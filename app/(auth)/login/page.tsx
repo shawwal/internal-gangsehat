@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
+import { Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export const dynamic = 'force-dynamic'
@@ -11,9 +13,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
     setLoading(true)
@@ -31,65 +34,66 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{ backgroundColor: '#F4F5F7' }}
-    >
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
           <div className="text-center mb-8">
-            <div
-              className="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center"
-              style={{ backgroundColor: '#3D2B1F' }}
-            >
-              <span className="text-[#D4A017] font-bold text-lg" style={{ fontFamily: 'Sora, sans-serif' }}>T</span>
+            <div className="flex justify-center mb-4">
+              <Image src="/black-logo.png" alt="Gang Sehat" width={180} height={52} className="object-contain dark:hidden" priority />
+              <Image src="/white-logo.png" alt="Gang Sehat" width={180} height={52} className="object-contain hidden dark:block" priority />
             </div>
-            <h1 className="text-xl font-bold text-gray-900" style={{ fontFamily: 'Sora, sans-serif' }}>
-              TeamFGS
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">Sistem Internal Manajemen Fisioterapi</p>
+            <p className="text-sm text-muted-foreground">Sistem Internal Manajemen Fisioterapi</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Masukkan email Anda"
                 required
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A017] focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kata Sandi</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Masukkan kata sandi Anda"
-                required
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A017] focus:border-transparent"
-              />
+              <label className="block text-sm font-medium text-foreground mb-1">Kata Sandi</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Masukkan kata sandi Anda"
+                  required
+                  className="w-full px-3 py-2.5 pr-10 border border-border rounded-xl text-sm bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>
+              <p className="text-sm text-destructive bg-destructive/10 rounded-xl px-3 py-2">{error}</p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-60"
-              style={{ backgroundColor: '#D4A017' }}
+              className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors disabled:opacity-60"
             >
               {loading ? 'Sedang masuk...' : 'Masuk'}
             </button>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-6">
-            Dikembangkan dengan ❤ oleh BAT Solution
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            © 2026 Gang Sehat. Semua hak dilindungi
           </p>
         </div>
       </div>

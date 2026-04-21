@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import * as LucideIcons from 'lucide-react'
@@ -57,7 +58,7 @@ export function Sidebar({ collapsed }: Props) {
             onClick={() => toggleGroup(item.key)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${
               collapsed ? 'justify-center' : ''
-            } hover:bg-white/10 text-[#F5ECD7]/80 hover:text-[#F5ECD7]`}
+            } hover:bg-white/10 text-[#F5ECD7]/70 hover:text-[#F5ECD7]`}
           >
             <span className="shrink-0"><Icon name={item.icon} /></span>
             {!collapsed && (
@@ -84,8 +85,8 @@ export function Sidebar({ collapsed }: Props) {
           collapsed ? 'justify-center' : ''
         } ${
           isActive(item.href)
-            ? 'bg-[#D4A017] text-white'
-            : 'text-[#F5ECD7]/80 hover:bg-white/10 hover:text-[#F5ECD7]'
+            ? 'bg-[#FF0090] text-white'
+            : 'text-[#F5ECD7]/70 hover:bg-white/10 hover:text-[#F5ECD7]'
         }`}
       >
         <span className="shrink-0"><Icon name={item.icon} /></span>
@@ -96,16 +97,33 @@ export function Sidebar({ collapsed }: Props) {
 
   return (
     <aside
-      style={{ backgroundColor: '#3D2B1F', color: '#F5ECD7' }}
+      style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}
       className={`flex flex-col h-full transition-all duration-200 ${collapsed ? 'w-16' : 'w-[220px]'}`}
     >
-      <div className={`flex items-center h-14 border-b border-white/10 ${collapsed ? 'justify-center px-2' : 'px-4 gap-2'}`}>
+      <div
+        className={`flex items-center h-14 border-b ${collapsed ? 'justify-center px-2' : 'px-4 gap-2'}`}
+        style={{ borderColor: 'var(--sidebar-border)' }}
+      >
         {!collapsed && (
-          <span className="font-bold text-sm tracking-wide text-[#D4A017]" style={{ fontFamily: 'Sora, sans-serif' }}>
-            TeamFGS
-          </span>
+          <Image
+            src="/white-logo.png"
+            alt="Gang Sehat"
+            width={140}
+            height={40}
+            className="object-contain"
+            priority
+          />
         )}
-        {collapsed && <Icon name="Activity" size={20} />}
+        {collapsed && (
+          <Image
+            src="/white-logo.png"
+            alt="Gang Sehat"
+            width={32}
+            height={32}
+            className="object-contain object-left"
+            priority
+          />
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">

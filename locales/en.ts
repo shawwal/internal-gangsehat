@@ -7,7 +7,7 @@ const en = {
       'You have successfully signed in. Use the sidebar navigation to manage data, configure content, and monitor system activity.',
     welcome_sub:
       'If you need help or encounter any issue, please contact the system administrator.',
-    footer: 'Developed with ❤ by BAT Solution',
+    footer: '© 2026 Gang Sehat. Semua hak dilindungi',
   },
 
   auth: {

@@ -9,7 +9,7 @@ const id: Translations = {
       'Anda berhasil masuk. Gunakan navigasi sidebar untuk mengelola data, mengonfigurasi konten, dan memantau aktivitas sistem.',
     welcome_sub:
       'Jika membutuhkan bantuan atau menemui masalah, silakan hubungi administrator sistem.',
-    footer: 'Dikembangkan dengan ❤ oleh BAT Solution',
+    footer: '© 2026 Gang Sehat. Semua hak dilindungi',
   },
 
   auth: {

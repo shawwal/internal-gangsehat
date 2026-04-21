@@ -36,15 +36,15 @@ export function DataTable<T extends Record<string, unknown>>({
   const to = Math.min(page * pageSize, total)
 
   return (
-    <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden">
+    <div className="rounded-2xl bg-card border border-border overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr className="border-b border-border bg-muted">
               {columns.map((col) => (
                 <th
                   key={String(col.key)}
-                  className={`px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide ${col.className ?? ''}`}
+                  className={`px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide ${col.className ?? ''}`}
                 >
                   {col.header}
                 </th>
@@ -54,21 +54,21 @@ export function DataTable<T extends Record<string, unknown>>({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-muted-foreground">
                   {t('common.loading')}
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-muted-foreground">
                   {t('common.no_data')}
                 </td>
               </tr>
             ) : (
               data.map((row, i) => (
-                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                <tr key={i} className="border-b border-border hover:bg-muted/50 transition-colors">
                   {columns.map((col) => (
-                    <td key={String(col.key)} className={`px-4 py-3 text-gray-700 ${col.className ?? ''}`}>
+                    <td key={String(col.key)} className={`px-4 py-3 text-foreground ${col.className ?? ''}`}>
                       {col.render
                         ? col.render(row)
                         : String(row[col.key as keyof T] ?? '')}
@@ -81,7 +81,7 @@ export function DataTable<T extends Record<string, unknown>>({
         </table>
       </div>
 
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-xs text-gray-500">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border text-xs text-muted-foreground">
         <span>
           {t('common.showing')} {from}–{to} {t('common.of')} {total} {t('common.data')}
         </span>
@@ -89,7 +89,7 @@ export function DataTable<T extends Record<string, unknown>>({
           <button
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
-            className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+            className="px-2 py-1 rounded-lg border border-border disabled:opacity-40 hover:bg-muted transition-colors"
           >
             ‹
           </button>
@@ -101,8 +101,8 @@ export function DataTable<T extends Record<string, unknown>>({
                 onClick={() => onPageChange(p)}
                 className={`px-2 py-1 rounded-lg border transition-colors ${
                   p === page
-                    ? 'border-[#D4A017] bg-[#D4A017] text-white'
-                    : 'border-gray-200 hover:bg-gray-50'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border hover:bg-muted'
                 }`}
               >
                 {p}
@@ -112,7 +112,7 @@ export function DataTable<T extends Record<string, unknown>>({
           <button
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages}
-            className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+            className="px-2 py-1 rounded-lg border border-border disabled:opacity-40 hover:bg-muted transition-colors"
           >
             ›
           </button>
@@ -123,7 +123,7 @@ export function DataTable<T extends Record<string, unknown>>({
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="border border-gray-200 rounded-lg px-1 py-0.5 text-xs"
+              className="border border-border rounded-lg px-1 py-0.5 text-xs bg-input text-foreground"
             >
               {[10, 25, 50].map((s) => (
                 <option key={s} value={s}>{s}</option>

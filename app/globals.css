@@ -1,22 +1,94 @@
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  --color-sidebar-bg:   #3D2B1F;
-  --color-sidebar-text: #F5ECD7;
-  --color-brand-gold:   #D4A017;
-  --color-page-bg:      #F4F5F7;
-  --color-header-bg:    #FFFFFF;
+  /* Gangsehat.com brand tokens — light mode */
+  --primary:              #FF0090;
+  --primary-light:        #FFB3D9;
+  --secondary:            #FFB35C;
+  --background:           #F8F8F8;
+  --foreground:           #1D1D1D;
+  --card:                 #FFFFFF;
+  --card-foreground:      #1D1D1D;
+  --popover:              #FFFFFF;
+  --popover-foreground:   #1D1D1D;
+  --primary-foreground:   #FFFFFF;
+  --secondary-foreground: #1D1D1D;
+  --muted:                #F0F0F0;
+  --muted-foreground:     #999999;
+  --accent:               #FF0090;
+  --accent-foreground:    #FFFFFF;
+  --destructive:          #FF3B30;
+  --destructive-foreground: #FFFFFF;
+  --border:               #E8E8E8;
+  --input:                #F0F0F0;
+  --ring:                 #FF0090;
+
+  /* Internal sidebar — always dark, not theme-dependent */
+  --sidebar-bg:     #2d1b24;
+  --sidebar-text:   #F5ECD7;
+  --sidebar-active: #FF0090;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+}
+
+.dark {
+  --primary:              #FF0090;
+  --primary-light:        #FFB3D9;
+  --secondary:            #FFB35C;
+  --background:           oklch(0.145 0 0);
+  --foreground:           oklch(0.985 0 0);
+  --card:                 oklch(0.17 0 0);
+  --card-foreground:      oklch(0.985 0 0);
+  --popover:              oklch(0.17 0 0);
+  --popover-foreground:   oklch(0.985 0 0);
+  --primary-foreground:   #FFFFFF;
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted:                oklch(0.269 0 0);
+  --muted-foreground:     oklch(0.708 0 0);
+  --accent:               #FF0090;
+  --accent-foreground:    #FFFFFF;
+  --destructive:          oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border:               oklch(0.269 0 0);
+  --input:                oklch(0.269 0 0);
+  --ring:                 #FF0090;
 }
 
 @theme inline {
   --font-display: 'Sora', sans-serif;
   --font-body:    'DM Sans', sans-serif;
   --font-mono:    'JetBrains Mono', monospace;
+
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-ring:                 var(--ring);
 }
 
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--color-page-bg);
-  color: #1a1a1a;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    @apply bg-background text-foreground;
+    transition: background-color 0.2s, color 0.2s;
+  }
 }
