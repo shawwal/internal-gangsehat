@@ -142,7 +142,7 @@ interal-gangsehat/
 ├── supabase/
 │   └── migrations/
 │       └── 001_internal_tables.sql
-├── middleware.ts
+├── proxy.ts
 ├── navigation.ts               (root-level copy for Claude Code convenience)
 ├── en.ts                       (root-level copy for Claude Code convenience)
 ├── .env.local
