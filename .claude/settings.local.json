@@ -5,7 +5,9 @@
       "Bash(taskkill /PID 24052 /F)",
       "PowerShell(Stop-Process -Id 24052 -Force)",
       "Bash(curl -sL \"https://gangsehat.com\")",
-      "Bash(curl -sL \"https://gangsehat.com/_next/static/chunks/a06cf6f745569492.css\")"
+      "Bash(curl -sL \"https://gangsehat.com/_next/static/chunks/a06cf6f745569492.css\")",
+      "Bash(yarn add *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

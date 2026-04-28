@@ -1,77 +1,133 @@
+import type { UserRole } from '@/types'
+
 export interface NavItem {
   key: string
+  label: string
   href?: string
   icon: string
-  roles?: string[]
+  roles: UserRole[]
   children?: NavItem[]
 }
 
 export const navigation: NavItem[] = [
+  // Director
   {
-    key: 'nav.dashboard',
-    href: '/dashboard',
+    key: 'overview',
+    label: 'Overview',
+    href: '/director/overview',
     icon: 'LayoutDashboard',
+    roles: ['director'],
   },
   {
-    key: 'nav.order',
-    icon: 'ShoppingBag',
-    children: [
-      { key: 'nav.order_list',     href: '/order',          icon: 'List'    },
-      { key: 'nav.order_packages', href: '/order/packages', icon: 'Package' },
-    ],
+    key: 'branches',
+    label: 'Cabang',
+    href: '/director/branches',
+    icon: 'Building2',
+    roles: ['director'],
   },
   {
-    key: 'nav.master_data',
-    icon: 'Database',
-    roles: ['admin', 'manager', 'owner'],
-    children: [
-      { key: 'nav.tester',          href: '/master/tester',      icon: 'FlaskConical' },
-      { key: 'nav.positions',       href: '/master/positions',   icon: 'Briefcase'    },
-      { key: 'nav.patients',        href: '/master/patients',    icon: 'Users'        },
-      { key: 'nav.services',        href: '/master/services',    icon: 'Stethoscope'  },
-      { key: 'nav.shift_hours',     href: '/master/shifts',      icon: 'Clock'        },
-      { key: 'nav.master_schedule', href: '/master/schedules',   icon: 'CalendarCog'  },
-      { key: 'nav.territory',       href: '/master/territories', icon: 'MapPin'       },
-      { key: 'nav.users',           href: '/master/users',       icon: 'UserCog'      },
-    ],
+    key: 'director-reports',
+    label: 'Laporan',
+    href: '/director/reports',
+    icon: 'FileCheck',
+    roles: ['director'],
   },
   {
-    key: 'nav.leave',
+    key: 'director-staff',
+    label: 'Staff',
+    href: '/director/staff',
+    icon: 'Users',
+    roles: ['director'],
+  },
+  {
+    key: 'director-users',
+    label: 'Pengguna',
+    href: '/director/users',
+    icon: 'UserCog',
+    roles: ['director'],
+  },
+
+  // Finance
+  {
+    key: 'transactions',
+    label: 'Transaksi',
+    href: '/finance/transactions',
+    icon: 'Receipt',
+    roles: ['finance'],
+  },
+  {
+    key: 'finance-reports',
+    label: 'Laporan Bulanan',
+    href: '/finance/reports',
+    icon: 'FileText',
+    roles: ['finance'],
+  },
+
+  // HR
+  {
+    key: 'hr-staff',
+    label: 'Staff',
+    href: '/hr/staff',
+    icon: 'Users',
+    roles: ['hr'],
+  },
+  {
+    key: 'attendance',
+    label: 'Absensi',
+    href: '/hr/attendance',
+    icon: 'CalendarCheck',
+    roles: ['hr'],
+  },
+  {
+    key: 'hr-leave',
+    label: 'Cuti',
+    href: '/hr/leave',
+    icon: 'CalendarOff',
+    roles: ['hr'],
+  },
+
+  // Leave requests (self-service for non-HR staff)
+  {
+    key: 'my-leave',
+    label: 'Pengajuan Cuti',
     href: '/leave',
     icon: 'CalendarOff',
+    roles: ['finance', 'marketing'],
+  },
+
+  // Marketing
+  {
+    key: 'campaigns',
+    label: 'Kampanye',
+    href: '/marketing/campaigns',
+    icon: 'Megaphone',
+    roles: ['marketing'],
+  },
+
+  // All roles
+  {
+    key: 'patients',
+    label: 'Pasien',
+    href: '/patients',
+    icon: 'HeartPulse',
+    roles: ['director', 'finance', 'hr', 'marketing'],
   },
   {
-    key: 'nav.targets',
-    href: '/targets',
-    icon: 'Target',
+    key: 'notifications',
+    label: 'Notifikasi',
+    href: '/notifications',
+    icon: 'Bell',
+    roles: ['director', 'finance', 'hr', 'marketing'],
   },
   {
-    key: 'nav.schedule',
-    icon: 'CalendarDays',
-    children: [
-      { key: 'nav.schedule_list',     href: '/schedules',          icon: 'TableProperties' },
-      { key: 'nav.schedule_calendar', href: '/schedules/calendar', icon: 'Calendar'        },
-      { key: 'nav.schedule_today',    href: '/schedules/today',    icon: 'CalendarCheck'   },
-    ],
-  },
-  {
-    key: 'nav.reports',
-    icon: 'BarChart3',
-    children: [
-      { key: 'nav.statistics',    href: '/reports',         icon: 'TrendingUp' },
-      { key: 'nav.daily_report',  href: '/reports/daily',   icon: 'FileText'   },
-      { key: 'nav.target_report', href: '/reports/targets', icon: 'Goal'       },
-    ],
-  },
-  {
-    key: 'nav.settings',
+    key: 'settings',
+    label: 'Pengaturan',
+    href: '/settings',
     icon: 'Settings',
-    roles: ['admin', 'manager', 'owner'],
-    children: [
-      { key: 'nav.references',    href: '/settings/references',   icon: 'BookOpen'    },
-      { key: 'nav.roles',         href: '/settings/roles',        icon: 'ShieldCheck' },
-      { key: 'nav.permissions',   href: '/settings/permissions',  icon: 'Lock'        },
-      { key: 'nav.configuration', href: '/settings/configuration',icon: 'Cog'         },
-    ],
+    roles: ['director', 'finance', 'hr', 'marketing'],
   },
 ]
+
+export function navForRole(role: UserRole): NavItem[] {
+  return navigation.filter((item) => item.roles.includes(role))
+}

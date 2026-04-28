@@ -12,11 +12,11 @@ export function useProfile() {
   useEffect(() => {
     if (!user) { setProfile(null); return }
     createClient()
-      .from('profiles')
-      .select('id, email, full_name, phone, role')
+      .from('internal_profiles')
+      .select('*')
       .eq('id', user.id)
       .single()
-      .then(({ data }) => setProfile(data))
+      .then(({ data }) => setProfile(data as Profile | null))
   }, [user?.id])
 
   return profile

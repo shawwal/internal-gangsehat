@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import * as LucideIcons from 'lucide-react'
 import { navigation } from '@/config/navigation'
-import { useTranslation } from '@/hooks/useTranslation'
 import type { NavItem } from '@/config/navigation'
 
 function Icon({ name, size = 18 }: { name: string; size?: number }) {
@@ -21,7 +20,6 @@ interface Props {
 }
 
 export function Sidebar({ collapsed }: Props) {
-  const { t } = useTranslation()
   const pathname = usePathname()
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
 
@@ -58,18 +56,18 @@ export function Sidebar({ collapsed }: Props) {
             onClick={() => toggleGroup(item.key)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${
               collapsed ? 'justify-center' : ''
-            } hover:bg-white/10 text-[#F5ECD7]/70 hover:text-[#F5ECD7]`}
+            } hover:bg-muted text-sidebar-foreground/60 hover:text-sidebar-foreground`}
           >
             <span className="shrink-0"><Icon name={item.icon} /></span>
             {!collapsed && (
               <>
-                <span className="flex-1 text-sm font-medium">{t(item.key)}</span>
+                <span className="flex-1 text-sm font-medium">{item.label}</span>
                 <Icon name={open ? 'ChevronDown' : 'ChevronRight'} size={14} />
               </>
             )}
           </button>
           {!collapsed && open && (
-            <div className="ml-4 mt-0.5 space-y-0.5 border-l border-white/10 pl-3">
+            <div className="ml-4 mt-0.5 space-y-0.5 border-l border-border pl-3">
               {item.children.map((child) => renderItem(child, depth + 1))}
             </div>
           )}
@@ -85,48 +83,41 @@ export function Sidebar({ collapsed }: Props) {
           collapsed ? 'justify-center' : ''
         } ${
           isActive(item.href)
-            ? 'bg-[#FF0090] text-white'
-            : 'text-[#F5ECD7]/70 hover:bg-white/10 hover:text-[#F5ECD7]'
+            ? 'bg-primary text-primary-foreground'
+            : 'text-sidebar-foreground/60 hover:bg-muted hover:text-sidebar-foreground'
         }`}
       >
         <span className="shrink-0"><Icon name={item.icon} /></span>
-        {!collapsed && <span className="text-sm font-medium">{t(item.key)}</span>}
+        {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
       </Link>
     )
   }
 
   return (
     <aside
-      style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}
-      className={`flex flex-col h-full transition-all duration-200 ${collapsed ? 'w-16' : 'w-[220px]'}`}
+      className={`flex flex-col h-full bg-sidebar border-r border-sidebar-border transition-all duration-200 ${
+        collapsed ? 'w-16' : 'w-[220px]'
+      }`}
     >
       <div
-        className={`flex items-center h-14 border-b ${collapsed ? 'justify-center px-2' : 'px-4 gap-2'}`}
-        style={{ borderColor: 'var(--sidebar-border)' }}
+        className={`flex items-center h-14 border-b border-sidebar-border shrink-0 ${
+          collapsed ? 'justify-center px-2' : 'px-4 gap-2'
+        }`}
       >
-        {!collapsed && (
-          <Image
-            src="/white-logo.png"
-            alt="Gang Sehat"
-            width={140}
-            height={40}
-            className="object-contain"
-            priority
-          />
-        )}
-        {collapsed && (
-          <Image
-            src="/white-logo.png"
-            alt="Gang Sehat"
-            width={32}
-            height={32}
-            className="object-contain object-left"
-            priority
-          />
+        {collapsed ? (
+          <>
+            <Image src="/black-logo.png" alt="GS" width={28} height={28} className="object-contain dark:hidden" priority />
+            <Image src="/white-logo.png" alt="GS" width={28} height={28} className="object-contain hidden dark:block" priority />
+          </>
+        ) : (
+          <>
+            <Image src="/black-logo.png" alt="Gang Sehat" width={140} height={40} className="object-contain dark:hidden" priority />
+            <Image src="/white-logo.png" alt="Gang Sehat" width={140} height={40} className="object-contain hidden dark:block" priority />
+          </>
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5 scrollbar-hide">
         {navigation.map((item) => renderItem(item))}
       </nav>
     </aside>

@@ -32,14 +32,28 @@ export async function proxy(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const isPublic = pathname.startsWith('/login')
+  const isPublic = pathname.startsWith('/login') ||
+    pathname.startsWith('/unauthorized')
 
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (user && pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  if (user && (pathname === '/login' || pathname === '/' || pathname === '/dashboard')) {
+    const { data: profile } = await supabase
+      .from('internal_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const roleHome: Record<string, string> = {
+      director:  '/director/overview',
+      finance:   '/finance/transactions',
+      hr:        '/hr/staff',
+      marketing: '/marketing/campaigns',
+    }
+    const dest = roleHome[profile?.role ?? ''] ?? '/director/overview'
+    return NextResponse.redirect(new URL(dest, request.url))
   }
 
   return response

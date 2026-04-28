@@ -4,7 +4,8 @@ import { X, Phone } from 'lucide-react'
 import { StatusBadge } from './StatusBadge'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatCurrency, formatDate, formatWaNumber } from '@/lib/utils'
-import type { BookingRow } from '@/types'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type BookingRow = any
 
 interface Props {
   booking: BookingRow | null
