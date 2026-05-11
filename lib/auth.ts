@@ -35,8 +35,8 @@ export async function getProfileOrNull(supabase: SupabaseClient) {
 export function roleDashboard(role: UserRole): string {
   switch (role) {
     case 'director':  return '/director/overview'
-    case 'finance':   return '/finance/transactions'
-    case 'hr':        return '/hr/staff'
-    case 'marketing': return '/marketing/campaigns'
+    case 'finance':   return '/finance'
+    case 'hr':        return '/hr'
+    case 'marketing': return '/marketing'
   }
 }

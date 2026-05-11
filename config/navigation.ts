@@ -49,6 +49,13 @@ export const navigation: NavItem[] = [
 
   // Finance
   {
+    key: 'finance-home',
+    label: 'Beranda',
+    href: '/finance',
+    icon: 'LayoutDashboard',
+    roles: ['finance'],
+  },
+  {
     key: 'transactions',
     label: 'Transaksi',
     href: '/finance/transactions',
@@ -64,6 +71,13 @@ export const navigation: NavItem[] = [
   },
 
   // HR
+  {
+    key: 'hr-home',
+    label: 'Beranda',
+    href: '/hr',
+    icon: 'LayoutDashboard',
+    roles: ['hr'],
+  },
   {
     key: 'hr-staff',
     label: 'Staff',
@@ -96,6 +110,13 @@ export const navigation: NavItem[] = [
   },
 
   // Marketing
+  {
+    key: 'marketing-home',
+    label: 'Beranda',
+    href: '/marketing',
+    icon: 'LayoutDashboard',
+    roles: ['marketing'],
+  },
   {
     key: 'campaigns',
     label: 'Kampanye',
