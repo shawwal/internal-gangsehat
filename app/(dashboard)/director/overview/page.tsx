@@ -1,21 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { Users, TrendingUp, TrendingDown, DollarSign, Building2 } from 'lucide-react'
 import Link from 'next/link'
-import nextDynamic from 'next/dynamic'
+import { ChartsSection } from '@/components/dashboard/charts/ChartsSection'
 import type { BranchRevenueData } from '@/components/dashboard/charts/BranchRevenueChart'
 import type { MonthlyTrendData } from '@/components/dashboard/charts/MonthlyTrendChart'
 
 export const dynamic = 'force-dynamic'
-
-const BranchRevenueChart = nextDynamic(
-  () => import('@/components/dashboard/charts/BranchRevenueChart').then(m => ({ default: m.BranchRevenueChart })),
-  { ssr: false, loading: () => <div className="glass-card h-72 animate-pulse rounded-3xl" /> }
-)
-
-const MonthlyTrendChart = nextDynamic(
-  () => import('@/components/dashboard/charts/MonthlyTrendChart').then(m => ({ default: m.MonthlyTrendChart })),
-  { ssr: false, loading: () => <div className="glass-card h-64 animate-pulse rounded-3xl" /> }
-)
 
 function formatRp(n: number) {
   return new Intl.NumberFormat('id-ID', {
@@ -183,8 +173,7 @@ export default async function DirectorOverviewPage() {
       </div>
 
       {/* Charts */}
-      <BranchRevenueChart data={latestPerBranch} />
-      <MonthlyTrendChart data={trendData} />
+      <ChartsSection branchData={latestPerBranch} trendData={trendData} />
 
       {/* Pending Reports */}
       <div className="glass-card p-5">
