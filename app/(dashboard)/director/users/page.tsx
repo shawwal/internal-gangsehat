@@ -21,13 +21,14 @@ interface UserRow {
 interface BranchOption { id: string; name: string }
 
 const ROLE_LABELS: Record<UserRole, string> = {
-  director: 'Direktur', finance: 'Keuangan', hr: 'HR', marketing: 'Marketing',
+  director: 'Direktur', finance: 'Keuangan', hr: 'HR', marketing: 'Marketing', staff: 'Staff',
 }
 const ROLE_COLOR: Record<UserRole, string> = {
   director:  'bg-primary/10 text-primary',
   finance:   'bg-chart-3/15 text-chart-3',
   hr:        'bg-chart-5/15 text-chart-5',
   marketing: 'bg-secondary/20 text-secondary-foreground',
+  staff:     'bg-muted text-muted-foreground',
 }
 
 export default function UsersPage() {

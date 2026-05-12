@@ -11,6 +11,9 @@ const STATUS_BADGE: Record<TransactionStatus, string>  = {
   confirmed: 'bg-chart-4/15 text-chart-4',
   rejected:  'bg-destructive/10 text-destructive',
 }
+const STATUS_LABEL: Record<TransactionStatus, string> = {
+  pending: 'Menunggu', confirmed: 'Dikonfirmasi', rejected: 'Ditolak',
+}
 
 function formatRp(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
@@ -27,6 +30,25 @@ export default function TransactionsPage() {
   const [rejectId, setRejectId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
 
+  // Current user context — needed to scope inserts to the right branch
+  const [userId, setUserId]     = useState<string | null>(null)
+  const [branchId, setBranchId] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
+
+  async function loadProfile() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase
+      .from('internal_profiles')
+      .select('branch_id, role')
+      .eq('id', user.id)
+      .single()
+    setUserId(user.id)
+    setBranchId(profile?.branch_id ?? null)
+    setUserRole(profile?.role ?? null)
+  }
+
   async function load() {
     const { data } = await createClient()
       .from('transactions')
@@ -37,16 +59,24 @@ export default function TransactionsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    loadProfile().then(() => load())
+  }, [])
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
+    if (!branchId) {
+      alert('Akun Anda belum terhubung ke cabang. Hubungi direktur.')
+      return
+    }
     setSaving(true)
     await createClient().from('transactions').insert({
-      type: form.type,
-      category: form.category,
-      amount: Number(form.amount),
-      description: form.description || null,
+      branch_id:        branchId,
+      recorded_by:      userId,
+      type:             form.type,
+      category:         form.category,
+      amount:           Number(form.amount),
+      description:      form.description || null,
       transaction_date: form.transaction_date,
     })
     setSaving(false)
@@ -55,7 +85,10 @@ export default function TransactionsPage() {
   }
 
   async function confirm(id: string) {
-    await createClient().from('transactions').update({ status: 'confirmed' }).eq('id', id)
+    await createClient().from('transactions').update({
+      status:       'confirmed',
+      confirmed_by: userId,
+    }).eq('id', id)
     load()
   }
 
@@ -67,6 +100,8 @@ export default function TransactionsPage() {
     setRejectReason('')
     load()
   }
+
+  const canConfirm = userRole === 'finance' || userRole === 'director'
 
   return (
     <div className="space-y-6">
@@ -82,6 +117,12 @@ export default function TransactionsPage() {
           <Plus size={16} /> Tambah
         </button>
       </div>
+
+      {!branchId && !loading && (
+        <div className="bg-secondary/10 border border-secondary/30 rounded-xl px-4 py-3 text-sm text-secondary-foreground">
+          Akun Anda belum terhubung ke cabang. Hubungi direktur untuk pengaturan cabang.
+        </div>
+      )}
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Memuat...</p>
@@ -113,11 +154,11 @@ export default function TransactionsPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[r.status]}`}>
-                      {r.status}
+                      {STATUS_LABEL[r.status]}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {r.status === 'pending' && (
+                    {r.status === 'pending' && canConfirm && (
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => confirm(r.id)} className="p-1.5 rounded-lg hover:bg-chart-4/10 text-chart-4 transition-colors" title="Konfirmasi">
                           <CheckCircle size={14} />
@@ -175,7 +216,7 @@ export default function TransactionsPage() {
               </div>
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Batal</button>
-                <button type="submit" disabled={saving} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
+                <button type="submit" disabled={saving || !branchId} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
                   {saving ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Eye, EyeOff } from 'lucide-react'
@@ -92,7 +93,14 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-xs text-muted-foreground mt-6">
+          <p className="text-center text-sm text-muted-foreground mt-4">
+            Belum punya akun?{' '}
+            <Link href="/register" className="text-primary font-medium hover:underline">
+              Daftar
+            </Link>
+          </p>
+
+          <p className="text-center text-xs text-muted-foreground mt-3">
             © 2026 Gang Sehat. Semua hak dilindungi
           </p>
         </div>

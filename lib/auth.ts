@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { SupabaseClient } from '@supabase/supabase-js'
 
-export type UserRole = 'director' | 'finance' | 'hr' | 'marketing'
+export type UserRole = 'director' | 'finance' | 'hr' | 'marketing' | 'staff'
 
 export async function requireRole(supabase: SupabaseClient, allowed: UserRole[]) {
   const { data: { user } } = await supabase.auth.getUser()
@@ -38,5 +38,6 @@ export function roleDashboard(role: UserRole): string {
     case 'finance':   return '/finance'
     case 'hr':        return '/hr'
     case 'marketing': return '/marketing'
+    case 'staff':     return '/pending'
   }
 }

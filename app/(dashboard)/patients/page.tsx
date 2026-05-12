@@ -17,6 +17,22 @@ export default function PatientsPage() {
   })
   const [saving, setSaving] = useState(false)
 
+  const [userId, setUserId]     = useState<string | null>(null)
+  const [branchId, setBranchId] = useState<string | null>(null)
+
+  async function loadProfile() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase
+      .from('internal_profiles')
+      .select('branch_id')
+      .eq('id', user.id)
+      .single()
+    setUserId(user.id)
+    setBranchId(profile?.branch_id ?? null)
+  }
+
   async function load() {
     const { data } = await createClient()
       .from('patients')
@@ -27,7 +43,7 @@ export default function PatientsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { loadProfile().then(() => load()) }, [])
 
   const filtered = patients.filter((p) =>
     p.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -37,14 +53,20 @@ export default function PatientsPage() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
+    if (!branchId) {
+      alert('Akun Anda belum terhubung ke cabang. Hubungi direktur.')
+      return
+    }
     setSaving(true)
     await createClient().from('patients').insert({
-      full_name: form.full_name,
-      date_of_birth: form.date_of_birth || null,
-      gender: form.gender,
-      phone: form.phone || null,
-      email: form.email || null,
-      address: form.address || null,
+      branch_id:             branchId,
+      created_by:            userId,
+      full_name:             form.full_name,
+      date_of_birth:         form.date_of_birth || null,
+      gender:                form.gender,
+      phone:                 form.phone || null,
+      email:                 form.email || null,
+      address:               form.address || null,
       medical_record_number: form.medical_record_number || null,
     })
     setSaving(false)

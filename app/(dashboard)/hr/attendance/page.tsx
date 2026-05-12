@@ -35,16 +35,36 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState<string | null>(null)
 
+  const [userId, setUserId]     = useState<string | null>(null)
+  const [branchId, setBranchId] = useState<string | null>(null)
+
   const days = daysInMonth(year, month)
   const dayNumbers = Array.from({ length: days }, (_, i) => i + 1)
+
+  async function loadProfile() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase
+      .from('internal_profiles')
+      .select('branch_id')
+      .eq('id', user.id)
+      .single()
+    setUserId(user.id)
+    setBranchId(profile?.branch_id ?? null)
+  }
 
   async function load() {
     const supabase = createClient()
     const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`
     const endDate   = `${year}-${String(month + 1).padStart(2, '0')}-${String(days).padStart(2, '0')}`
 
+    // Staff query: filter by branch if the user has one (HR sees own branch only)
+    let staffQuery = supabase.from('internal_profiles').select('id, full_name').eq('is_active', true).neq('role', 'staff')
+    if (branchId) staffQuery = staffQuery.eq('branch_id', branchId)
+
     const [{ data: staffData }, { data: attData }] = await Promise.all([
-      supabase.from('internal_profiles').select('id, full_name').eq('is_active', true).order('full_name'),
+      staffQuery.order('full_name'),
       supabase.from('attendance').select('id, staff_id, date, status').gte('date', startDate).lte('date', endDate),
     ])
     setStaff((staffData ?? []) as StaffRow[])
@@ -52,7 +72,11 @@ export default function AttendancePage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [year, month])
+  useEffect(() => { loadProfile() }, [])
+  useEffect(() => {
+    if (branchId !== null || !loading) load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month, branchId])
 
   function getStatus(staffId: string, day: number): AttendanceStatus | null {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -69,7 +93,13 @@ export default function AttendancePage() {
     } else if (existing) {
       await supabase.from('attendance').update({ status }).eq('id', existing.id)
     } else {
-      await supabase.from('attendance').insert({ staff_id: staffId, date: dateStr, status })
+      await supabase.from('attendance').insert({
+        staff_id:    staffId,
+        branch_id:   branchId,
+        date:        dateStr,
+        status,
+        recorded_by: userId,
+      })
     }
     setSaving(null)
     load()

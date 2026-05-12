@@ -27,6 +27,22 @@ export default function FinanceReportsPage() {
   const [form, setForm]         = useState({ year: now.getFullYear(), month: now.getMonth() + 1, notes: '' })
   const [saving, setSaving]     = useState(false)
 
+  const [userId, setUserId]     = useState<string | null>(null)
+  const [branchId, setBranchId] = useState<string | null>(null)
+
+  async function loadProfile() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase
+      .from('internal_profiles')
+      .select('branch_id')
+      .eq('id', user.id)
+      .single()
+    setUserId(user.id)
+    setBranchId(profile?.branch_id ?? null)
+  }
+
   async function load() {
     const { data } = await createClient()
       .from('branch_financial_reports')
@@ -37,33 +53,64 @@ export default function FinanceReportsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    loadProfile().then(() => load())
+  }, [])
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault()
+    if (!branchId) {
+      alert('Akun Anda belum terhubung ke cabang. Hubungi direktur.')
+      return
+    }
     setSaving(true)
     const supabase = createClient()
 
-    const [{ data: income }, { data: expense }, { count: patients }, { count: visits }] = await Promise.all([
-      supabase.from('transactions').select('amount').eq('type', 'income').eq('status', 'confirmed'),
-      supabase.from('transactions').select('amount').eq('type', 'expense').eq('status', 'confirmed'),
-      supabase.from('patients').select('id', { count: 'exact', head: true }),
-      supabase.from('patient_visits').select('id', { count: 'exact', head: true }),
+    // Date range for the selected period
+    const periodStart = `${form.year}-${String(form.month).padStart(2, '0')}-01`
+    const lastDay     = new Date(form.year, form.month, 0).getDate()
+    const periodEnd   = `${form.year}-${String(form.month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+
+    const [{ data: income }, { data: expense }, { count: visitCount }] = await Promise.all([
+      supabase.from('transactions')
+        .select('amount')
+        .eq('type', 'income').eq('status', 'confirmed').eq('branch_id', branchId)
+        .gte('transaction_date', periodStart).lte('transaction_date', periodEnd),
+      supabase.from('transactions')
+        .select('amount')
+        .eq('type', 'expense').eq('status', 'confirmed').eq('branch_id', branchId)
+        .gte('transaction_date', periodStart).lte('transaction_date', periodEnd),
+      supabase.from('patient_visits')
+        .select('id', { count: 'exact', head: true })
+        .eq('branch_id', branchId)
+        .gte('visit_date', periodStart).lte('visit_date', periodEnd),
     ])
 
     const totalIncome  = (income ?? []).reduce((s, r) => s + Number(r.amount), 0)
     const totalExpense = (expense ?? []).reduce((s, r) => s + Number(r.amount), 0)
 
-    await supabase.from('branch_financial_reports').upsert({
-      period_year:    form.year,
-      period_month:   form.month,
-      total_income:   totalIncome,
-      total_expense:  totalExpense,
-      patient_count:  patients ?? 0,
-      visit_count:    visits ?? 0,
-      notes:          form.notes || null,
-      status:         'draft',
+    // Distinct patient count via visit records for this branch/period
+    const { data: patientVisits } = await supabase
+      .from('patient_visits')
+      .select('patient_id')
+      .eq('branch_id', branchId)
+      .gte('visit_date', periodStart).lte('visit_date', periodEnd)
+
+    const patientCount = new Set((patientVisits ?? []).map((v) => v.patient_id)).size
+
+    const { error } = await supabase.from('branch_financial_reports').upsert({
+      branch_id:     branchId,
+      period_year:   form.year,
+      period_month:  form.month,
+      total_income:  totalIncome,
+      total_expense: totalExpense,
+      patient_count: patientCount,
+      visit_count:   visitCount ?? 0,
+      notes:         form.notes || null,
+      status:        'draft',
     }, { onConflict: 'branch_id,period_year,period_month' })
+
+    if (error) alert('Gagal menyimpan laporan: ' + error.message)
 
     setSaving(false)
     setShowForm(false)
@@ -71,7 +118,11 @@ export default function FinanceReportsPage() {
   }
 
   async function submit(id: string) {
-    await createClient().from('branch_financial_reports').update({ status: 'submitted', submitted_at: new Date().toISOString() }).eq('id', id)
+    await createClient().from('branch_financial_reports').update({
+      status:       'submitted',
+      submitted_at: new Date().toISOString(),
+      submitted_by: userId,
+    }).eq('id', id)
     load()
   }
 
@@ -82,13 +133,17 @@ export default function FinanceReportsPage() {
           <h1 className="text-xl font-semibold text-foreground">Laporan Bulanan</h1>
           <p className="text-sm text-muted-foreground">Generate dan kirim laporan ke direktur</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
+        <button onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
           <Plus size={16} /> Generate Laporan
         </button>
       </div>
+
+      {!branchId && !loading && (
+        <div className="bg-secondary/10 border border-secondary/30 rounded-xl px-4 py-3 text-sm text-secondary-foreground">
+          Akun Anda belum terhubung ke cabang. Hubungi direktur untuk pengaturan cabang.
+        </div>
+      )}
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Memuat...</p>
@@ -101,6 +156,7 @@ export default function FinanceReportsPage() {
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Pemasukan</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Pengeluaran</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Net Profit</th>
+                <th className="text-center px-4 py-3 font-medium text-muted-foreground">Pasien</th>
                 <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -114,6 +170,9 @@ export default function FinanceReportsPage() {
                   <td className={`px-4 py-3 text-right font-medium ${r.net_profit >= 0 ? 'text-chart-4' : 'text-destructive'}`}>
                     {formatRp(r.net_profit)}
                   </td>
+                  <td className="px-4 py-3 text-center text-xs text-muted-foreground">
+                    {r.patient_count} pasien · {r.visit_count} kunjungan
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${STATUS_BADGE[r.status]}`}>
                       {r.status}
@@ -121,10 +180,8 @@ export default function FinanceReportsPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     {r.status === 'draft' && (
-                      <button
-                        onClick={() => submit(r.id)}
-                        className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors ml-auto"
-                      >
+                      <button onClick={() => submit(r.id)}
+                        className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors ml-auto">
                         <Send size={12} /> Kirim
                       </button>
                     )}
@@ -166,7 +223,7 @@ export default function FinanceReportsPage() {
               </div>
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Batal</button>
-                <button type="submit" disabled={saving} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
+                <button type="submit" disabled={saving || !branchId} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
                   {saving ? 'Memproses...' : 'Generate'}
                 </button>
               </div>

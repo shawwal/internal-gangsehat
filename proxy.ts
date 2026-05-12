@@ -33,13 +33,14 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
   const isPublic = pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
     pathname.startsWith('/unauthorized')
 
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (user && (pathname === '/login' || pathname === '/' || pathname === '/dashboard')) {
+  if (user && (pathname === '/login' || pathname === '/register' || pathname === '/' || pathname === '/dashboard')) {
     const { data: profile } = await supabase
       .from('internal_profiles')
       .select('role')
@@ -51,6 +52,7 @@ export async function proxy(request: NextRequest) {
       finance:   '/finance/transactions',
       hr:        '/hr/staff',
       marketing: '/marketing/campaigns',
+      staff:     '/pending',
     }
     const dest = roleHome[profile?.role ?? ''] ?? '/director/overview'
     return NextResponse.redirect(new URL(dest, request.url))

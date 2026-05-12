@@ -37,6 +37,22 @@ export default function CampaignsPage() {
   })
   const [saving, setSaving] = useState(false)
 
+  const [userId, setUserId]     = useState<string | null>(null)
+  const [branchId, setBranchId] = useState<string | null>(null)
+
+  async function loadProfile() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase
+      .from('internal_profiles')
+      .select('branch_id')
+      .eq('id', user.id)
+      .single()
+    setUserId(user.id)
+    setBranchId(profile?.branch_id ?? null)
+  }
+
   async function load() {
     const { data } = await createClient()
       .from('campaigns')
@@ -46,7 +62,7 @@ export default function CampaignsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { loadProfile().then(() => load()) }, [])
 
   function openNew() {
     setEditItem(null)
@@ -75,7 +91,17 @@ export default function CampaignsPage() {
     if (editItem) {
       await createClient().from('campaigns').update(payload).eq('id', editItem.id)
     } else {
-      await createClient().from('campaigns').insert({ ...payload, status: 'draft' })
+      if (!branchId) {
+        alert('Akun Anda belum terhubung ke cabang. Hubungi direktur.')
+        setSaving(false)
+        return
+      }
+      await createClient().from('campaigns').insert({
+        ...payload,
+        status:     'draft',
+        branch_id:  branchId,
+        created_by: userId,
+      })
     }
     setSaving(false)
     setShowForm(false)

@@ -31,6 +31,22 @@ export default function PatientVisitsPage() {
   })
   const [saving, setSaving] = useState(false)
 
+  const [userId, setUserId]     = useState<string | null>(null)
+  const [branchId, setBranchId] = useState<string | null>(null)
+
+  async function loadProfile() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase
+      .from('internal_profiles')
+      .select('branch_id')
+      .eq('id', user.id)
+      .single()
+    setUserId(user.id)
+    setBranchId(profile?.branch_id ?? null)
+  }
+
   async function load() {
     const supabase = createClient()
     const [{ data: p }, { data: v }] = await Promise.all([
@@ -42,19 +58,25 @@ export default function PatientVisitsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [id])
+  useEffect(() => { loadProfile().then(() => load()) }, [id])
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
+    if (!branchId) {
+      alert('Akun Anda belum terhubung ke cabang. Hubungi direktur.')
+      return
+    }
     setSaving(true)
     await createClient().from('patient_visits').insert({
-      patient_id:      id,
-      visit_date:      form.visit_date,
-      chief_complaint: form.chief_complaint || null,
-      diagnosis:       form.diagnosis || null,
-      treatment:       form.treatment || null,
-      status:          form.status,
-      notes:           form.notes || null,
+      patient_id:          id,
+      branch_id:           branchId,
+      attending_staff_id:  userId,
+      visit_date:          form.visit_date,
+      chief_complaint:     form.chief_complaint || null,
+      diagnosis:           form.diagnosis || null,
+      treatment:           form.treatment || null,
+      status:              form.status,
+      notes:               form.notes || null,
     })
     setSaving(false)
     setShowForm(false)

@@ -16,10 +16,10 @@ interface StaffRow {
 }
 
 const ROLE_LABELS: Record<UserRole, string> = {
-  director: 'Direktur', finance: 'Keuangan', hr: 'HR', marketing: 'Marketing',
+  director: 'Direktur', finance: 'Keuangan', hr: 'HR', marketing: 'Marketing', staff: 'Staff',
 }
 
-const ALL_ROLES: UserRole[] = ['director', 'finance', 'hr', 'marketing']
+const ALL_ROLES: UserRole[] = ['director', 'finance', 'hr', 'marketing', 'staff']
 
 export default function DirectorStaffPage() {
   const [staff, setStaff]       = useState<StaffRow[]>([])

@@ -52,7 +52,7 @@ export default async function DirectorOverviewPage() {
     { data: pendingReports },
   ] = await Promise.all([
     supabase.from('patients').select('id', { count: 'exact', head: true }),
-    supabase.from('internal_profiles').select('id', { count: 'exact', head: true }).eq('is_active', true),
+    supabase.from('internal_profiles').select('id', { count: 'exact', head: true }).eq('is_active', true).neq('role', 'staff'),
     supabase.from('branches').select('id', { count: 'exact', head: true }).eq('is_active', true),
     supabase.from('transactions').select('amount').eq('type', 'income').eq('status', 'confirmed'),
     supabase.from('transactions').select('amount').eq('type', 'expense').eq('status', 'confirmed'),
