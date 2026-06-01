@@ -46,6 +46,13 @@ export const navigation: NavItem[] = [
     icon: 'UserCog',
     roles: ['director'],
   },
+  {
+    key: 'director-leave',
+    label: 'Cuti Staff',
+    href: '/director/leave',
+    icon: 'CalendarOff',
+    roles: ['director'],
+  },
 
   // Finance
   {
