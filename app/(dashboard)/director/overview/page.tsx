@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { Users, TrendingUp, TrendingDown, DollarSign, Building2 } from 'lucide-react'
+import { Users, TrendingUp, TrendingDown, DollarSign, Building2, Target } from 'lucide-react'
 import Link from 'next/link'
 import { ChartsSection } from '@/components/dashboard/charts/ChartsSection'
 import type { BranchRevenueData } from '@/components/dashboard/charts/BranchRevenueChart'
@@ -50,6 +50,7 @@ export default async function DirectorOverviewPage() {
     { data: branchReports },
     { data: monthlyTrend },
     { data: pendingReports },
+    { data: pendingTargets },
   ] = await Promise.all([
     supabase.from('patients').select('id', { count: 'exact', head: true }),
     supabase.from('internal_profiles').select('id', { count: 'exact', head: true }).eq('is_active', true).neq('role', 'staff'),
@@ -75,6 +76,12 @@ export default async function DirectorOverviewPage() {
       .select('id, period_year, period_month, branches(name), submitted_at')
       .eq('status', 'submitted')
       .order('submitted_at', { ascending: false })
+      .limit(5),
+    // Pending targets for approval
+    supabase.from('staff_targets')
+      .select('id, bulan, tahun, internal_profiles(full_name), branches(name), created_at')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
       .limit(5),
   ])
 
@@ -174,6 +181,60 @@ export default async function DirectorOverviewPage() {
 
       {/* Charts */}
       <ChartsSection branchData={latestPerBranch} trendData={trendData} />
+
+      {/* Pending Targets */}
+      <div className="glass-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Target Menunggu Persetujuan</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Target bulanan staff yang perlu ditinjau</p>
+          </div>
+          {(pendingTargets?.length ?? 0) > 0 && (
+            <Link
+              href="/director/targets"
+              className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              Lihat semua →
+            </Link>
+          )}
+        </div>
+
+        {!pendingTargets?.length ? (
+          <div className="flex items-center gap-3 py-6 px-4 bg-muted/30 rounded-2xl">
+            <div className="w-8 h-8 rounded-2xl bg-chart-4/15 flex items-center justify-center shrink-0">
+              <Target size={16} style={{ color: 'var(--chart-4)' }} />
+            </div>
+            <p className="text-sm text-muted-foreground">Semua target sudah ditinjau. Tidak ada yang menunggu.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {pendingTargets.map((t) => (
+              <div key={t.id} className="flex items-center justify-between py-3 px-4 bg-muted/20 rounded-2xl hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-2xl bg-secondary/20 flex items-center justify-center shrink-0">
+                    <Target size={14} className="text-secondary-foreground" />
+                  </div>
+                  <div>
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    <p className="text-sm font-medium text-foreground">{(t.internal_profiles as any)?.full_name ?? '—'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {MONTH_NAMES[(t.bulan ?? 1) - 1]} {t.tahun}
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      {(t.branches as any)?.name && ` · ${(t.branches as any).name}`}
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/director/targets"
+                  className="text-xs font-medium px-3 py-1.5 rounded-xl bg-secondary/20 text-secondary-foreground hover:bg-secondary/30 transition-colors"
+                >
+                  Tinjau
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Pending Reports */}
       <div className="glass-card p-5">

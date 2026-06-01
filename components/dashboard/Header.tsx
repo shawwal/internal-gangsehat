@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, Bell, Sun, Moon, LogOut, Settings, User } from 'lucide-react'
+import { Menu, Bell, Sun, Moon, LogOut, Settings, User, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Props {
@@ -19,6 +19,7 @@ export function Header({ fullName, email, avatarUrl, onToggleSidebar }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [dark, setDark] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     setDark(document.documentElement.classList.contains('dark'))
@@ -41,6 +42,12 @@ export function Header({ fullName, email, avatarUrl, onToggleSidebar }: Props) {
       .eq('is_read', false)
       .then(({ count }) => setUnreadCount(count ?? 0))
   }, [])
+
+  function handleRefresh() {
+    setRefreshing(true)
+    router.refresh()
+    setTimeout(() => setRefreshing(false), 700)
+  }
 
   function toggleTheme() {
     const next = !dark
@@ -73,6 +80,19 @@ export function Header({ fullName, email, avatarUrl, onToggleSidebar }: Props) {
       </button>
 
       <div className="flex items-center gap-1.5">
+        {/* Refresh */}
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="p-2 rounded-lg hover:bg-muted transition-colors text-foreground/60 hover:text-foreground disabled:opacity-50"
+          aria-label="Refresh halaman"
+        >
+          <RefreshCw
+            size={16}
+            className={refreshing ? 'animate-spin' : ''}
+          />
+        </button>
+
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}

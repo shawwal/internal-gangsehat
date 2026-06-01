@@ -53,6 +53,13 @@ export const navigation: NavItem[] = [
     icon: 'CalendarOff',
     roles: ['director'],
   },
+  {
+    key: 'director-targets',
+    label: 'Target Staff',
+    href: '/director/targets',
+    icon: 'Target',
+    roles: ['director'],
+  },
 
   // Finance
   {
@@ -116,6 +123,15 @@ export const navigation: NavItem[] = [
     roles: ['finance', 'marketing'],
   },
 
+  // Target (self-service for all non-director staff)
+  {
+    key: 'my-targets',
+    label: 'Target',
+    href: '/my-targets',
+    icon: 'Target',
+    roles: ['finance', 'hr', 'marketing', 'staff'],
+  },
+
   // Marketing
   {
     key: 'marketing-home',
@@ -145,14 +161,14 @@ export const navigation: NavItem[] = [
     label: 'Notifikasi',
     href: '/notifications',
     icon: 'Bell',
-    roles: ['director', 'finance', 'hr', 'marketing'],
+    roles: ['director', 'finance', 'hr', 'marketing', 'staff'],
   },
   {
     key: 'settings',
     label: 'Pengaturan',
     href: '/settings',
     icon: 'Settings',
-    roles: ['director', 'finance', 'hr', 'marketing'],
+    roles: ['director', 'finance', 'hr', 'marketing', 'staff'],
   },
 ]
 
