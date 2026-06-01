@@ -1,25 +1,18 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { ChevronLeft, ClipboardList } from 'lucide-react'
-import type { Patient } from '@/types'
+import { fetchPatient } from '@/app/actions/patients'
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
 export default async function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-
-  const { data: patient } = await supabase
-    .from('patients')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const patient = await fetchPatient(id)
 
   if (!patient) notFound()
 
-  const p = patient as Patient
-
+  const supabase = await createClient()
   const { data: visits } = await supabase
     .from('patient_visits')
     .select('*')
@@ -34,10 +27,7 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
           <ChevronLeft size={16} />
         </Link>
         <div>
-          <h1 className="text-xl font-semibold text-foreground">{p.full_name}</h1>
-          {p.medical_record_number && (
-            <p className="text-sm text-muted-foreground">MRN: {p.medical_record_number}</p>
-          )}
+          <h1 className="text-xl font-semibold text-foreground">{patient.name}</h1>
         </div>
       </div>
 
@@ -46,11 +36,10 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
           <h2 className="text-sm font-semibold text-foreground mb-3">Informasi Pasien</h2>
           <dl className="space-y-2 text-sm">
             {[
-              ['Tanggal Lahir', p.date_of_birth ?? '—'],
-              ['Jenis Kelamin', p.gender === 'male' ? 'Laki-laki' : p.gender === 'female' ? 'Perempuan' : p.gender ?? '—'],
-              ['Telepon', p.phone ?? '—'],
-              ['Email', p.email ?? '—'],
-              ['Alamat', p.address ?? '—'],
+              ['Tanggal Lahir', patient.birthDate ?? '—'],
+              ['Jenis Kelamin', patient.gender === 'male' ? 'Laki-laki' : patient.gender === 'female' ? 'Perempuan' : patient.gender ?? '—'],
+              ['Telepon', patient.phone ?? '—'],
+              ['Alamat', patient.address ?? '—'],
             ].map(([label, value]) => (
               <div key={label} className="flex gap-2">
                 <dt className="w-28 text-muted-foreground shrink-0">{label}</dt>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Search, UserPlus } from 'lucide-react'
+import { Search, UserPlus, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/types'
 
@@ -13,7 +13,7 @@ interface StaffRow {
   is_active: boolean
 }
 
-const ROLE_LABELS: Record<UserRole, string> = {
+const ROLE_LABELS: Record<string, string> = {
   director: 'Direktur', finance: 'Keuangan', hr: 'HR', marketing: 'Marketing',
 }
 
@@ -21,6 +21,8 @@ export default function HRStaffPage() {
   const [staff, setStaff]       = useState<StaffRow[]>([])
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
+  const [branchName, setBranchName]       = useState<string | null>(null)
+  const [noBranchWarning, setNoBranchWarning] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole]   = useState<UserRole>('marketing')
@@ -28,7 +30,28 @@ export default function HRStaffPage() {
   const [message, setMessage]   = useState('')
 
   async function load() {
-    const { data } = await createClient()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data: self } = await supabase
+      .from('internal_profiles')
+      .select('branch_id, branches(name)')
+      .eq('id', user.id)
+      .single()
+
+    const myBranchId   = (self as any)?.branch_id      ?? null
+    const myBranchName = (self as any)?.branches?.name ?? null
+    setBranchName(myBranchName)
+
+    if (!myBranchId) {
+      setNoBranchWarning(true)
+      setLoading(false)
+      return
+    }
+    setNoBranchWarning(false)
+
+    const { data } = await supabase
       .from('internal_profiles')
       .select('id, full_name, email, role, is_active')
       .order('full_name')
@@ -72,7 +95,9 @@ export default function HRStaffPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Staff</h1>
-          <p className="text-sm text-muted-foreground">Kelola staff di cabang Anda</p>
+          <p className="text-sm text-muted-foreground">
+            {branchName ? `Kelola staff cabang ${branchName}` : 'Kelola staff di cabang Anda'}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative w-56">
@@ -80,12 +105,21 @@ export default function HRStaffPage() {
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari..."
               className="w-full pl-8 pr-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
           </div>
-          <button onClick={() => setShowInvite(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-            <UserPlus size={16} /> Undang
-          </button>
+          {!noBranchWarning && (
+            <button onClick={() => setShowInvite(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+              <UserPlus size={16} /> Undang
+            </button>
+          )}
         </div>
       </div>
+
+      {noBranchWarning && (
+        <div className="flex items-start gap-3 bg-destructive/10 text-destructive rounded-2xl px-4 py-3 text-sm">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <p>Akun Anda belum terhubung ke cabang. Hubungi direktur untuk menetapkan cabang Anda.</p>
+        </div>
+      )}
 
       {message && (
         <p className="text-sm text-chart-4 bg-chart-4/10 rounded-xl px-4 py-2">{message}</p>
@@ -93,7 +127,7 @@ export default function HRStaffPage() {
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Memuat...</p>
-      ) : (
+      ) : !noBranchWarning && (
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -112,7 +146,7 @@ export default function HRStaffPage() {
                     <p className="text-xs text-muted-foreground">{s.email}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-xs bg-muted px-2 py-0.5 rounded-full">{ROLE_LABELS[s.role]}</span>
+                    <span className="text-xs bg-muted px-2 py-0.5 rounded-full">{ROLE_LABELS[s.role] ?? s.role}</span>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.is_active ? 'bg-chart-4/15 text-chart-4' : 'bg-muted text-muted-foreground'}`}>

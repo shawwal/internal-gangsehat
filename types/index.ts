@@ -25,18 +25,13 @@ export interface Profile {
 
 export interface Patient {
   id: string
-  branch_id: string
-  full_name: string
-  date_of_birth: string | null
-  gender: 'male' | 'female' | 'other' | null
-  phone: string | null
-  email: string | null
+  name: string
+  phone: string
   address: string | null
-  medical_record_number: string | null
-  is_active: boolean
-  created_by: string | null
-  created_at: string
-  updated_at: string
+  birthDate: string | null
+  gender: 'male' | 'female' | 'other' | null
+  isActive: boolean
+  createdAt: string
 }
 
 export type VisitStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show'

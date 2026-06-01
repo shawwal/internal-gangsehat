@@ -46,7 +46,7 @@ All tables have `id uuid PK DEFAULT gen_random_uuid()` and `created_at timestamp
 ### Clinical
 | Table | Key columns |
 |-------|-------------|
-| `patients` | branch_id, full_name, date_of_birth, gender(male/female/other), phone, email, address, medical_record_number UNIQUE, is_active, created_by→profiles |
+| `patients` | encrypted_name, encrypted_phone, encrypted_address, encrypted_birth_date, gender(male/female/other), is_active — **shared with gangsehat.com; no branch_id; PII encrypted AES-256-GCM. Read via `decryptPatientPII()` server-side (`lib/encryption.ts`). Internal staff access granted by migration 008 RLS policy.** |
 | `patient_visits` | patient_id, branch_id, visit_date, chief_complaint, diagnosis, treatment, attending_staff_id→profiles, status(scheduled/completed/cancelled/no_show), notes |
 
 ### Finance
@@ -69,8 +69,8 @@ All tables have `id uuid PK DEFAULT gen_random_uuid()` and `created_at timestamp
 
 ### Helper Functions
 ```sql
-get_my_role()   → text  -- SELECT role FROM internal_profiles WHERE id = auth.uid()
-get_my_branch() → uuid  -- SELECT branch_id FROM internal_profiles WHERE id = auth.uid() -- NULL for director
+get_my_internal_role() → text  -- SELECT role FROM internal_profiles WHERE id = auth.uid()
+get_my_branch()        → uuid  -- SELECT branch_id FROM internal_profiles WHERE id = auth.uid() -- NULL for director
 ```
 
 ## RLS Summary
@@ -79,7 +79,7 @@ get_my_branch() → uuid  -- SELECT branch_id FROM internal_profiles WHERE id = 
 |-------|-------------|----------|
 | branches | SELECT own branch | ALL |
 | internal_profiles | SELECT own row; HR SELECT own branch | ALL |
-| patients | ALL own branch (finance/hr/marketing) | ALL |
+| patients | SELECT all (internal staff, via migration 008 RLS) | SELECT all |
 | patient_visits | ALL own branch | ALL |
 | transactions | ALL own branch (finance) | ALL |
 | branch_financial_reports | ALL own branch (finance) | ALL |
@@ -121,7 +121,7 @@ app/
       overview/             ← cross-branch KPIs + charts + pending targets widget
       branches/             ← CRUD branches
       reports/              ← approve/reject monthly reports
-      staff/                ← manage all staff
+      users/                ← manage all staff & pengguna (staff/ redirects here)
       leave/                ← all leave requests: search, filter, paginate, approve/reject/delete + bulk delete
       targets/              ← all staff targets: search, filter, paginate, approve/reject/delete
     finance/
@@ -157,6 +157,8 @@ const { data: profiles } = await supabase.from('internal_profiles')
 const ids = profiles.map(p => p.id)
 query = query.in('staff_id', ids)
 ```
+
+**Patient PII encryption**: `lib/encryption.ts` provides `encryptPatientPII()` / `decryptPatientPII()` using AES-256-GCM (Node.js `crypto`, server-only). Never call these in `'use client'` components — use Server Actions in `app/actions/patients.ts` instead. Encrypted format: `iv:authTag:encryptedData` (hex). Shared `ENCRYPTION_KEY` env var works across both the internal app and gangsehat.com.
 
 **Storage cleanup on delete**: When deleting `leave_requests` with a `proof_url`, extract the path after `/leave-proofs/` and call `supabase.storage.from('leave-proofs').remove([path])` before the DB delete. Storage bucket: `leave-proofs` (public, 5 MB max, image + PDF).
 

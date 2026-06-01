@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ChevronLeft, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { fetchPatient } from '@/app/actions/patients'
 import type { PatientVisit, VisitStatus } from '@/types'
 
 const STATUS_OPTIONS: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
@@ -49,11 +50,11 @@ export default function PatientVisitsPage() {
 
   async function load() {
     const supabase = createClient()
-    const [{ data: p }, { data: v }] = await Promise.all([
-      supabase.from('patients').select('full_name').eq('id', id).single(),
+    const [patient, { data: v }] = await Promise.all([
+      fetchPatient(id),
       supabase.from('patient_visits').select('*').eq('patient_id', id).order('visit_date', { ascending: false }),
     ])
-    setPatientName(p?.full_name ?? '')
+    setPatientName(patient?.name ?? '')
     setVisits((v ?? []) as PatientVisit[])
     setLoading(false)
   }

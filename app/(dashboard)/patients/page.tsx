@@ -3,75 +3,46 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Search, Plus, HeartPulse } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import type { Patient } from '@/types'
+import { fetchPatients, addPatient, type PatientPlain } from '@/app/actions/patients'
 
 export default function PatientsPage() {
-  const [patients, setPatients] = useState<Patient[]>([])
+  const [patients, setPatients] = useState<PatientPlain[]>([])
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
   const [showForm, setShowForm] = useState(false)
   const [form, setForm]         = useState({
-    full_name: '', date_of_birth: '', gender: 'male' as Patient['gender'],
-    phone: '', email: '', address: '', medical_record_number: '',
+    name: '', birthDate: '', gender: 'male' as 'male' | 'female' | 'other',
+    phone: '', address: '',
   })
   const [saving, setSaving] = useState(false)
 
-  const [userId, setUserId]     = useState<string | null>(null)
-  const [branchId, setBranchId] = useState<string | null>(null)
-
-  async function loadProfile() {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: profile } = await supabase
-      .from('internal_profiles')
-      .select('branch_id')
-      .eq('id', user.id)
-      .single()
-    setUserId(user.id)
-    setBranchId(profile?.branch_id ?? null)
-  }
-
   async function load() {
-    const { data } = await createClient()
-      .from('patients')
-      .select('*')
-      .eq('is_active', true)
-      .order('full_name')
-    setPatients((data ?? []) as Patient[])
+    const data = await fetchPatients()
+    setPatients(data)
     setLoading(false)
   }
 
-  useEffect(() => { loadProfile().then(() => load()) }, [])
+  useEffect(() => { load() }, [])
 
   const filtered = patients.filter((p) =>
-    p.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.phone ?? '').includes(search) ||
-    (p.medical_record_number ?? '').toLowerCase().includes(search.toLowerCase())
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.phone ?? '').includes(search)
   )
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
-    if (!branchId) {
-      alert('Akun Anda belum terhubung ke cabang. Hubungi direktur.')
-      return
-    }
     setSaving(true)
-    await createClient().from('patients').insert({
-      branch_id:             branchId,
-      created_by:            userId,
-      full_name:             form.full_name,
-      date_of_birth:         form.date_of_birth || null,
-      gender:                form.gender,
-      phone:                 form.phone || null,
-      email:                 form.email || null,
-      address:               form.address || null,
-      medical_record_number: form.medical_record_number || null,
+    const { error } = await addPatient({
+      name:      form.name,
+      phone:     form.phone,
+      address:   form.address || undefined,
+      birthDate: form.birthDate || undefined,
+      gender:    form.gender,
     })
     setSaving(false)
+    if (error) { alert(error); return }
     setShowForm(false)
-    setForm({ full_name: '', date_of_birth: '', gender: 'male', phone: '', email: '', address: '', medical_record_number: '' })
+    setForm({ name: '', birthDate: '', gender: 'male', phone: '', address: '' })
     load()
   }
 
@@ -80,12 +51,12 @@ export default function PatientsPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Pasien</h1>
-          <p className="text-sm text-muted-foreground">Data pasien cabang</p>
+          <p className="text-sm text-muted-foreground">Data pasien</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative w-56">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama, MRN, telepon..."
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama, telepon..."
               className="w-full pl-8 pr-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
           </div>
           <button onClick={() => setShowForm(true)}
@@ -110,15 +81,12 @@ export default function PatientsPage() {
                   <HeartPulse size={16} className="text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">{p.full_name}</p>
-                  {p.medical_record_number && (
-                    <p className="text-xs text-muted-foreground">{p.medical_record_number}</p>
-                  )}
+                  <p className="text-sm font-semibold text-foreground">{p.name}</p>
                 </div>
               </div>
               <div className="text-xs text-muted-foreground space-y-0.5">
                 {p.phone && <p>📞 {p.phone}</p>}
-                {p.date_of_birth && <p>🎂 {p.date_of_birth}</p>}
+                {p.birthDate && <p>🎂 {p.birthDate}</p>}
                 {p.gender && <p className="capitalize">⚧ {p.gender === 'male' ? 'Laki-laki' : p.gender === 'female' ? 'Perempuan' : 'Lainnya'}</p>}
               </div>
             </Link>
@@ -136,23 +104,18 @@ export default function PatientsPage() {
             <form onSubmit={handleAdd} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Nama Lengkap</label>
-                <input required value={form.full_name} onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">No. Rekam Medis</label>
-                <input value={form.medical_record_number} onChange={(e) => setForm((f) => ({ ...f, medical_record_number: e.target.value }))}
+                <input required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">Tanggal Lahir</label>
-                  <input type="date" value={form.date_of_birth} onChange={(e) => setForm((f) => ({ ...f, date_of_birth: e.target.value }))}
+                  <input type="date" value={form.birthDate} onChange={(e) => setForm((f) => ({ ...f, birthDate: e.target.value }))}
                     className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">Jenis Kelamin</label>
-                  <select value={form.gender ?? 'male'} onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value as Patient['gender'] }))}
+                  <select value={form.gender} onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value as 'male' | 'female' | 'other' }))}
                     className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
                     <option value="male">Laki-laki</option>
                     <option value="female">Perempuan</option>
@@ -162,12 +125,7 @@ export default function PatientsPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Telepon</label>
-                <input type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">Email</label>
-                <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                <input type="tel" required value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
               <div>
