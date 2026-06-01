@@ -144,8 +144,11 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
           {/* Nav grid */}
           <div className="grid grid-cols-3 gap-2.5 px-4 pb-4">
             {items.map((item) => {
+              const isParent = item.href
+                ? items.some(i => i.href && i.href !== item.href && i.href.startsWith(item.href + '/'))
+                : false
               const isActive = item.href
-                ? (item.href === '/' ? pathname === '/' : pathname === item.href || pathname.startsWith(item.href + '/'))
+                ? (item.href === '/' ? pathname === '/' : isParent ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + '/'))
                 : false
 
               return (

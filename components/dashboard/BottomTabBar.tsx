@@ -32,11 +32,15 @@ export function BottomTabBar({ role, onMorePress }: Props) {
     return () => obs.disconnect()
   }, [])
 
-  const tabs = navForRole(role).slice(0, 4)
+  const allItems = navForRole(role)
+  const tabs = allItems.slice(0, 4)
 
   function isActive(href?: string) {
     if (!href) return false
     if (href === '/') return pathname === '/'
+    // If another nav item starts with this href + '/', it's a parent route — exact match only.
+    const isParent = allItems.some(i => i.href && i.href !== href && i.href.startsWith(href + '/'))
+    if (isParent) return pathname === href
     return pathname === href || pathname.startsWith(href + '/')
   }
 

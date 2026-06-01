@@ -25,6 +25,10 @@ export function Sidebar({ role, collapsed }: Props) {
 
   function isActive(href?: string) {
     if (!href) return false
+    // If another nav item starts with this href + '/', this is a parent route —
+    // use exact match only so /marketing doesn't activate on /marketing/campaigns.
+    const isParent = items.some(i => i.href && i.href !== href && i.href.startsWith(href + '/'))
+    if (isParent) return pathname === href
     return pathname === href || pathname.startsWith(href + '/')
   }
 

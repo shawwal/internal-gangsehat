@@ -346,7 +346,7 @@ CREATE TABLE public.internal_wilayah (
 CREATE TABLE public.leave_requests (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   staff_id uuid NOT NULL,
-  branch_id uuid NOT NULL,
+  branch_id uuid,
   start_date date NOT NULL,
   end_date date NOT NULL,
   reason text NOT NULL,
@@ -445,6 +445,7 @@ CREATE TABLE public.profiles (
   role USER-DEFINED NOT NULL DEFAULT 'patient'::user_role,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  star_level integer NOT NULL DEFAULT 0 CHECK (star_level >= 0 AND star_level <= 3),
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
@@ -491,6 +492,28 @@ CREATE TABLE public.session_packages (
   card_type integer,
   CONSTRAINT session_packages_pkey PRIMARY KEY (id),
   CONSTRAINT session_packages_card_type_fkey FOREIGN KEY (card_type) REFERENCES public.member_type(id)
+);
+CREATE TABLE public.staff_targets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  staff_id uuid NOT NULL,
+  branch_id uuid,
+  bulan integer NOT NULL CHECK (bulan >= 1 AND bulan <= 12),
+  tahun integer NOT NULL,
+  target_ta integer NOT NULL DEFAULT 0,
+  target_paket_klinik integer NOT NULL DEFAULT 0,
+  target_kunjungan integer NOT NULL DEFAULT 0,
+  target_visit integer NOT NULL DEFAULT 0,
+  notes text,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])),
+  reviewed_by uuid,
+  reviewed_at timestamp with time zone,
+  rejection_note text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT staff_targets_pkey PRIMARY KEY (id),
+  CONSTRAINT staff_targets_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.internal_profiles(id),
+  CONSTRAINT staff_targets_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT staff_targets_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.internal_profiles(id)
 );
 CREATE TABLE public.success_stories (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
