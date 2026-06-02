@@ -67,6 +67,13 @@ export const navigation: NavItem[] = [
     icon: 'ClipboardList',
     roles: ['director'],
   },
+  {
+    key: 'director-payroll',
+    label: 'Penggajian',
+    href: '/director/payroll',
+    icon: 'Wallet',
+    roles: ['director', 'manager'],
+  },
 
   // Finance
   {

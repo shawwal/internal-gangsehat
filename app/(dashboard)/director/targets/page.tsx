@@ -442,8 +442,8 @@ export default function DirectorTargetsPage() {
       {role !== null && (
         <div className="flex gap-2">
           {([
-            { value: 'staff' as TopTab, label: 'Target Staff' },
             { value: 'branch' as TopTab, label: 'Target Cabang' },
+            { value: 'staff' as TopTab, label: 'Target Staff' },
           ] as const).map(tab => (
             <button
               key={tab.value}

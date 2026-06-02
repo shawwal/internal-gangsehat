@@ -31,6 +31,10 @@ const ICON_GRADIENTS: Record<string, string> = {
   HeartPulse:      'from-red-400 to-rose-500',
   Bell:            'from-sky-400 to-sky-600',
   Settings:        'from-gray-400 to-gray-600',
+  Wallet:          'from-lime-400 to-green-600',
+  CalendarDays:    'from-sky-400 to-blue-500',
+  BarChart2:       'from-violet-400 to-violet-600',
+  ClipboardList:   'from-cyan-400 to-cyan-600',
 }
 
 function gradientFor(icon: string) {
