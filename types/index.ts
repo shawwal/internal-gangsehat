@@ -1,4 +1,4 @@
-export type UserRole = 'director' | 'finance' | 'hr' | 'marketing' | 'staff'
+export type UserRole = 'director' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'manager'
 
 export interface Branch {
   id: string

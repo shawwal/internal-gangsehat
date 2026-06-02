@@ -1,626 +1,260 @@
--- WARNING: This schema is for context only and is not meant to be run.
--- Table order and constraints may not be valid for execution.
+-- SCHEMA: public (token-optimised for Claude Code)
+-- Roles: patient|therapist|admin (profiles.role), director|hr|finance|marketing|staff (internal_profiles.role)
+-- Key auth links: profiles.id = auth.users.id, internal_profiles.id = auth.users.id
 
-CREATE TABLE public.attendance (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  staff_id uuid NOT NULL,
-  branch_id uuid NOT NULL,
-  date date NOT NULL DEFAULT CURRENT_DATE,
-  check_in timestamp with time zone,
-  check_out timestamp with time zone,
-  status text NOT NULL DEFAULT 'present'::text CHECK (status = ANY (ARRAY['present'::text, 'absent'::text, 'late'::text, 'leave'::text, 'sick'::text])),
-  notes text,
-  recorded_by uuid,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT attendance_pkey PRIMARY KEY (id),
-  CONSTRAINT attendance_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.internal_profiles(id),
-  CONSTRAINT attendance_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
-  CONSTRAINT attendance_recorded_by_fkey FOREIGN KEY (recorded_by) REFERENCES public.internal_profiles(id)
-);
-CREATE TABLE public.bank_accounts (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  bank_name character varying NOT NULL,
-  account_number character varying NOT NULL,
-  account_name character varying NOT NULL,
-  is_active boolean NOT NULL DEFAULT true,
-  sort_order integer NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT bank_accounts_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.blog_posts (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  title_id character varying NOT NULL,
-  title_en character varying NOT NULL,
-  slug character varying NOT NULL UNIQUE,
-  excerpt_id text NOT NULL,
-  excerpt_en text NOT NULL,
-  content_id text NOT NULL,
-  content_en text NOT NULL,
-  author character varying NOT NULL,
-  category character varying NOT NULL,
-  image_url text,
-  published_at timestamp with time zone,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  is_published boolean NOT NULL DEFAULT false,
-  meta_title_id character varying,
-  meta_description_id text,
-  meta_title_en character varying,
-  meta_description_en text,
-  CONSTRAINT blog_posts_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.booking_history (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  booking_id uuid NOT NULL,
-  previous_status text,
-  new_status text NOT NULL,
-  changed_by_user_id uuid,
-  changed_by_role text,
-  cancellation_reason text,
-  therapist_id uuid,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT booking_history_pkey PRIMARY KEY (id),
-  CONSTRAINT booking_history_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id),
-  CONSTRAINT booking_history_changed_by_user_id_fkey FOREIGN KEY (changed_by_user_id) REFERENCES auth.users(id),
-  CONSTRAINT booking_history_therapist_id_fkey FOREIGN KEY (therapist_id) REFERENCES public.therapists(id)
-);
-CREATE TABLE public.bookings (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  patient_id uuid,
-  therapist_id uuid,
-  service_type text NOT NULL,
-  scheduled_date date NOT NULL,
-  scheduled_time text NOT NULL,
-  duration_minutes integer NOT NULL DEFAULT 60,
-  encrypted_address text,
-  location_notes text,
-  estimated_price numeric,
-  patient_notes text,
-  therapist_notes text,
-  admin_notes text,
-  confirmed_at timestamp with time zone,
-  started_at timestamp with time zone,
-  completed_at timestamp with time zone,
-  cancelled_at timestamp with time zone,
-  cancellation_reason text,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  guest_name character varying,
-  guest_email character varying,
-  guest_phone character varying,
-  status text DEFAULT 'waiting_confirmation'::text,
-  city character varying,
-  discount_percentage numeric,
-  discounted_price numeric,
-  payment_method text,
-  payment_receipt_url text,
-  bank_name text,
-  bank_account_number text,
-  bank_account_name text,
-  rating integer CHECK (rating >= 1 AND rating <= 5),
-  feedback text,
-  guest_age integer,
-  guest_gender text CHECK (guest_gender = ANY (ARRAY['male'::text, 'female'::text])),
-  is_for_other boolean DEFAULT false,
-  location_lat double precision,
-  location_lng double precision,
-  distance_fee integer NOT NULL DEFAULT 0,
-  parent_name text,
-  parent_job text,
-  CONSTRAINT bookings_pkey PRIMARY KEY (id),
-  CONSTRAINT bookings_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
-  CONSTRAINT bookings_therapist_id_fkey FOREIGN KEY (therapist_id) REFERENCES public.therapists(id)
-);
-CREATE TABLE public.branch_financial_reports (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  branch_id uuid NOT NULL,
-  period_year integer NOT NULL,
-  period_month integer NOT NULL CHECK (period_month >= 1 AND period_month <= 12),
-  total_income numeric NOT NULL DEFAULT 0,
-  total_expense numeric NOT NULL DEFAULT 0,
-  net_profit numeric DEFAULT (total_income - total_expense),
-  patient_count integer NOT NULL DEFAULT 0,
-  visit_count integer NOT NULL DEFAULT 0,
-  submitted_by uuid,
-  submitted_at timestamp with time zone,
-  reviewed_by uuid,
-  reviewed_at timestamp with time zone,
-  status text NOT NULL DEFAULT 'draft'::text CHECK (status = ANY (ARRAY['draft'::text, 'submitted'::text, 'approved'::text, 'rejected'::text])),
-  notes text,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT branch_financial_reports_pkey PRIMARY KEY (id),
-  CONSTRAINT branch_financial_reports_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
-  CONSTRAINT branch_financial_reports_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES public.internal_profiles(id),
-  CONSTRAINT branch_financial_reports_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.internal_profiles(id)
-);
-CREATE TABLE public.branches (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  address text,
-  phone text,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT branches_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.campaigns (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  branch_id uuid NOT NULL,
-  title text NOT NULL,
-  description text,
-  channel text CHECK (channel = ANY (ARRAY['social_media'::text, 'whatsapp'::text, 'email'::text, 'flyer'::text, 'other'::text])),
-  start_date date,
-  end_date date,
-  budget numeric DEFAULT 0,
-  actual_spend numeric DEFAULT 0,
-  target_reach integer,
-  actual_reach integer,
-  status text NOT NULL DEFAULT 'draft'::text CHECK (status = ANY (ARRAY['draft'::text, 'active'::text, 'completed'::text, 'cancelled'::text])),
-  created_by uuid,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT campaigns_pkey PRIMARY KEY (id),
-  CONSTRAINT campaigns_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
-  CONSTRAINT campaigns_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.internal_profiles(id)
-);
-CREATE TABLE public.clinic_settings (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  setting_key text NOT NULL UNIQUE,
-  setting_value text,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT clinic_settings_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.dp_settings (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  is_active boolean NOT NULL DEFAULT false,
-  dp_percentage numeric NOT NULL DEFAULT 50.00,
-  transfer_enabled boolean NOT NULL DEFAULT true,
-  qris_enabled boolean NOT NULL DEFAULT true,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT dp_settings_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.gallery_videos (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  title_id character varying NOT NULL,
-  title_en character varying NOT NULL,
-  description_id text NOT NULL,
-  description_en text NOT NULL,
-  video_id character varying NOT NULL,
-  thumbnail_url text,
-  display_order integer NOT NULL DEFAULT 0,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT gallery_videos_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.homepage_services (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  title_id text NOT NULL,
-  title_en text NOT NULL,
-  description_id text NOT NULL DEFAULT ''::text,
-  description_en text NOT NULL DEFAULT ''::text,
-  icon text NOT NULL DEFAULT '💪'::text,
-  image_url text,
-  display_order integer NOT NULL DEFAULT 0,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  booking_type text NOT NULL DEFAULT 'fisioterapi'::text,
-  CONSTRAINT homepage_services_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.internal_cuti (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  tanggal_mulai date NOT NULL,
-  tanggal_selesai date NOT NULL,
-  alasan text NOT NULL,
-  bukti_url text,
-  status character varying NOT NULL DEFAULT 'MENUNGGU'::character varying CHECK (status::text = ANY (ARRAY['MENUNGGU'::character varying, 'DISETUJUI'::character varying, 'DITOLAK'::character varying]::text[])),
-  disetujui_oleh uuid,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_cuti_pkey PRIMARY KEY (id),
-  CONSTRAINT internal_cuti_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.internal_users(id),
-  CONSTRAINT internal_cuti_disetujui_oleh_fkey FOREIGN KEY (disetujui_oleh) REFERENCES public.internal_users(id)
-);
-CREATE TABLE public.internal_jabatan (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  nama character varying NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_jabatan_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.internal_jadwal (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  therapist_id uuid NOT NULL,
-  tanggal date NOT NULL,
-  shift character varying NOT NULL CHECK (shift::text = ANY (ARRAY['PAGI'::character varying, 'SORE'::character varying]::text[])),
-  status character varying NOT NULL DEFAULT 'TERSEDIA'::character varying CHECK (status::text = ANY (ARRAY['TERSEDIA'::character varying, 'OFF'::character varying, 'CUTI'::character varying, 'MASUK'::character varying]::text[])),
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_jadwal_pkey PRIMARY KEY (id),
-  CONSTRAINT internal_jadwal_therapist_id_fkey FOREIGN KEY (therapist_id) REFERENCES public.therapists(id)
-);
-CREATE TABLE public.internal_jam_shift (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  shift character varying NOT NULL CHECK (shift::text = ANY (ARRAY['PAGI'::character varying, 'SORE'::character varying]::text[])),
-  jam_mulai time without time zone NOT NULL,
-  jam_selesai time without time zone NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_jam_shift_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.internal_konfigurasi (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  kunci character varying NOT NULL UNIQUE,
-  nilai text NOT NULL,
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_konfigurasi_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.internal_layanan (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  nama character varying NOT NULL,
-  kategori character varying NOT NULL,
-  jumlah_sesi integer,
-  harga numeric NOT NULL DEFAULT 0,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_layanan_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.internal_master_jadwal (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  therapist_id uuid NOT NULL,
-  hari character varying NOT NULL,
-  shift character varying NOT NULL CHECK (shift::text = ANY (ARRAY['PAGI'::character varying, 'SORE'::character varying]::text[])),
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_master_jadwal_pkey PRIMARY KEY (id),
-  CONSTRAINT internal_master_jadwal_therapist_id_fkey FOREIGN KEY (therapist_id) REFERENCES public.therapists(id)
-);
-CREATE TABLE public.internal_order_meta (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  booking_id uuid NOT NULL,
-  kode_transaksi character varying NOT NULL UNIQUE,
-  status_bayar character varying NOT NULL DEFAULT 'Belum Lunas'::character varying CHECK (status_bayar::text = ANY (ARRAY['Belum Lunas'::character varying, 'Lunas'::character varying]::text[])),
-  catatan_admin text,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_order_meta_pkey PRIMARY KEY (id),
-  CONSTRAINT internal_order_meta_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id)
-);
-CREATE TABLE public.internal_profiles (
-  id uuid NOT NULL,
-  full_name text NOT NULL DEFAULT ''::text,
-  email text NOT NULL DEFAULT ''::text,
-  phone text,
-  role USER-DEFINED NOT NULL DEFAULT 'marketing'::internal_user_role,
-  branch_id uuid,
-  avatar_url text,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT internal_profiles_pkey PRIMARY KEY (id),
-  CONSTRAINT internal_profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
-  CONSTRAINT internal_profiles_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id)
-);
-CREATE TABLE public.internal_referensi (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  kunci character varying NOT NULL,
-  nilai text NOT NULL,
-  tipe character varying NOT NULL,
-  grup character varying,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_referensi_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.internal_target (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  therapist_id uuid NOT NULL,
-  bulan integer NOT NULL CHECK (bulan >= 1 AND bulan <= 12),
-  tahun integer NOT NULL,
-  target_terapi_awal integer NOT NULL DEFAULT 0,
-  target_paket_klinik integer NOT NULL DEFAULT 0,
-  target_kunjungan integer NOT NULL DEFAULT 0,
-  target_homevisit_paket integer NOT NULL DEFAULT 0,
-  approved boolean NOT NULL DEFAULT false,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_target_pkey PRIMARY KEY (id),
-  CONSTRAINT internal_target_therapist_id_fkey FOREIGN KEY (therapist_id) REFERENCES public.therapists(id)
-);
-CREATE TABLE public.internal_users (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  profile_id uuid NOT NULL,
-  jabatan_id uuid,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_users_pkey PRIMARY KEY (id),
-  CONSTRAINT internal_users_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id),
-  CONSTRAINT internal_users_jabatan_id_fkey FOREIGN KEY (jabatan_id) REFERENCES public.internal_jabatan(id)
-);
-CREATE TABLE public.internal_wilayah (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  kode character varying NOT NULL UNIQUE,
-  nama character varying NOT NULL,
-  tipe character varying NOT NULL CHECK (tipe::text = ANY (ARRAY['provinsi'::character varying, 'kabupaten'::character varying, 'kecamatan'::character varying, 'kelurahan'::character varying]::text[])),
-  parent_id uuid,
-  CONSTRAINT internal_wilayah_pkey PRIMARY KEY (id),
-  CONSTRAINT internal_wilayah_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.internal_wilayah(id)
-);
-CREATE TABLE public.leave_requests (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  staff_id uuid NOT NULL,
-  branch_id uuid,
-  start_date date NOT NULL,
-  end_date date NOT NULL,
-  reason text NOT NULL,
-  proof_url text,
-  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])),
-  reviewed_by uuid,
-  reviewed_at timestamp with time zone,
-  rejection_note text,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT leave_requests_pkey PRIMARY KEY (id),
-  CONSTRAINT leave_requests_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.internal_profiles(id),
-  CONSTRAINT leave_requests_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
-  CONSTRAINT leave_requests_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.internal_profiles(id)
-);
-CREATE TABLE public.member_type (
-  id integer NOT NULL DEFAULT nextval('member_type_id_seq'::regclass),
-  name character varying NOT NULL UNIQUE,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT member_type_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.patient_points (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  patient_id uuid NOT NULL UNIQUE,
-  total_points integer NOT NULL DEFAULT 0,
-  used_points integer NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT patient_points_pkey PRIMARY KEY (id),
-  CONSTRAINT patient_points_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id)
-);
-CREATE TABLE public.patient_visits (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  patient_id uuid NOT NULL,
-  branch_id uuid NOT NULL,
-  visit_date date NOT NULL DEFAULT CURRENT_DATE,
-  chief_complaint text,
-  diagnosis text,
-  treatment text,
-  attending_staff_id uuid,
-  status text NOT NULL DEFAULT 'scheduled'::text CHECK (status = ANY (ARRAY['scheduled'::text, 'completed'::text, 'cancelled'::text, 'no_show'::text])),
-  notes text,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT patient_visits_pkey PRIMARY KEY (id),
-  CONSTRAINT patient_visits_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
-  CONSTRAINT patient_visits_attending_staff_id_fkey FOREIGN KEY (attending_staff_id) REFERENCES public.internal_profiles(id)
-);
-CREATE TABLE public.patients (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  profile_id uuid,
-  encrypted_name text NOT NULL,
-  encrypted_phone text NOT NULL,
-  encrypted_address text,
-  encrypted_id_number text,
-  encrypted_birth_date text,
-  encrypted_emergency_contact text,
-  gender text CHECK (gender = ANY (ARRAY['male'::text, 'female'::text, 'other'::text])),
-  blood_type text CHECK (blood_type = ANY (ARRAY['A'::text, 'B'::text, 'AB'::text, 'O'::text, 'unknown'::text])),
-  allergies ARRAY,
-  medical_notes text,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  member_type_id integer,
-  last_booking_city text,
-  last_location_lat double precision,
-  last_location_lng double precision,
-  last_booking_age integer,
-  CONSTRAINT patients_pkey PRIMARY KEY (id),
-  CONSTRAINT patients_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id),
-  CONSTRAINT patients_member_type_id_fkey FOREIGN KEY (member_type_id) REFERENCES public.member_type(id)
-);
-CREATE TABLE public.point_transactions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  patient_id uuid NOT NULL,
-  package_id uuid,
-  points_change integer NOT NULL,
-  type character varying NOT NULL CHECK (type::text = ANY (ARRAY['purchase'::character varying, 'redeem'::character varying, 'adjustment'::character varying]::text[])),
-  booking_id uuid,
-  notes text,
-  created_by uuid,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT point_transactions_pkey PRIMARY KEY (id),
-  CONSTRAINT point_transactions_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
-  CONSTRAINT point_transactions_package_id_fkey FOREIGN KEY (package_id) REFERENCES public.session_packages(id),
-  CONSTRAINT point_transactions_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id),
-  CONSTRAINT point_transactions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
-);
+-- == PUBLIC TABLES (patient-facing) ==
+
+-- profiles: id(pk,fk→auth.users) email* full_name phone avatar_url role[patient|therapist|admin]* star_level[0-3]
 CREATE TABLE public.profiles (
-  id uuid NOT NULL,
+  id uuid PK FK→auth.users,
   email text NOT NULL,
-  full_name text,
-  phone text,
-  avatar_url text,
-  role USER-DEFINED NOT NULL DEFAULT 'patient'::user_role,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  star_level integer NOT NULL DEFAULT 0 CHECK (star_level >= 0 AND star_level <= 3),
-  CONSTRAINT profiles_pkey PRIMARY KEY (id),
-  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+  full_name text, phone text, avatar_url text,
+  role user_role NOT NULL DEFAULT 'patient',
+  star_level int NOT NULL DEFAULT 0 CHECK(0-3),
+  created_at timestamptz, updated_at timestamptz
 );
-CREATE TABLE public.service_areas (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  name text NOT NULL UNIQUE,
-  city text NOT NULL,
-  address text,
-  phone text,
-  hours text,
-  latitude numeric,
-  longitude numeric,
-  map_url text,
-  is_active boolean DEFAULT true,
-  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
-  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
-  CONSTRAINT service_areas_pkey PRIMARY KEY (id)
+
+-- patients: id(pk) profile_id(fk→profiles) encrypted_* gender blood_type allergies[] medical_notes is_active member_type_id last_booking_*
+CREATE TABLE public.patients (
+  id uuid PK,
+  profile_id uuid FK→profiles,
+  encrypted_name text NOT NULL, encrypted_phone text NOT NULL,
+  encrypted_address text, encrypted_id_number text, encrypted_birth_date text, encrypted_emergency_contact text,
+  gender text CHECK(male|female|other), blood_type text CHECK(A|B|AB|O|unknown),
+  allergies text[], medical_notes text, is_active bool NOT NULL DEFAULT true,
+  member_type_id int FK→member_type,
+  last_booking_city text, last_location_lat float, last_location_lng float, last_booking_age int,
+  created_at timestamptz, updated_at timestamptz
 );
-CREATE TABLE public.service_types (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  name text NOT NULL UNIQUE,
-  description text,
-  icon text,
-  price numeric NOT NULL,
-  duration_minutes integer NOT NULL DEFAULT 60,
-  is_active boolean NOT NULL DEFAULT true,
-  display_order integer,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  discount_percentage numeric DEFAULT 0,
-  discount_until date,
-  category text NOT NULL DEFAULT 'fisioterapi'::text,
-  image_url text,
-  CONSTRAINT service_types_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.session_packages (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  name character varying NOT NULL,
-  points_count integer NOT NULL CHECK (points_count > 0),
-  price numeric NOT NULL DEFAULT 0,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  card_type integer,
-  CONSTRAINT session_packages_pkey PRIMARY KEY (id),
-  CONSTRAINT session_packages_card_type_fkey FOREIGN KEY (card_type) REFERENCES public.member_type(id)
-);
-CREATE TABLE public.staff_targets (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  staff_id uuid NOT NULL,
-  branch_id uuid,
-  bulan integer NOT NULL CHECK (bulan >= 1 AND bulan <= 12),
-  tahun integer NOT NULL,
-  target_ta integer NOT NULL DEFAULT 0,
-  target_paket_klinik integer NOT NULL DEFAULT 0,
-  target_kunjungan integer NOT NULL DEFAULT 0,
-  target_visit integer NOT NULL DEFAULT 0,
-  notes text,
-  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])),
-  reviewed_by uuid,
-  reviewed_at timestamp with time zone,
-  rejection_note text,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT staff_targets_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_targets_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.internal_profiles(id),
-  CONSTRAINT staff_targets_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
-  CONSTRAINT staff_targets_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.internal_profiles(id)
-);
-CREATE TABLE public.success_stories (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  patient_name character varying NOT NULL,
-  condition character varying NOT NULL,
-  quote text NOT NULL,
-  image_url text,
-  display_order integer NOT NULL DEFAULT 0,
-  is_published boolean NOT NULL DEFAULT false,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT success_stories_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.therapist_ratings (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  therapist_id uuid NOT NULL,
-  patient_id uuid NOT NULL,
-  booking_id uuid NOT NULL UNIQUE,
-  rating integer NOT NULL CHECK (rating >= 1 AND rating <= 5),
-  feedback text,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT therapist_ratings_pkey PRIMARY KEY (id),
-  CONSTRAINT therapist_ratings_therapist_id_fkey FOREIGN KEY (therapist_id) REFERENCES public.therapists(id),
-  CONSTRAINT therapist_ratings_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
-  CONSTRAINT therapist_ratings_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id)
-);
+
+-- therapists: id(pk) profile_id(fk→profiles) specializations[] certifications[] license_number experience_years bio is_available working_hours(jsonb) service_areas[] current_location(jsonb) average_rating total_reviews avatar_url
 CREATE TABLE public.therapists (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  profile_id uuid,
-  specializations ARRAY NOT NULL DEFAULT '{}'::text[],
-  certifications ARRAY DEFAULT '{}'::text[],
-  license_number text,
-  experience_years integer DEFAULT 0,
-  bio text,
-  is_available boolean NOT NULL DEFAULT true,
-  working_hours jsonb DEFAULT '{"friday": {"end": "17:00", "start": "09:00"}, "monday": {"end": "17:00", "start": "09:00"}, "tuesday": {"end": "17:00", "start": "09:00"}, "thursday": {"end": "17:00", "start": "09:00"}, "wednesday": {"end": "17:00", "start": "09:00"}}'::jsonb,
-  service_areas ARRAY DEFAULT '{}'::text[],
-  current_location jsonb,
-  average_rating numeric DEFAULT 0.00,
-  total_reviews integer DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  avatar_url text,
-  CONSTRAINT therapists_pkey PRIMARY KEY (id),
-  CONSTRAINT therapists_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id)
+  id uuid PK,
+  profile_id uuid FK→profiles,
+  specializations text[] NOT NULL DEFAULT '{}',
+  certifications text[] DEFAULT '{}',
+  license_number text, experience_years int DEFAULT 0, bio text,
+  is_available bool NOT NULL DEFAULT true,
+  working_hours jsonb, service_areas text[], current_location jsonb,
+  average_rating numeric DEFAULT 0, total_reviews int DEFAULT 0,
+  avatar_url text, created_at timestamptz, updated_at timestamptz
 );
-CREATE TABLE public.transactions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  branch_id uuid NOT NULL,
-  patient_id uuid,
-  visit_id uuid,
-  type text NOT NULL CHECK (type = ANY (ARRAY['income'::text, 'expense'::text])),
-  category text NOT NULL,
-  amount numeric NOT NULL,
-  description text,
-  receipt_url text,
-  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'confirmed'::text, 'rejected'::text])),
-  rejection_reason text,
-  recorded_by uuid,
-  confirmed_by uuid,
-  transaction_date date NOT NULL DEFAULT CURRENT_DATE,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT transactions_pkey PRIMARY KEY (id),
-  CONSTRAINT transactions_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
-  CONSTRAINT transactions_visit_id_fkey FOREIGN KEY (visit_id) REFERENCES public.patient_visits(id),
-  CONSTRAINT transactions_recorded_by_fkey FOREIGN KEY (recorded_by) REFERENCES public.internal_profiles(id),
-  CONSTRAINT transactions_confirmed_by_fkey FOREIGN KEY (confirmed_by) REFERENCES public.internal_profiles(id)
+
+-- bookings: id(pk) patient_id(fk→patients) therapist_id(fk→therapists) service_type scheduled_date scheduled_time duration_minutes status[waiting_confirmation|...]
+-- also: encrypted_address location_notes estimated_price patient_notes therapist_notes admin_notes
+-- payment: payment_method payment_receipt_url bank_name bank_account_number bank_account_name discount_percentage discounted_price distance_fee
+-- guest fields: guest_name guest_email guest_phone guest_age guest_gender is_for_other parent_name parent_job
+-- timestamps: confirmed_at started_at completed_at cancelled_at cancellation_reason
+-- rating: rating[1-5] feedback
+CREATE TABLE public.bookings (
+  id uuid PK,
+  patient_id uuid FK→patients, therapist_id uuid FK→therapists,
+  service_type text NOT NULL, status text DEFAULT 'waiting_confirmation',
+  scheduled_date date NOT NULL, scheduled_time text NOT NULL, duration_minutes int DEFAULT 60,
+  city varchar, encrypted_address text, location_notes text, location_lat float, location_lng float,
+  estimated_price numeric, discounted_price numeric, discount_percentage numeric, distance_fee int DEFAULT 0,
+  payment_method text, payment_receipt_url text, bank_name text, bank_account_number text, bank_account_name text,
+  patient_notes text, therapist_notes text, admin_notes text,
+  rating int CHECK(1-5), feedback text,
+  guest_name varchar, guest_email varchar, guest_phone varchar, guest_age int, guest_gender text CHECK(male|female),
+  is_for_other bool DEFAULT false, parent_name text, parent_job text,
+  confirmed_at timestamptz, started_at timestamptz, completed_at timestamptz,
+  cancelled_at timestamptz, cancellation_reason text,
+  created_at timestamptz, updated_at timestamptz
 );
+
+-- treatment_logs: id(pk) booking_id(fk→bookings) therapist_id(fk→therapists) patient_id(fk→patients)
+-- treatment_type treatment_date duration_minutes symptoms diagnosis treatment_provided patient_response recommendations
+-- vitals(jsonb) follow_up_required follow_up_notes next_appointment_date attachments[]
+-- guest_name guest_email guest_phone
 CREATE TABLE public.treatment_logs (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  booking_id uuid NOT NULL,
-  therapist_id uuid NOT NULL,
-  patient_id uuid,
-  treatment_type text NOT NULL,
-  treatment_date date NOT NULL,
-  duration_minutes integer NOT NULL,
-  symptoms text,
-  diagnosis text,
-  treatment_provided text NOT NULL,
-  patient_response text,
-  recommendations text,
-  vitals jsonb,
-  follow_up_required boolean DEFAULT false,
-  follow_up_notes text,
-  next_appointment_date date,
-  attachments ARRAY DEFAULT '{}'::text[],
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  guest_name character varying,
-  guest_email character varying,
-  guest_phone character varying,
-  CONSTRAINT treatment_logs_pkey PRIMARY KEY (id),
-  CONSTRAINT treatment_logs_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id),
-  CONSTRAINT treatment_logs_therapist_id_fkey FOREIGN KEY (therapist_id) REFERENCES public.therapists(id),
-  CONSTRAINT treatment_logs_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id)
+  id uuid PK,
+  booking_id uuid NOT NULL FK→bookings,
+  therapist_id uuid NOT NULL FK→therapists,
+  patient_id uuid FK→patients,
+  treatment_type text NOT NULL, treatment_date date NOT NULL, duration_minutes int NOT NULL,
+  symptoms text, diagnosis text, treatment_provided text NOT NULL,
+  patient_response text, recommendations text, vitals jsonb,
+  follow_up_required bool DEFAULT false, follow_up_notes text, next_appointment_date date,
+  attachments text[] DEFAULT '{}',
+  guest_name varchar, guest_email varchar, guest_phone varchar,
+  created_at timestamptz, updated_at timestamptz
 );
-CREATE TABLE public.user_notifications (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid,
-  target_role USER-DEFINED,
-  title text NOT NULL,
-  message text,
-  link text,
-  is_read boolean NOT NULL DEFAULT false,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT user_notifications_pkey PRIMARY KEY (id),
-  CONSTRAINT user_notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.internal_profiles(id)
+
+-- booking_history: id(pk) booking_id(fk→bookings) previous_status new_status changed_by_user_id(fk→auth.users) changed_by_role cancellation_reason therapist_id(fk→therapists)
+CREATE TABLE public.booking_history (
+  id uuid PK,
+  booking_id uuid NOT NULL FK→bookings,
+  previous_status text, new_status text NOT NULL,
+  changed_by_user_id uuid FK→auth.users, changed_by_role text,
+  cancellation_reason text, therapist_id uuid FK→therapists,
+  created_at timestamptz
 );
+
+-- therapist_ratings: id(pk) therapist_id(fk→therapists) patient_id(fk→patients) booking_id(fk→bookings,unique) rating[1-5] feedback
+CREATE TABLE public.therapist_ratings (
+  id uuid PK,
+  therapist_id uuid NOT NULL FK→therapists,
+  patient_id uuid NOT NULL FK→patients,
+  booking_id uuid NOT NULL UNIQUE FK→bookings,
+  rating int NOT NULL CHECK(1-5), feedback text,
+  created_at timestamptz, updated_at timestamptz
+);
+
+-- == LOOKUP / CONFIG TABLES ==
+
+-- member_type: id(pk,serial) name(unique)
+CREATE TABLE public.member_type (id serial PK, name varchar NOT NULL UNIQUE, created_at timestamptz);
+
+-- service_types: id(pk) name(unique) description icon price* duration_minutes is_active display_order discount_percentage discount_until category image_url
+CREATE TABLE public.service_types (
+  id uuid PK, name text NOT NULL UNIQUE, description text, icon text,
+  price numeric NOT NULL, duration_minutes int DEFAULT 60, is_active bool DEFAULT true,
+  display_order int, discount_percentage numeric DEFAULT 0, discount_until date,
+  category text NOT NULL DEFAULT 'fisioterapi', image_url text,
+  created_at timestamptz, updated_at timestamptz
+);
+
+-- service_areas: id(pk) name(unique) city address phone hours latitude longitude map_url is_active
+CREATE TABLE public.service_areas (
+  id uuid PK, name text NOT NULL UNIQUE, city text NOT NULL,
+  address text, phone text, hours text,
+  latitude numeric, longitude numeric, map_url text,
+  is_active bool DEFAULT true, created_at timestamptz, updated_at timestamptz
+);
+
+-- clinic_settings: id(pk) setting_key(unique) setting_value
+CREATE TABLE public.clinic_settings (id uuid PK, setting_key text NOT NULL UNIQUE, setting_value text, created_at timestamptz, updated_at timestamptz);
+
+-- dp_settings: id(pk) is_active dp_percentage[50] transfer_enabled qris_enabled
+CREATE TABLE public.dp_settings (
+  id uuid PK, is_active bool DEFAULT false,
+  dp_percentage numeric DEFAULT 50, transfer_enabled bool DEFAULT true, qris_enabled bool DEFAULT true,
+  created_at timestamptz, updated_at timestamptz
+);
+
+-- bank_accounts: id(pk) bank_name account_number account_name is_active sort_order
+CREATE TABLE public.bank_accounts (
+  id uuid PK, bank_name varchar NOT NULL, account_number varchar NOT NULL,
+  account_name varchar NOT NULL, is_active bool DEFAULT true, sort_order int DEFAULT 0,
+  created_at timestamptz, updated_at timestamptz
+);
+
+-- == POINTS SYSTEM ==
+
+-- session_packages: id(pk) name points_count price is_active card_type(fk→member_type)
+CREATE TABLE public.session_packages (
+  id uuid PK, name varchar NOT NULL, points_count int NOT NULL CHECK(>0),
+  price numeric DEFAULT 0, is_active bool DEFAULT true,
+  card_type int FK→member_type, created_at timestamptz, updated_at timestamptz
+);
+
+-- patient_points: id(pk) patient_id(fk→patients,unique) total_points used_points
+CREATE TABLE public.patient_points (
+  id uuid PK, patient_id uuid NOT NULL UNIQUE FK→patients,
+  total_points int DEFAULT 0, used_points int DEFAULT 0,
+  created_at timestamptz, updated_at timestamptz
+);
+
+-- point_transactions: id(pk) patient_id(fk→patients) package_id(fk→session_packages) points_change type[purchase|redeem|adjustment] booking_id(fk→bookings) notes created_by(fk→profiles)
+CREATE TABLE public.point_transactions (
+  id uuid PK, patient_id uuid NOT NULL FK→patients,
+  package_id uuid FK→session_packages, points_change int NOT NULL,
+  type varchar NOT NULL CHECK(purchase|redeem|adjustment),
+  booking_id uuid FK→bookings, notes text, created_by uuid FK→profiles,
+  created_at timestamptz
+);
+
+-- == CMS TABLES (public read, admin write) ==
+
+-- success_stories: id(pk) patient_name condition quote image_url display_order is_published
+CREATE TABLE public.success_stories (id uuid PK, patient_name varchar NOT NULL, condition varchar NOT NULL, quote text NOT NULL, image_url text, display_order int DEFAULT 0, is_published bool DEFAULT false, created_at timestamptz, updated_at timestamptz);
+
+-- gallery_videos: id(pk) title_id title_en description_id description_en video_id thumbnail_url display_order is_active
+CREATE TABLE public.gallery_videos (id uuid PK, title_id varchar NOT NULL, title_en varchar NOT NULL, description_id text NOT NULL, description_en text NOT NULL, video_id varchar NOT NULL, thumbnail_url text, display_order int DEFAULT 0, is_active bool DEFAULT true, created_at timestamptz, updated_at timestamptz);
+
+-- blog_posts: id(pk) title_id title_en slug(unique) excerpt_id excerpt_en content_id content_en author category image_url published_at is_published meta_*
+CREATE TABLE public.blog_posts (id uuid PK, title_id varchar NOT NULL, title_en varchar NOT NULL, slug varchar NOT NULL UNIQUE, excerpt_id text NOT NULL, excerpt_en text NOT NULL, content_id text NOT NULL, content_en text NOT NULL, author varchar NOT NULL, category varchar NOT NULL, image_url text, published_at timestamptz, is_published bool DEFAULT false, meta_title_id varchar, meta_description_id text, meta_title_en varchar, meta_description_en text, created_at timestamptz, updated_at timestamptz);
+
+-- homepage_services: id(pk) title_id title_en description_id description_en icon image_url display_order is_active booking_type
+CREATE TABLE public.homepage_services (id uuid PK, title_id text NOT NULL, title_en text NOT NULL, description_id text DEFAULT '', description_en text DEFAULT '', icon text DEFAULT '💪', image_url text, display_order int DEFAULT 0, is_active bool DEFAULT true, booking_type text DEFAULT 'fisioterapi', created_at timestamptz, updated_at timestamptz);
+
+-- == INTERNAL / BRANCH TABLES ==
+
+-- branches: id(pk) name address phone is_active
+CREATE TABLE public.branches (id uuid PK, name text NOT NULL, address text, phone text, is_active bool DEFAULT true, created_at timestamptz, updated_at timestamptz);
+
+-- internal_profiles: id(pk,fk→auth.users) full_name email phone role[director|hr|finance|marketing|staff|therapist|manager]* branch_id(fk→branches) avatar_url is_active
+-- NOTE: this is the identity table for all internal staff; id = auth.uid()
+-- therapist: branch-scoped clinical staff (patient_visits, own attendance/leave/targets)
+-- manager: branch-scoped director equivalent (full access within own branch)
+CREATE TABLE public.internal_profiles (
+  id uuid PK FK→auth.users,
+  full_name text NOT NULL DEFAULT '', email text NOT NULL DEFAULT '',
+  phone text, role internal_user_role NOT NULL DEFAULT 'marketing',
+  branch_id uuid FK→branches, avatar_url text, is_active bool DEFAULT true,
+  created_at timestamptz, updated_at timestamptz
+);
+
+-- internal_jabatan: id(pk) nama  [position/job title lookup]
+CREATE TABLE public.internal_jabatan (id uuid PK, nama varchar NOT NULL, created_at timestamptz);
+
+-- internal_users: id(pk) profile_id(fk→profiles) jabatan_id(fk→internal_jabatan) is_active
+-- NOTE: links public patient-side profiles to internal job titles
+CREATE TABLE public.internal_users (id uuid PK, profile_id uuid NOT NULL FK→profiles, jabatan_id uuid FK→internal_jabatan, is_active bool DEFAULT true, created_at timestamptz);
+
+-- internal_layanan: id(pk) nama kategori jumlah_sesi harga is_active  [internal service catalog]
+CREATE TABLE public.internal_layanan (id uuid PK, nama varchar NOT NULL, kategori varchar NOT NULL, jumlah_sesi int, harga numeric DEFAULT 0, is_active bool DEFAULT true, created_at timestamptz);
+
+-- internal_jam_shift: id(pk) shift[PAGI|SORE] jam_mulai jam_selesai
+CREATE TABLE public.internal_jam_shift (id uuid PK, shift varchar NOT NULL CHECK(PAGI|SORE), jam_mulai time NOT NULL, jam_selesai time NOT NULL, created_at timestamptz);
+
+-- internal_master_jadwal: id(pk) therapist_id(fk→therapists) hari shift[PAGI|SORE]  [recurring schedule template]
+CREATE TABLE public.internal_master_jadwal (id uuid PK, therapist_id uuid NOT NULL FK→therapists, hari varchar NOT NULL, shift varchar NOT NULL CHECK(PAGI|SORE), created_at timestamptz);
+
+-- internal_jadwal: id(pk) therapist_id(fk→therapists) tanggal shift[PAGI|SORE] status[TERSEDIA|OFF|CUTI|MASUK]  [daily schedule]
+CREATE TABLE public.internal_jadwal (id uuid PK, therapist_id uuid NOT NULL FK→therapists, tanggal date NOT NULL, shift varchar NOT NULL CHECK(PAGI|SORE), status varchar NOT NULL DEFAULT 'TERSEDIA' CHECK(TERSEDIA|OFF|CUTI|MASUK), created_at timestamptz);
+
+-- internal_cuti: id(pk) user_id(fk→internal_users) tanggal_mulai tanggal_selesai alasan bukti_url status[MENUNGGU|DISETUJUI|DITOLAK] disetujui_oleh(fk→internal_users)
+CREATE TABLE public.internal_cuti (id uuid PK, user_id uuid NOT NULL FK→internal_users, tanggal_mulai date NOT NULL, tanggal_selesai date NOT NULL, alasan text NOT NULL, bukti_url text, status varchar NOT NULL DEFAULT 'MENUNGGU' CHECK(MENUNGGU|DISETUJUI|DITOLAK), disetujui_oleh uuid FK→internal_users, created_at timestamptz);
+
+-- internal_target: id(pk) therapist_id(fk→therapists) bulan[1-12] tahun target_terapi_awal target_paket_klinik target_kunjungan target_homevisit_paket approved
+CREATE TABLE public.internal_target (id uuid PK, therapist_id uuid NOT NULL FK→therapists, bulan int NOT NULL CHECK(1-12), tahun int NOT NULL, target_terapi_awal int DEFAULT 0, target_paket_klinik int DEFAULT 0, target_kunjungan int DEFAULT 0, target_homevisit_paket int DEFAULT 0, approved bool DEFAULT false, created_at timestamptz);
+
+-- internal_order_meta: id(pk) booking_id(fk→bookings) kode_transaksi(unique) status_bayar[Belum Lunas|Lunas] catatan_admin
+CREATE TABLE public.internal_order_meta (id uuid PK, booking_id uuid NOT NULL FK→bookings, kode_transaksi varchar NOT NULL UNIQUE, status_bayar varchar DEFAULT 'Belum Lunas' CHECK(Belum Lunas|Lunas), catatan_admin text, created_at timestamptz);
+
+-- internal_wilayah: id(pk) kode(unique) nama tipe[provinsi|kabupaten|kecamatan|kelurahan] parent_id(fk→self)  [region hierarchy]
+CREATE TABLE public.internal_wilayah (id uuid PK, kode varchar NOT NULL UNIQUE, nama varchar NOT NULL, tipe varchar NOT NULL CHECK(provinsi|kabupaten|kecamatan|kelurahan), parent_id uuid FK→internal_wilayah.id, CONSTRAINT self_ref);
+
+-- internal_referensi: id(pk) kunci nilai tipe grup  [generic key-value reference data]
+CREATE TABLE public.internal_referensi (id uuid PK, kunci varchar NOT NULL, nilai text NOT NULL, tipe varchar NOT NULL, grup varchar, created_at timestamptz);
+
+-- internal_konfigurasi: id(pk) kunci(unique) nilai  [system config key-value]
+CREATE TABLE public.internal_konfigurasi (id uuid PK, kunci varchar NOT NULL UNIQUE, nilai text NOT NULL, updated_at timestamptz);
+
+-- == BRANCH OPERATIONS ==
+
+-- patient_visits: id(pk) patient_id(fk→patients) branch_id(fk→branches) visit_date attending_staff_id(fk→internal_profiles) status[scheduled|completed|cancelled|no_show] chief_complaint diagnosis treatment notes
+CREATE TABLE public.patient_visits (id uuid PK, patient_id uuid NOT NULL FK→patients, branch_id uuid NOT NULL FK→branches, visit_date date DEFAULT CURRENT_DATE, attending_staff_id uuid FK→internal_profiles, status text DEFAULT 'scheduled' CHECK(scheduled|completed|cancelled|no_show), chief_complaint text, diagnosis text, treatment text, notes text, created_at timestamptz, updated_at timestamptz);
+
+-- transactions: id(pk) branch_id(fk→branches) patient_id(fk→patients) visit_id(fk→patient_visits) type[income|expense] category amount description receipt_url status[pending|confirmed|rejected] rejection_reason recorded_by(fk→internal_profiles) confirmed_by(fk→internal_profiles) transaction_date
+CREATE TABLE public.transactions (id uuid PK, branch_id uuid NOT NULL FK→branches, patient_id uuid FK→patients, visit_id uuid FK→patient_visits, type text NOT NULL CHECK(income|expense), category text NOT NULL, amount numeric NOT NULL, description text, receipt_url text, status text DEFAULT 'pending' CHECK(pending|confirmed|rejected), rejection_reason text, recorded_by uuid FK→internal_profiles, confirmed_by uuid FK→internal_profiles, transaction_date date DEFAULT CURRENT_DATE, created_at timestamptz, updated_at timestamptz);
+
+-- branch_financial_reports: id(pk) branch_id(fk→branches) period_year period_month[1-12] total_income total_expense net_profit patient_count visit_count status[draft|submitted|approved|rejected] submitted_by reviewed_by notes
+CREATE TABLE public.branch_financial_reports (id uuid PK, branch_id uuid NOT NULL FK→branches, period_year int NOT NULL, period_month int NOT NULL CHECK(1-12), total_income numeric DEFAULT 0, total_expense numeric DEFAULT 0, net_profit numeric, patient_count int DEFAULT 0, visit_count int DEFAULT 0, submitted_by uuid FK→internal_profiles, submitted_at timestamptz, reviewed_by uuid FK→internal_profiles, reviewed_at timestamptz, status text DEFAULT 'draft' CHECK(draft|submitted|approved|rejected), notes text, created_at timestamptz, updated_at timestamptz);
+
+-- attendance: id(pk) staff_id(fk→internal_profiles) branch_id(fk→branches) date check_in check_out status[present|absent|late|leave|sick] notes recorded_by(fk→internal_profiles)
+CREATE TABLE public.attendance (id uuid PK, staff_id uuid NOT NULL FK→internal_profiles, branch_id uuid NOT NULL FK→branches, date date DEFAULT CURRENT_DATE, check_in timestamptz, check_out timestamptz, status text DEFAULT 'present' CHECK(present|absent|late|leave|sick), notes text, recorded_by uuid FK→internal_profiles, created_at timestamptz);
+
+-- leave_requests: id(pk) staff_id(fk→internal_profiles) branch_id(fk→branches) start_date end_date reason proof_url status[pending|approved|rejected] reviewed_by(fk→internal_profiles) reviewed_at rejection_note
+CREATE TABLE public.leave_requests (id uuid PK, staff_id uuid NOT NULL FK→internal_profiles, branch_id uuid FK→branches, start_date date NOT NULL, end_date date NOT NULL, reason text NOT NULL, proof_url text, status text DEFAULT 'pending' CHECK(pending|approved|rejected), reviewed_by uuid FK→internal_profiles, reviewed_at timestamptz, rejection_note text, created_at timestamptz, updated_at timestamptz);
+
+-- campaigns: id(pk) branch_id(fk→branches) title description channel[social_media|whatsapp|email|flyer|other] start_date end_date budget actual_spend target_reach actual_reach status[draft|active|completed|cancelled] created_by(fk→internal_profiles)
+CREATE TABLE public.campaigns (id uuid PK, branch_id uuid NOT NULL FK→branches, title text NOT NULL, description text, channel text CHECK(social_media|whatsapp|email|flyer|other), start_date date, end_date date, budget numeric DEFAULT 0, actual_spend numeric DEFAULT 0, target_reach int, actual_reach int, status text DEFAULT 'draft' CHECK(draft|active|completed|cancelled), created_by uuid FK→internal_profiles, created_at timestamptz, updated_at timestamptz);
+
+-- staff_targets: id(pk) staff_id(fk→internal_profiles) branch_id(fk→branches) bulan[1-12] tahun target_ta target_paket_klinik target_kunjungan target_visit notes status[pending|approved|rejected] reviewed_by reviewed_at rejection_note
+CREATE TABLE public.staff_targets (id uuid PK, staff_id uuid NOT NULL FK→internal_profiles, branch_id uuid FK→branches, bulan int NOT NULL CHECK(1-12), tahun int NOT NULL, target_ta int DEFAULT 0, target_paket_klinik int DEFAULT 0, target_kunjungan int DEFAULT 0, target_visit int DEFAULT 0, notes text, status text DEFAULT 'pending' CHECK(pending|approved|rejected), reviewed_by uuid FK→internal_profiles, reviewed_at timestamptz, rejection_note text, created_at timestamptz, updated_at timestamptz);
+
+-- user_notifications: id(pk) user_id(fk→internal_profiles) target_role title message link is_read
+CREATE TABLE public.user_notifications (id uuid PK, user_id uuid FK→internal_profiles, target_role internal_user_role, title text NOT NULL, message text, link text, is_read bool DEFAULT false, created_at timestamptz);

@@ -21,7 +21,13 @@ interface UserRow {
 interface BranchOption { id: string; name: string }
 
 const ROLE_LABELS: Record<UserRole, string> = {
-  director: 'Direktur', finance: 'Keuangan', hr: 'HR', marketing: 'Marketing', staff: 'Staff',
+  director:  'Direktur',
+  finance:   'Keuangan',
+  hr:        'HR',
+  marketing: 'Marketing',
+  staff:     'Staff',
+  therapist: 'Terapis',
+  manager:   'Manager',
 }
 const ROLE_COLOR: Record<UserRole, string> = {
   director:  'bg-primary/10 text-primary',
@@ -29,9 +35,11 @@ const ROLE_COLOR: Record<UserRole, string> = {
   hr:        'bg-violet-500/15 text-violet-500',
   marketing: 'bg-secondary/20 text-secondary-foreground',
   staff:     'bg-muted text-muted-foreground',
+  therapist: 'bg-green-500/15 text-green-600',
+  manager:   'bg-orange-500/15 text-orange-600',
 }
 
-const STAFF_ROLES: UserRole[] = ['finance', 'hr', 'marketing', 'staff']
+const STAFF_ROLES: UserRole[] = ['finance', 'hr', 'marketing', 'staff', 'therapist', 'manager']
 
 type Tab = 'staff' | 'director'
 

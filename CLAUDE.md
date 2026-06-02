@@ -20,17 +20,24 @@ Key utilities:
 
 ## Roles
 ```sql
-CREATE TYPE public.user_role AS ENUM ('director','finance','hr','marketing');
+CREATE TYPE public.internal_user_role AS ENUM (
+  'director', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'manager'
+);
 ```
 
-| Role      | Patients    | Finances    | Staff/HR    | Marketing   | Cross-branch |
-|-----------|-------------|-------------|-------------|-------------|--------------|
-| director  | all         | all         | all         | all         | yes          |
-| finance   | read (own)  | full (own)  | —           | —           | no           |
-| hr        | —           | —           | full (own)  | —           | no           |
-| marketing | —           | —           | —           | full (own)  | no           |
+| Role      | Patients        | Finances    | Staff/HR    | Marketing   | Cross-branch |
+|-----------|-----------------|-------------|-------------|-------------|--------------|
+| director  | all             | all         | all         | all         | yes          |
+| finance   | read (own)      | full (own)  | —           | —           | no           |
+| hr        | —               | —           | full (own)  | —           | no           |
+| marketing | —               | —           | —           | full (own)  | no           |
+| therapist | visits (own br) | —           | own only    | —           | no           |
+| manager   | all (own br)    | all (own br)| all (own br)| all (own br)| no           |
+| staff     | visits (own br) | —           | own only    | —           | no           |
 
-Director has `branch_id = NULL` — this is the signal for cross-branch access in RLS.
+- **director**: `branch_id = NULL` — cross-branch access signal in RLS
+- **therapist**: branch-scoped clinical staff; falls through existing `branch_id = get_my_branch()` policies; manages own attendance, leave, targets, and patient visits
+- **manager**: branch-scoped director equivalent; full access within own branch across all domains (finance, HR, marketing, clinical)
 
 ## Database Schema
 
