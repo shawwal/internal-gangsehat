@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
-import { GeistSans } from 'geist/font/sans'
-import { GeistMono } from 'geist/font/mono'
+import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
+
+const geist = Geist({ subsets: ['latin'] })
+const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 export const metadata: Metadata = {
   title: 'Gangsehat Internal',
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={`h-full ${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
+    <html lang="id" className="h-full" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -22,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="h-full font-sans">{children}</body>
+      <body className={`h-full ${geist.className} ${geistMono.variable} font-sans`}>{children}</body>
     </html>
   )
 }

@@ -70,3 +70,37 @@ export const MONTHS = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ]
+
+// ── Branch Targets ─────────────────────────────────────────────────────────
+
+export interface BranchTargetRow {
+  id: string
+  branch_id: string
+  bulan: number
+  tahun: number
+  target_ta: number
+  target_paket_klinik: number
+  target_kunjungan: number
+  target_visit: number
+  notes: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  rejection_note: string | null
+  created_at: string
+  branches: { name: string } | null
+  // Only set_by join to avoid PostgREST dual-FK collision with reviewed_by
+  internal_profiles: { full_name: string } | null
+}
+
+export interface BranchTargetFilters {
+  status: StatusFilter
+  branchId: string   // 'all' or uuid — ignored for manager (RLS scopes it)
+  month: string      // 'all' or '1'–'12'
+  year: string
+}
+
+export const DEFAULT_BRANCH_FILTERS: BranchTargetFilters = {
+  status: 'all',
+  branchId: 'all',
+  month: 'all',
+  year: String(new Date().getFullYear()),
+}

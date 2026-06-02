@@ -55,10 +55,10 @@ export const navigation: NavItem[] = [
   },
   {
     key: 'director-targets',
-    label: 'Target Staff',
+    label: 'Target',
     href: '/director/targets',
     icon: 'Target',
-    roles: ['director'],
+    roles: ['director', 'manager'],
   },
   {
     key: 'director-orders',
