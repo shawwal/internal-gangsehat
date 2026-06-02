@@ -3,6 +3,7 @@
 import { X } from 'lucide-react'
 import type { PayrollRecord } from './types'
 import { MONTHS, formatRupiah, calcNet } from './types'
+import { CurrencyInput } from './CurrencyInput'
 
 export interface PayrollEditFormState {
   base_salary: number
@@ -23,7 +24,11 @@ interface Props {
   onCancel: () => void
 }
 
-const FIELDS: { field: keyof PayrollEditFormState; label: string; negative?: boolean }[] = [
+const FIELDS: {
+  field: keyof PayrollEditFormState
+  label: string
+  negative?: boolean
+}[] = [
   { field: 'base_salary',         label: 'Gaji Pokok' },
   { field: 'transport_allowance', label: 'Tunjangan Transport' },
   { field: 'meal_allowance',      label: 'Tunjangan Makan' },
@@ -33,25 +38,7 @@ const FIELDS: { field: keyof PayrollEditFormState; label: string; negative?: boo
 ]
 
 export function PayrollEditForm({ record, form, saving, onChange, onSubmit, onCancel }: Props) {
-  function numInput(field: keyof PayrollEditFormState) {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
-      const raw = e.target.value.replace(/^0+(?=\d)/, '')
-      onChange({ ...form, [field]: Math.max(0, parseInt(raw) || 0) })
-    }
-  }
-
-  function selectAll(e: React.FocusEvent<HTMLInputElement>) {
-    e.target.select()
-  }
-
-  const previewNet = calcNet({
-    base_salary: form.base_salary,
-    transport_allowance: form.transport_allowance,
-    meal_allowance: form.meal_allowance,
-    other_allowance: form.other_allowance,
-    bonus_achievement: form.bonus_achievement,
-    deductions: form.deductions,
-  })
+  const previewNet = calcNet(form)
 
   return (
     <div className="glass-card p-5 space-y-4">
@@ -76,26 +63,32 @@ export function PayrollEditForm({ record, form, saving, onChange, onSubmit, onCa
       </div>
 
       <form onSubmit={onSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          {FIELDS.map(({ field, label }) => (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          {FIELDS.map(({ field, label, negative }) => (
             <div key={field}>
-              <label className="block text-xs font-medium text-foreground mb-1.5">{label}</label>
-              <input
-                type="number"
-                min={0}
+              <label className="block text-xs font-medium text-foreground mb-1.5">
+                {label}
+                {negative && (
+                  <span className="ml-1 text-[10px] text-destructive font-normal">(pengurang)</span>
+                )}
+              </label>
+              <CurrencyInput
                 value={form[field] as number}
-                onChange={numInput(field)}
-                onFocus={selectAll}
-                className="w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                onChange={v => onChange({ ...form, [field]: v })}
+                inputClassName={negative ? 'border-destructive/40 focus:ring-destructive/30' : ''}
               />
             </div>
           ))}
         </div>
 
         {/* Live net preview */}
-        <div className="flex items-center justify-between bg-muted/40 rounded-xl px-3 py-2.5">
-          <span className="text-xs font-medium text-muted-foreground">Preview Total Bersih</span>
-          <span className="text-sm font-bold text-foreground">{formatRupiah(previewNet)}</span>
+        <div className="flex items-center justify-between bg-muted/40 rounded-xl px-4 py-3 border border-border/50">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Preview Total Bersih</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-bold text-foreground">{formatRupiah(previewNet)}</p>
+          </div>
         </div>
 
         <div>

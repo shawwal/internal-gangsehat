@@ -4,28 +4,33 @@ import { useState } from 'react'
 import { Save, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { SalarySetting } from './types'
-import { ROLE_LABELS, ALL_ROLES, formatRupiah } from './types'
+import { ROLE_LABELS, ALL_ROLES } from './types'
+import { CurrencyInput } from './CurrencyInput'
 
 interface Props {
   settings: SalarySetting[]
   onSaved: (updated: SalarySetting[]) => void
 }
 
+// Store IDR fields as numbers, pct as string
 type RowDraft = {
-  base_salary: string
-  transport_allowance: string
-  meal_allowance: string
+  base_salary: number
+  transport_allowance: number
+  meal_allowance: number
   bonus_target_pct: string
 }
 
 function toRowDraft(s: SalarySetting): RowDraft {
   return {
-    base_salary: String(s.base_salary),
-    transport_allowance: String(s.transport_allowance),
-    meal_allowance: String(s.meal_allowance),
-    bonus_target_pct: String(s.bonus_target_pct),
+    base_salary:         s.base_salary,
+    transport_allowance: s.transport_allowance,
+    meal_allowance:      s.meal_allowance,
+    bonus_target_pct:    String(s.bonus_target_pct),
   }
 }
+
+// Fallback row for roles not yet in DB
+const EMPTY_ROW: RowDraft = { base_salary: 0, transport_allowance: 0, meal_allowance: 0, bonus_target_pct: '0' }
 
 export function SalarySettingsTable({ settings, onSaved }: Props) {
   const [drafts, setDrafts] = useState<Record<string, RowDraft>>(() => {
@@ -36,8 +41,12 @@ export function SalarySettingsTable({ settings, onSaved }: Props) {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
 
-  function update(role: string, field: keyof RowDraft, value: string) {
-    setDrafts(d => ({ ...d, [role]: { ...d[role], [field]: value } }))
+  function setIDR(role: string, field: 'base_salary' | 'transport_allowance' | 'meal_allowance', value: number) {
+    setDrafts(d => ({ ...d, [role]: { ...(d[role] ?? EMPTY_ROW), [field]: value } }))
+  }
+
+  function setPct(role: string, value: string) {
+    setDrafts(d => ({ ...d, [role]: { ...(d[role] ?? EMPTY_ROW), bonus_target_pct: value } }))
   }
 
   async function handleSave() {
@@ -45,14 +54,17 @@ export function SalarySettingsTable({ settings, onSaved }: Props) {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    const upserts = ALL_ROLES.map(role => ({
-      role,
-      base_salary:         Math.max(0, parseInt(drafts[role]?.base_salary ?? '0') || 0),
-      transport_allowance: Math.max(0, parseInt(drafts[role]?.transport_allowance ?? '0') || 0),
-      meal_allowance:      Math.max(0, parseInt(drafts[role]?.meal_allowance ?? '0') || 0),
-      bonus_target_pct:    Math.max(0, parseFloat(drafts[role]?.bonus_target_pct ?? '0') || 0),
-      updated_by:          user?.id ?? null,
-    }))
+    const upserts = ALL_ROLES.map(role => {
+      const row = drafts[role] ?? EMPTY_ROW
+      return {
+        role,
+        base_salary:         Math.max(0, row.base_salary),
+        transport_allowance: Math.max(0, row.transport_allowance),
+        meal_allowance:      Math.max(0, row.meal_allowance),
+        bonus_target_pct:    Math.max(0, parseFloat(row.bonus_target_pct) || 0),
+        updated_by:          user?.id ?? null,
+      }
+    })
 
     const { data, error } = await supabase
       .from('salary_settings')
@@ -69,20 +81,13 @@ export function SalarySettingsTable({ settings, onSaved }: Props) {
     setTimeout(() => setToast(''), 4000)
   }
 
-  const COLS: { field: keyof RowDraft; label: string; pct?: boolean }[] = [
-    { field: 'base_salary',         label: 'Gaji Pokok (Rp)' },
-    { field: 'transport_allowance', label: 'Transport (Rp)' },
-    { field: 'meal_allowance',      label: 'Makan (Rp)' },
-    { field: 'bonus_target_pct',    label: 'Bonus Target (%)', pct: true },
-  ]
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold text-foreground">Formula Gaji per Jabatan</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Nilai default yang digunakan saat generate penggajian. Override per karyawan tetap diprioritaskan.
+            Nilai default saat generate penggajian. Override per karyawan tetap diprioritaskan.
           </p>
         </div>
         <button
@@ -95,52 +100,90 @@ export function SalarySettingsTable({ settings, onSaved }: Props) {
         </button>
       </div>
 
-      {/* Desktop table */}
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border/50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide w-32">
                   Jabatan
                 </th>
-                {COLS.map(c => (
-                  <th key={c.field} className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    {c.label}
-                  </th>
-                ))}
+                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Gaji Pokok (Rp)
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Transport (Rp)
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Makan (Rp)
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Bonus Target (%)
+                </th>
               </tr>
             </thead>
             <tbody>
-              {ALL_ROLES.map((role, i) => (
-                <tr key={role} className={`${i !== ALL_ROLES.length - 1 ? 'border-b border-border/30' : ''} hover:bg-muted/20 transition-colors`}>
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-medium text-foreground">{ROLE_LABELS[role]}</span>
-                  </td>
-                  {COLS.map(c => (
-                    <td key={c.field} className="px-4 py-3">
+              {ALL_ROLES.map((role, i) => {
+                const row = drafts[role] ?? EMPTY_ROW
+                return (
+                  <tr
+                    key={role}
+                    className={`${i !== ALL_ROLES.length - 1 ? 'border-b border-border/30' : ''} hover:bg-muted/20 transition-colors`}
+                  >
+                    <td className="px-4 py-2">
+                      <span className="text-sm font-medium text-foreground">{ROLE_LABELS[role]}</span>
+                    </td>
+
+                    {/* Gaji Pokok */}
+                    <td className="px-4 py-2 min-w-[160px]">
+                      <CurrencyInput
+                        value={row.base_salary}
+                        onChange={v => setIDR(role, 'base_salary', v)}
+                      />
+                    </td>
+
+                    {/* Transport */}
+                    <td className="px-4 py-2 min-w-[140px]">
+                      <CurrencyInput
+                        value={row.transport_allowance}
+                        onChange={v => setIDR(role, 'transport_allowance', v)}
+                      />
+                    </td>
+
+                    {/* Makan */}
+                    <td className="px-4 py-2 min-w-[140px]">
+                      <CurrencyInput
+                        value={row.meal_allowance}
+                        onChange={v => setIDR(role, 'meal_allowance', v)}
+                      />
+                    </td>
+
+                    {/* Bonus % — plain number input, not IDR */}
+                    <td className="px-4 py-2 min-w-[110px]">
                       <input
                         type="number"
                         min={0}
-                        step={c.pct ? '0.1' : '1000'}
-                        value={drafts[role]?.[c.field] ?? '0'}
-                        onChange={e => update(role, c.field, e.target.value)}
+                        max={100}
+                        step="0.1"
+                        value={row.bonus_target_pct}
+                        onChange={e => setPct(role, e.target.value)}
                         onFocus={e => e.target.select()}
-                        className="w-full text-right px-2.5 py-1.5 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring min-w-[100px]"
+                        className="w-full text-right px-2.5 py-1.5 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                       />
+                      {/* Spacer so rows stay the same height as IDR columns */}
+                      <p className="h-[14px]" />
                     </td>
-                  ))}
-                </tr>
-              ))}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Info note */}
       <p className="text-xs text-muted-foreground bg-muted/30 px-4 py-3 rounded-xl">
-        <strong>Bonus Target (%):</strong> Persentase dari gaji pokok yang ditambahkan sebagai bonus jika karyawan mencapai 100% target bulanan.
-        Contoh: Gaji pokok Rp 5.000.000 dengan bonus target 10% → bonus Rp 500.000 jika target tercapai penuh.
+        <strong>Bonus Target (%):</strong> Persentase dari gaji pokok sebagai bonus jika karyawan mencapai 100% target bulanan.
+        Contoh: Gaji pokok Rp 5.000.000 dengan bonus 10% → bonus Rp 500.000 jika target tercapai penuh.
       </p>
 
       {toast && (

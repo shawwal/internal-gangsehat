@@ -1,5 +1,5 @@
 import type { PayrollRecord } from './types'
-import { MONTHS, ROLE_LABELS, formatRupiah, calcNet } from './types'
+import { MONTHS, ROLE_LABELS, formatRupiah, toHumanIDR, calcNet } from './types'
 
 export function generatePayrollInvoice(record: PayrollRecord) {
   const staffName  = record.internal_profiles?.full_name ?? '—'
@@ -13,17 +13,35 @@ export function generatePayrollInvoice(record: PayrollRecord) {
     day: 'numeric', month: 'long', year: 'numeric',
   })
 
-  const earningsRows: { label: string; value: number }[] = [
-    { label: 'Gaji Pokok',          value: record.base_salary },
-    { label: 'Tunjangan Transport',  value: record.transport_allowance },
-    { label: 'Tunjangan Makan',      value: record.meal_allowance },
+  /** Render a table row: label | amount (Rp) | human-readable */
+  function row(label: string, value: number, isDeduction = false): string {
+    const human = toHumanIDR(value)
+    const color = isDeduction ? '#dc2626' : '#111'
+    const amountStr = isDeduction
+      ? `<span style="color:#dc2626">(${formatRupiah(value)})</span>`
+      : formatRupiah(value)
+    return `
+    <tr>
+      <td style="color:${color}">${label}</td>
+      <td class="amt" style="color:${color}">${amountStr}</td>
+      <td class="hint">${isDeduction ? '' : human}</td>
+    </tr>`
+  }
+
+  const earningsRows = [
+    row('Gaji Pokok',           record.base_salary),
+    row('Tunjangan Transport',  record.transport_allowance),
+    row('Tunjangan Makan',      record.meal_allowance),
     ...(record.other_allowance > 0
-      ? [{ label: 'Tunjangan Lainnya', value: record.other_allowance }]
+      ? [row('Tunjangan Lainnya', record.other_allowance)]
       : []),
     ...(record.bonus_achievement > 0
-      ? [{ label: 'Bonus Pencapaian', value: record.bonus_achievement }]
+      ? [row('Bonus Pencapaian', record.bonus_achievement)]
       : []),
-  ]
+    ...(record.deductions > 0
+      ? [row('Potongan', record.deductions, true)]
+      : []),
+  ].join('')
 
   const html = `<!DOCTYPE html>
 <html lang="id">
@@ -33,45 +51,50 @@ export function generatePayrollInvoice(record: PayrollRecord) {
   <title>Slip Gaji — ${staffName} — ${period}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       font-family: Arial, Helvetica, sans-serif;
       font-size: 13px;
       color: #111;
-      background: #f5f5f5;
+      background: #f0f0f0;
       padding: 32px 16px;
     }
+
     .sheet {
       background: #fff;
-      max-width: 680px;
+      max-width: 700px;
       margin: 0 auto;
-      padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 2px 16px rgba(0,0,0,.08);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,.10);
     }
 
-    /* ── Header ── */
-    .header {
+    /* ── Pink top bar ── */
+    .top-bar {
+      background: #FF0090;
+      padding: 20px 32px;
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #FF0090;
-      margin-bottom: 28px;
+      align-items: center;
     }
-    .brand       { font-size: 22px; font-weight: 800; color: #FF0090; letter-spacing: -0.5px; }
-    .brand-sub   { font-size: 11px; color: #888; margin-top: 3px; }
-    .slip-meta   { text-align: right; }
-    .slip-meta h2 { font-size: 18px; font-weight: 700; }
-    .slip-meta p  { font-size: 12px; color: #888; margin-top: 4px; }
+    .brand       { color: #fff; }
+    .brand-name  { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .brand-sub   { font-size: 11px; opacity: .75; margin-top: 2px; }
+    .slip-label  { text-align: right; color: #fff; }
+    .slip-label h2 { font-size: 20px; font-weight: 700; }
+    .slip-label p  { font-size: 12px; opacity: .75; margin-top: 3px; }
 
-    /* ── Employee info ── */
+    /* ── Body ── */
+    .body { padding: 28px 32px; }
+
+    /* ── Employee info grid ── */
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 14px;
       background: #fafafa;
       border: 1px solid #eee;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 16px 20px;
       margin-bottom: 28px;
     }
@@ -79,7 +102,7 @@ export function generatePayrollInvoice(record: PayrollRecord) {
       display: block;
       font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
+      letter-spacing: 0.7px;
       color: #aaa;
       margin-bottom: 3px;
     }
@@ -87,33 +110,47 @@ export function generatePayrollInvoice(record: PayrollRecord) {
 
     /* ── Salary table ── */
     table { width: 100%; border-collapse: collapse; }
+
     thead tr { background: #FF0090; }
     thead th {
       padding: 10px 16px;
       color: #fff;
-      font-size: 12px;
-      font-weight: 600;
-      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    thead th:last-child { text-align: right; }
+    thead th:first-child  { text-align: left; }
+    thead th.amt          { text-align: right; width: 170px; }
+    thead th.hint         { text-align: right; width: 120px; font-weight: 400; opacity: .7; }
+
     tbody tr { border-bottom: 1px solid #f0f0f0; }
-    tbody tr:hover { background: #fef9fb; }
-    tbody td { padding: 10px 16px; font-size: 13px; }
-    tbody td:last-child { text-align: right; font-weight: 500; }
-    .row-deduction td { color: #dc2626; }
-    .row-total {
-      border-top: 2px solid #FF0090 !important;
-      background: #fff8fc !important;
+    tbody tr:last-child { border-bottom: none; }
+    tbody td { padding: 10px 16px; font-size: 13px; vertical-align: middle; }
+    tbody td.amt  { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+    tbody td.hint {
+      text-align: right;
+      font-size: 11px;
+      color: #aaa;
+      font-style: italic;
+      white-space: nowrap;
     }
-    .row-total td { font-weight: 700; font-size: 14px; padding: 12px 16px; }
-    .row-total td:last-child { color: #FF0090; }
+
+    /* ── Total row ── */
+    .row-total { border-top: 2px solid #FF0090 !important; background: #fff8fc !important; }
+    .row-total td { font-size: 14px; font-weight: 700; padding: 14px 16px; }
+    .row-total td.amt { color: #FF0090; font-size: 16px; }
+    .row-total td.hint { font-size: 12px; color: #FF0090; font-style: normal; font-weight: 600; }
 
     /* ── Notes ── */
     .notes {
-      margin-top: 12px;
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: #fffbe6;
+      border-left: 3px solid #f59e0b;
+      border-radius: 0 6px 6px 0;
       font-size: 12px;
-      color: #666;
-      font-style: italic;
+      color: #555;
     }
 
     /* ── Signatures ── */
@@ -124,8 +161,8 @@ export function generatePayrollInvoice(record: PayrollRecord) {
     }
     .sig { text-align: center; width: 180px; }
     .sig .blank { height: 56px; }
-    .sig .line {
-      border-top: 1px solid #111;
+    .sig .line  {
+      border-top: 1px solid #333;
       padding-top: 6px;
       font-size: 12px;
       font-weight: 600;
@@ -134,49 +171,50 @@ export function generatePayrollInvoice(record: PayrollRecord) {
     /* ── Footer ── */
     .footer {
       margin-top: 28px;
-      padding-top: 12px;
+      padding-top: 14px;
       border-top: 1px solid #eee;
       text-align: center;
       font-size: 11px;
       color: #bbb;
     }
 
-    /* ── Print button (hidden on print) ── */
+    /* ── Print button ── */
+    .btn-wrap { text-align: center; margin-top: 28px; }
     .print-btn {
-      display: block;
-      margin: 28px auto 0;
       background: #FF0090;
       color: #fff;
       border: none;
-      padding: 11px 28px;
+      padding: 12px 32px;
       border-radius: 8px;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       cursor: pointer;
       letter-spacing: 0.2px;
     }
-    .print-btn:hover { background: #e0007c; }
+    .print-btn:hover { background: #d4007a; }
 
     @media print {
-      body         { background: #fff; padding: 0; }
-      .sheet       { box-shadow: none; border-radius: 0; padding: 24px; }
-      .print-btn   { display: none !important; }
+      body      { background: #fff; padding: 0; }
+      .sheet    { box-shadow: none; border-radius: 0; }
+      .btn-wrap { display: none !important; }
     }
   </style>
 </head>
 <body>
-  <div class="sheet">
+<div class="sheet">
 
-    <div class="header">
-      <div>
-        <div class="brand">GANG SEHAT</div>
-        <div class="brand-sub">Fisioterapi &amp; Kesehatan</div>
-      </div>
-      <div class="slip-meta">
-        <h2>SLIP GAJI</h2>
-        <p>Periode: ${period}</p>
-      </div>
+  <div class="top-bar">
+    <div class="brand">
+      <div class="brand-name">GANG SEHAT</div>
+      <div class="brand-sub">Fisioterapi &amp; Kesehatan</div>
     </div>
+    <div class="slip-label">
+      <h2>SLIP GAJI</h2>
+      <p>Periode: ${period}</p>
+    </div>
+  </div>
+
+  <div class="body">
 
     <div class="info-grid">
       <div class="info-field">
@@ -201,28 +239,24 @@ export function generatePayrollInvoice(record: PayrollRecord) {
       <thead>
         <tr>
           <th>Komponen Gaji</th>
-          <th>Jumlah</th>
+          <th class="amt">Jumlah</th>
+          <th class="hint">Terbilang</th>
         </tr>
       </thead>
       <tbody>
-        ${earningsRows.map(r => `
-        <tr>
-          <td>${r.label}</td>
-          <td>${formatRupiah(r.value)}</td>
-        </tr>`).join('')}
-        ${record.deductions > 0 ? `
-        <tr class="row-deduction">
-          <td>Potongan</td>
-          <td>(${formatRupiah(record.deductions)})</td>
-        </tr>` : ''}
+        ${earningsRows}
         <tr class="row-total">
-          <td>Total Gaji Bersih</td>
-          <td>${formatRupiah(net)}</td>
+          <td><strong>Total Gaji Bersih</strong></td>
+          <td class="amt">${formatRupiah(net)}</td>
+          <td class="hint">${toHumanIDR(net)}</td>
         </tr>
       </tbody>
     </table>
 
-    ${record.notes ? `<p class="notes">Keterangan: ${record.notes}</p>` : ''}
+    ${record.notes ? `
+    <div class="notes">
+      <strong>Keterangan:</strong> ${record.notes}
+    </div>` : ''}
 
     <div class="sigs">
       <div class="sig">
@@ -239,15 +273,19 @@ export function generatePayrollInvoice(record: PayrollRecord) {
       Dokumen ini digenerate otomatis pada ${today} &middot; Sistem Internal Gang Sehat
     </div>
 
-    <button class="print-btn" onclick="window.print()">
-      Cetak / Simpan PDF
-    </button>
+  </div><!-- /.body -->
+</div><!-- /.sheet -->
 
-  </div>
+<div class="btn-wrap">
+  <button class="print-btn" onclick="window.print()">
+    Cetak / Simpan PDF
+  </button>
+</div>
+
 </body>
 </html>`
 
-  const win = window.open('', '_blank', 'width=800,height=900')
+  const win = window.open('', '_blank', 'width=820,height=960')
   if (win) {
     win.document.write(html)
     win.document.close()

@@ -105,6 +105,7 @@ export const ROLE_LABELS: Record<string, string> = {
 
 export const ALL_ROLES = ['director', 'manager', 'finance', 'hr', 'marketing', 'therapist', 'staff']
 
+/** "Rp 10.000.000" — full currency label for display/invoice */
 export function formatRupiah(amount: number): string {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -112,6 +113,32 @@ export function formatRupiah(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+/** "10.000.000" — plain dots-separated number (no Rp prefix) */
+export function formatIDR(amount: number): string {
+  return new Intl.NumberFormat('id-ID').format(amount)
+}
+
+/**
+ * Human-readable Indonesian denomination label.
+ * 10_000_000 → "10 juta"
+ * 1_500_000  → "1 juta 500 ribu"
+ *   500_000  → "500 ribu"
+ *    50_000  → "50 ribu"
+ *         0  → "" (empty — caller decides what to show)
+ */
+export function toHumanIDR(amount: number): string {
+  if (amount <= 0) return ''
+  const juta = Math.floor(amount / 1_000_000)
+  const sisaJuta = amount % 1_000_000
+  const ribu = Math.floor(sisaJuta / 1_000)
+  const sisaRibu = sisaJuta % 1_000
+  const parts: string[] = []
+  if (juta > 0) parts.push(`${juta} juta`)
+  if (ribu > 0) parts.push(`${ribu} ribu`)
+  if (parts.length === 0 && sisaRibu > 0) parts.push(`${sisaRibu}`)
+  return parts.join(' ')
 }
 
 export function calcGross(r: Pick<PayrollRecord, 'base_salary' | 'transport_allowance' | 'meal_allowance' | 'other_allowance' | 'bonus_achievement'>): number {
