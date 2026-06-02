@@ -130,6 +130,8 @@ export default function PayrollPage() {
             isManager={identity.isManager}
             generating={payroll.generating}
             onGenerate={payroll.handleGenerate}
+            copying={payroll.copying}
+            onCopyFromPrev={payroll.handleCopyFromPrev}
           />
 
           <PayrollStats

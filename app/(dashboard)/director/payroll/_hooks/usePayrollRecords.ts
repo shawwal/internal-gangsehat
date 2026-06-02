@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { PayrollRecord, PayrollFiltersState, PayrollStats, SalarySetting } from '@/components/salary/types'
 import type { PayrollEditFormState } from '@/components/salary/PayrollEditForm'
-import { PAGE_SIZE } from '@/components/salary/types'
+import { PAGE_SIZE, MONTHS } from '@/components/salary/types'
 
 const now = new Date()
 
@@ -43,6 +43,7 @@ export function usePayrollRecords({ role, isManager, userId, settings, showToast
   const [form, setForm] = useState<PayrollEditFormState>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [copying, setCopying] = useState(false)
 
   // ── Load ─────────────────────────────────────────────────────────────────
   const loadRecords = useCallback(async () => {
@@ -293,6 +294,56 @@ export function usePayrollRecords({ role, isManager, userId, settings, showToast
     }
   }
 
+  // ── Copy from previous month ──────────────────────────────────────────────
+  async function handleCopyFromPrev() {
+    if (!userId) return
+    setCopying(true)
+    const supabase = createClient()
+
+    const prevMonth = filters.month === 1 ? 12 : filters.month - 1
+    const prevYear  = filters.month === 1 ? filters.year - 1 : filters.year
+
+    const { data: prevRecords, error: fetchErr } = await supabase
+      .from('payroll_records')
+      .select('staff_id, branch_id, base_salary, transport_allowance, meal_allowance, other_allowance')
+      .eq('period_month', prevMonth)
+      .eq('period_year', prevYear)
+
+    if (fetchErr || !prevRecords?.length) {
+      showToast(fetchErr ? 'Gagal mengambil data bulan lalu' : `Tidak ada data di ${MONTHS[prevMonth - 1]} ${prevYear}`)
+      setCopying(false)
+      return
+    }
+
+    const inserts = prevRecords.map(r => ({
+      staff_id:            r.staff_id,
+      branch_id:           r.branch_id,
+      period_month:        filters.month,
+      period_year:         filters.year,
+      base_salary:         r.base_salary,
+      transport_allowance: r.transport_allowance,
+      meal_allowance:      r.meal_allowance,
+      other_allowance:     r.other_allowance,
+      bonus_achievement:   0,
+      deductions:          0,
+      notes:               null,
+      status:              'draft',
+      created_by:          userId,
+    }))
+
+    const { error } = await supabase
+      .from('payroll_records')
+      .upsert(inserts, { onConflict: 'staff_id,period_month,period_year', ignoreDuplicates: true })
+
+    setCopying(false)
+    if (error) {
+      showToast('Gagal menyalin: ' + error.message)
+    } else {
+      showToast(`${inserts.length} record disalin dari ${MONTHS[prevMonth - 1]} ${prevYear}`)
+      loadRecords()
+    }
+  }
+
   // ── Form helpers ──────────────────────────────────────────────────────────
   function openEdit(r: PayrollRecord) {
     setEditRecord(r)
@@ -327,9 +378,10 @@ export function usePayrollRecords({ role, isManager, userId, settings, showToast
     // Filters
     filters, changeFilter,
     // Form
-    showForm, editRecord, form, setForm, saving, generating,
+    showForm, editRecord, form, setForm, saving,
     // Actions
-    handleGenerate, handleDelete, handleConfirm, handleMarkPaid, handleSubmit,
+    handleGenerate, handleCopyFromPrev, handleDelete, handleConfirm, handleMarkPaid, handleSubmit,
     openEdit, cancelForm,
+    generating, copying,
   }
 }
