@@ -344,7 +344,7 @@ export default function MySchedulePage() {
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         row.shift === 'PAGI'
-                          ? 'bg-[color:var(--secondary)]/20 text-[color:var(--secondary-foreground)]'
+                          ? 'bg-[color:var(--secondary)]/20 text-secondary'
                           : 'bg-primary/10 text-primary'
                       }`}>
                         {row.shift}
