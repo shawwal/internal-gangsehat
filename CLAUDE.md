@@ -169,6 +169,34 @@ query = query.in('staff_id', ids)
 
 **Storage cleanup on delete**: When deleting `leave_requests` with a `proof_url`, extract the path after `/leave-proofs/` and call `supabase.storage.from('leave-proofs').remove([path])` before the DB delete. Storage bucket: `leave-proofs` (public, 5 MB max, image + PDF).
 
+## Middleware — `proxy.ts` (not `middleware.ts`)
+
+This project uses Next.js 15's **custom middleware file** feature. The middleware entry point is `proxy.ts` at the repo root, not the conventional `middleware.ts`.
+
+Next.js 15 allows any filename to serve as middleware via the `experimental.instrumentationHook` or by Turbopack's module resolution — the build output confirms this: Turbopack compiles `proxy.ts` as `INNER_MIDDLEWARE_MODULE`. The `export const config = { matcher: [...] }` inside `proxy.ts` is what Next.js uses to register it as middleware.
+
+**Key facts — do not second-guess these:**
+- The middleware function is named `proxy` (not `middleware`) and is a **named export**, not a default export.
+- `proxy.ts` IS the middleware. Do not create or look for `middleware.ts` — it does not exist and is not needed.
+- Edit `proxy.ts` directly for any auth guards, redirects, or route protection changes.
+- `window.location.href` (full reload) must be used after login — not `router.push` — so the middleware picks up the new Supabase session cookies.
+
+**Public routes** (no auth check): `/login`, `/register`, `/unauthorized`, `/auth/callback`
+
+**Role → home redirect** (handled inside `proxy.ts`):
+```
+director  → /director/overview
+finance   → /finance/transactions
+hr        → /hr/staff
+marketing → /marketing/campaigns
+manager   → /patients
+therapist → /patients
+staff     → /pending
+```
+
+**Login components** live in `components/login/` — `ThemeToggle`, `BrandPanel`, `MobileLogo`, `LoginForm`.  
+**OAuth callback** route: `app/auth/callback/route.ts` — exchanges code → redirects to `/dashboard` → proxy redirects to role home.
+
 ## Key Design Decisions
 - **Branch isolation via RLS**: `get_my_branch()` scopes all non-director queries at DB level — no app-level filtering needed.
 - **Director = NULL branch_id**: absence of branch_id is the director signal; director policies check role only.

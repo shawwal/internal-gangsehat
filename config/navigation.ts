@@ -113,7 +113,7 @@ export const navigation: NavItem[] = [
     label: 'Pengajuan Cuti',
     href: '/leave',
     icon: 'CalendarOff',
-    roles: ['finance', 'marketing'],
+    roles: ['finance', 'marketing', 'therapist', 'manager'],
   },
 
   // Target (self-service for all non-director staff)
@@ -122,7 +122,7 @@ export const navigation: NavItem[] = [
     label: 'Target',
     href: '/my-targets',
     icon: 'Target',
-    roles: ['finance', 'hr', 'marketing', 'staff'],
+    roles: ['finance', 'hr', 'marketing', 'staff', 'therapist', 'manager'],
   },
 
   // Marketing
@@ -138,7 +138,44 @@ export const navigation: NavItem[] = [
     label: 'Kampanye',
     href: '/marketing/campaigns',
     icon: 'Megaphone',
-    roles: ['marketing'],
+    roles: ['marketing', 'manager'],
+  },
+
+  // Manager — cross-domain branch access
+  {
+    key: 'manager-transactions',
+    label: 'Transaksi',
+    href: '/finance/transactions',
+    icon: 'Receipt',
+    roles: ['manager'],
+  },
+  {
+    key: 'manager-reports',
+    label: 'Laporan Bulanan',
+    href: '/finance/reports',
+    icon: 'FileText',
+    roles: ['manager'],
+  },
+  {
+    key: 'manager-staff',
+    label: 'Staff',
+    href: '/hr/staff',
+    icon: 'Users',
+    roles: ['manager'],
+  },
+  {
+    key: 'manager-attendance',
+    label: 'Absensi',
+    href: '/hr/attendance',
+    icon: 'CalendarCheck',
+    roles: ['manager'],
+  },
+  {
+    key: 'manager-leave',
+    label: 'Cuti Staff',
+    href: '/hr/leave',
+    icon: 'CalendarOff',
+    roles: ['manager'],
   },
 
   // All roles
@@ -147,21 +184,21 @@ export const navigation: NavItem[] = [
     label: 'Pasien',
     href: '/patients',
     icon: 'HeartPulse',
-    roles: ['director', 'finance', 'hr', 'marketing'],
+    roles: ['director', 'finance', 'hr', 'marketing', 'therapist', 'manager'],
   },
   {
     key: 'notifications',
     label: 'Notifikasi',
     href: '/notifications',
     icon: 'Bell',
-    roles: ['director', 'finance', 'hr', 'marketing', 'staff'],
+    roles: ['director', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'manager'],
   },
   {
     key: 'settings',
     label: 'Pengaturan',
     href: '/settings',
     icon: 'Settings',
-    roles: ['director', 'finance', 'hr', 'marketing', 'staff'],
+    roles: ['director', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'manager'],
   },
 ]
 

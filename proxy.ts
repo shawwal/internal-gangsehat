@@ -34,7 +34,8 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const isPublic = pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
-    pathname.startsWith('/unauthorized')
+    pathname.startsWith('/unauthorized') ||
+    pathname.startsWith('/auth/callback')
 
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))
@@ -52,6 +53,8 @@ export async function proxy(request: NextRequest) {
       finance:   '/finance/transactions',
       hr:        '/hr/staff',
       marketing: '/marketing/campaigns',
+      manager:   '/patients',
+      therapist: '/patients',
       staff:     '/pending',
     }
     const dest = roleHome[profile?.role ?? ''] ?? '/director/overview'
