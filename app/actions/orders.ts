@@ -149,7 +149,7 @@ export async function fetchTherapistOptions(): Promise<TherapistOption[]> {
     .eq('is_available', true)
     .order('id')
 
-  return ((data ?? []) as { id: string; profiles: { full_name: string } | null }[]).map((t) => ({
+  return ((data ?? []) as unknown as { id: string; profiles: { full_name: string } | null }[]).map((t) => ({
     id: t.id,
     name: t.profiles?.full_name ?? '—',
   }))

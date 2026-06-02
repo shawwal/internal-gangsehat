@@ -33,6 +33,13 @@ export const navigation: NavItem[] = [
     roles: ['director'],
   },
   {
+    key: 'director-analytics',
+    label: 'Statistik',
+    href: '/director/analytics',
+    icon: 'BarChart2',
+    roles: ['director'],
+  },
+  {
     key: 'director-users',
     label: 'Staff & Pengguna',
     href: '/director/users',
