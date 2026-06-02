@@ -184,11 +184,12 @@ export default function SchedulesPage() {
     }
 
     // Build base filter helper
-    function applyFilters(q: ReturnType<typeof supabase.from>) {
-      if (hariFilter)  q = (q as any).eq('hari', hariFilter)
-      if (shiftFilter) q = (q as any).eq('shift', shiftFilter)
-      if (staffIds)    q = (q as any).in('staff_id', staffIds)
-      return q as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    function applyFilters(q: any) {
+      if (hariFilter)  q = q.eq('hari', hariFilter)
+      if (shiftFilter) q = q.eq('shift', shiftFilter)
+      if (staffIds)    q = q.in('staff_id', staffIds)
+      return q
     }
 
     // Run main query + stat counts in parallel

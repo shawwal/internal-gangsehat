@@ -24,4 +24,6 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   hr:        'HR',
   marketing: 'Marketing',
   staff:     'Staff',
+  manager:   'Manager',
+  therapist: 'Terapis',
 }
