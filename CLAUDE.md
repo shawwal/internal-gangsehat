@@ -3,7 +3,7 @@
 Internal management system for Gangsehat clinics/branches. Multi-branch patient tracking, financial reporting, HR, and marketing — all rolled up to a director view.
 
 ## Tech Stack
-- **Framework**: Next.js 14+ (App Router, `'use client'` where needed)
+- **Framework**: Next.js 16 (App Router, `'use client'` where needed)
 - **Database**: Supabase (PostgreSQL + Auth + RLS)
 - **Styling**: Tailwind CSS v4 — uses `@import 'tailwindcss'` not `@tailwind`; CSS vars via `var(--primary)` not HSL tuples
 - **Language**: TypeScript
@@ -171,9 +171,9 @@ query = query.in('staff_id', ids)
 
 ## Middleware — `proxy.ts` (not `middleware.ts`)
 
-This project uses Next.js 15's **custom middleware file** feature. The middleware entry point is `proxy.ts` at the repo root, not the conventional `middleware.ts`.
+This project uses Next.js 16's **custom middleware file** feature. The middleware entry point is `proxy.ts` at the repo root, not the conventional `middleware.ts`.
 
-Next.js 15 allows any filename to serve as middleware via the `experimental.instrumentationHook` or by Turbopack's module resolution — the build output confirms this: Turbopack compiles `proxy.ts` as `INNER_MIDDLEWARE_MODULE`. The `export const config = { matcher: [...] }` inside `proxy.ts` is what Next.js uses to register it as middleware.
+Next.js 16 allows any filename to serve as middleware via Turbopack's module resolution — the build output confirms this: Turbopack compiles `proxy.ts` as `INNER_MIDDLEWARE_MODULE`. The `export const config = { matcher: [...] }` inside `proxy.ts` is what Next.js uses to register it as middleware.
 
 **Key facts — do not second-guess these:**
 - The middleware function is named `proxy` (not `middleware`) and is a **named export**, not a default export.

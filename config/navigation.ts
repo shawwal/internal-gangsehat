@@ -107,6 +107,24 @@ export const navigation: NavItem[] = [
     roles: ['hr'],
   },
 
+  // Master Jadwal — director + HR only (full staff schedule management)
+  {
+    key: 'schedules',
+    label: 'Master Jadwal',
+    href: '/hr/schedules',
+    icon: 'CalendarDays',
+    roles: ['director', 'hr'],
+  },
+
+  // My Schedule — every role can manage their own schedule
+  {
+    key: 'my-schedule',
+    label: 'Jadwal Saya',
+    href: '/my-schedule',
+    icon: 'CalendarDays',
+    roles: ['director', 'hr', 'finance', 'marketing', 'therapist', 'staff', 'manager'],
+  },
+
   // Leave requests (self-service for non-HR staff)
   {
     key: 'my-leave',

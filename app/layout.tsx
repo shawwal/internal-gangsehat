@@ -6,6 +6,10 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Gangsehat Internal',
   description: 'Sistem Manajemen Internal Gangsehat',
+  robots: {
+    index: false,
+    follow: false,
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
