@@ -53,6 +53,13 @@ export const navigation: NavItem[] = [
     icon: 'Target',
     roles: ['director'],
   },
+  {
+    key: 'director-orders',
+    label: 'Semua Order',
+    href: '/director/orders',
+    icon: 'ClipboardList',
+    roles: ['director'],
+  },
 
   // Finance
   {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Search, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useProfile } from '@/hooks/useProfile'
@@ -191,10 +192,13 @@ export default function OrderPage() {
                     className="border-b border-gray-50 hover:bg-amber-50/40 cursor-pointer transition-colors"
                   >
                     <td className="px-4 py-3 text-gray-400 text-xs">{fromIdx + i}</td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <Link
+                        href={`/order/${row.id}`}
+                        className="font-mono text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.5 rounded transition-colors"
+                      >
                         {getTrxCode(row)}
-                      </span>
+                      </Link>
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900">{getPatientName(row)}</td>
                     <td className="px-4 py-3 text-gray-600">{getTherapistName(row)}</td>

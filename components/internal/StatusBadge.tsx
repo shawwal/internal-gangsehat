@@ -19,6 +19,10 @@ const colorMap: Record<string, string> = {
   DITOLAK:              'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
   PAGI:                 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
   SORE:                 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  'Belum Ditangani':    'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  Hadir:                'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  'Tidak Hadir':        'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  Batal:                'bg-gray-100 text-gray-500 dark:bg-gray-800/40 dark:text-gray-400',
 }
 
 const labelKeyMap: Record<string, string> = {

@@ -1,6 +1,7 @@
 'use client'
 
-import { X, Phone } from 'lucide-react'
+import { X, Phone, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 import { StatusBadge } from './StatusBadge'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatCurrency, formatDate, formatWaNumber } from '@/lib/utils'
@@ -134,7 +135,13 @@ export function OrderDetailPanel({ booking, onClose, showAmounts, onMarkPaid, on
         </div>
 
         {/* Footer actions */}
-        <div className="p-5 border-t border-gray-100">
+        <div className="p-5 border-t border-gray-100 space-y-2">
+          <Link
+            href={`/order/${booking.id}`}
+            className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 rounded-xl text-sm font-medium border border-gray-200 hover:bg-gray-50 text-gray-700 transition-colors"
+          >
+            <ExternalLink size={14} /> Lihat Detail
+          </Link>
           <div className="grid grid-cols-2 gap-2">
             {canMarkPaid && (
               <button

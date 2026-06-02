@@ -258,3 +258,31 @@ CREATE TABLE public.staff_targets (id uuid PK, staff_id uuid NOT NULL FK→inter
 
 -- user_notifications: id(pk) user_id(fk→internal_profiles) target_role title message link is_read
 CREATE TABLE public.user_notifications (id uuid PK, user_id uuid FK→internal_profiles, target_role internal_user_role, title text NOT NULL, message text, link text, is_read bool DEFAULT false, created_at timestamptz);
+
+-- == ORDER SESSION & PAYMENT TRACKING ==
+
+-- booking_sessions: id(pk) booking_id(fk→bookings) session_number(unique with booking_id) tanggal jam therapist_id(fk→therapists) kehadiran status[Belum Ditangani|Hadir|Tidak Hadir|Batal] nominal_bayar metode_pembayaran keterangan catatan_admin wa_order_count wa_reminder_count
+CREATE TABLE public.booking_sessions (
+  id uuid PK,
+  booking_id uuid NOT NULL FK→bookings ON DELETE CASCADE,
+  session_number int NOT NULL,
+  tanggal date, jam time,
+  therapist_id uuid FK→therapists,
+  kehadiran text,
+  status text NOT NULL DEFAULT 'Belum Ditangani' CHECK(Belum Ditangani|Hadir|Tidak Hadir|Batal),
+  nominal_bayar numeric DEFAULT 0,
+  metode_pembayaran text, keterangan text, catatan_admin text,
+  wa_order_count int DEFAULT 0, wa_reminder_count int DEFAULT 0,
+  created_at timestamptz, updated_at timestamptz,
+  UNIQUE(booking_id, session_number)
+);
+
+-- booking_payments: id(pk) booking_id(fk→bookings) tanggal nominal waktu_bayar metode catatan created_by(fk→internal_profiles)
+CREATE TABLE public.booking_payments (
+  id uuid PK,
+  booking_id uuid NOT NULL FK→bookings ON DELETE CASCADE,
+  tanggal date NOT NULL, nominal numeric NOT NULL,
+  waktu_bayar text, metode text, catatan text,
+  created_by uuid FK→internal_profiles,
+  created_at timestamptz
+);
