@@ -134,6 +134,64 @@ export async function addPatient(input: {
   return { error: error?.message ?? null }
 }
 
+export interface UpdatePatientInput {
+  name: string
+  phone: string
+  address?: string
+  birthDate?: string
+  gender?: 'male' | 'female' | 'other'
+  idNumber?: string
+  emergencyContact?: string
+  blood_type?: string
+  allergies?: string
+  medical_notes?: string
+  no_rm?: string
+  pekerjaan?: string
+  agama?: string
+  hobi?: string
+  kelurahan?: string
+  kecamatan?: string
+  kabupaten_kota?: string
+  provinsi?: string
+}
+
+export async function updatePatient(
+  id: string,
+  input: UpdatePatientInput,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const enc = encryptPatientPII({
+    name:             input.name,
+    phone:            input.phone,
+    address:          input.address,
+    birthDate:        input.birthDate,
+    idNumber:         input.idNumber,
+    emergencyContact: input.emergencyContact,
+  })
+  const { error } = await supabase.from('patients').update({
+    encrypted_name:              enc.encrypted_name,
+    encrypted_phone:             enc.encrypted_phone,
+    encrypted_address:           enc.encrypted_address           ?? null,
+    encrypted_birth_date:        enc.encrypted_birth_date        ?? null,
+    encrypted_id_number:         enc.encrypted_id_number         ?? null,
+    encrypted_emergency_contact: enc.encrypted_emergency_contact ?? null,
+    phone_hash:                  hashPhone(input.phone),
+    gender:        input.gender       ?? null,
+    blood_type:    input.blood_type   ?? null,
+    allergies:     input.allergies    ?? null,
+    medical_notes: input.medical_notes ?? null,
+    no_rm:         input.no_rm          ?? null,
+    pekerjaan:     input.pekerjaan      ?? null,
+    agama:         input.agama          ?? null,
+    hobi:          input.hobi           ?? null,
+    kelurahan:     input.kelurahan      ?? null,
+    kecamatan:     input.kecamatan      ?? null,
+    kabupaten_kota: input.kabupaten_kota ?? null,
+    provinsi:      input.provinsi       ?? null,
+  }).eq('id', id)
+  return { error: error?.message ?? null }
+}
+
 /**
  * Backfill phone_hash for all existing patients that don't have one yet.
  * Decrypts each patient's encrypted_phone, normalizes, hashes, and writes back.
