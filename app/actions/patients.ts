@@ -56,7 +56,10 @@ function toPlain(row: Record<string, unknown>): PatientPlain {
     emergencyContact: pii.emergencyContact ?? null,
     gender:           (row.gender as PatientPlain['gender']) ?? null,
     blood_type:       (row.blood_type as string | null)      ?? null,
-    allergies:        (row.allergies as string | null)       ?? null,
+    // allergies is text[] in DB — join to a single display string
+    allergies: Array.isArray(row.allergies)
+      ? (row.allergies as string[]).join(', ') || null
+      : (row.allergies as string | null) ?? null,
     medical_notes:    (row.medical_notes as string | null)   ?? null,
     isActive:         row.is_active as boolean,
     createdAt:        row.created_at as string,
@@ -176,9 +179,10 @@ export async function updatePatient(
     encrypted_id_number:         enc.encrypted_id_number         ?? null,
     encrypted_emergency_contact: enc.encrypted_emergency_contact ?? null,
     phone_hash:                  hashPhone(input.phone),
-    gender:        input.gender       ?? null,
-    blood_type:    input.blood_type   ?? null,
-    allergies:     input.allergies    ?? null,
+    gender:        input.gender        ?? null,
+    blood_type:    input.blood_type    ?? null,
+    // allergies is text[] in DB — store as single-element array
+    allergies:     input.allergies ? [input.allergies] : null,
     medical_notes: input.medical_notes ?? null,
     no_rm:         input.no_rm          ?? null,
     pekerjaan:     input.pekerjaan      ?? null,

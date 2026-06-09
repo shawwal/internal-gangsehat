@@ -16,11 +16,8 @@ export const AGAMA_OPTIONS = [
   'HINDU', 'BUDHA', 'KONGHUCU', 'LAINNYA',
 ]
 
-export const BLOOD_TYPE_OPTIONS = [
-  'A', 'B', 'AB', 'O',
-  'A+', 'B+', 'AB+', 'O+',
-  'A-', 'B-', 'AB-', 'O-',
-]
+// Must match DB CHECK constraint: blood_type = ANY('A','B','AB','O','unknown')
+export const BLOOD_TYPE_OPTIONS = ['A', 'B', 'AB', 'O', 'unknown']
 
 export const STATUS_BADGE: Record<string, string> = {
   scheduled: 'bg-secondary/20 text-secondary-foreground',
