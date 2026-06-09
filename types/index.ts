@@ -32,9 +32,36 @@ export interface Patient {
   gender: 'male' | 'female' | 'other' | null
   isActive: boolean
   createdAt: string
+  // Additional demographics (migration 022)
+  no_rm: string | null
+  pekerjaan: string | null
+  agama: string | null
+  hobi: string | null
+  kelurahan: string | null
+  kecamatan: string | null
+  kabupaten_kota: string | null
+  provinsi: string | null
 }
 
 export type VisitStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show'
+
+// Service types (LAYANAN) — maps to Excel purchase codes:
+// K.TA → TERAPI AWAL, K.ST → SESI TERAPI, K.PT → PAKET TERAPI
+// V.TA → TA VISIT, V.ST → SESI VISIT, V.PT → PAKET VISIT
+export type ServiceType =
+  | 'TERAPI AWAL'
+  | 'PAKET TERAPI'
+  | 'SESI TERAPI'
+  | 'TA VISIT'
+  | 'SESI VISIT'
+  | 'PAKET VISIT'
+  | 'LAINNYA'
+
+export type BodyRegion =
+  | 'HEAD' | 'NECK' | 'SHOULDER' | 'UPPER ARM' | 'ELBOW' | 'LOWER ARM'
+  | 'WRIST' | 'HAND' | 'SPINE' | 'CHEST' | 'UPPER BACK' | 'LOWER BACK'
+  | 'ABDOMINAL' | 'HIP/PELVIC' | 'THIGH' | 'KNEE' | 'CALF' | 'ANKLE'
+  | 'FOOT' | 'CNS' | 'PNS' | 'SYSTEMIC' | 'CARDIOVASCULAR' | 'PULMONAL' | 'PERFORMANCE'
 
 export interface PatientVisit {
   id: string
@@ -50,10 +77,23 @@ export interface PatientVisit {
   notes: string | null
   created_at: string
   updated_at: string
+  // Clinical enrichment fields (migration 021)
+  service_type: ServiceType | null
+  shift: 'PAGI' | 'SORE' | null
+  kehadiran: 'HADIR' | 'TIDAK HADIR' | null  // attendance — distinct from `status` workflow
+  regio: BodyRegion | null
+  sumber_pasien: string | null
 }
 
 export type TransactionType = 'income' | 'expense'
 export type TransactionStatus = 'pending' | 'confirmed' | 'rejected'
+
+// Payment method (METODE BAYAR in finance Excel)
+export type PaymentMethod = 'TUNAI' | 'TRANSFER BCA' | 'EDC BCA'
+
+// Payment detail status (KETERANGAN BAYAR) — independent of approval `status`
+// LUNAS = fully paid, DP = down payment, PELUNASAN = final/settlement payment
+export type PaymentDetailStatus = 'LUNAS' | 'DP' | 'PELUNASAN'
 
 export interface Transaction {
   id: string
@@ -62,16 +102,24 @@ export interface Transaction {
   visit_id: string | null
   type: TransactionType
   category: string
-  amount: number
+  amount: number                        // amount paid (JUMLAH BAYAR)
   description: string | null
   receipt_url: string | null
-  status: TransactionStatus
+  status: TransactionStatus             // approval workflow: pending → confirmed/rejected
   rejection_reason: string | null
   recorded_by: string | null
   confirmed_by: string | null
   transaction_date: string
   created_at: string
   updated_at: string
+  // Payment enrichment fields (migration 020)
+  harga: number                         // full price (HARGA)
+  discount: number                      // discount given (DISKON)
+  outstanding: number                   // computed: max(harga - amount - discount, 0)
+  payment_method: PaymentMethod | null  // METODE BAYAR
+  payment_status: PaymentDetailStatus | null  // KETERANGAN BAYAR
+  penjamin: string | null               // guarantor name (can differ from patient)
+  fisio_id: string | null               // FK to internal_profiles — treating therapist
 }
 
 export type ReportStatus = 'draft' | 'submitted' | 'approved' | 'rejected'
@@ -96,6 +144,10 @@ export interface BranchFinancialReport {
   updated_at: string
 }
 
+export type JenisPaket = 'P1' | 'P2'
+export type PackageOperationalStatus = 'ON' | 'OFF' | 'PENDING'
+export type PackageCompletionStatus = 'LANJUT' | 'SEMBUH' | 'TIDAK LANJUT' | 'STOP'
+
 export type PackageType = 'fixed' | 'flexible'
 export type PackageStatus = 'active' | 'completed' | 'cancelled'
 
@@ -107,6 +159,16 @@ export interface PatientPackage {
   used_sessions: number   // computed from patient_visits
   notes: string | null
   status: PackageStatus
+  // Operational fields (migration 023)
+  jenis_paket: JenisPaket | null        // P1 = 5 sessions, P2 = 10 sessions
+  mulai_paket: 'NEW' | 'EXT.' | null   // NEW = first episode, EXT. = extension
+  operational_status: PackageOperationalStatus  // ON / OFF / PENDING
+  completion_status: PackageCompletionStatus | null
+  // Individual session dates T1–T10 (t6–t10 are NULL for P1 packages)
+  t1: string | null; t2: string | null; t3: string | null
+  t4: string | null; t5: string | null; t6: string | null
+  t7: string | null; t8: string | null; t9: string | null
+  t10: string | null
 }
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'leave' | 'sick'

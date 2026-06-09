@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react'
 import { Plus, CheckCircle, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import type { Transaction, TransactionType, TransactionStatus } from '@/types'
+import type { Transaction, TransactionType, TransactionStatus, PaymentMethod, PaymentDetailStatus } from '@/types'
 
-const TYPE_LABELS: Record<TransactionType, string>     = { income: 'Pemasukan', expense: 'Pengeluaran' }
-const STATUS_BADGE: Record<TransactionStatus, string>  = {
+const TYPE_LABELS: Record<TransactionType, string>    = { income: 'Pemasukan', expense: 'Pengeluaran' }
+const STATUS_BADGE: Record<TransactionStatus, string> = {
   pending:   'bg-secondary/20 text-secondary-foreground',
   confirmed: 'bg-chart-4/15 text-chart-4',
   rejected:  'bg-destructive/10 text-destructive',
@@ -14,23 +14,61 @@ const STATUS_BADGE: Record<TransactionStatus, string>  = {
 const STATUS_LABEL: Record<TransactionStatus, string> = {
   pending: 'Menunggu', confirmed: 'Dikonfirmasi', rejected: 'Ditolak',
 }
+const PAY_STATUS_BADGE: Record<PaymentDetailStatus, string> = {
+  LUNAS:     'bg-chart-4/15 text-chart-4',
+  DP:        'bg-secondary/20 text-secondary-foreground',
+  PELUNASAN: 'bg-primary/15 text-primary',
+}
 
 function formatRp(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 }
 
-const CATEGORIES = ['Terapi','Obat','Operasional','Gaji','Sewa','Utilitas','Marketing','Lainnya']
+// Income categories aligned with Excel KATEGORI PEMBELIAN
+const INCOME_CATEGORIES = [
+  'TA KLINIK',
+  'PAKET KLINIK',
+  'SESI KLINIK',
+  'TA VISIT',
+  'SESI VISIT',
+  'PAKET VISIT',
+  'LAINNYA',
+]
+// Expense categories aligned with Excel PENGELUARAN
+const EXPENSE_CATEGORIES = [
+  'BEBAN PELAYANAN',
+  'GAJI',
+  'SEWA',
+  'LISTRIK',
+  'MARKETING',
+  'TUKAR TUNAI',
+  'LAINNYA',
+]
+const PAYMENT_METHODS: PaymentMethod[]         = ['TUNAI', 'TRANSFER BCA', 'EDC BCA']
+const PAYMENT_STATUSES: PaymentDetailStatus[]  = ['LUNAS', 'DP', 'PELUNASAN']
+
+const DEFAULT_FORM = {
+  type:             'income' as TransactionType,
+  category:         INCOME_CATEGORIES[0],
+  harga:            '',
+  amount:           '',
+  discount:         '',
+  payment_method:   'TUNAI' as PaymentMethod,
+  payment_status:   'LUNAS' as PaymentDetailStatus,
+  penjamin:         '',
+  description:      '',
+  transaction_date: new Date().toISOString().split('T')[0],
+}
 
 export default function TransactionsPage() {
   const [rows, setRows]         = useState<Transaction[]>([])
   const [loading, setLoading]   = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm]         = useState({ type: 'income' as TransactionType, category: CATEGORIES[0], amount: '', description: '', transaction_date: new Date().toISOString().split('T')[0] })
+  const [form, setForm]         = useState(DEFAULT_FORM)
   const [saving, setSaving]     = useState(false)
   const [rejectId, setRejectId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
 
-  // Current user context — needed to scope inserts to the right branch
   const [userId, setUserId]     = useState<string | null>(null)
   const [branchId, setBranchId] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
@@ -63,6 +101,17 @@ export default function TransactionsPage() {
     loadProfile().then(() => load())
   }, [])
 
+  // Reset category when type changes so the value stays valid
+  useEffect(() => {
+    setForm((f) => ({
+      ...f,
+      category: f.type === 'income' ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0],
+    }))
+  }, [form.type])
+
+  const categories = form.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+  const isIncome   = form.type === 'income'
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (!branchId) {
@@ -70,17 +119,26 @@ export default function TransactionsPage() {
       return
     }
     setSaving(true)
+    const harga    = Number(form.harga)   || 0
+    const amount   = Number(form.amount)  || 0
+    const discount = Number(form.discount) || 0
     await createClient().from('transactions').insert({
       branch_id:        branchId,
       recorded_by:      userId,
       type:             form.type,
       category:         form.category,
-      amount:           Number(form.amount),
+      amount,
       description:      form.description || null,
       transaction_date: form.transaction_date,
+      harga,
+      discount,
+      payment_method:   form.payment_method   || null,
+      payment_status:   isIncome ? form.payment_status : null,
+      penjamin:         isIncome ? (form.penjamin || null) : null,
     })
     setSaving(false)
     setShowForm(false)
+    setForm(DEFAULT_FORM)
     load()
   }
 
@@ -111,7 +169,7 @@ export default function TransactionsPage() {
           <p className="text-sm text-muted-foreground">Catat dan kelola transaksi keuangan cabang</p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => { setForm(DEFAULT_FORM); setShowForm(true) }}
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           <Plus size={16} /> Tambah
@@ -127,14 +185,17 @@ export default function TransactionsPage() {
       {loading ? (
         <p className="text-sm text-muted-foreground">Memuat...</p>
       ) : (
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
+        <div className="bg-card rounded-2xl border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tanggal</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Kategori</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tipe</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Jumlah</th>
+                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Bayar</th>
+                <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">Sisa</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Bayar Via</th>
+                <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status Bayar</th>
                 <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -151,6 +212,21 @@ export default function TransactionsPage() {
                   </td>
                   <td className={`px-4 py-3 text-right font-medium ${r.type === 'income' ? 'text-chart-4' : 'text-destructive'}`}>
                     {r.type === 'income' ? '+' : '-'}{formatRp(r.amount)}
+                  </td>
+                  <td className="px-4 py-3 text-right hidden sm:table-cell">
+                    {r.outstanding > 0
+                      ? <span className="text-destructive font-medium">{formatRp(r.outstanding)}</span>
+                      : <span className="text-muted-foreground">—</span>
+                    }
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                    {r.payment_method ?? '—'}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {r.payment_status
+                      ? <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PAY_STATUS_BADGE[r.payment_status]}`}>{r.payment_status}</span>
+                      : <span className="text-xs text-muted-foreground">—</span>
+                    }
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[r.status]}`}>
@@ -179,7 +255,7 @@ export default function TransactionsPage() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm">
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md overflow-y-auto max-h-[90vh]">
             <h2 className="text-base font-semibold text-foreground mb-4">Tambah Transaksi</h2>
             <form onSubmit={handleAdd} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -197,23 +273,70 @@ export default function TransactionsPage() {
                     className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
               </div>
+
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Kategori</label>
                 <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">Jumlah (Rp)</label>
-                <input required type="number" min="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
+
+              {isIncome && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Harga (Rp)</label>
+                      <input type="number" min="0" value={form.harga} onChange={(e) => setForm((f) => ({ ...f, harga: e.target.value }))}
+                        placeholder="0"
+                        className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Diskon (Rp)</label>
+                      <input type="number" min="0" value={form.discount} onChange={(e) => setForm((f) => ({ ...f, discount: e.target.value }))}
+                        placeholder="0"
+                        className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Status Bayar</label>
+                      <select value={form.payment_status} onChange={(e) => setForm((f) => ({ ...f, payment_status: e.target.value as PaymentDetailStatus }))}
+                        className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
+                        {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Penjamin</label>
+                      <input value={form.penjamin} onChange={(e) => setForm((f) => ({ ...f, penjamin: e.target.value }))}
+                        placeholder="Nama penjamin (opsional)"
+                        className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Jumlah Bayar (Rp)</label>
+                  <input required type="number" min="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                    className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Metode Bayar</label>
+                  <select value={form.payment_method} onChange={(e) => setForm((f) => ({ ...f, payment_method: e.target.value as PaymentMethod }))}
+                    className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
+                    {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
               </div>
+
               <div>
-                <label className="block text-xs font-medium text-foreground mb-1">Deskripsi</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Keterangan</label>
                 <input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
+
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Batal</button>
                 <button type="submit" disabled={saving || !branchId} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">

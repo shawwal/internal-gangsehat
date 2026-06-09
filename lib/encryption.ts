@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto'
 
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 16
@@ -145,4 +145,19 @@ export function encryptAddress(address: string): string {
 
 export function decryptAddress(encryptedAddress: string): string {
   return decrypt(encryptedAddress)
+}
+
+/**
+ * Deterministic SHA-256 hash of a normalized phone number.
+ * Normalization: strip spaces/dashes/parens/dots/+, then convert leading 0 → 62 (Indonesian standard).
+ * Examples: "0812-3456-7890", "+62 812 3456 7890", "6281234567890" all produce the same hash.
+ *
+ * Used as a deduplication key in the `patients.phone_hash` column — non-reversible, safe to store plain.
+ * Must be called server-side only (Node.js crypto).
+ */
+export function hashPhone(phone: string): string {
+  const normalized = phone
+    .replace(/[\s\-\(\)\.\+]/g, '')  // strip separators and leading +
+    .replace(/^0/, '62')             // 08xx → 628xx
+  return createHash('sha256').update(normalized).digest('hex')
 }

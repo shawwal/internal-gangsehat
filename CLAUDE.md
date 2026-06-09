@@ -53,14 +53,18 @@ All tables have `id uuid PK DEFAULT gen_random_uuid()` and `created_at timestamp
 ### Clinical
 | Table | Key columns |
 |-------|-------------|
-| `patients` | encrypted_name, encrypted_phone, encrypted_address, encrypted_birth_date, gender(male/female/other), is_active — **shared with gangsehat.com; no branch_id; PII encrypted AES-256-GCM. Read via `decryptPatientPII()` server-side (`lib/encryption.ts`). Internal staff access granted by migration 008 RLS policy.** |
-| `patient_visits` | patient_id, branch_id, visit_date, chief_complaint, diagnosis, treatment, attending_staff_id→profiles, status(scheduled/completed/cancelled/no_show), notes |
+| `patients` | encrypted_name, encrypted_phone, encrypted_address, encrypted_birth_date, gender(male/female/other), is_active, no_rm(UNIQUE partial), pekerjaan, agama, hobi, kelurahan, kecamatan, kabupaten_kota, provinsi — **shared with gangsehat.com; no branch_id; PII encrypted AES-256-GCM. Read via `decryptPatientPII()` server-side (`lib/encryption.ts`). Internal staff access granted by migration 008 RLS policy. Plain (non-PII) fields added in migration 022.** |
+| `patient_visits` | patient_id, branch_id, visit_date, service_type(TERAPI AWAL/PAKET TERAPI/SESI TERAPI/TA VISIT/SESI VISIT/PAKET VISIT/LAINNYA), shift(PAGI/SORE), kehadiran(HADIR/TIDAK HADIR), regio(body_region), sumber_pasien, chief_complaint, diagnosis, treatment, attending_staff_id→profiles, status(scheduled/completed/cancelled/no_show), notes |
+
+**Dual-status on patient_visits**: `status` (scheduled/completed/cancelled/no_show) is the *scheduling workflow*. `kehadiran` (HADIR/TIDAK HADIR) is the *attendance record* entered by admin at time of visit — they are independent fields.
 
 ### Finance
 | Table | Key columns |
 |-------|-------------|
-| `transactions` | branch_id, patient_id, visit_id, type(income/expense), category, amount, description, receipt_url, status(pending/confirmed/rejected), rejection_reason, recorded_by, confirmed_by, transaction_date |
+| `transactions` | branch_id, patient_id, visit_id, type(income/expense), category, amount(jumlah_bayar), harga(full_price), discount, outstanding(GENERATED=harga-amount-discount), description, receipt_url, status(pending/confirmed/rejected), rejection_reason, payment_method(TUNAI/TRANSFER BCA/EDC BCA), payment_status(LUNAS/DP/PELUNASAN), penjamin(guarantor), fisio_id→internal_profiles, recorded_by, confirmed_by, transaction_date |
 | `branch_financial_reports` | branch_id, period_year, period_month(1-12), total_income, total_expense, net_profit(GENERATED), patient_count, visit_count, submitted_by, submitted_at, reviewed_by, reviewed_at, status(draft/submitted/approved/rejected), notes — UNIQUE(branch_id, period_year, period_month) |
+
+**Dual-status on transactions**: `status` (pending/confirmed/rejected) is the *approval workflow*. `payment_status` (LUNAS/DP/PELUNASAN) is the *payment detail* — they are independent fields.
 
 ### HR
 | Table | Key columns |
@@ -79,6 +83,50 @@ All tables have `id uuid PK DEFAULT gen_random_uuid()` and `created_at timestamp
 get_my_internal_role() → text  -- SELECT role FROM internal_profiles WHERE id = auth.uid()
 get_my_branch()        → uuid  -- SELECT branch_id FROM internal_profiles WHERE id = auth.uid() -- NULL for director
 ```
+
+## Domain Configuration Values
+
+These are the canonical value lists used throughout the system, derived from the clinic's Excel source data.
+
+### Service Types (LAYANAN) — used in `patient_visits.service_type` and income `transactions.category`
+| Code (Excel) | System Value | Type | Price (approx) |
+|---|---|---|---|
+| K.TA | `TERAPI AWAL` | Klinik | Rp 250,000 |
+| K.ST | `SESI TERAPI` | Klinik | Rp 150,000 |
+| K.PT Paket 1 | `PAKET TERAPI` (P1) | Klinik | Rp 650,000 (5 sesi) |
+| K.PT Paket 2 | `PAKET TERAPI` (P2) | Klinik | Rp 1,200,000 (10 sesi) |
+| V.TA | `TA VISIT` | Home Visit | Rp 350,000 |
+| V.ST | `SESI VISIT` | Home Visit | Rp 200,000 |
+| V.PT | `PAKET VISIT` | Home Visit | varies |
+
+### Transaction Categories
+**Income** (`type = 'income'`): `TA KLINIK`, `PAKET KLINIK`, `SESI KLINIK`, `TA VISIT`, `SESI VISIT`, `PAKET VISIT`, `LAINNYA`
+
+**Expense** (`type = 'expense'`): `BEBAN PELAYANAN`, `GAJI`, `SEWA`, `LISTRIK`, `MARKETING`, `TUKAR TUNAI`, `LAINNYA`
+
+### Payment Methods (`transactions.payment_method`)
+`TUNAI` | `TRANSFER BCA` | `EDC BCA`
+
+### Payment Detail Status (`transactions.payment_status`)
+`LUNAS` (fully paid) | `DP` (down payment) | `PELUNASAN` (final/settlement payment)
+
+### Body Regions (`patient_visits.regio`) — 26 anatomical regions
+`HEAD` `NECK` `SHOULDER` `UPPER ARM` `ELBOW` `LOWER ARM` `WRIST` `HAND` `SPINE` `CHEST` `UPPER BACK` `LOWER BACK` `ABDOMINAL` `HIP/PELVIC` `THIGH` `KNEE` `CALF` `ANKLE` `FOOT` `CNS` `PNS` `SYSTEMIC` `CARDIOVASCULAR` `PULMONAL` `PERFORMANCE`
+
+### Package Types (`patient_packages.jenis_paket`)
+- `P1` — 5 sessions (t1–t5 dates)
+- `P2` — 10 sessions (t1–t10 dates)
+
+### Package Completion Status (`patient_packages.completion_status`)
+`LANJUT` (continuing) | `SEMBUH` (recovered) | `TIDAK LANJUT` (discontinued) | `STOP` (stopped mid-package)
+
+### Patient Religion Values (`patients.agama`)
+`ISLAM` | `KRISTEN PROTESTAN` | `KRISTEN KATOLIK` | `HINDU` | `BUDHA` | `KONGHUCU` | `LAINNYA`
+
+### No. RM Format (`patients.no_rm`)
+Format: `[Initial][Birth year 2-digit][Month 2-digit][Sequential 5-digit]`
+Example: `Z0922105765` — patient whose name starts with Z, born 09/22, record #105765.
+This is the patient identifier used in clinic operations; UNIQUE partial index in DB.
 
 ## RLS Summary
 

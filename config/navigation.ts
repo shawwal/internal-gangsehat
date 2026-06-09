@@ -98,6 +98,14 @@ export const navigation: NavItem[] = [
     roles: ['director', 'manager'],
     group: 'operations',
   },
+  {
+    key: 'director-import',
+    label: 'Import Pasien',
+    href: '/director/import',
+    icon: 'FileUp',
+    roles: ['director'],
+    group: 'management',
+  },
 
   // Finance
   {

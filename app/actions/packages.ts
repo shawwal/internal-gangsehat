@@ -33,13 +33,20 @@ export async function fetchPatientPackages(
   }
 
   return packages.map((p) => ({
-    id:              p.id,
-    package_name:    p.package_name,
-    package_type:    p.package_type as PatientPackage['package_type'],
-    total_sessions:  p.total_sessions,
-    used_sessions:   countMap.get(p.id) ?? 0,
-    notes:           p.notes ?? null,
-    status:          p.status as PatientPackage['status'],
+    id:                 p.id,
+    package_name:       p.package_name,
+    package_type:       p.package_type as PatientPackage['package_type'],
+    total_sessions:     p.total_sessions,
+    used_sessions:      countMap.get(p.id) ?? 0,
+    notes:              p.notes ?? null,
+    status:             p.status as PatientPackage['status'],
+    // Operational fields (migration 023) — not selected here, default to null/ON
+    jenis_paket:        null,
+    mulai_paket:        null,
+    operational_status: 'ON' as const,
+    completion_status:  null,
+    t1: null, t2: null, t3: null, t4: null, t5: null,
+    t6: null, t7: null, t8: null, t9: null, t10: null,
   }))
 }
 
