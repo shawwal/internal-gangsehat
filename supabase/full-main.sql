@@ -35,6 +35,15 @@ CREATE TABLE public.patients (
   last_location_lat double precision,
   last_location_lng double precision,
   last_booking_age integer,
+  no_rm text,
+  pekerjaan text,
+  agama text,
+  hobi text,
+  kelurahan text,
+  kecamatan text,
+  kabupaten_kota text,
+  provinsi text,
+  phone_hash text,
   CONSTRAINT patients_pkey PRIMARY KEY (id),
   CONSTRAINT patients_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id),
   CONSTRAINT patients_member_type_id_fkey FOREIGN KEY (member_type_id) REFERENCES public.member_type(id)
@@ -485,9 +494,17 @@ CREATE TABLE public.patient_visits (
   notes text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  visit_time time without time zone,
+  package_id uuid,
+  service_type text CHECK (service_type = ANY (ARRAY['TERAPI AWAL'::text, 'PAKET TERAPI'::text, 'SESI TERAPI'::text, 'TA VISIT'::text, 'SESI VISIT'::text, 'PAKET VISIT'::text, 'LAINNYA'::text])),
+  shift text CHECK (shift = ANY (ARRAY['PAGI'::text, 'SORE'::text])),
+  kehadiran text CHECK (kehadiran = ANY (ARRAY['HADIR'::text, 'TIDAK HADIR'::text])),
+  regio text CHECK (regio = ANY (ARRAY['HEAD'::text, 'NECK'::text, 'SHOULDER'::text, 'UPPER ARM'::text, 'ELBOW'::text, 'LOWER ARM'::text, 'WRIST'::text, 'HAND'::text, 'SPINE'::text, 'CHEST'::text, 'UPPER BACK'::text, 'LOWER BACK'::text, 'ABDOMINAL'::text, 'HIP/PELVIC'::text, 'THIGH'::text, 'KNEE'::text, 'CALF'::text, 'ANKLE'::text, 'FOOT'::text, 'CNS'::text, 'PNS'::text, 'SYSTEMIC'::text, 'CARDIOVASCULAR'::text, 'PULMONAL'::text, 'PERFORMANCE'::text])),
+  sumber_pasien text,
   CONSTRAINT patient_visits_pkey PRIMARY KEY (id),
   CONSTRAINT patient_visits_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
-  CONSTRAINT patient_visits_attending_staff_id_fkey FOREIGN KEY (attending_staff_id) REFERENCES public.internal_profiles(id)
+  CONSTRAINT patient_visits_attending_staff_id_fkey FOREIGN KEY (attending_staff_id) REFERENCES public.internal_profiles(id),
+  CONSTRAINT patient_visits_package_id_fkey FOREIGN KEY (package_id) REFERENCES public.patient_packages(id)
 );
 CREATE TABLE public.transactions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -506,11 +523,19 @@ CREATE TABLE public.transactions (
   transaction_date date NOT NULL DEFAULT CURRENT_DATE,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  harga numeric NOT NULL DEFAULT 0,
+  discount numeric NOT NULL DEFAULT 0,
+  outstanding numeric DEFAULT GREATEST(((harga - amount) - discount), (0)::numeric),
+  payment_method text CHECK (payment_method = ANY (ARRAY['TUNAI'::text, 'TRANSFER BCA'::text, 'EDC BCA'::text])),
+  payment_status text CHECK (payment_status = ANY (ARRAY['LUNAS'::text, 'DP'::text, 'PELUNASAN'::text])),
+  penjamin text,
+  fisio_id uuid,
   CONSTRAINT transactions_pkey PRIMARY KEY (id),
   CONSTRAINT transactions_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
   CONSTRAINT transactions_visit_id_fkey FOREIGN KEY (visit_id) REFERENCES public.patient_visits(id),
   CONSTRAINT transactions_recorded_by_fkey FOREIGN KEY (recorded_by) REFERENCES public.internal_profiles(id),
-  CONSTRAINT transactions_confirmed_by_fkey FOREIGN KEY (confirmed_by) REFERENCES public.internal_profiles(id)
+  CONSTRAINT transactions_confirmed_by_fkey FOREIGN KEY (confirmed_by) REFERENCES public.internal_profiles(id),
+  CONSTRAINT transactions_fisio_id_fkey FOREIGN KEY (fisio_id) REFERENCES public.internal_profiles(id)
 );
 CREATE TABLE public.branch_financial_reports (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -750,4 +775,35 @@ CREATE TABLE public.payroll_records (
   CONSTRAINT payroll_records_confirmed_by_fkey FOREIGN KEY (confirmed_by) REFERENCES public.internal_profiles(id),
   CONSTRAINT payroll_records_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id),
   CONSTRAINT payroll_records_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.internal_profiles(id)
+);
+CREATE TABLE public.patient_packages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  patient_id uuid NOT NULL,
+  branch_id uuid,
+  package_name text NOT NULL,
+  package_type text NOT NULL DEFAULT 'flexible'::text CHECK (package_type = ANY (ARRAY['fixed'::text, 'flexible'::text])),
+  total_sessions integer NOT NULL DEFAULT 1 CHECK (total_sessions > 0),
+  notes text,
+  status text NOT NULL DEFAULT 'active'::text CHECK (status = ANY (ARRAY['active'::text, 'completed'::text, 'cancelled'::text])),
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  jenis_paket text CHECK (jenis_paket = ANY (ARRAY['P1'::text, 'P2'::text])),
+  mulai_paket text CHECK (mulai_paket = ANY (ARRAY['NEW'::text, 'EXT.'::text])),
+  operational_status text NOT NULL DEFAULT 'ON'::text CHECK (operational_status = ANY (ARRAY['ON'::text, 'OFF'::text, 'PENDING'::text])),
+  completion_status text CHECK (completion_status = ANY (ARRAY['LANJUT'::text, 'SEMBUH'::text, 'TIDAK LANJUT'::text, 'STOP'::text])),
+  t1 date,
+  t2 date,
+  t3 date,
+  t4 date,
+  t5 date,
+  t6 date,
+  t7 date,
+  t8 date,
+  t9 date,
+  t10 date,
+  CONSTRAINT patient_packages_pkey PRIMARY KEY (id),
+  CONSTRAINT patient_packages_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT patient_packages_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT patient_packages_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.internal_profiles(id)
 );

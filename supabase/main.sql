@@ -1,5 +1,5 @@
 -- SCHEMA: public (token-optimised for Claude Code)
--- Roles: patient|therapist|admin (profiles.role), director|hr|finance|marketing|staff (internal_profiles.role)
+-- Roles: patient|therapist|admin (profiles.role), director|hr|finance|marketing|staff|therapist|manager (internal_profiles.role)
 -- Key auth links: profiles.id = auth.users.id, internal_profiles.id = auth.users.id
 
 -- == PUBLIC TABLES (patient-facing) ==
@@ -15,6 +15,8 @@ CREATE TABLE public.profiles (
 );
 
 -- patients: id(pk) profile_id(fk→profiles) encrypted_* gender blood_type allergies[] medical_notes is_active member_type_id last_booking_*
+-- plain (non-PII) fields: no_rm(UNIQUE partial) pekerjaan agama hobi kelurahan kecamatan kabupaten_kota provinsi phone_hash
+-- PII encrypted AES-256-GCM via lib/encryption.ts (server-only). No branch_id — shared with gangsehat.com.
 CREATE TABLE public.patients (
   id uuid PK,
   profile_id uuid FK→profiles,
@@ -24,6 +26,9 @@ CREATE TABLE public.patients (
   allergies text[], medical_notes text, is_active bool NOT NULL DEFAULT true,
   member_type_id int FK→member_type,
   last_booking_city text, last_location_lat float, last_location_lng float, last_booking_age int,
+  no_rm text, pekerjaan text, agama text, hobi text,
+  kelurahan text, kecamatan text, kabupaten_kota text, provinsi text,
+  phone_hash text,
   created_at timestamptz, updated_at timestamptz
 );
 
@@ -235,16 +240,51 @@ CREATE TABLE public.internal_konfigurasi (id uuid PK, kunci varchar NOT NULL UNI
 
 -- == BRANCH OPERATIONS ==
 
--- patient_visits: id(pk) patient_id(fk→patients) branch_id(fk→branches) visit_date attending_staff_id(fk→internal_profiles) status[scheduled|completed|cancelled|no_show] chief_complaint diagnosis treatment notes
-CREATE TABLE public.patient_visits (id uuid PK, patient_id uuid NOT NULL FK→patients, branch_id uuid NOT NULL FK→branches, visit_date date DEFAULT CURRENT_DATE, attending_staff_id uuid FK→internal_profiles, status text DEFAULT 'scheduled' CHECK(scheduled|completed|cancelled|no_show), chief_complaint text, diagnosis text, treatment text, notes text, created_at timestamptz, updated_at timestamptz);
+-- patient_visits: id(pk) patient_id(fk→patients) branch_id(fk→branches) visit_date visit_time attending_staff_id(fk→internal_profiles)
+-- status[scheduled|completed|cancelled|no_show] kehadiran[HADIR|TIDAK HADIR] shift[PAGI|SORE]
+-- service_type[TERAPI AWAL|PAKET TERAPI|SESI TERAPI|TA VISIT|SESI VISIT|PAKET VISIT|LAINNYA]
+-- regio(body_region) sumber_pasien package_id(fk→patient_packages) chief_complaint diagnosis treatment notes
+-- NOTE: status=scheduling workflow; kehadiran=attendance record — independent fields
+CREATE TABLE public.patient_visits (
+  id uuid PK, patient_id uuid NOT NULL FK→patients, branch_id uuid NOT NULL FK→branches,
+  visit_date date DEFAULT CURRENT_DATE, visit_time time,
+  attending_staff_id uuid FK→internal_profiles,
+  status text DEFAULT 'scheduled' CHECK(scheduled|completed|cancelled|no_show),
+  kehadiran text CHECK(HADIR|TIDAK HADIR),
+  shift text CHECK(PAGI|SORE),
+  service_type text CHECK(TERAPI AWAL|PAKET TERAPI|SESI TERAPI|TA VISIT|SESI VISIT|PAKET VISIT|LAINNYA),
+  regio text, sumber_pasien text,
+  package_id uuid FK→patient_packages,
+  chief_complaint text, diagnosis text, treatment text, notes text,
+  created_at timestamptz, updated_at timestamptz
+);
 
--- transactions: id(pk) branch_id(fk→branches) patient_id(fk→patients) visit_id(fk→patient_visits) type[income|expense] category amount description receipt_url status[pending|confirmed|rejected] rejection_reason recorded_by(fk→internal_profiles) confirmed_by(fk→internal_profiles) transaction_date
-CREATE TABLE public.transactions (id uuid PK, branch_id uuid NOT NULL FK→branches, patient_id uuid FK→patients, visit_id uuid FK→patient_visits, type text NOT NULL CHECK(income|expense), category text NOT NULL, amount numeric NOT NULL, description text, receipt_url text, status text DEFAULT 'pending' CHECK(pending|confirmed|rejected), rejection_reason text, recorded_by uuid FK→internal_profiles, confirmed_by uuid FK→internal_profiles, transaction_date date DEFAULT CURRENT_DATE, created_at timestamptz, updated_at timestamptz);
+-- transactions: id(pk) branch_id(fk→branches) patient_id(fk→patients) visit_id(fk→patient_visits)
+-- type[income|expense] category amount(jumlah_bayar) harga(full_price) discount outstanding(GENERATED=harga-amount-discount)
+-- payment_method[TUNAI|TRANSFER BCA|EDC BCA] payment_status[LUNAS|DP|PELUNASAN] penjamin(guarantor)
+-- fisio_id(fk→internal_profiles) status[pending|confirmed|rejected]
+-- NOTE: status=approval workflow; payment_status=payment detail — independent fields
+CREATE TABLE public.transactions (
+  id uuid PK, branch_id uuid NOT NULL FK→branches,
+  patient_id uuid FK→patients, visit_id uuid FK→patient_visits,
+  type text NOT NULL CHECK(income|expense), category text NOT NULL,
+  amount numeric NOT NULL, harga numeric DEFAULT 0, discount numeric DEFAULT 0,
+  outstanding numeric GENERATED(harga-amount-discount),
+  description text, receipt_url text,
+  status text DEFAULT 'pending' CHECK(pending|confirmed|rejected), rejection_reason text,
+  payment_method text CHECK(TUNAI|TRANSFER BCA|EDC BCA),
+  payment_status text CHECK(LUNAS|DP|PELUNASAN),
+  penjamin text, fisio_id uuid FK→internal_profiles,
+  recorded_by uuid FK→internal_profiles, confirmed_by uuid FK→internal_profiles,
+  transaction_date date DEFAULT CURRENT_DATE, created_at timestamptz, updated_at timestamptz
+);
 
 -- branch_financial_reports: id(pk) branch_id(fk→branches) period_year period_month[1-12] total_income total_expense net_profit patient_count visit_count status[draft|submitted|approved|rejected] submitted_by reviewed_by notes
-CREATE TABLE public.branch_financial_reports (id uuid PK, branch_id uuid NOT NULL FK→branches, period_year int NOT NULL, period_month int NOT NULL CHECK(1-12), total_income numeric DEFAULT 0, total_expense numeric DEFAULT 0, net_profit numeric, patient_count int DEFAULT 0, visit_count int DEFAULT 0, submitted_by uuid FK→internal_profiles, submitted_at timestamptz, reviewed_by uuid FK→internal_profiles, reviewed_at timestamptz, status text DEFAULT 'draft' CHECK(draft|submitted|approved|rejected), notes text, created_at timestamptz, updated_at timestamptz);
+-- UNIQUE(branch_id, period_year, period_month)
+CREATE TABLE public.branch_financial_reports (id uuid PK, branch_id uuid NOT NULL FK→branches, period_year int NOT NULL, period_month int NOT NULL CHECK(1-12), total_income numeric DEFAULT 0, total_expense numeric DEFAULT 0, net_profit numeric GENERATED, patient_count int DEFAULT 0, visit_count int DEFAULT 0, submitted_by uuid FK→internal_profiles, submitted_at timestamptz, reviewed_by uuid FK→internal_profiles, reviewed_at timestamptz, status text DEFAULT 'draft' CHECK(draft|submitted|approved|rejected), notes text, created_at timestamptz, updated_at timestamptz);
 
 -- attendance: id(pk) staff_id(fk→internal_profiles) branch_id(fk→branches) date check_in check_out status[present|absent|late|leave|sick] notes recorded_by(fk→internal_profiles)
+-- UNIQUE(staff_id, date)
 CREATE TABLE public.attendance (id uuid PK, staff_id uuid NOT NULL FK→internal_profiles, branch_id uuid NOT NULL FK→branches, date date DEFAULT CURRENT_DATE, check_in timestamptz, check_out timestamptz, status text DEFAULT 'present' CHECK(present|absent|late|leave|sick), notes text, recorded_by uuid FK→internal_profiles, created_at timestamptz);
 
 -- leave_requests: id(pk) staff_id(fk→internal_profiles) branch_id(fk→branches) start_date end_date reason proof_url status[pending|approved|rejected] reviewed_by(fk→internal_profiles) reviewed_at rejection_note
@@ -254,10 +294,43 @@ CREATE TABLE public.leave_requests (id uuid PK, staff_id uuid NOT NULL FK→inte
 CREATE TABLE public.campaigns (id uuid PK, branch_id uuid NOT NULL FK→branches, title text NOT NULL, description text, channel text CHECK(social_media|whatsapp|email|flyer|other), start_date date, end_date date, budget numeric DEFAULT 0, actual_spend numeric DEFAULT 0, target_reach int, actual_reach int, status text DEFAULT 'draft' CHECK(draft|active|completed|cancelled), created_by uuid FK→internal_profiles, created_at timestamptz, updated_at timestamptz);
 
 -- staff_targets: id(pk) staff_id(fk→internal_profiles) branch_id(fk→branches) bulan[1-12] tahun target_ta target_paket_klinik target_kunjungan target_visit notes status[pending|approved|rejected] reviewed_by reviewed_at rejection_note
+-- UNIQUE(staff_id, bulan, tahun)
 CREATE TABLE public.staff_targets (id uuid PK, staff_id uuid NOT NULL FK→internal_profiles, branch_id uuid FK→branches, bulan int NOT NULL CHECK(1-12), tahun int NOT NULL, target_ta int DEFAULT 0, target_paket_klinik int DEFAULT 0, target_kunjungan int DEFAULT 0, target_visit int DEFAULT 0, notes text, status text DEFAULT 'pending' CHECK(pending|approved|rejected), reviewed_by uuid FK→internal_profiles, reviewed_at timestamptz, rejection_note text, created_at timestamptz, updated_at timestamptz);
+
+-- branch_targets: id(pk) branch_id(fk→branches) bulan[1-12] tahun target_ta target_paket_klinik target_kunjungan target_visit notes status[pending|approved|rejected] set_by reviewed_by reviewed_at rejection_note
+-- UNIQUE(branch_id, bulan, tahun)
+CREATE TABLE public.branch_targets (id uuid PK, branch_id uuid NOT NULL FK→branches, bulan int NOT NULL CHECK(1-12), tahun int NOT NULL, target_ta int DEFAULT 0, target_paket_klinik int DEFAULT 0, target_kunjungan int DEFAULT 0, target_visit int DEFAULT 0, notes text, status text DEFAULT 'pending' CHECK(pending|approved|rejected), set_by uuid FK→internal_profiles, reviewed_by uuid FK→internal_profiles, reviewed_at timestamptz, rejection_note text, created_at timestamptz, updated_at timestamptz);
 
 -- user_notifications: id(pk) user_id(fk→internal_profiles) target_role title message link is_read
 CREATE TABLE public.user_notifications (id uuid PK, user_id uuid FK→internal_profiles, target_role internal_user_role, title text NOT NULL, message text, link text, is_read bool DEFAULT false, created_at timestamptz);
+
+-- schedules: id(pk) staff_id(fk→internal_profiles) branch_id(fk→branches) hari[SENIN|SELASA|RABU|KAMIS|JUMAT|SABTU|AHAD] shift[PAGI|SORE] jam_mulai jam_selesai status[AKTIF|OFF] notes
+CREATE TABLE public.schedules (
+  id uuid PK, staff_id uuid NOT NULL FK→internal_profiles, branch_id uuid FK→branches,
+  hari varchar NOT NULL CHECK(SENIN|SELASA|RABU|KAMIS|JUMAT|SABTU|AHAD),
+  shift varchar NOT NULL CHECK(PAGI|SORE),
+  jam_mulai time DEFAULT '09:00', jam_selesai time DEFAULT '17:00',
+  status varchar DEFAULT 'AKTIF' CHECK(AKTIF|OFF),
+  notes text, created_at timestamptz
+);
+
+-- == PATIENT PACKAGES ==
+
+-- patient_packages: id(pk) patient_id(fk→patients) branch_id(fk→branches) package_name package_type[fixed|flexible] total_sessions
+-- jenis_paket[P1|P2] mulai_paket[NEW|EXT.] operational_status[ON|OFF|PENDING] completion_status[LANJUT|SEMBUH|TIDAK LANJUT|STOP]
+-- t1..t10(session dates) status[active|completed|cancelled] created_by(fk→internal_profiles)
+CREATE TABLE public.patient_packages (
+  id uuid PK, patient_id uuid NOT NULL FK→patients, branch_id uuid FK→branches,
+  package_name text NOT NULL, package_type text DEFAULT 'flexible' CHECK(fixed|flexible),
+  total_sessions int NOT NULL DEFAULT 1 CHECK(>0),
+  jenis_paket text CHECK(P1|P2), mulai_paket text CHECK(NEW|EXT.),
+  operational_status text DEFAULT 'ON' CHECK(ON|OFF|PENDING),
+  completion_status text CHECK(LANJUT|SEMBUH|TIDAK LANJUT|STOP),
+  t1 date, t2 date, t3 date, t4 date, t5 date,
+  t6 date, t7 date, t8 date, t9 date, t10 date,
+  notes text, status text DEFAULT 'active' CHECK(active|completed|cancelled),
+  created_by uuid FK→internal_profiles, created_at timestamptz, updated_at timestamptz
+);
 
 -- == ORDER SESSION & PAYMENT TRACKING ==
 
@@ -285,4 +358,39 @@ CREATE TABLE public.booking_payments (
   waktu_bayar text, metode text, catatan text,
   created_by uuid FK→internal_profiles,
   created_at timestamptz
+);
+
+-- == SALARY & PAYROLL ==
+
+-- salary_settings: id(pk) role(unique) base_salary transport_allowance meal_allowance bonus_target_pct updated_by(fk→internal_profiles)
+CREATE TABLE public.salary_settings (
+  id uuid PK, role text NOT NULL UNIQUE,
+  base_salary numeric DEFAULT 0, transport_allowance numeric DEFAULT 0,
+  meal_allowance numeric DEFAULT 0, bonus_target_pct numeric DEFAULT 0,
+  updated_by uuid FK→internal_profiles, updated_at timestamptz
+);
+
+-- employee_salaries: id(pk) staff_id(fk→internal_profiles,unique) base_salary transport_allowance meal_allowance other_allowance notes updated_by(fk→internal_profiles)
+-- Per-employee salary overrides (takes precedence over salary_settings role defaults)
+CREATE TABLE public.employee_salaries (
+  id uuid PK, staff_id uuid NOT NULL UNIQUE FK→internal_profiles,
+  base_salary numeric, transport_allowance numeric, meal_allowance numeric,
+  other_allowance numeric DEFAULT 0,
+  notes text, updated_by uuid FK→internal_profiles,
+  updated_at timestamptz, created_at timestamptz
+);
+
+-- payroll_records: id(pk) staff_id(fk→internal_profiles) branch_id(fk→branches) period_month[1-12] period_year
+-- base_salary transport_allowance meal_allowance other_allowance bonus_achievement deductions
+-- status[draft|confirmed|paid] confirmed_by paid_at transaction_id(fk→transactions) created_by
+CREATE TABLE public.payroll_records (
+  id uuid PK, staff_id uuid NOT NULL FK→internal_profiles, branch_id uuid FK→branches,
+  period_month int NOT NULL CHECK(1-12), period_year int NOT NULL,
+  base_salary numeric DEFAULT 0, transport_allowance numeric DEFAULT 0,
+  meal_allowance numeric DEFAULT 0, other_allowance numeric DEFAULT 0,
+  bonus_achievement numeric DEFAULT 0, deductions numeric DEFAULT 0,
+  notes text, status text DEFAULT 'draft' CHECK(draft|confirmed|paid),
+  confirmed_by uuid FK→internal_profiles, confirmed_at timestamptz,
+  paid_at timestamptz, transaction_id uuid FK→transactions,
+  created_by uuid FK→internal_profiles, created_at timestamptz, updated_at timestamptz
 );
