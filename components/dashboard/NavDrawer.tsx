@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import * as Icons from 'lucide-react'
 import { X } from 'lucide-react'
-import { navForRole } from '@/config/navigation'
+import { navForRole, NAV_GROUP_LABELS } from '@/config/navigation'
+import type { NavGroup } from '@/config/navigation'
 import type { UserRole } from '@/types'
 
 function NavIcon({ name, className }: { name: string; className?: string }) {
@@ -76,6 +77,13 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
 
   const items = navForRole(role)
 
+  // Build ordered groups, preserving nav order
+  const orderedGroupKeys = [...new Set(items.map(i => i.group))] as NavGroup[]
+  const groupedItems = orderedGroupKeys.reduce<Record<NavGroup, typeof items>>((acc, g) => {
+    acc[g] = items.filter(i => i.group === g)
+    return acc
+  }, {} as Record<NavGroup, typeof items>)
+
   const sheetBg = isDark
     ? 'rgba(10, 14, 28, 0.88)'
     : 'rgba(255, 255, 255, 0.88)'
@@ -145,46 +153,58 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
             </button>
           </div>
 
-          {/* Nav grid */}
-          <div className="grid grid-cols-3 gap-2.5 px-4 pb-4">
-            {items.map((item) => {
-              const isParent = item.href
-                ? items.some(i => i.href && i.href !== item.href && i.href.startsWith(item.href + '/'))
-                : false
-              const isActive = item.href
-                ? (item.href === '/' ? pathname === '/' : isParent ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + '/'))
-                : false
-
-              return (
-                <Link
-                  key={item.key}
-                  href={item.href!}
-                  className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all active:scale-95"
-                  style={{
-                    background: isActive
-                      ? isDark ? 'rgba(255,0,144,0.12)' : 'rgba(255,0,144,0.08)'
-                      : isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-                    ...(isActive ? { ring: '2px solid rgba(255,0,144,0.30)' } : {}),
-                  }}
+          {/* Nav groups */}
+          <div className="px-4 pb-4 space-y-4">
+            {orderedGroupKeys.map((groupKey) => (
+              <div key={groupKey}>
+                {/* Group label */}
+                <p
+                  className="text-[10px] font-semibold tracking-widest uppercase mb-2 px-1"
+                  style={{ color: isDark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.30)' }}
                 >
-                  <div
-                    className={`p-2.5 rounded-xl bg-gradient-to-br ${gradientFor(item.icon)} shadow-md`}
-                  >
-                    <NavIcon name={item.icon} className="text-white" />
-                  </div>
-                  <span
-                    className="text-[11px] font-medium text-center leading-tight"
-                    style={{
-                      color: isActive
-                        ? '#FF0090'
-                        : isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.55)',
-                    }}
-                  >
-                    {item.label}
-                  </span>
-                </Link>
-              )
-            })}
+                  {NAV_GROUP_LABELS[groupKey]}
+                </p>
+
+                {/* Items grid */}
+                <div className="grid grid-cols-3 gap-2.5">
+                  {groupedItems[groupKey].map((item) => {
+                    const isParent = item.href
+                      ? items.some(i => i.href && i.href !== item.href && i.href.startsWith(item.href + '/'))
+                      : false
+                    const isActive = item.href
+                      ? (item.href === '/' ? pathname === '/' : isParent ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + '/'))
+                      : false
+
+                    return (
+                      <Link
+                        key={item.key}
+                        href={item.href!}
+                        className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all active:scale-95"
+                        style={{
+                          background: isActive
+                            ? isDark ? 'rgba(255,0,144,0.12)' : 'rgba(255,0,144,0.08)'
+                            : isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                        }}
+                      >
+                        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradientFor(item.icon)} shadow-md`}>
+                          <NavIcon name={item.icon} className="text-white" />
+                        </div>
+                        <span
+                          className="text-[11px] font-medium text-center leading-tight"
+                          style={{
+                            color: isActive
+                              ? '#FF0090'
+                              : isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.55)',
+                          }}
+                        >
+                          {item.label}
+                        </span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Safe area spacer */}

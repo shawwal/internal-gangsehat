@@ -1,11 +1,26 @@
 import type { UserRole } from '@/types'
 
+export type NavGroup = 'dashboard' | 'management' | 'hr' | 'operations' | 'finance' | 'schedule' | 'clinic' | 'marketing' | 'system'
+
+export const NAV_GROUP_LABELS: Record<NavGroup, string> = {
+  dashboard:  'Beranda',
+  management: 'Manajemen',
+  hr:         'Tim & HR',
+  operations: 'Operasional',
+  finance:    'Keuangan',
+  schedule:   'Jadwal',
+  clinic:     'Klinik',
+  marketing:  'Marketing',
+  system:     'Sistem',
+}
+
 export interface NavItem {
   key: string
   label: string
   href?: string
   icon: string
   roles: UserRole[]
+  group: NavGroup
   children?: NavItem[]
 }
 
@@ -17,6 +32,7 @@ export const navigation: NavItem[] = [
     href: '/director/overview',
     icon: 'LayoutDashboard',
     roles: ['director'],
+    group: 'dashboard',
   },
   {
     key: 'branches',
@@ -24,6 +40,7 @@ export const navigation: NavItem[] = [
     href: '/director/branches',
     icon: 'Building2',
     roles: ['director'],
+    group: 'management',
   },
   {
     key: 'director-reports',
@@ -31,6 +48,7 @@ export const navigation: NavItem[] = [
     href: '/director/reports',
     icon: 'FileCheck',
     roles: ['director'],
+    group: 'management',
   },
   {
     key: 'director-analytics',
@@ -38,6 +56,7 @@ export const navigation: NavItem[] = [
     href: '/director/analytics',
     icon: 'BarChart2',
     roles: ['director'],
+    group: 'management',
   },
   {
     key: 'director-users',
@@ -45,6 +64,7 @@ export const navigation: NavItem[] = [
     href: '/director/users',
     icon: 'UserCog',
     roles: ['director'],
+    group: 'hr',
   },
   {
     key: 'director-leave',
@@ -52,6 +72,7 @@ export const navigation: NavItem[] = [
     href: '/director/leave',
     icon: 'CalendarOff',
     roles: ['director'],
+    group: 'hr',
   },
   {
     key: 'director-targets',
@@ -59,6 +80,7 @@ export const navigation: NavItem[] = [
     href: '/director/targets',
     icon: 'Target',
     roles: ['director', 'manager'],
+    group: 'hr',
   },
   {
     key: 'director-orders',
@@ -66,6 +88,7 @@ export const navigation: NavItem[] = [
     href: '/director/orders',
     icon: 'ClipboardList',
     roles: ['director'],
+    group: 'operations',
   },
   {
     key: 'director-payroll',
@@ -73,6 +96,7 @@ export const navigation: NavItem[] = [
     href: '/director/payroll',
     icon: 'Wallet',
     roles: ['director', 'manager'],
+    group: 'operations',
   },
 
   // Finance
@@ -82,6 +106,7 @@ export const navigation: NavItem[] = [
     href: '/finance',
     icon: 'LayoutDashboard',
     roles: ['finance'],
+    group: 'dashboard',
   },
   {
     key: 'transactions',
@@ -89,6 +114,7 @@ export const navigation: NavItem[] = [
     href: '/finance/transactions',
     icon: 'Receipt',
     roles: ['finance'],
+    group: 'finance',
   },
   {
     key: 'finance-reports',
@@ -96,6 +122,7 @@ export const navigation: NavItem[] = [
     href: '/finance/reports',
     icon: 'FileText',
     roles: ['finance'],
+    group: 'finance',
   },
 
   // HR
@@ -105,6 +132,7 @@ export const navigation: NavItem[] = [
     href: '/hr',
     icon: 'LayoutDashboard',
     roles: ['hr'],
+    group: 'dashboard',
   },
   {
     key: 'hr-staff',
@@ -112,6 +140,7 @@ export const navigation: NavItem[] = [
     href: '/hr/staff',
     icon: 'Users',
     roles: ['hr'],
+    group: 'hr',
   },
   {
     key: 'attendance',
@@ -119,6 +148,7 @@ export const navigation: NavItem[] = [
     href: '/hr/attendance',
     icon: 'CalendarCheck',
     roles: ['hr'],
+    group: 'hr',
   },
   {
     key: 'hr-leave',
@@ -126,6 +156,7 @@ export const navigation: NavItem[] = [
     href: '/hr/leave',
     icon: 'CalendarOff',
     roles: ['hr'],
+    group: 'hr',
   },
 
   // Master Jadwal — director + HR only (full staff schedule management)
@@ -135,6 +166,7 @@ export const navigation: NavItem[] = [
     href: '/hr/schedules',
     icon: 'CalendarDays',
     roles: ['director', 'hr'],
+    group: 'schedule',
   },
 
   // Daily schedule + patient assignment — HR, manager, therapist, staff, director
@@ -144,6 +176,7 @@ export const navigation: NavItem[] = [
     href: '/jadwal-harian',
     icon: 'CalendarClock',
     roles: ['director', 'hr', 'manager', 'therapist', 'staff'],
+    group: 'schedule',
   },
 
   // My Schedule — every role can manage their own schedule
@@ -153,6 +186,7 @@ export const navigation: NavItem[] = [
     href: '/my-schedule',
     icon: 'CalendarDays',
     roles: ['director', 'hr', 'finance', 'marketing', 'therapist', 'staff', 'manager'],
+    group: 'schedule',
   },
 
   // Leave requests (self-service for non-HR staff)
@@ -162,6 +196,7 @@ export const navigation: NavItem[] = [
     href: '/leave',
     icon: 'CalendarOff',
     roles: ['finance', 'marketing', 'therapist', 'manager'],
+    group: 'hr',
   },
 
   // Target (self-service for all non-director staff)
@@ -171,6 +206,7 @@ export const navigation: NavItem[] = [
     href: '/my-targets',
     icon: 'Target',
     roles: ['finance', 'hr', 'marketing', 'staff', 'therapist', 'manager'],
+    group: 'hr',
   },
 
   // Marketing
@@ -180,6 +216,7 @@ export const navigation: NavItem[] = [
     href: '/marketing',
     icon: 'LayoutDashboard',
     roles: ['marketing'],
+    group: 'dashboard',
   },
   {
     key: 'campaigns',
@@ -187,6 +224,7 @@ export const navigation: NavItem[] = [
     href: '/marketing/campaigns',
     icon: 'Megaphone',
     roles: ['marketing', 'manager'],
+    group: 'marketing',
   },
 
   // Manager — cross-domain branch access
@@ -196,6 +234,7 @@ export const navigation: NavItem[] = [
     href: '/finance/transactions',
     icon: 'Receipt',
     roles: ['manager'],
+    group: 'finance',
   },
   {
     key: 'manager-reports',
@@ -203,6 +242,7 @@ export const navigation: NavItem[] = [
     href: '/finance/reports',
     icon: 'FileText',
     roles: ['manager'],
+    group: 'finance',
   },
   {
     key: 'manager-staff',
@@ -210,6 +250,7 @@ export const navigation: NavItem[] = [
     href: '/hr/staff',
     icon: 'Users',
     roles: ['manager'],
+    group: 'hr',
   },
   {
     key: 'manager-attendance',
@@ -217,6 +258,7 @@ export const navigation: NavItem[] = [
     href: '/hr/attendance',
     icon: 'CalendarCheck',
     roles: ['manager'],
+    group: 'hr',
   },
   {
     key: 'manager-leave',
@@ -224,6 +266,7 @@ export const navigation: NavItem[] = [
     href: '/hr/leave',
     icon: 'CalendarOff',
     roles: ['manager'],
+    group: 'hr',
   },
 
   // All roles
@@ -233,6 +276,7 @@ export const navigation: NavItem[] = [
     href: '/patients',
     icon: 'HeartPulse',
     roles: ['director', 'finance', 'hr', 'marketing', 'therapist', 'manager'],
+    group: 'clinic',
   },
   {
     key: 'notifications',
@@ -240,6 +284,7 @@ export const navigation: NavItem[] = [
     href: '/notifications',
     icon: 'Bell',
     roles: ['director', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'manager'],
+    group: 'system',
   },
   {
     key: 'settings',
@@ -247,6 +292,7 @@ export const navigation: NavItem[] = [
     href: '/settings',
     icon: 'Settings',
     roles: ['director', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'manager'],
+    group: 'system',
   },
 ]
 
