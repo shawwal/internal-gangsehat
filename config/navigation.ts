@@ -59,6 +59,14 @@ export const navigation: NavItem[] = [
     group: 'management',
   },
   {
+    key: 'director-performance',
+    label: 'Performa',
+    href: '/director/performance',
+    icon: 'Trophy',
+    roles: ['director'],
+    group: 'management',
+  },
+  {
     key: 'director-users',
     label: 'Staff & Pengguna',
     href: '/director/users',
