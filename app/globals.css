@@ -136,18 +136,23 @@
 }
 
 /* Glass Card Components */
+/* Light: solid white card with visible border for contrast on #F8F8F8 bg
+   Dark:  translucent glass with backdrop-blur (existing effect preserved) */
 .glass-card {
-  @apply rounded-3xl border border-white/20 bg-white/10 backdrop-blur-lg
-         dark:border-white/10 dark:bg-white/5 transition-all duration-300;
+  @apply rounded-3xl border border-border/70 bg-white
+         backdrop-blur-sm shadow-sm
+         dark:border-white/10 dark:bg-white/5
+         dark:backdrop-blur-lg dark:shadow-none
+         transition-all duration-300;
 }
 
 .glass-card:hover {
-  @apply border-white/30 dark:border-white/20;
+  @apply border-border dark:border-white/20;
 }
 
 .glass-card-dark {
-  @apply rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg
-         dark:border-white/10 dark:bg-black/20;
+  @apply rounded-3xl border border-border/50 bg-white/60 backdrop-blur-sm
+         dark:border-white/10 dark:bg-black/20 dark:backdrop-blur-lg;
 }
 
 /* Gradient text animation */

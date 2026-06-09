@@ -34,11 +34,11 @@ const SELECT_CLS = INPUT_CLS + ' cursor-pointer'
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 
-function FormSection({ title, icon, children }: {
-  title: string; icon: React.ReactNode; children: React.ReactNode
+function FormSection({ id, title, icon, children }: {
+  id: string; title: string; icon: React.ReactNode; children: React.ReactNode
 }) {
   return (
-    <div className="glass-card p-5 space-y-4">
+    <div id={id} className="glass-card p-5 space-y-4 scroll-mt-6">
       <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground border-b border-border/50 pb-3">
         <span className="text-primary">{icon}</span>
         {title}
@@ -122,7 +122,7 @@ export function PatientEditForm({ patient }: Props) {
     <form onSubmit={handleSubmit} className="space-y-5">
 
       {/* ── Identitas ─────────────────────────────────────────────────────── */}
-      <FormSection title="Identitas" icon={<User size={15} />}>
+      <FormSection id="identitas" title="Identitas" icon={<User size={15} />}>
         <Field label="Nama Lengkap" required>
           <input
             value={form.name}
@@ -200,7 +200,7 @@ export function PatientEditForm({ patient }: Props) {
       </FormSection>
 
       {/* ── Kontak ────────────────────────────────────────────────────────── */}
-      <FormSection title="Informasi Kontak" icon={<Phone size={15} />}>
+      <FormSection id="kontak" title="Informasi Kontak" icon={<Phone size={15} />}>
         <Field label="No. Telepon" required>
           <input
             type="tel"
@@ -244,7 +244,7 @@ export function PatientEditForm({ patient }: Props) {
       </FormSection>
 
       {/* ── Domisili ──────────────────────────────────────────────────────── */}
-      <FormSection title="Domisili" icon={<Home size={15} />}>
+      <FormSection id="domisili" title="Domisili" icon={<Home size={15} />}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Kelurahan">
             <input value={form.kelurahan} onChange={set('kelurahan')} placeholder="Nama kelurahan" className={INPUT_CLS} />
@@ -264,7 +264,7 @@ export function PatientEditForm({ patient }: Props) {
       </FormSection>
 
       {/* ── Catatan Medis ─────────────────────────────────────────────────── */}
-      <FormSection title="Catatan Medis" icon={<Stethoscope size={15} />}>
+      <FormSection id="medis" title="Catatan Medis" icon={<Stethoscope size={15} />}>
         <Field label="Alergi">
           <input
             value={form.allergies}
