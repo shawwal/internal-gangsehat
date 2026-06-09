@@ -136,7 +136,7 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
           </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3">
+          <div className="flex items-center justify-between px-5 py-2 sm:py-3">
             <span
               className="text-xs font-semibold tracking-widest uppercase"
               style={{ color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.40)' }}
@@ -154,19 +154,19 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
           </div>
 
           {/* Nav groups */}
-          <div className="px-4 pb-4 space-y-4">
+          <div className="px-3 sm:px-4 pb-3 sm:pb-4 space-y-2 sm:space-y-4">
             {orderedGroupKeys.map((groupKey) => (
               <div key={groupKey}>
-                {/* Group label */}
+                {/* Group label — hidden on mobile to save space */}
                 <p
-                  className="text-[10px] font-semibold tracking-widest uppercase mb-2 px-1"
+                  className="hidden sm:block text-[10px] font-semibold tracking-widest uppercase mb-1 sm:mb-2 px-1"
                   style={{ color: isDark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.30)' }}
                 >
                   {NAV_GROUP_LABELS[groupKey]}
                 </p>
 
-                {/* Items grid */}
-                <div className="grid grid-cols-3 gap-2.5">
+                {/* Items grid — 4 cols (icon-only) on mobile, 3 cols with labels on sm+ */}
+                <div className="grid grid-cols-4 sm:grid-cols-3 gap-2">
                   {groupedItems[groupKey].map((item) => {
                     const isParent = item.href
                       ? items.some(i => i.href && i.href !== item.href && i.href.startsWith(item.href + '/'))
@@ -179,14 +179,15 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
                       <Link
                         key={item.key}
                         href={item.href!}
-                        className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all active:scale-95"
+                        className="flex flex-col items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-2xl transition-all active:scale-95"
+                        title={item.label}
                         style={{
                           background: isActive
                             ? isDark ? 'rgba(255,0,144,0.12)' : 'rgba(255,0,144,0.08)'
                             : isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
                         }}
                       >
-                        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradientFor(item.icon)} shadow-md`}>
+                        <div className={`p-2 sm:p-2.5 rounded-xl bg-gradient-to-br ${gradientFor(item.icon)} shadow-md`}>
                           <NavIcon name={item.icon} className="text-white" />
                         </div>
                         <span
