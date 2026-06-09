@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { RefreshCw, Plus, CalendarRange } from 'lucide-react'
+import { RefreshCw, Plus, CalendarRange, LayoutList, CalendarDays } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { ScheduleRow, StaffOption, BranchOption, ScheduleForm } from '@/components/schedule/types'
 import { EMPTY_FORM } from '@/components/schedule/constants'
@@ -11,6 +11,9 @@ import { ScheduleTable } from '@/components/schedule/ScheduleTable'
 import { ScheduleDialog } from '@/components/schedule/ScheduleDialog'
 import { MonthlyScheduleDialog } from '@/components/schedule/MonthlyScheduleDialog'
 import { DeleteDialog } from '@/components/schedule/DeleteDialog'
+import { ScheduleCalendarView } from '@/components/schedule/ScheduleCalendarView'
+
+type ViewMode = 'table' | 'calendar'
 
 export default function SchedulesPage() {
   // ── Data ────────────────────────────────────────────────────────────────────
@@ -21,6 +24,7 @@ export default function SchedulesPage() {
   const [loading, setLoading]       = useState(true)
   const [staffList, setStaffList]   = useState<StaffOption[]>([])
   const [branches, setBranches]     = useState<BranchOption[]>([])
+  const [viewMode, setViewMode]     = useState<ViewMode>('table')
 
   // ── Filters + pagination ─────────────────────────────────────────────────────
   const [search, setSearch]           = useState('')
@@ -45,7 +49,7 @@ export default function SchedulesPage() {
       const [{ data: staff }, { data: br }] = await Promise.all([
         supabase
           .from('internal_profiles')
-          .select('id, full_name')
+          .select('id, full_name, branch_id')
           .in('role', ['therapist', 'staff', 'manager'])
           .order('full_name'),
         supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
@@ -174,60 +178,104 @@ export default function SchedulesPage() {
     <div className="space-y-5">
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Master Jadwal</h1>
           <p className="text-sm text-muted-foreground">Kelola jadwal kerja staff dan terapis</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={load}
-            title="Refresh data"
-            className="p-2 rounded-xl border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-          >
-            <RefreshCw size={15} />
-          </button>
-          <button
-            onClick={() => setShowMonthly(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors cursor-pointer text-foreground"
-          >
-            <CalendarRange size={15} /> Jadwal Mingguan
-          </button>
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer"
-          >
-            <Plus size={15} /> Tambah
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View mode toggle */}
+          <div className="flex items-center border border-border rounded-xl overflow-hidden">
+            <button
+              onClick={() => setViewMode('table')}
+              title="Tampilan Tabel"
+              className={[
+                'flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors cursor-pointer',
+                viewMode === 'table'
+                  ? 'bg-primary text-white'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              ].join(' ')}
+            >
+              <LayoutList size={14} />
+              <span className="hidden sm:inline">Tabel</span>
+            </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              title="Kalender Harian"
+              className={[
+                'flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors cursor-pointer',
+                viewMode === 'calendar'
+                  ? 'bg-primary text-white'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              ].join(' ')}
+            >
+              <CalendarDays size={14} />
+              <span className="hidden sm:inline">Kalender</span>
+            </button>
+          </div>
+
+          {viewMode === 'table' && (
+            <>
+              <button
+                onClick={load}
+                title="Refresh data"
+                className="p-2 rounded-xl border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <RefreshCw size={15} />
+              </button>
+              <button
+                onClick={() => setShowMonthly(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors cursor-pointer text-foreground"
+              >
+                <CalendarRange size={15} /> Jadwal Mingguan
+              </button>
+              <button
+                onClick={openAdd}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer"
+              >
+                <Plus size={15} /> Tambah
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      <ScheduleStats total={total} totalMasuk={totalMasuk} totalOff={totalOff} loading={loading} />
+      {/* ── Calendar view ── */}
+      {viewMode === 'calendar' && (
+        <ScheduleCalendarView staffList={staffList} branches={branches} />
+      )}
 
-      <ScheduleFilters
-        search={search}
-        hariFilter={hariFilter}
-        shiftFilter={shiftFilter}
-        pageSize={pageSize}
-        onSearch={(v) => { setSearch(v); setPage(0) }}
-        onHari={(v) => { setHariFilter(v); setPage(0) }}
-        onShift={(v) => { setShiftFilter(v); setPage(0) }}
-        onPageSize={(v) => { setPageSize(v); setPage(0) }}
-      />
+      {/* ── Table view ── */}
+      {viewMode === 'table' && (
+        <>
+          <ScheduleStats total={total} totalMasuk={totalMasuk} totalOff={totalOff} loading={loading} />
 
-      <ScheduleTable
-        rows={rows}
-        loading={loading}
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        search={search}
-        hariFilter={hariFilter}
-        shiftFilter={shiftFilter}
-        onEdit={openEdit}
-        onDelete={setDeleteId}
-        onPage={setPage}
-      />
+          <ScheduleFilters
+            search={search}
+            hariFilter={hariFilter}
+            shiftFilter={shiftFilter}
+            pageSize={pageSize}
+            onSearch={(v) => { setSearch(v); setPage(0) }}
+            onHari={(v) => { setHariFilter(v); setPage(0) }}
+            onShift={(v) => { setShiftFilter(v); setPage(0) }}
+            onPageSize={(v) => { setPageSize(v); setPage(0) }}
+          />
+
+          <ScheduleTable
+            rows={rows}
+            loading={loading}
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            search={search}
+            hariFilter={hariFilter}
+            shiftFilter={shiftFilter}
+            onEdit={openEdit}
+            onDelete={setDeleteId}
+            onPage={setPage}
+          />
+        </>
+      )}
 
       <ScheduleDialog
         open={showSingle}

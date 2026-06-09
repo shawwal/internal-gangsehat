@@ -41,6 +41,7 @@ export interface PatientVisit {
   patient_id: string
   branch_id: string
   visit_date: string
+  visit_time: string | null
   chief_complaint: string | null
   diagnosis: string | null
   treatment: string | null

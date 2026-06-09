@@ -137,6 +137,15 @@ export const navigation: NavItem[] = [
     roles: ['director', 'hr'],
   },
 
+  // Daily schedule + patient assignment — HR, manager, therapist, staff, director
+  {
+    key: 'jadwal-harian',
+    label: 'Jadwal Harian',
+    href: '/jadwal-harian',
+    icon: 'CalendarClock',
+    roles: ['director', 'hr', 'manager', 'therapist', 'staff'],
+  },
+
   // My Schedule — every role can manage their own schedule
   {
     key: 'my-schedule',

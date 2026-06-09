@@ -15,6 +15,7 @@ export interface ScheduleRow {
 export interface StaffOption {
   id: string
   full_name: string
+  branch_id?: string | null
 }
 
 export interface BranchOption {
@@ -42,3 +43,28 @@ export interface DayEntry {
 }
 
 export type WeeklyPattern = Record<string, DayEntry>
+
+export interface LeaveCalendarRow {
+  id: string
+  start_date: string
+  end_date: string
+  reason: string
+}
+
+export interface AttendanceCalendarRow {
+  id: string
+  status: string
+  notes: string | null
+}
+
+export type CalendarEffectiveStatus = 'AKTIF' | 'CUTI' | 'OFF' | 'OVERRIDE_AKTIF' | 'OVERRIDE_OFF'
+
+export interface CalendarStaffEntry {
+  staff_id: string
+  full_name: string
+  branch_id: string | null
+  schedules_for_day: ScheduleRow[]
+  leave: LeaveCalendarRow | null
+  attendance: AttendanceCalendarRow | null
+  effectiveStatus: CalendarEffectiveStatus
+}
