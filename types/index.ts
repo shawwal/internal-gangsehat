@@ -96,6 +96,19 @@ export interface BranchFinancialReport {
   updated_at: string
 }
 
+export type PackageType = 'fixed' | 'flexible'
+export type PackageStatus = 'active' | 'completed' | 'cancelled'
+
+export interface PatientPackage {
+  id: string
+  package_name: string
+  package_type: PackageType
+  total_sessions: number
+  used_sessions: number   // computed from patient_visits
+  notes: string | null
+  status: PackageStatus
+}
+
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'leave' | 'sick'
 
 export interface Attendance {

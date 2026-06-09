@@ -29,6 +29,7 @@ export interface CreateVisitInput {
   chief_complaint: string | null
   status: VisitStatus
   notes: string | null
+  package_id?: string | null
 }
 
 // ── Fetch all visits for a date with decrypted patient names ───────────────────
@@ -93,6 +94,7 @@ export async function createVisit(input: CreateVisitInput): Promise<{ error: str
     chief_complaint:     input.chief_complaint ?? null,
     status:              input.status,
     notes:               input.notes ?? null,
+    package_id:          input.package_id ?? null,
     updated_at:          new Date().toISOString(),
   })
 
@@ -117,4 +119,29 @@ export async function deleteVisit(visitId: string): Promise<{ error: string | nu
   const supabase = await createClient()
   const { error } = await supabase.from('patient_visits').delete().eq('id', visitId)
   return { error: error?.message ?? null }
+}
+
+// ── Bulk-create visits (recurring assignment) ──────────────────────────────────
+export async function createBulkVisits(
+  inputs: CreateVisitInput[],
+): Promise<{ error: string | null; created: number }> {
+  if (inputs.length === 0) return { error: null, created: 0 }
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const rows = inputs.map((input) => ({
+    patient_id:          input.patient_id,
+    branch_id:           input.branch_id,
+    attending_staff_id:  input.attending_staff_id ?? user?.id ?? null,
+    visit_date:          input.visit_date,
+    visit_time:          input.visit_time ?? null,
+    chief_complaint:     input.chief_complaint ?? null,
+    status:              input.status,
+    notes:               input.notes ?? null,
+    package_id:          input.package_id ?? null,
+    updated_at:          new Date().toISOString(),
+  }))
+
+  const { data, error } = await supabase.from('patient_visits').insert(rows).select('id')
+  return { error: error?.message ?? null, created: data?.length ?? 0 }
 }

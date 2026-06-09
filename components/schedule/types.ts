@@ -26,7 +26,7 @@ export interface BranchOption {
 export interface ScheduleForm {
   staff_id: string
   branch_id: string
-  hari: string
+  hari: string[]   // multi-day selection; single element when editing
   shift: string
   jam_mulai: string
   jam_selesai: string

@@ -3,6 +3,13 @@ import type { VisitStatus } from '@/types'
 
 export type { DailyVisit }
 
+export interface PendingLeaveInfo {
+  id: string
+  reason: string
+  start_date: string
+  end_date: string
+}
+
 export interface DayStaffEntry {
   staff_id: string
   full_name: string
@@ -10,9 +17,10 @@ export interface DayStaffEntry {
   shift: string           // 'PAGI' | 'SORE' | ''
   jam_mulai: string       // 'HH:MM'
   jam_selesai: string     // 'HH:MM'
-  isOnLeave: boolean
+  isOnLeave: boolean      // approved leave covers this date
   leaveReason: string | null
   hasSchedule: boolean    // false = unscheduled but has visits today
+  pendingLeave: PendingLeaveInfo | null  // pending (unapproved) leave for this date
 }
 
 export interface AssignTarget {

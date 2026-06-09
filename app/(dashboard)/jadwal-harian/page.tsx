@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { CalendarClock, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Calendar, CalendarClock, ChevronLeft, ChevronRight, RefreshCw, X, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchDailyVisits, updateVisitStatus, deleteVisit } from '@/app/actions/jadwal'
 import { DailyGrid } from '@/components/jadwal/DailyGrid'
 import { AssignDialog } from '@/components/jadwal/AssignDialog'
-import type { DayStaffEntry, AssignTarget } from '@/components/jadwal/types'
+import type { DayStaffEntry, AssignTarget, PendingLeaveInfo } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { VisitStatus } from '@/types'
 
@@ -65,7 +65,32 @@ export default function JadwalHarianPage() {
   const [visits, setVisits]             = useState<DailyVisit[]>([])
   const [loading, setLoading]           = useState(true)
   const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null)
+  const dateInputRef                    = useRef<HTMLInputElement>(null)
   const today = new Date()
+
+  // Leave action modal
+  const [leavePopover, setLeavePopover] = useState<{
+    staffName: string
+    leave: PendingLeaveInfo
+  } | null>(null)
+  const [leaveSaving, setLeaveSaving]   = useState(false)
+
+  // Can current user approve leaves? (hr / director / manager)
+  const [canApproveLeave, setCanApproveLeave] = useState(false)
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data } = await supabase
+        .from('internal_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      if (data?.role && ['director', 'hr', 'manager'].includes(data.role)) {
+        setCanApproveLeave(true)
+      }
+    })
+  }, [])
 
   // ── Load everything for a date ─────────────────────────────────────────────
   const loadAll = useCallback(async (date: Date) => {
@@ -82,16 +107,27 @@ export default function JadwalHarianPage() {
         .eq('status', 'AKTIF'),
       supabase
         .from('leave_requests')
-        .select('staff_id, reason')
-        .eq('status', 'approved')
+        .select('id, staff_id, reason, status, start_date, end_date')
+        .in('status', ['approved', 'pending'])
         .lte('start_date', isoDate)
         .gte('end_date', isoDate),
       fetchDailyVisits(isoDate),
     ])
 
-    const leaveMap = new Map<string, string>()
+    // Separate approved vs pending leaves
+    const approvedLeaveMap = new Map<string, string>()
+    const pendingLeaveMap  = new Map<string, { id: string; reason: string; start_date: string; end_date: string }>()
     for (const l of leavesRes.data ?? []) {
-      leaveMap.set(l.staff_id, l.reason ?? '')
+      if (l.status === 'approved') {
+        approvedLeaveMap.set(l.staff_id, l.reason ?? '')
+      } else if (l.status === 'pending' && !pendingLeaveMap.has(l.staff_id)) {
+        pendingLeaveMap.set(l.staff_id, {
+          id:         l.id,
+          reason:     l.reason ?? '',
+          start_date: l.start_date,
+          end_date:   l.end_date,
+        })
+      }
     }
 
     // Build staff entries from schedules
@@ -101,15 +137,16 @@ export default function JadwalHarianPage() {
       const sid = row.staff_id as string
       if (entries.has(sid)) continue  // already added
       entries.set(sid, {
-        staff_id:   sid,
-        full_name:  row.internal_profiles?.full_name ?? 'Unknown',
-        branch_id:  row.branch_id ?? null,
-        shift:      row.shift,
-        jam_mulai:  row.jam_mulai?.slice(0, 5) ?? '08:00',
+        staff_id:    sid,
+        full_name:   row.internal_profiles?.full_name ?? 'Unknown',
+        branch_id:   row.branch_id ?? null,
+        shift:       row.shift,
+        jam_mulai:   row.jam_mulai?.slice(0, 5) ?? '08:00',
         jam_selesai: row.jam_selesai?.slice(0, 5) ?? '17:00',
-        isOnLeave:  leaveMap.has(sid),
-        leaveReason: leaveMap.get(sid) ?? null,
+        isOnLeave:   approvedLeaveMap.has(sid),
+        leaveReason: approvedLeaveMap.get(sid) ?? null,
         hasSchedule: true,
+        pendingLeave: pendingLeaveMap.get(sid) ?? null,
       })
     }
 
@@ -117,7 +154,6 @@ export default function JadwalHarianPage() {
     for (const v of visitsData) {
       const sid = v.attending_staff_id
       if (!sid || entries.has(sid)) continue
-      // Try to get name from schedules or leave; otherwise unknown
       entries.set(sid, {
         staff_id:    sid,
         full_name:   'Staff',     // name will be overridden if found
@@ -125,9 +161,10 @@ export default function JadwalHarianPage() {
         shift:       '',
         jam_mulai:   '08:00',
         jam_selesai: '20:00',
-        isOnLeave:   leaveMap.has(sid),
-        leaveReason: leaveMap.get(sid) ?? null,
+        isOnLeave:   approvedLeaveMap.has(sid),
+        leaveReason: approvedLeaveMap.get(sid) ?? null,
         hasSchedule: false,
+        pendingLeave: pendingLeaveMap.get(sid) ?? null,
       })
     }
 
@@ -172,6 +209,25 @@ export default function JadwalHarianPage() {
   async function handleDelete(visitId: string) {
     setVisits((vs) => vs.filter((v) => v.id !== visitId))
     await deleteVisit(visitId)
+  }
+
+  // ── Leave approve / reject ─────────────────────────────────────────────────
+  async function handleLeaveAction(leaveId: string, action: 'approve' | 'reject') {
+    setLeaveSaving(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase
+      .from('leave_requests')
+      .update({
+        status:      action === 'approve' ? 'approved' : 'rejected',
+        reviewed_by: user?.id ?? null,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq('id', leaveId)
+    setLeaveSaving(false)
+    if (error) { alert('Gagal: ' + error.message); return }
+    setLeavePopover(null)
+    loadAll(selectedDate)
   }
 
   // ── Summary counts ─────────────────────────────────────────────────────────
@@ -266,6 +322,29 @@ export default function JadwalHarianPage() {
             <ChevronRight size={16} />
           </button>
 
+          {/* Any-date picker */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => dateInputRef.current?.showPicker()}
+              title="Pilih tanggal"
+              aria-label="Pilih tanggal"
+              className="p-2 rounded-xl border border-border hover:bg-muted transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
+            >
+              <Calendar size={15} />
+            </button>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={toIso(selectedDate)}
+              onChange={(e) => {
+                if (e.target.value) setSelectedDate(new Date(e.target.value + 'T00:00:00'))
+              }}
+              className="absolute inset-0 opacity-0 w-full h-full pointer-events-none"
+              tabIndex={-1}
+              aria-hidden="true"
+            />
+          </div>
+
           {!isSameDay(selectedDate, today) && (
             <button
               onClick={() => setSelectedDate(new Date())}
@@ -312,6 +391,7 @@ export default function JadwalHarianPage() {
               onAssign={setAssignTarget}
               onStatusChange={handleStatusChange}
               onDelete={handleDelete}
+              onPendingLeaveClick={(staffName, leave) => setLeavePopover({ staffName, leave })}
             />
           )}
         </div>
@@ -351,6 +431,92 @@ export default function JadwalHarianPage() {
             loadAll(selectedDate)
           }}
         />
+      )}
+
+      {/* ── Pending leave action modal ── */}
+      {leavePopover && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            onClick={() => setLeavePopover(null)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div className="glass-card w-full max-w-sm pointer-events-auto shadow-2xl">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-3 p-5 border-b border-border/30">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-yellow-500/15 flex items-center justify-center shrink-0">
+                    <AlertCircle size={15} className="text-yellow-400" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+                      Pengajuan Cuti
+                    </p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {leavePopover.staffName}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setLeavePopover(null)}
+                  className="p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer text-muted-foreground shrink-0"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 space-y-3">
+                <div className="flex gap-3 text-sm">
+                  <span className="text-muted-foreground w-20 shrink-0">Tanggal</span>
+                  <span className="text-foreground font-medium">
+                    {leavePopover.leave.start_date === leavePopover.leave.end_date
+                      ? leavePopover.leave.start_date
+                      : `${leavePopover.leave.start_date} – ${leavePopover.leave.end_date}`}
+                  </span>
+                </div>
+                <div className="flex gap-3 text-sm">
+                  <span className="text-muted-foreground w-20 shrink-0">Alasan</span>
+                  <span className="text-foreground">
+                    {leavePopover.leave.reason || <span className="italic text-muted-foreground">—</span>}
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 border-t border-border/30 space-y-2">
+                {canApproveLeave ? (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleLeaveAction(leavePopover.leave.id, 'reject')}
+                      disabled={leaveSaving}
+                      className="flex-1 py-2.5 rounded-xl border border-destructive/40 text-destructive text-sm font-medium hover:bg-destructive/10 disabled:opacity-60 transition-colors cursor-pointer"
+                    >
+                      Tolak
+                    </button>
+                    <button
+                      onClick={() => handleLeaveAction(leavePopover.leave.id, 'approve')}
+                      disabled={leaveSaving}
+                      className="flex-1 py-2.5 rounded-xl bg-[#34C759] text-white text-sm font-medium hover:bg-[#34C759]/90 disabled:opacity-60 transition-colors cursor-pointer"
+                    >
+                      {leaveSaving ? 'Menyimpan...' : 'Setujui'}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-1">
+                    Hanya HR, Manager, atau Director yang dapat menyetujui cuti.
+                  </p>
+                )}
+                <button
+                  onClick={() => setLeavePopover(null)}
+                  className="w-full py-2 rounded-xl text-xs text-muted-foreground hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </>
   )

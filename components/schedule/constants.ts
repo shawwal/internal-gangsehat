@@ -12,7 +12,7 @@ export const SHIFT_HOURS: Record<string, { jam_mulai: string; jam_selesai: strin
 export const EMPTY_FORM: ScheduleForm = {
   staff_id:    '',
   branch_id:   '',
-  hari:        'SENIN',
+  hari:        ['SENIN'],
   shift:       'PAGI',
   jam_mulai:   '08:00',
   jam_selesai: '15:00',

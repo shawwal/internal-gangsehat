@@ -1,9 +1,8 @@
 'use client'
 
-import { CalendarX, Plus } from 'lucide-react'
-import type { DailyVisit, DayStaffEntry, AssignTarget } from './types'
+import { AlertCircle, CalendarX, Plus } from 'lucide-react'
+import type { DailyVisit, DayStaffEntry, AssignTarget, PendingLeaveInfo } from './types'
 import {
-  STATUS_COLOR, STATUS_BADGE, STATUS_LABEL,
   GRID_START, GRID_END, SLOT_H, TIME_COL_W, STAFF_COL_W,
 } from './types'
 import type { VisitStatus } from '@/types'
@@ -33,10 +32,11 @@ interface Props {
   onAssign: (target: AssignTarget) => void
   onStatusChange: (visitId: string, status: VisitStatus) => void
   onDelete: (visitId: string) => void
+  onPendingLeaveClick: (staffName: string, leave: PendingLeaveInfo) => void
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDelete }: Props) {
+export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDelete, onPendingLeaveClick }: Props) {
   const totalH = (GRID_END - GRID_START) * SLOT_H
 
   // Current time line
@@ -109,6 +109,8 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                   'w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold border-2',
                   s.isOnLeave
                     ? 'bg-amber-500/30 border-amber-400/60 text-amber-200'
+                    : s.pendingLeave
+                    ? 'bg-yellow-500/20 border-yellow-400/50 text-yellow-200'
                     : 'bg-white/20 border-white/40 text-white',
                 ].join(' ')}
               >
@@ -120,7 +122,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                 {s.full_name}
               </p>
 
-              {/* Shift badge */}
+              {/* Shift + leave badges */}
               <div className="flex items-center gap-1 flex-wrap justify-center">
                 {s.isOnLeave ? (
                   <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-200 font-bold uppercase">
@@ -139,6 +141,18 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                   <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-white/40 font-bold">
                     —
                   </span>
+                )}
+
+                {/* Pending leave badge — shown alongside shift info (not yet approved) */}
+                {s.pendingLeave && !s.isOnLeave && (
+                  <button
+                    onClick={() => onPendingLeaveClick(s.full_name, s.pendingLeave!)}
+                    className="flex items-center gap-0.5 text-[9px] px-2 py-0.5 rounded-full bg-yellow-500/25 text-yellow-200 font-bold uppercase border border-yellow-400/30 hover:bg-yellow-500/40 transition-colors cursor-pointer"
+                    title="Klik untuk tinjau pengajuan cuti"
+                  >
+                    <AlertCircle size={8} className="shrink-0" />
+                    PENGAJUAN
+                  </button>
                 )}
               </div>
             </div>
@@ -246,9 +260,14 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                   />
                 )}
 
-                {/* On-leave overlay */}
+                {/* Approved leave overlay */}
                 {s.isOnLeave && (
                   <div className="absolute inset-0 bg-amber-500/5 pointer-events-none" />
+                )}
+
+                {/* Pending leave overlay — lighter tint, no pointer blocking */}
+                {s.pendingLeave && !s.isOnLeave && (
+                  <div className="absolute inset-0 bg-yellow-500/[0.03] pointer-events-none" />
                 )}
 
                 {/* Time slot cells */}
@@ -273,8 +292,8 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                         />
                       ))}
 
-                      {/* Add button — appears on hover for empty in-shift cells */}
-                      {cellVisits.length === 0 && (
+                      {/* Add button — blocked for staff on approved leave */}
+                      {cellVisits.length === 0 && !s.isOnLeave && (
                         <button
                           onClick={() =>
                             onAssign({

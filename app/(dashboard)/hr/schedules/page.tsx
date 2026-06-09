@@ -127,7 +127,7 @@ export default function SchedulesPage() {
     setForm({
       staff_id:    row.staff_id,
       branch_id:   row.branch_id ?? '',
-      hari:        row.hari,
+      hari:        [row.hari],   // array with one element for edit mode
       shift:       row.shift,
       jam_mulai:   row.jam_mulai?.slice(0, 5) ?? '08:00',
       jam_selesai: row.jam_selesai?.slice(0, 5) ?? '15:00',
@@ -140,21 +140,38 @@ export default function SchedulesPage() {
 
   async function handleSave() {
     if (!form.staff_id) return
+    const hariList = Array.isArray(form.hari) ? form.hari : [form.hari]
+    if (hariList.length === 0) return
+
     setSaving(true)
     const supabase = createClient()
-    const payload = {
+    const base = {
       staff_id:    form.staff_id,
       branch_id:   form.branch_id || null,
-      hari:        form.hari,
       shift:       form.shift,
       jam_mulai:   form.jam_mulai,
       jam_selesai: form.jam_selesai,
       status:      form.status,
       notes:       form.notes.trim() || null,
     }
-    const { error } = editId
-      ? await supabase.from('schedules').update(payload).eq('id', editId)
-      : await supabase.from('schedules').insert(payload)
+
+    let error = null
+
+    if (editId && hariList.length === 1) {
+      // Edit single day: update the existing row in-place
+      const { error: e } = await supabase
+        .from('schedules')
+        .update({ ...base, hari: hariList[0] })
+        .eq('id', editId)
+      error = e
+    } else {
+      // Add or edit with multiple days: upsert one row per selected day
+      const scheduleRows = hariList.map((h) => ({ ...base, hari: h }))
+      const { error: e } = await supabase
+        .from('schedules')
+        .upsert(scheduleRows, { onConflict: 'staff_id,hari' })
+      error = e
+    }
 
     if (error) { alert('Gagal menyimpan: ' + error.message); setSaving(false); return }
     setSaving(false)
