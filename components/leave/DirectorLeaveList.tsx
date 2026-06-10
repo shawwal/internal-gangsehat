@@ -9,9 +9,9 @@ interface Props {
   selectMode: boolean
   selected: Set<string>
   onToggle: (id: string) => void
-  onApprove: (id: string) => void
-  onReject: (id: string, note: string) => void
-  onDelete: (id: string) => void
+  onApprove: (id: string) => Promise<void>
+  onReject: (id: string, note: string) => Promise<void>
+  onDelete: (id: string) => Promise<void>
 }
 
 export function DirectorLeaveList({
