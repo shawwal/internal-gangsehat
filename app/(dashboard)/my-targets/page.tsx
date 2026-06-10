@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, CheckCircle2, PlusCircle, Target, XCircle } from 'lucide-react'
+import { PlusCircle, Target } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { TargetStats } from '@/components/target/TargetStats'
 import { TargetForm } from '@/components/target/TargetForm'
-import { MyTargetCard } from '@/components/target/MyTargetCard'
+import { MyTargetsHeader } from '@/components/target/MyTargetsHeader'
+import { MyTargetsToast } from '@/components/target/MyTargetsToast'
+import { CurrentMonthPrompt } from '@/components/target/CurrentMonthPrompt'
+import { MyTargetsHistory } from '@/components/target/MyTargetsHistory'
 import type { TargetRow, StatusFilter } from '@/components/target/types'
-import { MONTHS, STATUS_LABEL } from '@/components/target/types'
 
 interface FormState {
   bulan: number
@@ -32,13 +34,6 @@ function defaultForm(): FormState {
     notes: '',
   }
 }
-
-const STATUS_TABS: { value: StatusFilter; label: string }[] = [
-  { value: 'all', label: 'Semua' },
-  { value: 'pending', label: 'Menunggu' },
-  { value: 'approved', label: 'Disetujui' },
-  { value: 'rejected', label: 'Ditolak' },
-]
 
 export default function MyTargetsPage() {
   const [targets, setTargets]       = useState<TargetRow[]>([])
@@ -149,52 +144,19 @@ export default function MyTargetsPage() {
     }
   }
 
-  // Derived counts
   const pendingCount  = targets.filter(t => t.status === 'pending').length
   const approvedCount = targets.filter(t => t.status === 'approved').length
   const rejectedCount = targets.filter(t => t.status === 'rejected').length
-
   const hasCurrentMonth = targets.some(
     t => t.bulan === now.getMonth() + 1 && t.tahun === now.getFullYear(),
   )
 
-  // Filtered for the history list
-  const yearTargets = targets.filter(t => t.tahun === viewYear)
-  const filtered = activeTab === 'all'
-    ? yearTargets
-    : yearTargets.filter(t => t.status === activeTab)
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Target Saya</h1>
-          <p className="text-sm text-muted-foreground">Ajukan dan pantau target bulanan Anda</p>
-        </div>
-        {!showForm && (
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0 shadow-sm"
-          >
-            <PlusCircle size={15} /> Buat Target
-          </button>
-        )}
-      </div>
+      <MyTargetsHeader showForm={showForm} onCreateClick={openCreate} />
 
-      {/* Toast */}
-      {toast && (
-        <div className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl text-sm font-medium ${
-          toast.ok
-            ? 'bg-chart-4/10 text-chart-4 border border-chart-4/20'
-            : 'bg-destructive/10 text-destructive border border-destructive/20'
-        }`}>
-          {toast.ok ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
-          {toast.msg}
-        </div>
-      )}
+      <MyTargetsToast toast={toast} />
 
-      {/* Form */}
       {showForm && (
         <TargetForm
           editTarget={editTarget}
@@ -206,7 +168,6 @@ export default function MyTargetsPage() {
         />
       )}
 
-      {/* Stats */}
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map(i => <div key={i} className="animate-pulse bg-muted rounded-3xl h-20" />)}
@@ -220,95 +181,27 @@ export default function MyTargetsPage() {
         }} />
       )}
 
-      {/* Prompt — no target for current month */}
       {!loading && !showForm && !hasCurrentMonth && (
-        <div
+        <CurrentMonthPrompt
+          month={now.getMonth()}
+          year={now.getFullYear()}
           onClick={openCreate}
-          className="flex items-center gap-4 p-4 bg-primary/5 border border-primary/20 rounded-3xl cursor-pointer hover:bg-primary/10 transition-colors group"
-        >
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-            <Target size={18} className="text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">
-              Belum ada target untuk {MONTHS[now.getMonth()]} {now.getFullYear()}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">Klik untuk mengajukan target bulan ini</p>
-          </div>
-          <PlusCircle size={16} className="text-primary shrink-0" />
-        </div>
+        />
       )}
 
-      {/* History section */}
       {!loading && targets.length > 0 && (
-        <div className="space-y-4">
-          {/* Section header + year navigator */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Riwayat Target</h2>
-            <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
-              <button
-                onClick={() => setViewYear(y => y - 1)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-card transition-colors text-muted-foreground hover:text-foreground"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <span className="px-2 text-sm font-medium text-foreground min-w-[3rem] text-center">
-                {viewYear}
-              </span>
-              <button
-                onClick={() => setViewYear(y => y + 1)}
-                disabled={viewYear >= now.getFullYear()}
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-card transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-
-          {/* Filter tabs */}
-          {yearTargets.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {STATUS_TABS.map(tab => (
-                <button
-                  key={tab.value}
-                  onClick={() => setActiveTab(tab.value)}
-                  className={`relative px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                    activeTab === tab.value
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                  }`}
-                >
-                  {tab.label}
-                  {tab.value === 'pending' && pendingCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-white text-[10px] font-bold flex items-center justify-center leading-none">
-                      {pendingCount > 9 ? '9+' : pendingCount}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Cards */}
-          {yearTargets.length === 0 ? (
-            <div className="text-sm text-muted-foreground text-center py-10 bg-muted/30 rounded-3xl">
-              Tidak ada target untuk tahun {viewYear}.
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-sm text-muted-foreground text-center py-10 bg-muted/30 rounded-3xl">
-              Tidak ada target dengan status "{STATUS_LABEL[activeTab]}".
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filtered.map(t => (
-                <MyTargetCard key={t.id} target={t} onEdit={openEdit} />
-              ))}
-            </div>
-          )}
-        </div>
+        <MyTargetsHistory
+          targets={targets}
+          viewYear={viewYear}
+          maxYear={now.getFullYear()}
+          activeTab={activeTab}
+          pendingCount={pendingCount}
+          onYearChange={setViewYear}
+          onTabChange={setActiveTab}
+          onEdit={openEdit}
+        />
       )}
 
-      {/* Skeletons */}
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
@@ -317,7 +210,6 @@ export default function MyTargetsPage() {
         </div>
       )}
 
-      {/* Empty state — no targets at all */}
       {!loading && targets.length === 0 && (
         <div className="flex flex-col items-center py-16 px-4 bg-muted/30 rounded-3xl gap-3">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
