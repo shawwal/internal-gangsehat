@@ -97,6 +97,132 @@ export async function fetchPatients(): Promise<PatientPlain[]> {
   return rows.map(toPlain)
 }
 
+export interface PatientsPageParams {
+  page: number
+  pageSize: number
+  gender: 'all' | 'male' | 'female' | 'other'
+  search: string
+  sortField: 'name' | 'created_at' | 'no_rm'
+  sortOrder: 'asc' | 'desc'
+}
+
+export interface PatientsPageResult {
+  patients: PatientPlain[]
+  total: number
+}
+
+/**
+ * Server-side paginated patient list. Only the requested page is decrypted
+ * and sent to the client.
+ *
+ * Fast path: gender filter, created_at/no_rm sort, and count all happen in
+ * Postgres — one request via `{ count: 'exact' }` + `.range()`.
+ *
+ * Slow path (search term, or sort by name): name/phone are AES-encrypted at
+ * rest so Postgres can't ilike/order them — scan in 1000-row batches
+ * server-side, decrypt only name+phone to filter/sort, then fully decrypt
+ * just the requested page.
+ */
+export async function fetchPatientsPage(params: PatientsPageParams): Promise<PatientsPageResult> {
+  const supabase = await createClient()
+  const { page, pageSize, gender, sortField, sortOrder } = params
+  const search = params.search.trim().toLowerCase()
+  const ascending = sortOrder === 'asc'
+  const from = (page - 1) * pageSize
+
+  // Fast path — everything expressible in SQL
+  if (!search && sortField !== 'name') {
+    let query = supabase
+      .from('patients')
+      .select(SELECT_COLS, { count: 'exact' })
+      .eq('is_active', true)
+    if (gender !== 'all') query = query.eq('gender', gender)
+    const { data, count } = await query
+      .order(sortField, { ascending, nullsFirst: false })
+      .order('id', { ascending: true }) // stable tiebreaker across pages
+      .range(from, from + pageSize - 1)
+    return {
+      patients: (data ?? []).map((row) => toPlain(row as unknown as Record<string, unknown>)),
+      total: count ?? 0,
+    }
+  }
+
+  // Slow path — encrypted name/phone force an app-side scan
+  const BATCH = 1000
+  const rows: Record<string, unknown>[] = []
+  let offset = 0
+  while (true) {
+    let query = supabase
+      .from('patients')
+      .select(SELECT_COLS)
+      .eq('is_active', true)
+    if (gender !== 'all') query = query.eq('gender', gender)
+    const { data, error } = await query
+      .order('id', { ascending: true })
+      .range(offset, offset + BATCH - 1)
+    if (error || !data || data.length === 0) break
+    rows.push(...(data as unknown as Record<string, unknown>[]))
+    if (data.length < BATCH) break
+    offset += BATCH
+  }
+
+  // Decrypt only name+phone for filtering/sorting
+  let candidates = rows.map((row) => {
+    const pii = decryptPatientPII({
+      encrypted_name:  (row.encrypted_name as string)  ?? '',
+      encrypted_phone: (row.encrypted_phone as string) ?? '',
+    })
+    return { row, name: pii.name ?? '', phone: pii.phone ?? '' }
+  })
+
+  if (search) {
+    candidates = candidates.filter(
+      (c) => c.name.toLowerCase().includes(search) || c.phone.includes(search),
+    )
+  }
+
+  candidates.sort((a, b) => {
+    const mul = ascending ? 1 : -1
+    if (sortField === 'name') return mul * a.name.localeCompare(b.name, 'id')
+    if (sortField === 'no_rm') {
+      return mul * ((a.row.no_rm as string ?? '').localeCompare(b.row.no_rm as string ?? '', 'id'))
+    }
+    return mul * (new Date(a.row.created_at as string).getTime() - new Date(b.row.created_at as string).getTime())
+  })
+
+  const pageRows = candidates.slice(from, from + pageSize)
+  return {
+    patients: pageRows.map((c) => toPlain(c.row)),
+    total: candidates.length,
+  }
+}
+
+export interface PatientStats {
+  total: number
+  male: number
+  female: number
+  other: number
+}
+
+/** Head-only count queries — zero rows fetched. */
+export async function fetchPatientStats(): Promise<PatientStats> {
+  const supabase = await createClient()
+  const base = () =>
+    supabase.from('patients').select('*', { count: 'exact', head: true }).eq('is_active', true)
+  const [total, male, female, other] = await Promise.all([
+    base(),
+    base().eq('gender', 'male'),
+    base().eq('gender', 'female'),
+    base().eq('gender', 'other'),
+  ])
+  return {
+    total:  total.count  ?? 0,
+    male:   male.count   ?? 0,
+    female: female.count ?? 0,
+    other:  other.count  ?? 0,
+  }
+}
+
 export async function fetchPatient(id: string): Promise<PatientPlain | null> {
   const supabase = await createClient()
   const { data } = await supabase

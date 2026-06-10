@@ -1,17 +1,18 @@
 'use client'
 
 import { HeartPulse, User, Users } from 'lucide-react'
-import type { PatientPlain } from './types'
+import type { PatientStats as PatientStatsData } from '@/app/actions/patients'
 
 interface Props {
-  patients: PatientPlain[]
-  loading:  boolean
+  stats:   PatientStatsData | null
+  loading: boolean
 }
 
-export function PatientStats({ patients, loading }: Props) {
-  const maleCount   = patients.filter(p => p.gender === 'male').length
-  const femaleCount = patients.filter(p => p.gender === 'female').length
-  const otherCount  = patients.filter(p => p.gender === 'other').length
+export function PatientStats({ stats, loading }: Props) {
+  const totalCount  = stats?.total  ?? 0
+  const maleCount   = stats?.male   ?? 0
+  const femaleCount = stats?.female ?? 0
+  const otherCount  = stats?.other  ?? 0
 
   if (loading) {
     return (
@@ -30,7 +31,7 @@ export function PatientStats({ patients, loading }: Props) {
           <Users size={17} className="text-foreground" />
         </div>
         <div>
-          <p className="text-2xl font-bold text-foreground leading-none">{patients.length}</p>
+          <p className="text-2xl font-bold text-foreground leading-none">{totalCount}</p>
           <p className="text-xs text-muted-foreground mt-1">Total Pasien</p>
         </div>
       </div>

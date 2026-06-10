@@ -1,8 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, PlusCircle, XCircle } from 'lucide-react'
-import { fetchPatients, addPatient } from '@/app/actions/patients'
+import {
+  fetchPatientsPage,
+  fetchPatientStats,
+  addPatient,
+  type PatientStats as PatientStatsData,
+} from '@/app/actions/patients'
 import { PatientStats }   from '@/components/patients/PatientStats'
 import { PatientFilters } from '@/components/patients/PatientFilters'
 import { PatientCard }    from '@/components/patients/PatientCard'
@@ -11,7 +16,6 @@ import { PatientForm, DEFAULT_PATIENT_FORM } from '@/components/patients/Patient
 import { PatientEmpty }   from '@/components/patients/PatientEmpty'
 import { Pagination }     from '@/components/leave/Pagination'
 import {
-  applyFilters,
   DEFAULT_FILTERS,
   PAGE_SIZE,
   type PatientPlain,
@@ -20,8 +24,12 @@ import {
 } from '@/components/patients/types'
 import type { PatientFormData } from '@/components/patients/PatientForm'
 
+const SEARCH_DEBOUNCE_MS = 350
+
 export default function PatientsPage() {
   const [patients, setPatients] = useState<PatientPlain[]>([])
+  const [total,    setTotal]    = useState(0)
+  const [stats,    setStats]    = useState<PatientStatsData | null>(null)
   const [loading,  setLoading]  = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form,     setForm]     = useState<PatientFormData>(DEFAULT_PATIENT_FORM)
@@ -30,20 +38,42 @@ export default function PatientsPage() {
   const [filters,  setFilters]  = useState<PatientFiltersState>(DEFAULT_FILTERS)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [page,     setPage]     = useState(1)
+  const requestId = useRef(0)
 
   function showToast(msg: string, ok: boolean) {
     setToast({ msg, ok })
     setTimeout(() => setToast(null), 4000)
   }
 
-  async function load() {
+  async function loadPage(p: number, f: PatientFiltersState) {
+    const id = ++requestId.current
     setLoading(true)
-    const data = await fetchPatients()
+    const { patients: data, total } = await fetchPatientsPage({
+      page:      p,
+      pageSize:  PAGE_SIZE,
+      gender:    f.gender,
+      search:    f.search,
+      sortField: f.sortField,
+      sortOrder: f.sortOrder,
+    })
+    if (id !== requestId.current) return // a newer request superseded this one
     setPatients(data)
+    setTotal(total)
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  function loadStats() {
+    fetchPatientStats().then(setStats)
+  }
+
+  useEffect(() => { loadStats() }, [])
+
+  // Reload on page/filter change — debounced so search doesn't fire per keystroke
+  useEffect(() => {
+    const t = setTimeout(() => { loadPage(page, filters) }, filters.search ? SEARCH_DEBOUNCE_MS : 0)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, filters])
 
   function closeForm() {
     setShowForm(false)
@@ -64,7 +94,8 @@ export default function PatientsPage() {
     if (error) { showToast(error, false); return }
     showToast('Pasien berhasil ditambahkan!', true)
     closeForm()
-    load()
+    loadPage(page, filters)
+    loadStats()
   }
 
   // Reset page when filters change
@@ -78,8 +109,7 @@ export default function PatientsPage() {
     setPage(1)
   }
 
-  const filtered  = applyFilters(patients, filters)
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const totalPatients = stats?.total ?? 0
 
   return (
     <div className="space-y-6">
@@ -122,15 +152,15 @@ export default function PatientsPage() {
       )}
 
       {/* Stats */}
-      <PatientStats patients={patients} loading={loading} />
+      <PatientStats stats={stats} loading={stats === null} />
 
-      {/* Filters (only when there is data or loading is done) */}
-      {!loading && patients.length > 0 && (
+      {/* Filters */}
+      {totalPatients > 0 && (
         <PatientFilters
           filters={filters}
           viewMode={viewMode}
-          total={patients.length}
-          filtered={filtered.length}
+          total={totalPatients}
+          filtered={total}
           onChange={handleFiltersChange}
           onViewMode={handleViewMode}
         />
@@ -152,22 +182,22 @@ export default function PatientsPage() {
             ))}
           </div>
         )
-      ) : paginated.length === 0 ? (
-        <PatientEmpty totalPatients={patients.length} onAdd={() => setShowForm(true)} />
+      ) : patients.length === 0 ? (
+        <PatientEmpty totalPatients={totalPatients} onAdd={() => setShowForm(true)} />
       ) : viewMode === 'grid' ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {paginated.map(p => <PatientCard key={p.id} patient={p} />)}
+          {patients.map(p => <PatientCard key={p.id} patient={p} />)}
         </div>
       ) : (
-        <PatientTable patients={paginated} />
+        <PatientTable patients={patients} />
       )}
 
       {/* Pagination */}
-      {!loading && filtered.length > PAGE_SIZE && (
+      {!loading && total > PAGE_SIZE && (
         <Pagination
           page={page}
           pageSize={PAGE_SIZE}
-          total={filtered.length}
+          total={total}
           onPage={setPage}
         />
       )}

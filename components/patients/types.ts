@@ -50,31 +50,4 @@ export function formatDate(d: string) {
   return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export function applyFilters(
-  patients: PatientPlain[],
-  filters: PatientFiltersState,
-): PatientPlain[] {
-  let result = patients.filter(p => {
-    const matchSearch =
-      p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-      (p.phone ?? '').includes(filters.search)
-    const matchGender = filters.gender === 'all' || p.gender === filters.gender
-    return matchSearch && matchGender
-  })
-
-  result = [...result].sort((a, b) => {
-    const mul = filters.sortOrder === 'asc' ? 1 : -1
-    if (filters.sortField === 'name') {
-      return mul * a.name.localeCompare(b.name, 'id')
-    }
-    if (filters.sortField === 'no_rm') {
-      return mul * ((a.no_rm ?? '').localeCompare(b.no_rm ?? '', 'id'))
-    }
-    // created_at
-    return mul * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-  })
-
-  return result
-}
-
 export type { PatientPlain }
