@@ -66,15 +66,16 @@ export function ProfileCard({ initialData }: Props) {
     }
 
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    const bustedUrl = `${publicUrl}?t=${Date.now()}`
     const { error: updateError } = await supabase
       .from('internal_profiles')
-      .update({ avatar_url: publicUrl })
+      .update({ avatar_url: bustedUrl })
       .eq('id', user.id)
 
     if (updateError) {
       flash('Foto diunggah, gagal menyimpan URL.', false)
     } else {
-      setAvatarUrl(publicUrl)
+      setAvatarUrl(bustedUrl)
       flash('Foto profil diperbarui.', true)
     }
 
