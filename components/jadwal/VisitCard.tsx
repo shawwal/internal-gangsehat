@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, X, UserX, MoreVertical, Trash2 } from 'lucide-react'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL } from './types'
@@ -9,10 +10,10 @@ import type { VisitStatus } from '@/types'
 const ALL_STATUSES: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
 
 const STATUS_ICON: Record<VisitStatus, React.ReactNode> = {
-  scheduled: <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />,
-  completed: <Check size={10} className="text-[#34C759]" />,
-  cancelled: <X size={10} className="text-destructive" />,
-  no_show:   <UserX size={10} className="text-muted-foreground" />,
+  scheduled: <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />,
+  completed: <Check size={12} className="text-[#34C759]" />,
+  cancelled: <X size={12} className="text-destructive" />,
+  no_show:   <UserX size={12} className="text-muted-foreground" />,
 }
 
 interface Props {
@@ -22,19 +23,35 @@ interface Props {
 }
 
 export function VisitCard({ visit, onStatusChange, onDelete }: Props) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef  = useRef<HTMLDivElement>(null)
+  const [menuOpen, setMenuOpen]     = useState(false)
+  const [menuPos, setMenuPos]       = useState<{ top: number; left: number } | null>(null)
+  const btnRef  = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
-  // Close menu on outside click
+  function openMenu(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!btnRef.current) return
+    const rect = btnRef.current.getBoundingClientRect()
+    // Prefer opening to the left; if near right edge, adjust
+    const menuWidth = 208 // w-52
+    const left = Math.min(rect.right, window.innerWidth - menuWidth - 8)
+    setMenuPos({ top: rect.bottom + 4, left })
+    setMenuOpen(true)
+  }
+
+  // Close on outside click or scroll
   useEffect(() => {
     if (!menuOpen) return
-    function handler(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
+    function close() { setMenuOpen(false) }
+    function onMouseDown(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) close()
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('scroll', close, true)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('scroll', close, true)
+    }
   }, [menuOpen])
 
   const colorCls = STATUS_COLOR[visit.status]
@@ -42,8 +59,9 @@ export function VisitCard({ visit, onStatusChange, onDelete }: Props) {
   return (
     <div
       className={[
-        'relative rounded-lg border px-2 py-1.5 flex flex-col gap-0.5 group/card',
-        'transition-all duration-150 hover:scale-[1.02] cursor-default',
+        'relative rounded-lg border px-2 py-1.5 flex flex-col gap-0.5 group/card cursor-default',
+        'transition-all duration-150',
+        menuOpen ? '' : 'hover:scale-[1.02]',   // suppress scale while menu is open
         colorCls,
       ].join(' ')}
     >
@@ -53,8 +71,12 @@ export function VisitCard({ visit, onStatusChange, onDelete }: Props) {
           {visit.patient_name}
         </span>
         <button
-          onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v) }}
-          className="opacity-0 group-hover/card:opacity-100 p-0.5 rounded hover:bg-white/10 transition-all cursor-pointer shrink-0"
+          ref={btnRef}
+          onClick={openMenu}
+          className={[
+            'p-0.5 rounded hover:bg-white/10 transition-all cursor-pointer shrink-0',
+            menuOpen ? 'opacity-100' : 'opacity-0 group-hover/card:opacity-100',
+          ].join(' ')}
           aria-label="Menu kunjungan"
         >
           <MoreVertical size={10} />
@@ -76,42 +98,55 @@ export function VisitCard({ visit, onStatusChange, onDelete }: Props) {
         <span className="text-[9px] opacity-60 truncate">{visit.chief_complaint}</span>
       )}
 
-      {/* Context menu */}
-      {menuOpen && (
-        <div
-          ref={menuRef}
-          className="absolute top-0 right-6 z-50 w-44 glass-card p-1 shadow-2xl rounded-xl border border-border/50"
-          role="menu"
-        >
-          <p className="text-[9px] text-muted-foreground px-2 pt-1 pb-1.5 uppercase tracking-wider font-semibold">
-            Ubah Status
-          </p>
-          {ALL_STATUSES.map((s) => (
+      {/* Context menu — portalled to body so it always paints above the grid */}
+      {menuOpen && menuPos && createPortal(
+        <>
+          {/* Transparent backdrop to catch outside clicks */}
+          <div className="fixed inset-0 z-[200]" onClick={() => setMenuOpen(false)} />
+
+          <div
+            ref={menuRef}
+            role="menu"
+            className="fixed z-[201] w-52 rounded-xl border border-white/15 p-1.5 shadow-2xl backdrop-blur-xl bg-gray-900/95"
+            style={{ top: menuPos.top, left: menuPos.left }}
+          >
+            <p className="text-[10px] text-muted-foreground/70 px-2.5 pt-1 pb-2 uppercase tracking-widest font-semibold">
+              Ubah Status
+            </p>
+
+            {ALL_STATUSES.map((s) => (
+              <button
+                key={s}
+                onClick={() => { onStatusChange(visit.id, s); setMenuOpen(false) }}
+                className={[
+                  'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors cursor-pointer',
+                  s === visit.status
+                    ? 'bg-white/10 font-semibold text-foreground'
+                    : 'text-foreground/80 hover:bg-white/8 hover:text-foreground',
+                ].join(' ')}
+                role="menuitem"
+              >
+                {STATUS_ICON[s]}
+                <span>{STATUS_LABEL[s]}</span>
+                {s === visit.status && (
+                  <Check size={11} className="ml-auto text-foreground/50" />
+                )}
+              </button>
+            ))}
+
+            <hr className="border-white/10 my-1.5" />
+
             <button
-              key={s}
-              onClick={() => { onStatusChange(visit.id, s); setMenuOpen(false) }}
-              className={[
-                'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] transition-colors cursor-pointer',
-                s === visit.status
-                  ? 'bg-white/10 font-semibold'
-                  : 'hover:bg-white/5',
-              ].join(' ')}
+              onClick={() => { onDelete(visit.id); setMenuOpen(false) }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
               role="menuitem"
             >
-              {STATUS_ICON[s]}
-              <span>{STATUS_LABEL[s]}</span>
+              <Trash2 size={13} />
+              Hapus Kunjungan
             </button>
-          ))}
-          <hr className="border-border/30 my-1" />
-          <button
-            onClick={() => { onDelete(visit.id); setMenuOpen(false) }}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-            role="menuitem"
-          >
-            <Trash2 size={10} />
-            Hapus Kunjungan
-          </button>
-        </div>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   )

@@ -175,7 +175,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
               return (
                 <div
                   key={s.staff_id}
-                  className="shrink-0 border-l border-border/15 p-1.5 flex flex-col gap-1"
+                  className="shrink-0 border-l border-border/30 p-1.5 flex flex-col gap-1"
                   style={{ width: STAFF_COL_W, minHeight: 48 }}
                 >
                   {cellVisits.map((v) => (
@@ -197,7 +197,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
 
           {/* Time labels — sticky left */}
           <div
-            className="shrink-0 sticky left-0 z-10 bg-background/90 backdrop-blur-sm border-r border-border/20"
+            className="shrink-0 sticky left-0 z-10 bg-background/90 backdrop-blur-sm border-r border-border/40"
             style={{ width: TIME_COL_W, height: totalH }}
           >
             {HOURS.map((h, i) => (
@@ -221,7 +221,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
             {HOURS.map((h, i) => (
               <div
                 key={h}
-                className="absolute inset-x-0 border-t border-border/20"
+                className="absolute inset-x-0 border-t border-border/40"
                 style={{ top: i * SLOT_H }}
               />
             ))}
@@ -249,25 +249,25 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
             return (
               <div
                 key={s.staff_id}
-                className="shrink-0 relative border-l border-border/15"
+                className="shrink-0 relative border-l border-border/30"
                 style={{ width: STAFF_COL_W, height: totalH }}
               >
                 {/* Shift window shading */}
                 {shiftTop !== null && shiftBottom !== null && !s.isOnLeave && (
                   <div
-                    className="absolute inset-x-0 bg-white/[0.025] pointer-events-none"
+                    className="absolute inset-x-0 bg-foreground/[0.04] pointer-events-none"
                     style={{ top: shiftTop, height: shiftBottom - shiftTop }}
                   />
                 )}
 
                 {/* Approved leave overlay */}
                 {s.isOnLeave && (
-                  <div className="absolute inset-0 bg-amber-500/5 pointer-events-none" />
+                  <div className="absolute inset-0 bg-amber-500/10 pointer-events-none" />
                 )}
 
-                {/* Pending leave overlay — lighter tint, no pointer blocking */}
+                {/* Pending leave overlay */}
                 {s.pendingLeave && !s.isOnLeave && (
-                  <div className="absolute inset-0 bg-yellow-500/[0.03] pointer-events-none" />
+                  <div className="absolute inset-0 bg-yellow-500/[0.06] pointer-events-none" />
                 )}
 
                 {/* Time slot cells */}
@@ -276,12 +276,24 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                   const isInShift  = s.hasSchedule && !s.isOnLeave
                     && parseHour(s.jam_mulai) <= h && h < parseHour(s.jam_selesai)
 
+                  const unavailable = !isInShift && !s.isOnLeave && s.hasSchedule
+
                   return (
                     <div
                       key={h}
                       className="absolute inset-x-0 flex flex-col gap-1 p-1 group"
                       style={{ top: i * SLOT_H, height: SLOT_H }}
                     >
+                      {/* Outside-shift hatched overlay — pointer-events-none so visit cards stay clickable */}
+                      {unavailable && (
+                        <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 5px, color-mix(in srgb, currentColor 7%, transparent) 5px, color-mix(in srgb, currentColor 7%, transparent) 6px)',
+                          }}
+                        />
+                      )}
+
                       {/* Visit cards */}
                       {cellVisits.map((v) => (
                         <VisitCard
@@ -292,8 +304,8 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                         />
                       ))}
 
-                      {/* Add button — blocked for staff on approved leave */}
-                      {cellVisits.length === 0 && !s.isOnLeave && (
+                      {/* Add button — only for in-shift, non-leave, empty cells */}
+                      {cellVisits.length === 0 && isInShift && !s.isOnLeave && (
                         <button
                           onClick={() =>
                             onAssign({
@@ -304,15 +316,10 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                               date,
                             })
                           }
-                          className={[
-                            'w-full flex-1 flex items-center justify-center rounded-lg border border-dashed opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer',
-                            isInShift
-                              ? 'border-[#34C759]/30 hover:bg-[#34C759]/5 hover:border-[#34C759]/60'
-                              : 'border-border/20 hover:bg-white/5 hover:border-border/40',
-                          ].join(' ')}
+                          className="w-full flex-1 flex items-center justify-center rounded-lg border border-dashed opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer border-[#34C759]/40 hover:bg-[#34C759]/8 hover:border-[#34C759]/70"
                           aria-label={`Tambah kunjungan — ${s.full_name} jam ${fmtHour(h)}`}
                         >
-                          <Plus size={14} className={isInShift ? 'text-[#34C759]/50' : 'text-muted-foreground/30'} />
+                          <Plus size={14} className="text-[#34C759]/60" />
                         </button>
                       )}
                     </div>
