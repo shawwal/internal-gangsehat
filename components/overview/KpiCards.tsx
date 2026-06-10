@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Users, TrendingUp, TrendingDown, DollarSign, Building2 } from 'lucide-react'
 import { formatRp } from './utils'
 
@@ -7,11 +8,12 @@ interface StatCardProps {
   icon: React.ReactNode
   color: string
   sub?: string
+  href?: string
 }
 
-function GlassStatCard({ title, value, icon, color, sub }: StatCardProps) {
-  return (
-    <div className="glass-card p-5 hover:scale-[1.02] transition-transform duration-200 cursor-default">
+function GlassStatCard({ title, value, icon, color, sub, href }: StatCardProps) {
+  const inner = (
+    <>
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
         <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${color}`}>
@@ -20,6 +22,20 @@ function GlassStatCard({ title, value, icon, color, sub }: StatCardProps) {
       </div>
       <p className="text-2xl font-bold text-foreground">{value}</p>
       {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+    </>
+  )
+
+  if (href) {
+    return (
+      <Link href={href} className="glass-card p-5 hover:scale-[1.02] hover:ring-1 hover:ring-primary/30 transition-all duration-200 cursor-pointer block">
+        {inner}
+      </Link>
+    )
+  }
+
+  return (
+    <div className="glass-card p-5 hover:scale-[1.02] transition-transform duration-200 cursor-default">
+      {inner}
     </div>
   )
 }
@@ -40,6 +56,8 @@ export function KpiCards({ totalPatients, totalStaff, activeBranches, totalIncom
         value={totalPatients}
         icon={<Users size={16} className="text-white" />}
         color="bg-primary"
+        href="/director/patients"
+        sub="Lihat analitik →"
       />
       <GlassStatCard
         title="Staff Aktif"

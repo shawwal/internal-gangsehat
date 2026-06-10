@@ -49,8 +49,8 @@ export default function SchedulesPage() {
       const [{ data: staff }, { data: br }] = await Promise.all([
         supabase
           .from('internal_profiles')
-          .select('id, full_name, branch_id')
-          .in('role', ['therapist', 'staff', 'manager'])
+          .select('id, full_name, branch_id, avatar_url')
+          .in('role', ['therapist', 'staff', 'manager', 'director'])
           .order('full_name'),
         supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
       ])
@@ -125,13 +125,12 @@ export default function SchedulesPage() {
 
   function openEdit(row: ScheduleRow) {
     setForm({
-      staff_id:    row.staff_id,
+      staff_ids:   [row.staff_id],
       branch_id:   row.branch_id ?? '',
-      hari:        [row.hari],   // array with one element for edit mode
+      hari:        [row.hari],
       shift:       row.shift,
       jam_mulai:   row.jam_mulai?.slice(0, 5) ?? '08:00',
       jam_selesai: row.jam_selesai?.slice(0, 5) ?? '15:00',
-      status:      row.status,
       notes:       row.notes ?? '',
     })
     setEditId(row.id)
@@ -139,37 +138,39 @@ export default function SchedulesPage() {
   }
 
   async function handleSave() {
-    if (!form.staff_id) return
+    if (form.staff_ids.length === 0) return
     const hariList = Array.isArray(form.hari) ? form.hari : [form.hari]
     if (hariList.length === 0) return
 
     setSaving(true)
     const supabase = createClient()
     const base = {
-      staff_id:    form.staff_id,
       branch_id:   form.branch_id || null,
       shift:       form.shift,
       jam_mulai:   form.jam_mulai,
       jam_selesai: form.jam_selesai,
-      status:      form.status,
+      status:      'AKTIF' as const,
       notes:       form.notes.trim() || null,
     }
 
+    const rows = form.staff_ids.flatMap((sid) =>
+      hariList.map((h) => ({ ...base, staff_id: sid, hari: h })),
+    )
+
     let error = null
 
-    if (editId && hariList.length === 1) {
-      // Edit single day: update the existing row in-place
+    if (editId && form.staff_ids.length === 1 && hariList.length === 1) {
+      // Single staff + single day edit: update the specific row in-place
       const { error: e } = await supabase
         .from('schedules')
-        .update({ ...base, hari: hariList[0] })
+        .update({ ...rows[0] })
         .eq('id', editId)
       error = e
     } else {
-      // Add or edit with multiple days: upsert one row per selected day
-      const scheduleRows = hariList.map((h) => ({ ...base, hari: h }))
+      // Multi-staff or multi-day: upsert all combinations
       const { error: e } = await supabase
         .from('schedules')
-        .upsert(scheduleRows, { onConflict: 'staff_id,hari' })
+        .upsert(rows, { onConflict: 'staff_id,hari' })
       error = e
     }
 
@@ -295,6 +296,7 @@ export default function SchedulesPage() {
       )}
 
       <ScheduleDialog
+        key={editId ?? (showSingle ? 'new' : '')}
         open={showSingle}
         editId={editId}
         form={form}

@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
-import Link from 'next/link'
-import { ArrowLeft, BarChart2, PieChart, Users, UserPlus, Activity } from 'lucide-react'
+import { BarChart2, PieChart, Users, UserPlus, Activity } from 'lucide-react'
 import type { ChartDataItem, TrendDataItem } from './PatientCharts'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -216,27 +215,10 @@ export default function PatientAnalyticsClient({ patients, visits }: Props) {
     : `Tahun ${year}`
 
   return (
-    <div className="space-y-6 relative">
-      {/* Gradient blob */}
-      <div className="absolute top-0 right-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none -z-10" />
-
-      {/* Header */}
+    <div className="space-y-6">
+      {/* Filter Controls */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/director/overview"
-            className="w-9 h-9 rounded-2xl bg-muted/60 hover:bg-muted flex items-center justify-center transition-colors cursor-pointer"
-            aria-label="Kembali ke overview"
-          >
-            <ArrowLeft size={16} className="text-foreground/70" />
-          </Link>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Analitik Pasien</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Infografis & statistik demografi pasien</p>
-          </div>
-        </div>
-
-        {/* Filter Controls */}
+        <div />{/* spacer keeps controls right-aligned */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* View Mode Toggle */}
           <div className="flex items-center bg-muted/60 rounded-2xl p-1 gap-0.5">
