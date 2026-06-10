@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII, encryptPatientPII, hashPhone } from '@/lib/encryption'
+import { normalizeBirthDate } from '@/lib/dates'
 
 export interface PatientPlain {
   id: string
@@ -51,7 +52,7 @@ function toPlain(row: Record<string, unknown>): PatientPlain {
     name:             pii.name,
     phone:            pii.phone,
     address:          pii.address          ?? null,
-    birthDate:        pii.birthDate        ?? null,
+    birthDate:        normalizeBirthDate(pii.birthDate),
     idNumber:         pii.idNumber         ?? null,
     emergencyContact: pii.emergencyContact ?? null,
     gender:           (row.gender as PatientPlain['gender']) ?? null,
@@ -77,12 +78,23 @@ function toPlain(row: Record<string, unknown>): PatientPlain {
 
 export async function fetchPatients(): Promise<PatientPlain[]> {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('patients')
-    .select(SELECT_COLS)
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-  return (data ?? []).map((row) => toPlain(row as unknown as Record<string, unknown>))
+  // PostgREST caps each request at 1000 rows — page through with .range()
+  const BATCH = 1000
+  const rows: Record<string, unknown>[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('patients')
+      .select(SELECT_COLS)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .range(from, from + BATCH - 1)
+    if (error || !data || data.length === 0) break
+    rows.push(...(data as unknown as Record<string, unknown>[]))
+    if (data.length < BATCH) break
+    from += BATCH
+  }
+  return rows.map(toPlain)
 }
 
 export async function fetchPatient(id: string): Promise<PatientPlain | null> {

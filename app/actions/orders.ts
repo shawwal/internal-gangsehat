@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
+import { normalizeBirthDate } from '@/lib/dates'
 
 export type BookingSession = {
   id: string
@@ -113,7 +114,7 @@ export async function fetchOrderDetail(id: string): Promise<OrderDetail | null> 
       })
       if (pii.name) patientName = pii.name
       if (pii.phone) patientPhone = pii.phone
-      patientBirthDate = pii.birthDate ?? null
+      patientBirthDate = normalizeBirthDate(pii.birthDate)
     } catch {
       // decryption failed — show raw value as fallback
     }

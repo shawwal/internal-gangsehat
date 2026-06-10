@@ -41,7 +41,9 @@ export const AVATAR_BG: Record<string, string> = {
 
 export function formatDate(d: string | null): string {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('id-ID', {
+  const date = new Date(d)
+  if (isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('id-ID', {
     day: 'numeric', month: 'long', year: 'numeric',
   })
 }
@@ -57,6 +59,7 @@ export function formatDateTime(d: string | null): string {
 export function calcAge(birthDate: string | null): string {
   if (!birthDate) return '—'
   const birth = new Date(birthDate)
+  if (isNaN(birth.getTime())) return '—'
   const today = new Date()
   let age = today.getFullYear() - birth.getFullYear()
   const m = today.getMonth() - birth.getMonth()
