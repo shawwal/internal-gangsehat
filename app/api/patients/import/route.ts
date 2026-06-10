@@ -45,7 +45,6 @@ function normalizeGender(raw: string): 'male' | 'female' | 'other' {
 function cellStr(row: (string | number | boolean | null | undefined)[], idx: number | undefined): string {
   if (idx === undefined || row[idx] == null) return ''
   const v = row[idx]
-  if (v instanceof Date) return (v as Date).toISOString().split('T')[0]
   return String(v).trim()
 }
 

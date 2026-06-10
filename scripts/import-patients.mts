@@ -9,18 +9,26 @@
  *  4. Insert in batches of 100 (no per-row checks needed)
  */
 
-import * as XLSX from '../node_modules/xlsx/xlsx.mjs'
+import * as XLSX from 'xlsx'
 import { createHash, createCipheriv, randomBytes } from 'crypto'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-const SUPABASE_URL     = 'https://gezenrryirjwnqyhuafx.supabase.co'
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdlemVucnJ5aXJqd25xeWh1YWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTQxOTQ2NCwiZXhwIjoyMDg0OTk1NDY0fQ.XASArzW398hK56R6OV6WW7Yyh-CU_pUQKzMM3esDl38'
-const ENCRYPTION_KEY   = '1a6776a30490b7843b3dad2c315c4d00c14ebf952f6f78f3cbfcaea77f516a2f'
+// Load .env.local
+const envRaw = readFileSync(join(__dirname, '../.env.local'), 'utf8')
+const env: Record<string, string> = {}
+for (const line of envRaw.split('\n')) {
+  const m = line.match(/^([^#=\s][^=]*)=(.*)$/)
+  if (m) env[m[1].trim()] = m[2].trim()
+}
+
+const SUPABASE_URL     = env['NEXT_PUBLIC_SUPABASE_URL']      ?? ''
+const SERVICE_ROLE_KEY = env['SUPABASE_SERVICE_ROLE_KEY']     ?? ''
+const ENCRYPTION_KEY   = env['ENCRYPTION_KEY']                ?? ''
 const EXCEL_PATH       = join(__dirname, '../public/EX. DATA PELAYANAN 2025.xlsx')
 const BATCH_SIZE       = 100
 
@@ -80,7 +88,8 @@ function normalizeGender(raw: string): 'male' | 'female' | 'other' {
   return 'other'
 }
 
-async function fetchAllExisting(supabase: ReturnType<typeof createClient>, column: string): Promise<Set<string>> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchAllExisting(supabase: SupabaseClient<any, any, any>, column: string): Promise<Set<string>> {
   const result = new Set<string>()
   let from = 0
   const pageSize = 1000
