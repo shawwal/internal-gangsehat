@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ClipboardList, ExternalLink } from 'lucide-react'
 import { StatusBadge } from '@/components/internal/StatusBadge'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -19,6 +22,8 @@ interface OrdersTableProps {
 export function OrdersTable({
   rows, loading, total, page, fromIdx, toIdx, totalPages, onPage,
 }: OrdersTableProps) {
+  const router = useRouter()
+
   return (
     <div className="glass-card overflow-hidden">
       <div className="overflow-x-auto">
@@ -67,13 +72,17 @@ export function OrdersTable({
                 const rowTotal = row.discounted_price ?? row.estimated_price ?? 0
 
                 return (
-                  <tr key={row.id} className="border-b border-border/50 hover:bg-primary/5 transition-colors">
+                  <tr
+                    key={row.id}
+                    onClick={() => router.push(`/order/${row.id}`)}
+                    className="border-b border-border/50 hover:bg-primary/5 transition-colors cursor-pointer"
+                  >
                     <td className="px-4 py-3 text-muted-foreground text-xs">{fromIdx + i}</td>
 
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <Link
                         href={`/order/${row.id}`}
-                        className="font-mono text-xs font-medium text-primary hover:underline decoration-primary/50 underline-offset-2 transition-colors cursor-pointer"
+                        className="font-mono text-xs font-medium text-primary hover:underline decoration-primary/50 underline-offset-2 transition-colors"
                       >
                         {trx}
                       </Link>
@@ -110,10 +119,10 @@ export function OrdersTable({
                       </span>
                     </td>
 
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <Link
                         href={`/order/${row.id}`}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
                         aria-label={`Lihat detail order ${trx}`}
                       >
                         <ExternalLink size={12} />
