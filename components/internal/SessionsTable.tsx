@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, Edit2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { updateSessionAndRecordVisit } from '@/app/actions/orderPackages'
 import { StatusBadge } from './StatusBadge'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { BookingSession, TherapistOption } from '@/app/actions/orders'
@@ -28,21 +29,8 @@ export function SessionsTable({ sessions, bookingId, scheduledDate, therapists, 
   async function handleSaveSession(form: Partial<BookingSession>) {
     if (!editingSession) return
     setSaving(true)
-    await createClient()
-      .from('booking_sessions')
-      .update({
-        tanggal: form.tanggal || null,
-        jam: form.jam || null,
-        therapist_id: form.therapist_id || null,
-        status: form.status,
-        kehadiran: form.kehadiran || null,
-        nominal_bayar: form.nominal_bayar ?? 0,
-        metode_pembayaran: form.metode_pembayaran || null,
-        keterangan: form.keterangan || null,
-        catatan_admin: form.catatan_admin || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', editingSession.id)
+    // Server action: updates booking_session + creates patient_visit when status='Hadir'
+    await updateSessionAndRecordVisit(editingSession.id, form, bookingId)
     setSaving(false)
     setEditingSession(null)
     onRefresh()
