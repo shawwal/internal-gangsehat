@@ -295,6 +295,14 @@ export const navigation: NavItem[] = [
     group: 'clinic',
   },
   {
+    key: 'patient-analytics',
+    label: 'Analitik Pasien',
+    href: '/director/patients',
+    icon: 'PieChart',
+    roles: ['director'],
+    group: 'clinic',
+  },
+  {
     key: 'notifications',
     label: 'Notifikasi',
     href: '/notifications',

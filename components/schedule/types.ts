@@ -16,6 +16,7 @@ export interface StaffOption {
   id: string
   full_name: string
   branch_id?: string | null
+  avatar_url?: string | null
 }
 
 export interface BranchOption {
@@ -24,13 +25,12 @@ export interface BranchOption {
 }
 
 export interface ScheduleForm {
-  staff_id: string
+  staff_ids: string[]  // multi-staff; single-element array when editing
   branch_id: string
-  hari: string[]   // multi-day selection; single element when editing
+  hari: string[]       // multi-day selection; single element when editing
   shift: string
   jam_mulai: string
   jam_selesai: string
-  status: 'AKTIF' | 'OFF'
   notes: string
 }
 

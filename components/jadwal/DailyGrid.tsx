@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { AlertCircle, CalendarX, Plus } from 'lucide-react'
 import type { DailyVisit, DayStaffEntry, AssignTarget, PendingLeaveInfo } from './types'
 import {
@@ -23,6 +24,44 @@ function getInitials(name: string) {
 
 // Hours array: [8, 9, ..., 20]
 const HOURS = Array.from({ length: GRID_END - GRID_START }, (_, i) => GRID_START + i)
+
+// ── Staff avatar ───────────────────────────────────────────────────────────────
+function StaffAvatar({ entry }: { entry: DayStaffEntry }) {
+  const [imgError, setImgError] = useState(false)
+  const showImg = !!entry.avatar_url && !imgError
+
+  const ringCls = entry.isOnLeave
+    ? 'border-amber-400/60'
+    : entry.pendingLeave
+    ? 'border-yellow-400/50'
+    : 'border-white/40'
+
+  return (
+    <div className={`w-11 h-11 rounded-full border-2 overflow-hidden shrink-0 ${ringCls}`}>
+      {showImg ? (
+        <img
+          src={entry.avatar_url!}
+          alt={entry.full_name}
+          className="w-full h-full object-cover"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <div
+          className={[
+            'w-full h-full flex items-center justify-center text-sm font-bold',
+            entry.isOnLeave
+              ? 'bg-amber-500/30 text-amber-200'
+              : entry.pendingLeave
+              ? 'bg-yellow-500/20 text-yellow-200'
+              : 'bg-white/20 text-white',
+          ].join(' ')}
+        >
+          {getInitials(entry.full_name)}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 interface Props {
@@ -104,18 +143,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
               style={{ width: STAFF_COL_W }}
             >
               {/* Avatar */}
-              <div
-                className={[
-                  'w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold border-2',
-                  s.isOnLeave
-                    ? 'bg-amber-500/30 border-amber-400/60 text-amber-200'
-                    : s.pendingLeave
-                    ? 'bg-yellow-500/20 border-yellow-400/50 text-yellow-200'
-                    : 'bg-white/20 border-white/40 text-white',
-                ].join(' ')}
-              >
-                {getInitials(s.full_name)}
-              </div>
+              <StaffAvatar entry={s} />
 
               {/* Name */}
               <p className="text-[12px] font-semibold text-white text-center leading-tight line-clamp-2">

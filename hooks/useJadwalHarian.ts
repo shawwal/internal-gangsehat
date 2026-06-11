@@ -49,7 +49,7 @@ export function useJadwalHarian() {
     const [schedulesRes, leavesRes, visitsData] = await Promise.all([
       supabase
         .from('schedules')
-        .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(full_name)')
+        .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(full_name, avatar_url)')
         .eq('hari', hari)
         .eq('status', 'AKTIF'),
       supabase
@@ -86,6 +86,7 @@ export function useJadwalHarian() {
       entries.set(sid, {
         staff_id:    sid,
         full_name:   row.internal_profiles?.full_name ?? 'Unknown',
+        avatar_url:  row.internal_profiles?.avatar_url ?? null,
         branch_id:   row.branch_id ?? null,
         shift:       row.shift,
         jam_mulai:   row.jam_mulai?.slice(0, 5) ?? '08:00',
@@ -104,6 +105,7 @@ export function useJadwalHarian() {
       entries.set(sid, {
         staff_id:    sid,
         full_name:   'Staff',
+        avatar_url:  null,
         branch_id:   v.branch_id ?? null,
         shift:       '',
         jam_mulai:   '08:00',
@@ -120,11 +122,14 @@ export function useJadwalHarian() {
     if (unknownIds.length > 0) {
       const { data: profiles } = await supabase
         .from('internal_profiles')
-        .select('id, full_name')
+        .select('id, full_name, avatar_url')
         .in('id', unknownIds)
       for (const p of profiles ?? []) {
         const entry = entries.get(p.id)
-        if (entry) entry.full_name = p.full_name
+        if (entry) {
+          entry.full_name  = p.full_name
+          entry.avatar_url = p.avatar_url ?? null
+        }
       }
     }
 
