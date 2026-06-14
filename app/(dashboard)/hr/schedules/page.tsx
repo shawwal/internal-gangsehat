@@ -13,6 +13,7 @@ import { MonthlyScheduleDialog } from '@/components/schedule/MonthlyScheduleDial
 import { DeleteDialog } from '@/components/schedule/DeleteDialog'
 import { ScheduleCalendarView } from '@/components/schedule/ScheduleCalendarView'
 import { BulkEditDialog } from '@/components/schedule/BulkEditDialog'
+import { StatusListModal } from '@/components/schedule/StatusListModal'
 
 type ViewMode = 'table' | 'calendar'
 
@@ -38,6 +39,9 @@ export default function SchedulesPage() {
   const [selectedIds, setSelectedIds]   = useState<string[]>([])
   const [showBulkEdit, setShowBulkEdit] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+
+  // ── Status list modal ────────────────────────────────────────────────────────
+  const [statusModal, setStatusModal] = useState<'AKTIF' | 'OFF' | null>(null)
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [showSingle, setShowSingle]   = useState(false)
@@ -137,6 +141,7 @@ export default function SchedulesPage() {
       shift:       row.shift,
       jam_mulai:   row.jam_mulai?.slice(0, 5) ?? '08:00',
       jam_selesai: row.jam_selesai?.slice(0, 5) ?? '15:00',
+      status:      row.status,
       notes:       row.notes ?? '',
     })
     setEditId(row.id)
@@ -155,7 +160,7 @@ export default function SchedulesPage() {
       shift:       form.shift,
       jam_mulai:   form.jam_mulai,
       jam_selesai: form.jam_selesai,
-      status:      'AKTIF' as const,
+      status:      form.status,
       notes:       form.notes.trim() || null,
     }
 
@@ -289,7 +294,14 @@ export default function SchedulesPage() {
       {/* ── Table view ── */}
       {viewMode === 'table' && (
         <>
-          <ScheduleStats total={total} totalMasuk={totalMasuk} totalOff={totalOff} loading={loading} />
+          <ScheduleStats
+            total={total}
+            totalMasuk={totalMasuk}
+            totalOff={totalOff}
+            loading={loading}
+            onMasukClick={() => setStatusModal('AKTIF')}
+            onOffClick={() => setStatusModal('OFF')}
+          />
 
           <ScheduleFilters
             search={search}
@@ -390,6 +402,12 @@ export default function SchedulesPage() {
         saving={saving}
         onSave={handleBulkEdit}
         onClose={() => setShowBulkEdit(false)}
+      />
+
+      <StatusListModal
+        open={!!statusModal}
+        status={statusModal ?? 'AKTIF'}
+        onClose={() => setStatusModal(null)}
       />
     </div>
   )

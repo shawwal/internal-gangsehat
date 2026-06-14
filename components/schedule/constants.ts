@@ -20,6 +20,7 @@ export const EMPTY_FORM: ScheduleForm = {
   shift:       'PAGI',
   jam_mulai:   '08:00',
   jam_selesai: '15:00',
+  status:      'AKTIF',
   notes:       '',
 }
 

@@ -547,6 +547,30 @@ export function ScheduleDialog({
             )}
           </div>
 
+          {/* Status toggle */}
+          <div>
+            <label className={labelCls}>Keterangan</label>
+            <div className="flex gap-2">
+              {(['AKTIF', 'OFF'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onChange({ status: s })}
+                  className={[
+                    'flex-1 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer border',
+                    form.status === s
+                      ? s === 'AKTIF'
+                        ? 'bg-[#34C759] text-white border-[#34C759]'
+                        : 'bg-[#FF3B30] text-white border-[#FF3B30]'
+                      : 'border-border text-muted-foreground hover:bg-muted',
+                  ].join(' ')}
+                >
+                  {s === 'AKTIF' ? 'MASUK' : 'OFF'}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Notes */}
           <div>
             <label className={labelCls}>

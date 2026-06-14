@@ -31,6 +31,7 @@ export interface ScheduleForm {
   shift: string
   jam_mulai: string
   jam_selesai: string
+  status: 'AKTIF' | 'OFF'
   notes: string
 }
 
