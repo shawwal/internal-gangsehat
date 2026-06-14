@@ -20,9 +20,10 @@ interface Props {
   visit: DailyVisit
   onStatusChange: (id: string, status: VisitStatus) => void
   onDelete: (id: string) => void
+  onOpen: (id: string) => void
 }
 
-export function VisitCard({ visit, onStatusChange, onDelete }: Props) {
+export function VisitCard({ visit, onStatusChange, onDelete, onOpen }: Props) {
   const [menuOpen, setMenuOpen]     = useState(false)
   const [menuPos, setMenuPos]       = useState<{ top: number; left: number } | null>(null)
   const btnRef  = useRef<HTMLButtonElement>(null)
@@ -67,9 +68,12 @@ export function VisitCard({ visit, onStatusChange, onDelete }: Props) {
     >
       {/* Patient name + menu button */}
       <div className="flex items-start gap-1">
-        <span className="text-[11px] font-semibold leading-tight flex-1 truncate">
+        <button
+          onClick={() => onOpen(visit.id)}
+          className="text-[11px] font-semibold leading-tight flex-1 truncate text-left hover:underline cursor-pointer"
+        >
           {visit.patient_name}
-        </span>
+        </button>
         <button
           ref={btnRef}
           onClick={openMenu}
@@ -102,12 +106,12 @@ export function VisitCard({ visit, onStatusChange, onDelete }: Props) {
       {menuOpen && menuPos && createPortal(
         <>
           {/* Transparent backdrop to catch outside clicks */}
-          <div className="fixed inset-0 z-[200]" onClick={() => setMenuOpen(false)} />
+          <div className="fixed inset-0 z-200" onClick={() => setMenuOpen(false)} />
 
           <div
             ref={menuRef}
             role="menu"
-            className="fixed z-[201] w-52 rounded-xl border border-white/15 p-1.5 shadow-2xl backdrop-blur-xl bg-gray-900/95"
+            className="fixed z-201 w-52 rounded-xl border border-white/15 p-1.5 shadow-2xl backdrop-blur-xl bg-gray-900/95"
             style={{ top: menuPos.top, left: menuPos.left }}
           >
             <p className="text-[10px] text-muted-foreground/70 px-2.5 pt-1 pb-2 uppercase tracking-widest font-semibold">

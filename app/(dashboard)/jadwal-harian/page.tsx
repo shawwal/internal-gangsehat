@@ -11,6 +11,7 @@ import { Legend } from '@/components/jadwal/Legend'
 import { PendingLeaveModal } from '@/components/jadwal/PendingLeaveModal'
 import { DailyGrid } from '@/components/jadwal/DailyGrid'
 import { AssignDialog } from '@/components/jadwal/AssignDialog'
+import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
 import type { AssignTarget } from '@/components/jadwal/types'
 
 export default function JadwalHarianPage() {
@@ -22,7 +23,8 @@ export default function JadwalHarianPage() {
     loadAll, handleStatusChange, handleDelete, handleLeaveAction,
   } = useJadwalHarian()
 
-  const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null)
+  const [assignTarget, setAssignTarget]       = useState<AssignTarget | null>(null)
+  const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
 
   return (
     <>
@@ -64,6 +66,7 @@ export default function JadwalHarianPage() {
               onAssign={setAssignTarget}
               onStatusChange={handleStatusChange}
               onDelete={handleDelete}
+              onOpen={setSelectedVisitId}
               onPendingLeaveClick={(staffName, leave) => setLeavePopover({ staffName, leave })}
             />
           )}
@@ -92,6 +95,12 @@ export default function JadwalHarianPage() {
           onAction={handleLeaveAction}
         />
       )}
+
+      <MedicalRecordModal
+        visitId={selectedVisitId}
+        onClose={() => setSelectedVisitId(null)}
+        onSaved={() => { setSelectedVisitId(null); loadAll(selectedDate) }}
+      />
     </>
   )
 }

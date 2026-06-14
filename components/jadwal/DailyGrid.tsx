@@ -71,11 +71,12 @@ interface Props {
   onAssign: (target: AssignTarget) => void
   onStatusChange: (visitId: string, status: VisitStatus) => void
   onDelete: (visitId: string) => void
+  onOpen: (visitId: string) => void
   onPendingLeaveClick: (staffName: string, leave: PendingLeaveInfo) => void
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDelete, onPendingLeaveClick }: Props) {
+export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick }: Props) {
   const totalH = (GRID_END - GRID_START) * SLOT_H
 
   // Current time line
@@ -212,6 +213,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                       visit={v}
                       onStatusChange={onStatusChange}
                       onDelete={onDelete}
+                      onOpen={onOpen}
                     />
                   ))}
                 </div>
@@ -329,6 +331,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                           visit={v}
                           onStatusChange={onStatusChange}
                           onDelete={onDelete}
+                          onOpen={onOpen}
                         />
                       ))}
 

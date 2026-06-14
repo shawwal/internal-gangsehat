@@ -121,6 +121,96 @@ export async function deleteVisit(visitId: string): Promise<{ error: string | nu
   return { error: error?.message ?? null }
 }
 
+// ── Fetch a single visit with decrypted patient name ──────────────────────────
+export interface VisitWithPatient {
+  id: string
+  patient_id: string
+  patient_name: string
+  branch_id: string
+  visit_date: string
+  visit_time: string | null
+  service_type: string | null
+  shift: string | null
+  kehadiran: string | null
+  regio: string | null
+  sumber_pasien: string | null
+  chief_complaint: string | null
+  diagnosis: string | null
+  treatment: string | null
+  attending_staff_id: string | null
+  status: VisitStatus
+  notes: string | null
+}
+
+export async function fetchVisitWithPatient(visitId: string): Promise<VisitWithPatient | null> {
+  const supabase = await createClient()
+  const { data: v, error } = await supabase
+    .from('patient_visits')
+    .select('id, patient_id, branch_id, visit_date, visit_time, service_type, shift, kehadiran, regio, sumber_pasien, chief_complaint, diagnosis, treatment, attending_staff_id, status, notes')
+    .eq('id', visitId)
+    .single()
+
+  if (error || !v) return null
+
+  const { data: p } = await supabase
+    .from('patients')
+    .select('encrypted_name, encrypted_phone')
+    .eq('id', v.patient_id)
+    .single()
+
+  let patient_name = 'Pasien'
+  if (p) {
+    try {
+      const dec = decryptPatientPII({ encrypted_name: p.encrypted_name ?? '', encrypted_phone: p.encrypted_phone ?? '' })
+      patient_name = dec.name || 'Pasien'
+    } catch { /* keep default */ }
+  }
+
+  return {
+    id:                 v.id,
+    patient_id:         v.patient_id,
+    patient_name,
+    branch_id:          v.branch_id,
+    visit_date:         v.visit_date,
+    visit_time:         v.visit_time ? String(v.visit_time).slice(0, 5) : null,
+    service_type:       v.service_type,
+    shift:              v.shift,
+    kehadiran:          v.kehadiran,
+    regio:              v.regio,
+    sumber_pasien:      v.sumber_pasien,
+    chief_complaint:    v.chief_complaint,
+    diagnosis:          v.diagnosis,
+    treatment:          v.treatment,
+    attending_staff_id: v.attending_staff_id,
+    status:             v.status as VisitStatus,
+    notes:              v.notes,
+  }
+}
+
+// ── Update visit clinical fields ───────────────────────────────────────────────
+export async function updateVisit(
+  visitId: string,
+  data: {
+    service_type?: string | null
+    shift?: string | null
+    kehadiran?: string | null
+    regio?: string | null
+    sumber_pasien?: string | null
+    chief_complaint?: string | null
+    diagnosis?: string | null
+    treatment?: string | null
+    status?: VisitStatus
+    notes?: string | null
+  },
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('patient_visits')
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq('id', visitId)
+  return { error: error?.message ?? null }
+}
+
 // ── Bulk-create visits (recurring assignment) ──────────────────────────────────
 export async function createBulkVisits(
   inputs: CreateVisitInput[],
