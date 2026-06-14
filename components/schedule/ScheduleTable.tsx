@@ -22,7 +22,7 @@ export function ShiftBadge({ shift }: { shift: string }) {
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
         shift === 'PAGI'
-          ? 'bg-[color:var(--secondary)]/20 text-secondary'
+          ? 'bg-(--secondary)/20 text-secondary'
           : 'bg-primary/10 text-primary'
       }`}
     >
@@ -36,7 +36,7 @@ export function ShiftBadge({ shift }: { shift: string }) {
 function SkeletonRow() {
   return (
     <tr className="border-b border-border last:border-0">
-      {[12, 120, 64, 48, 52, 52, 60, 40].map((w, i) => (
+      {[24, 12, 120, 64, 48, 52, 52, 60, 40].map((w, i) => (
         <td key={i} className="px-4 py-3.5">
           <div className="h-3.5 bg-muted animate-pulse rounded-md" style={{ width: `${w}px` }} />
         </td>
@@ -113,38 +113,65 @@ interface Props {
   search: string
   hariFilter: string
   shiftFilter: string
+  selectedIds: string[]
+  onSelectionChange: (ids: string[]) => void
   onEdit: (row: ScheduleRow) => void
   onDelete: (id: string) => void
   onPage: (p: number) => void
 }
 
-const HEADERS = [
-  { label: 'NO',          cls: 'w-12' },
-  { label: 'NAMA STAFF',  cls: '' },
-  { label: 'HARI',        cls: 'w-24' },
-  { label: 'SHIFT',       cls: 'w-20' },
-  { label: 'JAM MULAI',   cls: 'w-28' },
-  { label: 'JAM SELESAI', cls: 'w-28' },
-  { label: 'KETERANGAN',  cls: 'w-28' },
-  { label: '',            cls: 'w-20' },
-]
-
 export function ScheduleTable({
   rows, loading, page, pageSize, total,
   search, hariFilter, shiftFilter,
+  selectedIds, onSelectionChange,
   onEdit, onDelete, onPage,
 }: Props) {
+  const pageIds = rows.map((r) => r.id)
+  const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id))
+  const someSelected = pageIds.some((id) => selectedIds.includes(id))
+
+  function toggleAll() {
+    if (allSelected) {
+      onSelectionChange(selectedIds.filter((id) => !pageIds.includes(id)))
+    } else {
+      const merged = Array.from(new Set([...selectedIds, ...pageIds]))
+      onSelectionChange(merged)
+    }
+  }
+
+  function toggleRow(id: string) {
+    if (selectedIds.includes(id)) {
+      onSelectionChange(selectedIds.filter((s) => s !== id))
+    } else {
+      onSelectionChange([...selectedIds, id])
+    }
+  }
+
   return (
     <div className="bg-card rounded-2xl border border-border overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-170 text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40">
-              {HEADERS.map(({ label, cls }, i) => (
-                <th key={i} className={`px-4 py-3 text-xs font-semibold text-muted-foreground text-left ${cls}`}>
-                  {label}
-                </th>
-              ))}
+              {/* Select-all checkbox */}
+              <th className="w-10 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected }}
+                  onChange={toggleAll}
+                  className="w-4 h-4 rounded cursor-pointer accent-primary"
+                  aria-label="Pilih semua di halaman ini"
+                />
+              </th>
+              <th className="w-12 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">NO</th>
+              <th className="px-4 py-3 text-xs font-semibold text-muted-foreground text-left">NAMA STAFF</th>
+              <th className="w-24 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">HARI</th>
+              <th className="w-20 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">SHIFT</th>
+              <th className="w-28 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">JAM MULAI</th>
+              <th className="w-28 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">JAM SELESAI</th>
+              <th className="w-28 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">KETERANGAN</th>
+              <th className="w-20 px-4 py-3 text-xs font-semibold text-muted-foreground text-left"></th>
             </tr>
           </thead>
           <tbody>
@@ -152,7 +179,7 @@ export function ScheduleTable({
               Array.from({ length: Math.min(pageSize, 6) }).map((_, i) => <SkeletonRow key={i} />)
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-16 text-center">
+                <td colSpan={9} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                       <CalendarDays size={22} className="text-primary" />
@@ -167,45 +194,62 @@ export function ScheduleTable({
                 </td>
               </tr>
             ) : (
-              rows.map((row, idx) => (
-                <tr
-                  key={row.id}
-                  className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                >
-                  <td className="px-4 py-3.5 text-muted-foreground">{page * pageSize + idx + 1}</td>
-                  <td className="px-4 py-3.5">
-                    <span className="font-medium text-foreground">
-                      {row.internal_profiles?.full_name ?? '—'}
-                    </span>
-                    {row.branches?.name && (
-                      <span className="ml-2 text-xs text-muted-foreground">{row.branches.name}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3.5 text-foreground">{row.hari}</td>
-                  <td className="px-4 py-3.5"><ShiftBadge shift={row.shift} /></td>
-                  <td className="px-4 py-3.5 font-mono text-foreground">{row.jam_mulai?.slice(0, 5) ?? '—'}</td>
-                  <td className="px-4 py-3.5 font-mono text-foreground">{row.jam_selesai?.slice(0, 5) ?? '—'}</td>
-                  <td className="px-4 py-3.5"><StatusBadge status={row.status} /></td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => onEdit(row)}
-                        title="Edit jadwal"
-                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                      <button
-                        onClick={() => onDelete(row.id)}
-                        title="Hapus jadwal"
-                        className="p-1.5 rounded-lg hover:bg-[#FF3B30]/10 text-muted-foreground hover:text-[#FF3B30] transition-colors cursor-pointer"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              rows.map((row, idx) => {
+                const isSelected = selectedIds.includes(row.id)
+                return (
+                  <tr
+                    key={row.id}
+                    className={[
+                      'border-b border-border last:border-0 transition-colors',
+                      isSelected
+                        ? 'bg-primary/5 border-l-2 border-l-primary'
+                        : 'hover:bg-muted/30',
+                    ].join(' ')}
+                  >
+                    <td className="px-4 py-3.5">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleRow(row.id)}
+                        className="w-4 h-4 rounded cursor-pointer accent-primary"
+                        aria-label={`Pilih ${row.internal_profiles?.full_name ?? 'jadwal ini'}`}
+                      />
+                    </td>
+                    <td className="px-4 py-3.5 text-muted-foreground">{page * pageSize + idx + 1}</td>
+                    <td className="px-4 py-3.5">
+                      <span className="font-medium text-foreground">
+                        {row.internal_profiles?.full_name ?? '—'}
+                      </span>
+                      {row.branches?.name && (
+                        <span className="ml-2 text-xs text-muted-foreground">{row.branches.name}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 text-foreground">{row.hari}</td>
+                    <td className="px-4 py-3.5"><ShiftBadge shift={row.shift} /></td>
+                    <td className="px-4 py-3.5 font-mono text-foreground">{row.jam_mulai?.slice(0, 5) ?? '—'}</td>
+                    <td className="px-4 py-3.5 font-mono text-foreground">{row.jam_selesai?.slice(0, 5) ?? '—'}</td>
+                    <td className="px-4 py-3.5"><StatusBadge status={row.status} /></td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => onEdit(row)}
+                          title="Edit jadwal"
+                          className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => onDelete(row.id)}
+                          title="Hapus jadwal"
+                          className="p-1.5 rounded-lg hover:bg-[#FF3B30]/10 text-muted-foreground hover:text-[#FF3B30] transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>

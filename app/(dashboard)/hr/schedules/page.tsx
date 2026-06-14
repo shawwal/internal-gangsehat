@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { RefreshCw, Plus, CalendarRange, LayoutList, CalendarDays } from 'lucide-react'
+import { RefreshCw, Plus, CalendarRange, LayoutList, CalendarDays, CheckSquare, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { ScheduleRow, StaffOption, BranchOption, ScheduleForm } from '@/components/schedule/types'
 import { EMPTY_FORM } from '@/components/schedule/constants'
@@ -12,6 +12,7 @@ import { ScheduleDialog } from '@/components/schedule/ScheduleDialog'
 import { MonthlyScheduleDialog } from '@/components/schedule/MonthlyScheduleDialog'
 import { DeleteDialog } from '@/components/schedule/DeleteDialog'
 import { ScheduleCalendarView } from '@/components/schedule/ScheduleCalendarView'
+import { BulkEditDialog } from '@/components/schedule/BulkEditDialog'
 
 type ViewMode = 'table' | 'calendar'
 
@@ -32,6 +33,11 @@ export default function SchedulesPage() {
   const [shiftFilter, setShiftFilter] = useState('')
   const [pageSize, setPageSize]       = useState(10)
   const [page, setPage]               = useState(0)
+
+  // ── Selection ────────────────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds]   = useState<string[]>([])
+  const [showBulkEdit, setShowBulkEdit] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [showSingle, setShowSingle]   = useState(false)
@@ -160,14 +166,12 @@ export default function SchedulesPage() {
     let error = null
 
     if (editId && form.staff_ids.length === 1 && hariList.length === 1) {
-      // Single staff + single day edit: update the specific row in-place
       const { error: e } = await supabase
         .from('schedules')
         .update({ ...rows[0] })
         .eq('id', editId)
       error = e
     } else {
-      // Multi-staff or multi-day: upsert all combinations
       const { error: e } = await supabase
         .from('schedules')
         .upsert(rows, { onConflict: 'staff_id,hari' })
@@ -188,6 +192,25 @@ export default function SchedulesPage() {
     await createClient().from('schedules').delete().eq('id', deleteId)
     setDeleting(false)
     setDeleteId(null)
+    load()
+  }
+
+  // ── Bulk delete ──────────────────────────────────────────────────────────────
+  async function handleBulkDelete() {
+    setBulkDeleting(true)
+    await createClient().from('schedules').delete().in('id', selectedIds)
+    setSelectedIds([])
+    setBulkDeleting(false)
+    load()
+  }
+
+  // ── Bulk edit ────────────────────────────────────────────────────────────────
+  async function handleBulkEdit(patch: { shift: 'PAGI' | 'SORE'; jam_mulai: string; jam_selesai: string; status: 'AKTIF' | 'OFF' }) {
+    setSaving(true)
+    await createClient().from('schedules').update(patch).in('id', selectedIds)
+    setSaving(false)
+    setShowBulkEdit(false)
+    setSelectedIds([])
     load()
   }
 
@@ -273,11 +296,47 @@ export default function SchedulesPage() {
             hariFilter={hariFilter}
             shiftFilter={shiftFilter}
             pageSize={pageSize}
-            onSearch={(v) => { setSearch(v); setPage(0) }}
-            onHari={(v) => { setHariFilter(v); setPage(0) }}
-            onShift={(v) => { setShiftFilter(v); setPage(0) }}
-            onPageSize={(v) => { setPageSize(v); setPage(0) }}
+            onSearch={(v) => { setSearch(v); setPage(0); setSelectedIds([]) }}
+            onHari={(v) => { setHariFilter(v); setPage(0); setSelectedIds([]) }}
+            onShift={(v) => { setShiftFilter(v); setPage(0); setSelectedIds([]) }}
+            onPageSize={(v) => { setPageSize(v); setPage(0); setSelectedIds([]) }}
           />
+
+          {/* ── Bulk action bar ── */}
+          {selectedIds.length > 0 && (
+            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-primary/30 bg-primary/5 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <CheckSquare size={16} className="text-primary" />
+                <span className="text-sm font-medium text-foreground">
+                  <span className="text-primary font-semibold">{selectedIds.length}</span> jadwal terpilih
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedIds([])}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted border border-border transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={() => setShowBulkEdit(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors cursor-pointer"
+                >
+                  <Pencil size={12} /> Edit Terpilih
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF3B30] text-white text-xs font-medium hover:bg-[#FF3B30]/90 transition-colors cursor-pointer disabled:opacity-60"
+                >
+                  {bulkDeleting
+                    ? <Loader2 size={12} className="animate-spin" />
+                    : <Trash2 size={12} />}
+                  Hapus
+                </button>
+              </div>
+            </div>
+          )}
 
           <ScheduleTable
             rows={rows}
@@ -288,9 +347,11 @@ export default function SchedulesPage() {
             search={search}
             hariFilter={hariFilter}
             shiftFilter={shiftFilter}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
             onEdit={openEdit}
             onDelete={setDeleteId}
-            onPage={setPage}
+            onPage={(p) => { setPage(p); setSelectedIds([]) }}
           />
         </>
       )}
@@ -321,6 +382,14 @@ export default function SchedulesPage() {
         deleting={deleting}
         onConfirm={handleDelete}
         onClose={() => setDeleteId(null)}
+      />
+
+      <BulkEditDialog
+        open={showBulkEdit}
+        count={selectedIds.length}
+        saving={saving}
+        onSave={handleBulkEdit}
+        onClose={() => setShowBulkEdit(false)}
       />
     </div>
   )
