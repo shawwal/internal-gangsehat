@@ -3,20 +3,29 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ChevronLeft, Plus } from 'lucide-react'
+import {
+  ChevronLeft, Plus, Activity, CheckCircle2, Clock, UserX, FileText,
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchPatient } from '@/app/actions/patients'
+import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
 import type { PatientVisit, VisitStatus, ServiceType, BodyRegion } from '@/types'
 
+// ── Constants ─────────────────────────────────────────────────────────────────
 const STATUS_OPTIONS: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
-const STATUS_BADGE: Record<VisitStatus, string> = {
-  scheduled: 'bg-secondary/20 text-secondary-foreground',
-  completed: 'bg-chart-4/15 text-chart-4',
-  cancelled: 'bg-destructive/10 text-destructive',
-  no_show:   'bg-muted text-muted-foreground',
-}
+
 const STATUS_LABEL: Record<VisitStatus, string> = {
-  scheduled: 'Terjadwal', completed: 'Selesai', cancelled: 'Dibatalkan', no_show: 'Tidak Hadir',
+  scheduled: 'Terjadwal',
+  completed: 'Selesai',
+  cancelled: 'Dibatalkan',
+  no_show:   'Tidak Hadir',
+}
+
+const STATUS_BADGE: Record<VisitStatus, string> = {
+  scheduled: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
+  completed: 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/20',
+  cancelled: 'bg-destructive/15 text-destructive border-destructive/20',
+  no_show:   'bg-muted/40 text-muted-foreground border-border',
 }
 
 const SERVICE_TYPES: ServiceType[] = [
@@ -32,13 +41,13 @@ const BODY_REGIONS: BodyRegion[] = [
 ]
 
 const SERVICE_BADGE: Record<ServiceType, string> = {
-  'TERAPI AWAL':  'bg-primary/15 text-primary',
-  'PAKET TERAPI': 'bg-chart-4/15 text-chart-4',
-  'SESI TERAPI':  'bg-secondary/20 text-secondary-foreground',
-  'TA VISIT':     'bg-primary/10 text-primary',
-  'SESI VISIT':   'bg-muted text-muted-foreground',
-  'PAKET VISIT':  'bg-chart-4/10 text-chart-4',
-  'LAINNYA':      'bg-muted text-muted-foreground',
+  'TERAPI AWAL':  'bg-primary/15 text-primary border-primary/20',
+  'PAKET TERAPI': 'bg-chart-4/15 text-chart-4 border-chart-4/20',
+  'SESI TERAPI':  'bg-secondary/20 text-secondary-foreground border-secondary/20',
+  'TA VISIT':     'bg-primary/10 text-primary border-primary/15',
+  'SESI VISIT':   'bg-muted/40 text-muted-foreground border-border',
+  'PAKET VISIT':  'bg-chart-4/10 text-chart-4 border-chart-4/15',
+  'LAINNYA':      'bg-muted/40 text-muted-foreground border-border',
 }
 
 const DEFAULT_FORM = {
@@ -55,10 +64,40 @@ const DEFAULT_FORM = {
   notes:           '',
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function formatDate(d: string) {
+  return new Date(d + 'T00:00:00').toLocaleDateString('id-ID', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  })
+}
+
+// ── Stat card ──────────────────────────────────────────────────────────────────
+function StatCard({ label, value, icon: Icon, color, loading }: {
+  label: string; value: number; icon: React.ElementType; color: string; loading?: boolean
+}) {
+  return (
+    <div className="glass-card p-4 flex items-center gap-3">
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+        <Icon size={17} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground truncate">{label}</p>
+        {loading
+          ? <div className="h-6 w-10 bg-muted animate-pulse rounded mt-0.5" />
+          : <p className="text-xl font-bold text-foreground leading-tight">{value.toLocaleString('id-ID')}</p>
+        }
+      </div>
+    </div>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function PatientVisitsPage() {
   const { id } = useParams() as { id: string }
+
   const [visits, setVisits]           = useState<PatientVisit[]>([])
   const [patientName, setPatientName] = useState('')
+  const [noRm, setNoRm]               = useState('')
   const [loading, setLoading]         = useState(true)
   const [showForm, setShowForm]       = useState(false)
   const [form, setForm]               = useState(DEFAULT_FORM)
@@ -66,6 +105,8 @@ export default function PatientVisitsPage() {
 
   const [userId, setUserId]     = useState<string | null>(null)
   const [branchId, setBranchId] = useState<string | null>(null)
+
+  const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
 
   async function loadProfile() {
     const supabase = createClient()
@@ -87,6 +128,7 @@ export default function PatientVisitsPage() {
       supabase.from('patient_visits').select('*').eq('patient_id', id).order('visit_date', { ascending: false }),
     ])
     setPatientName(patient?.name ?? '')
+    setNoRm(patient?.no_rm ?? '')
     setVisits((v ?? []) as PatientVisit[])
     setLoading(false)
   }
@@ -95,26 +137,23 @@ export default function PatientVisitsPage() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
-    if (!branchId) {
-      alert('Akun Anda belum terhubung ke cabang. Hubungi direktur.')
-      return
-    }
+    if (!branchId) { alert('Akun Anda belum terhubung ke cabang.'); return }
     setSaving(true)
     await createClient().from('patient_visits').insert({
       patient_id:         id,
       branch_id:          branchId,
       attending_staff_id: userId,
       visit_date:         form.visit_date,
-      service_type:       form.service_type  || null,
-      shift:              form.shift         || null,
-      kehadiran:          form.kehadiran     || null,
-      regio:              form.regio         || null,
-      sumber_pasien:      form.sumber_pasien || null,
+      service_type:       form.service_type    || null,
+      shift:              form.shift           || null,
+      kehadiran:          form.kehadiran       || null,
+      regio:              form.regio           || null,
+      sumber_pasien:      form.sumber_pasien   || null,
       chief_complaint:    form.chief_complaint || null,
-      diagnosis:          form.diagnosis     || null,
-      treatment:          form.treatment     || null,
+      diagnosis:          form.diagnosis       || null,
+      treatment:          form.treatment       || null,
       status:             form.status,
-      notes:              form.notes         || null,
+      notes:              form.notes           || null,
     })
     setSaving(false)
     setShowForm(false)
@@ -122,89 +161,191 @@ export default function PatientVisitsPage() {
     load()
   }
 
+  // Derived stats
+  const total     = visits.length
+  const completed = visits.filter((v) => v.status === 'completed').length
+  const scheduled = visits.filter((v) => v.status === 'scheduled').length
+  const noShow    = visits.filter((v) => v.status === 'no_show' || v.kehadiran === 'TIDAK HADIR').length
+
+  const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
+  const labelCls = 'block text-xs font-medium text-foreground mb-1'
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-5">
+
+      {/* Page header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <Link href={`/patients/${id}`} className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground">
+          <Link
+            href={`/patients/${id}`}
+            className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground"
+          >
             <ChevronLeft size={16} />
           </Link>
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Kunjungan</h1>
-            <p className="text-sm text-muted-foreground">{patientName}</p>
+            <h1 className="text-xl font-semibold text-foreground">Rekam Medis</h1>
+            <p className="text-sm text-muted-foreground">
+              {patientName || '—'}
+              {noRm && <span className="ml-2 font-mono text-xs text-muted-foreground/70">{noRm}</span>}
+            </p>
           </div>
         </div>
-        <button onClick={() => { setForm(DEFAULT_FORM); setShowForm(true) }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+        <button
+          onClick={() => { setForm(DEFAULT_FORM); setShowForm(true) }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+        >
           <Plus size={16} /> Tambah Kunjungan
         </button>
       </div>
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
-      ) : (
-        <div className="space-y-3">
-          {visits.map((v) => (
-            <div key={v.id} className="bg-card rounded-2xl border border-border p-5">
-              <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-foreground">{v.visit_date}</p>
-                  {v.shift && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
-                      {v.shift}
-                    </span>
-                  )}
-                  {v.service_type && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SERVICE_BADGE[v.service_type]}`}>
-                      {v.service_type}
-                    </span>
-                  )}
-                  {v.kehadiran && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${v.kehadiran === 'HADIR' ? 'bg-chart-4/15 text-chart-4' : 'bg-destructive/10 text-destructive'}`}>
-                      {v.kehadiran}
-                    </span>
-                  )}
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[v.status]}`}>
-                  {STATUS_LABEL[v.status]}
-                </span>
-              </div>
-              <dl className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
-                {[
-                  ['Regio', v.regio],
-                  ['Keluhan', v.chief_complaint],
-                  ['Diagnosis', v.diagnosis],
-                  ['Tindakan', v.treatment],
-                  ['Sumber Pasien', v.sumber_pasien],
-                ].map(([label, value]) => value ? (
-                  <div key={label}>
-                    <dt className="text-xs text-muted-foreground">{label}</dt>
-                    <dd className="text-foreground">{value}</dd>
-                  </div>
-                ) : null)}
-              </dl>
-              {v.notes && <p className="text-xs text-muted-foreground mt-2 italic">{v.notes}</p>}
-            </div>
-          ))}
-          {!visits.length && <p className="text-sm text-muted-foreground text-center py-8">Belum ada kunjungan.</p>}
-        </div>
-      )}
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatCard label="Total Kunjungan" value={total}     icon={Activity}     color="bg-primary/10 text-primary"          loading={loading} />
+        <StatCard label="Selesai"         value={completed} icon={CheckCircle2} color="bg-[#34C759]/10 text-[#34C759]"      loading={loading} />
+        <StatCard label="Terjadwal"       value={scheduled} icon={Clock}        color="bg-blue-500/10 text-blue-400"         loading={loading} />
+        <StatCard label="Tidak Hadir"     value={noShow}    icon={UserX}        color="bg-destructive/10 text-destructive"  loading={loading} />
+      </div>
 
+      {/* Table */}
+      <div className="glass-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide w-10">No</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Tanggal</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Layanan</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Regio</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Keluhan</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kehadiran</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rekam Medis</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="border-b border-border/50">
+                    {Array.from({ length: 8 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3">
+                        <div className="h-4 bg-muted animate-pulse rounded-lg" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : visits.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                        <FileText size={22} className="text-primary" />
+                      </div>
+                      <p className="text-sm font-medium text-foreground">Belum ada kunjungan</p>
+                      <p className="text-xs text-muted-foreground">Tekan "Tambah Kunjungan" untuk mencatat kunjungan baru</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                visits.map((v, i) => (
+                  <tr
+                    key={v.id}
+                    onClick={() => setSelectedVisitId(v.id)}
+                    className="border-b border-border/50 hover:bg-primary/5 transition-colors cursor-pointer"
+                  >
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{i + 1}</td>
+
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <p className="text-sm font-medium text-foreground">{formatDate(v.visit_date)}</p>
+                      {v.shift && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                          {v.shift}
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      {v.service_type ? (
+                        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${SERVICE_BADGE[v.service_type]}`}>
+                          {v.service_type}
+                        </span>
+                      ) : <span className="text-muted-foreground/40 text-xs">—</span>}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-foreground/80">{v.regio ?? '—'}</span>
+                    </td>
+
+                    <td className="px-4 py-3 max-w-45">
+                      <p className="text-xs text-foreground/80 truncate">{v.chief_complaint ?? '—'}</p>
+                      {v.diagnosis && (
+                        <p className="text-[10px] text-muted-foreground truncate">{v.diagnosis}</p>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      {v.kehadiran ? (
+                        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                          v.kehadiran === 'HADIR'
+                            ? 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/20'
+                            : 'bg-destructive/15 text-destructive border-destructive/20'
+                        }`}>
+                          {v.kehadiran}
+                        </span>
+                      ) : <span className="text-muted-foreground/40 text-xs">—</span>}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_BADGE[v.status]}`}>
+                        {STATUS_LABEL[v.status]}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => setSelectedVisitId(v.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        <FileText size={12} />
+                        Buka
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {!loading && total > 0 && (
+          <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
+            {total.toLocaleString('id-ID')} kunjungan total
+          </div>
+        )}
+      </div>
+
+      {/* Add visit modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h2 className="text-base font-semibold text-foreground mb-4">Tambah Kunjungan</h2>
-            <form onSubmit={handleAdd} className="space-y-3">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
+          <div
+            className="bg-card rounded-2xl border border-border w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+              <h2 className="text-sm font-semibold text-foreground">Tambah Kunjungan</h2>
+              <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors text-lg leading-none">×</button>
+            </div>
+
+            <form id="add-visit-form" onSubmit={handleAdd} className="flex-1 overflow-y-auto p-5 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Tanggal</label>
-                  <input required type="date" value={form.visit_date} onChange={(e) => setForm((f) => ({ ...f, visit_date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <label className={labelCls}>Tanggal</label>
+                  <input required type="date" value={form.visit_date}
+                    onChange={(e) => setForm((f) => ({ ...f, visit_date: e.target.value }))}
+                    className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Shift</label>
-                  <select value={form.shift} onChange={(e) => setForm((f) => ({ ...f, shift: e.target.value as typeof form.shift }))}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
+                  <label className={labelCls}>Shift</label>
+                  <select value={form.shift} onChange={(e) => setForm((f) => ({ ...f, shift: e.target.value as typeof form.shift }))} className={inputCls}>
                     <option value="">— Pilih —</option>
                     <option value="PAGI">PAGI</option>
                     <option value="SORE">SORE</option>
@@ -214,17 +355,15 @@ export default function PatientVisitsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Layanan</label>
-                  <select value={form.service_type} onChange={(e) => setForm((f) => ({ ...f, service_type: e.target.value as ServiceType | '' }))}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
+                  <label className={labelCls}>Layanan</label>
+                  <select value={form.service_type} onChange={(e) => setForm((f) => ({ ...f, service_type: e.target.value as ServiceType | '' }))} className={inputCls}>
                     <option value="">— Pilih —</option>
                     {SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Kehadiran</label>
-                  <select value={form.kehadiran} onChange={(e) => setForm((f) => ({ ...f, kehadiran: e.target.value as typeof form.kehadiran }))}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
+                  <label className={labelCls}>Kehadiran</label>
+                  <select value={form.kehadiran} onChange={(e) => setForm((f) => ({ ...f, kehadiran: e.target.value as typeof form.kehadiran }))} className={inputCls}>
                     <option value="">— Pilih —</option>
                     <option value="HADIR">HADIR</option>
                     <option value="TIDAK HADIR">TIDAK HADIR</option>
@@ -234,52 +373,65 @@ export default function PatientVisitsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Regio</label>
-                  <select value={form.regio} onChange={(e) => setForm((f) => ({ ...f, regio: e.target.value as BodyRegion | '' }))}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
+                  <label className={labelCls}>Regio</label>
+                  <select value={form.regio} onChange={(e) => setForm((f) => ({ ...f, regio: e.target.value as BodyRegion | '' }))} className={inputCls}>
                     <option value="">— Pilih —</option>
                     {BODY_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Status</label>
-                  <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as VisitStatus }))}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
+                  <label className={labelCls}>Status</label>
+                  <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as VisitStatus }))} className={inputCls}>
                     {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-foreground mb-1">Sumber Pasien</label>
+                <label className={labelCls}>Sumber Pasien</label>
                 <input value={form.sumber_pasien} onChange={(e) => setForm((f) => ({ ...f, sumber_pasien: e.target.value }))}
-                  placeholder="mis. Rekomendasi orang lain, sosial media"
-                  className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
+                  placeholder="mis. Rekomendasi, sosial media"
+                  className={inputCls} />
               </div>
 
-              {[
-                { key: 'chief_complaint', label: 'Keluhan Utama' },
-                { key: 'diagnosis', label: 'Diagnosis' },
-                { key: 'treatment', label: 'Tindakan' },
-                { key: 'notes', label: 'Catatan' },
-              ].map(({ key, label }) => (
+              {([
+                ['chief_complaint', 'Keluhan Utama'],
+                ['diagnosis', 'Diagnosis'],
+                ['treatment', 'Tindakan'],
+                ['notes', 'Catatan'],
+              ] as const).map(([key, label]) => (
                 <div key={key}>
-                  <label className="block text-xs font-medium text-foreground mb-1">{label}</label>
-                  <textarea value={form[key as keyof typeof form]} onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))} rows={2}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
+                  <label className={labelCls}>{label}</label>
+                  <textarea
+                    value={form[key]}
+                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                    rows={2}
+                    className={`${inputCls} resize-none`}
+                  />
                 </div>
               ))}
-
-              <div className="flex gap-2 pt-1">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Batal</button>
-                <button type="submit" disabled={saving} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
-                  {saving ? 'Menyimpan...' : 'Simpan'}
-                </button>
-              </div>
             </form>
+
+            <div className="flex gap-2 px-5 py-4 border-t border-border shrink-0">
+              <button type="button" onClick={() => setShowForm(false)}
+                className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
+                Batal
+              </button>
+              <button type="submit" form="add-visit-form" disabled={saving}
+                className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
+                {saving ? 'Menyimpan...' : 'Simpan'}
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Medical record modal */}
+      <MedicalRecordModal
+        visitId={selectedVisitId}
+        onClose={() => setSelectedVisitId(null)}
+        onSaved={() => { setSelectedVisitId(null); load() }}
+      />
     </div>
   )
 }
