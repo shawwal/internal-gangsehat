@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { Search, X, User, Clock, Package, AlertTriangle, CalendarDays, Repeat2 } from 'lucide-react'
-import { fetchPatients, type PatientPlain } from '@/app/actions/patients'
+import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { createVisit, createBulkVisits } from '@/app/actions/jadwal'
 import { fetchPatientPackages } from '@/app/actions/packages'
 import type { AssignTarget } from './types'
@@ -49,8 +49,8 @@ interface Props {
 // ── Component ──────────────────────────────────────────────────────────────────
 export function AssignDialog({ target, onClose, onSaved }: Props) {
   // ── Patient state ───────────────────────────────────────────────────────────
-  const [patients, setPatients]         = useState<PatientPlain[]>([])
-  const [pLoading, setPLoading]         = useState(true)
+  const [results, setResults]           = useState<PatientPlain[]>([])
+  const [searching, setSearching]       = useState(false)
   const [search, setSearch]             = useState('')
   const [selectedPatient, setSelected]  = useState<PatientPlain | null>(null)
   const searchRef                       = useRef<HTMLInputElement>(null)
@@ -62,7 +62,7 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   const [notes, setNotes]               = useState('')
 
   // ── Mode ────────────────────────────────────────────────────────────────────
-  const [mode, setMode]                 = useState<'single' | 'recurring'>('single')
+  const [mode, setMode]                 = useState<'terapi_awal' | 'single' | 'recurring'>('terapi_awal')
 
   // ── Recurring state ─────────────────────────────────────────────────────────
   const targetDow = useMemo(() => new Date(target.date + 'T00:00:00').getDay(), [target.date])
@@ -82,33 +82,40 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState<string | null>(null)
 
-  // ── Load patients on mount ──────────────────────────────────────────────────
+  // ── Focus search on open ────────────────────────────────────────────────────
   useEffect(() => {
-    fetchPatients().then((list) => { setPatients(list); setPLoading(false) })
     setTimeout(() => searchRef.current?.focus(), 100)
   }, [])
 
+  // ── Debounced patient search ────────────────────────────────────────────────
+  useEffect(() => {
+    const q = search.trim()
+    const t = setTimeout(() => {
+      if (q.length < 2) { setResults([]); setSearching(false); return }
+      setSearching(true)
+      searchPatients(q).then((r) => { setResults(r); setSearching(false) })
+    }, q.length < 2 ? 0 : 300)
+    return () => clearTimeout(t)
+  }, [search])
+
   // ── Load packages when patient selected ────────────────────────────────────
   useEffect(() => {
-    if (!selectedPatient) { setPackages([]); setSelectedPkg(null); return }
-    setPkgLoading(true)
-    fetchPatientPackages(selectedPatient.id).then((pkgs) => {
-      setPackages(pkgs)
-      // Auto-select the first active package if any
-      const first = pkgs.find((p) => p.status === 'active')
-      setSelectedPkg(first?.id ?? null)
-      setPkgLoading(false)
-    })
+    if (!selectedPatient) {
+      const t = setTimeout(() => { setPackages([]); setSelectedPkg(null) }, 0)
+      return () => clearTimeout(t)
+    }
+    const t = setTimeout(() => {
+      setPkgLoading(true)
+      fetchPatientPackages(selectedPatient.id).then((pkgs) => {
+        setPackages(pkgs)
+        const first = pkgs.find((p) => p.status === 'active')
+        setSelectedPkg(first?.id ?? null)
+        setPkgLoading(false)
+      })
+    }, 0)
+    return () => clearTimeout(t)
   }, [selectedPatient])
 
-  // ── Patient filter ──────────────────────────────────────────────────────────
-  const filtered = search.trim()
-    ? patients.filter(
-        (p) =>
-          p.name.toLowerCase().includes(search.toLowerCase()) ||
-          (p.phone ?? '').includes(search),
-      )
-    : patients.slice(0, 20)
 
   // ── Recurring dates computation ─────────────────────────────────────────────
   const recurDates = useMemo<string[]>(() => {
@@ -161,6 +168,7 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
       patient_id:         selectedPatient.id,
       branch_id:          target.branchId,
       attending_staff_id: target.staffId,
+      service_type:       mode === 'terapi_awal' ? 'TERAPI AWAL' : 'SESI TERAPI',
       visit_time:         visitTime || null,
       chief_complaint:    chiefComplaint.trim() || null,
       status,
@@ -168,7 +176,7 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
       package_id:         selectedPkgId ?? null,
     }
 
-    if (mode === 'single') {
+    if (mode === 'terapi_awal' || mode === 'single') {
       const { error: err } = await createVisit({ ...base, visit_date: target.date })
       setSaving(false)
       if (err) { setError(err); return }
@@ -203,7 +211,7 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
         <div
-          className="glass-card w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl"
+          className="glass-card w-full max-w-lg h-[80vh] flex flex-col shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -252,18 +260,22 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
 
                 {/* Patient list */}
                 <div className="space-y-1 max-h-64 overflow-y-auto">
-                  {pLoading ? (
+                  {search.trim().length < 2 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">
+                      Ketik minimal 2 huruf untuk mencari pasien
+                    </p>
+                  ) : searching ? (
                     <div className="space-y-2 animate-pulse">
                       {[1, 2, 3].map((i) => (
                         <div key={i} className="h-12 rounded-xl bg-white/5" />
                       ))}
                     </div>
-                  ) : filtered.length === 0 ? (
+                  ) : results.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-6">
-                      {search ? 'Pasien tidak ditemukan' : 'Belum ada data pasien'}
+                      Pasien tidak ditemukan
                     </p>
                   ) : (
-                    filtered.map((p) => (
+                    results.map((p) => (
                       <button
                         key={p.id}
                         onClick={() => setSelected(p)}
@@ -288,11 +300,6 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
                   )}
                 </div>
 
-                {!search && patients.length > 20 && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Menampilkan 20 pasien terbaru. Ketik untuk mencari lebih.
-                  </p>
-                )}
               </div>
             ) : (
               /* ── Step 2: Visit details ── */
@@ -334,6 +341,18 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
 
                 {/* Mode tabs */}
                 <div className="flex gap-1.5 p-1 rounded-xl bg-white/5 border border-border/30">
+                  <button
+                    onClick={() => setMode('terapi_awal')}
+                    className={[
+                      'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer',
+                      mode === 'terapi_awal'
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    ].join(' ')}
+                  >
+                    <User size={12} />
+                    Terapi Awal
+                  </button>
                   <button
                     onClick={() => setMode('single')}
                     className={[
@@ -550,6 +569,8 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
                   ? 'Menyimpan...'
                   : mode === 'recurring' && recurDates.length > 0
                   ? `Simpan ${recurDates.length} Sesi`
+                  : mode === 'terapi_awal'
+                  ? 'Simpan Terapi Awal'
                   : 'Simpan Kunjungan'}
               </button>
             )}

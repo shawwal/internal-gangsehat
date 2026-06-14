@@ -97,6 +97,20 @@ export async function fetchPatients(): Promise<PatientPlain[]> {
   return rows.map(toPlain)
 }
 
+export async function searchPatients(term: string): Promise<PatientPlain[]> {
+  const q = term.trim().toLowerCase()
+  if (q.length < 2) return []
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('patients')
+    .select(SELECT_COLS)
+    .eq('is_active', true)
+    .ilike('name_normalized', `%${q}%`)
+    .order('name_normalized', { ascending: true })
+    .limit(20)
+  return (data ?? []).map((row) => toPlain(row as unknown as Record<string, unknown>))
+}
+
 export interface PatientsPageParams {
   page: number
   pageSize: number
@@ -263,6 +277,7 @@ export async function addPatient(input: {
     encrypted_birth_date: enc.encrypted_birth_date ?? null,
     gender:               input.gender,
     phone_hash:           hashPhone(input.phone),
+    name_normalized:      input.name.trim().toLowerCase(),
     no_rm:                input.no_rm          ?? null,
     pekerjaan:            input.pekerjaan      ?? null,
     agama:                input.agama          ?? null,
@@ -317,6 +332,7 @@ export async function updatePatient(
     encrypted_id_number:         enc.encrypted_id_number         ?? null,
     encrypted_emergency_contact: enc.encrypted_emergency_contact ?? null,
     phone_hash:                  hashPhone(input.phone),
+    name_normalized:             input.name.trim().toLowerCase(),
     gender:        input.gender        ?? null,
     blood_type:    input.blood_type    ?? null,
     // allergies is text[] in DB — store as single-element array
@@ -332,6 +348,53 @@ export async function updatePatient(
     provinsi:      input.provinsi       ?? null,
   }).eq('id', id)
   return { error: error?.message ?? null }
+}
+
+/**
+ * Backfill name_normalized for all existing patients that don't have it yet.
+ * Decrypts encrypted_name and writes lower(trim(name)) into name_normalized.
+ * Safe to run multiple times — only processes rows where name_normalized IS NULL.
+ */
+export async function backfillNameNormalized(): Promise<{ updated: number; errors: number }> {
+  const supabase = await createClient()
+  let updated = 0
+  let errors = 0
+  let offset = 0
+  const BATCH = 100
+
+  while (true) {
+    const { data } = await supabase
+      .from('patients')
+      .select('id, encrypted_name')
+      .is('name_normalized', null)
+      .range(offset, offset + BATCH - 1)
+
+    if (!data || data.length === 0) break
+
+    for (const row of data as { id: string; encrypted_name: string }[]) {
+      try {
+        const { name } = decryptPatientPII({
+          encrypted_name:  row.encrypted_name,
+          encrypted_phone: '',
+        })
+        if (!name) { errors++; continue }
+        const { error } = await supabase
+          .from('patients')
+          .update({ name_normalized: name.trim().toLowerCase() })
+          .eq('id', row.id)
+          .is('name_normalized', null)
+        if (error) errors++
+        else updated++
+      } catch {
+        errors++
+      }
+    }
+
+    if (data.length < BATCH) break
+    offset += BATCH
+  }
+
+  return { updated, errors }
 }
 
 /**
