@@ -168,12 +168,17 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                   </span>
                 ) : s.hasSchedule ? (
                   <>
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/20 text-white/90 font-bold uppercase">
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                      s.isOverride ? 'bg-secondary/30 text-secondary' : 'bg-white/20 text-white/90'
+                    }`}>
                       {s.shift}
                     </span>
-                    <span className="text-[9px] text-white/50 font-mono">
+                    <span className={`text-[9px] font-mono ${s.isOverride ? 'text-secondary/70' : 'text-white/50'}`}>
                       {s.jam_mulai}–{s.jam_selesai}
                     </span>
+                    {s.isOverride && (
+                      <span className="text-[9px] font-bold text-secondary/70 uppercase tracking-wide">TEMP</span>
+                    )}
                   </>
                 ) : (
                   <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-white/40 font-bold">

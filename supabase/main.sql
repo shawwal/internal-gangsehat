@@ -316,6 +316,20 @@ CREATE TABLE public.schedules (
   notes text, created_at timestamptz
 );
 
+-- schedule_overrides: temporary day/shift/time change for a staff during a date range
+-- hari = replacement day (may differ from original schedule hari)
+-- Migration: CREATE TABLE public.schedule_overrides (id uuid PK DEFAULT gen_random_uuid(), staff_id uuid NOT NULL FK→internal_profiles, branch_id uuid FK→branches, start_date date NOT NULL, end_date date NOT NULL, hari varchar NOT NULL CHECK(SENIN|SELASA|RABU|KAMIS|JUMAT|SABTU|AHAD), shift varchar NOT NULL CHECK(PAGI|SORE), jam_mulai time NOT NULL DEFAULT '09:00', jam_selesai time NOT NULL DEFAULT '17:00', reason text, created_by uuid FK→internal_profiles, status varchar NOT NULL DEFAULT 'active' CHECK(active|cancelled), created_at timestamptz DEFAULT now(), CONSTRAINT end_after_start CHECK(end_date >= start_date));
+CREATE TABLE public.schedule_overrides (
+  id uuid PK DEFAULT gen_random_uuid(), staff_id uuid NOT NULL FK→internal_profiles,
+  branch_id uuid FK→branches, start_date date NOT NULL, end_date date NOT NULL,
+  hari varchar NOT NULL CHECK(SENIN|SELASA|RABU|KAMIS|JUMAT|SABTU|AHAD),
+  shift varchar NOT NULL CHECK(PAGI|SORE),
+  jam_mulai time NOT NULL DEFAULT '09:00', jam_selesai time NOT NULL DEFAULT '17:00',
+  reason text, created_by uuid FK→internal_profiles,
+  status varchar NOT NULL DEFAULT 'active' CHECK(active|cancelled),
+  created_at timestamptz DEFAULT now()
+);
+
 -- == PATIENT PACKAGES ==
 
 -- patient_packages: id(pk) patient_id(fk→patients) branch_id(fk→branches) package_name package_type[fixed|flexible] total_sessions

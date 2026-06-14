@@ -15,6 +15,8 @@ import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
 import { StaffDetailModal } from '@/components/jadwal/StaffDetailModal'
 import type { AssignTarget } from '@/components/jadwal/types'
 
+const LS_KEY = 'jadwal_showInactive'
+
 export default function JadwalHarianPage() {
   const {
     today, selectedDate, setSelectedDate,
@@ -27,6 +29,21 @@ export default function JadwalHarianPage() {
   const [assignTarget, setAssignTarget]       = useState<AssignTarget | null>(null)
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null)
+
+  const [showInactive, setShowInactive] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem(LS_KEY) === 'true'
+  })
+
+  function toggleShowInactive() {
+    const next = !showInactive
+    setShowInactive(next)
+    localStorage.setItem(LS_KEY, String(next))
+  }
+
+  const activeStaff   = staff.filter((s) => s.hasSchedule && !s.isOnLeave)
+  const inactiveStaff = staff.filter((s) => !s.hasSchedule || s.isOnLeave)
+  const visibleStaff  = showInactive ? staff : activeStaff
 
   return (
     <>
@@ -57,12 +74,42 @@ export default function JadwalHarianPage() {
 
         {!loading && <VisitSummary visits={visits} staff={staff} />}
 
+        {/* Inactive-staff toggle — only shown when there are inactive staff */}
+        {!loading && inactiveStaff.length > 0 && (
+          <div className="flex items-center justify-end">
+            <button
+              onClick={toggleShowInactive}
+              className="flex items-center gap-2.5 group cursor-pointer"
+              aria-pressed={showInactive}
+            >
+              <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors select-none">
+                {showInactive
+                  ? `Sembunyikan nonaktif (${inactiveStaff.length})`
+                  : `Tampilkan nonaktif (${inactiveStaff.length})`}
+              </span>
+              {/* Pill track */}
+              <span
+                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ${
+                  showInactive ? 'bg-primary' : 'bg-muted'
+                }`}
+              >
+                {/* Thumb */}
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                    showInactive ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
+        )}
+
         <div className="glass-card overflow-hidden">
           {loading ? (
             <GridSkeleton />
           ) : (
             <DailyGrid
-              staff={staff}
+              staff={visibleStaff}
               visits={visits}
               date={toIso(selectedDate)}
               onAssign={setAssignTarget}
@@ -110,6 +157,7 @@ export default function JadwalHarianPage() {
           staffId={selectedStaffId}
           entry={staff.find((s) => s.staff_id === selectedStaffId)!}
           onClose={() => setSelectedStaffId(null)}
+          onSaved={() => loadAll(selectedDate)}
         />
       )}
     </>

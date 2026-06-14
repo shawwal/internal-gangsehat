@@ -23,6 +23,8 @@ export interface DayStaffEntry {
   leaveReason: string | null
   hasSchedule: boolean    // false = unscheduled but has visits today
   pendingLeave: PendingLeaveInfo | null  // pending (unapproved) leave for this date
+  isOverride: boolean     // shift/day comes from a schedule_overrides row
+  overrideId: string | null
 }
 
 export interface AssignTarget {

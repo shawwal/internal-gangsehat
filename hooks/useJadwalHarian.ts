@@ -46,7 +46,7 @@ export function useJadwalHarian() {
     const isoDate  = toIso(date)
     const hari     = toHariIndonesia(date)
 
-    const [schedulesRes, leavesRes, visitsData] = await Promise.all([
+    const [schedulesRes, leavesRes, visitsData, overridesRes] = await Promise.all([
       supabase
         .from('schedules')
         .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(full_name, avatar_url, nickname)')
@@ -59,6 +59,12 @@ export function useJadwalHarian() {
         .lte('start_date', isoDate)
         .gte('end_date', isoDate),
       fetchDailyVisits(isoDate),
+      supabase
+        .from('schedule_overrides')
+        .select('id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!staff_id(full_name, avatar_url, nickname)')
+        .eq('status', 'active')
+        .lte('start_date', isoDate)
+        .gte('end_date', isoDate),
     ])
 
     // Separate approved vs pending leaves
@@ -77,25 +83,66 @@ export function useJadwalHarian() {
       }
     }
 
+    // Build override maps
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const overrideRows = (overridesRes.data ?? []) as any[]
+    // Staff whose override targets TODAY's hari → appear today with override details
+    const overrideForToday = new Map<string, typeof overrideRows[0]>()
+    // Staff whose override targets a DIFFERENT hari → suppress their regular schedule today
+    const suppressedToday  = new Set<string>()
+    for (const ov of overrideRows) {
+      if (ov.hari === hari) {
+        overrideForToday.set(ov.staff_id, ov)
+      } else {
+        suppressedToday.add(ov.staff_id)
+      }
+    }
+
     // Build staff entries from schedules
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const entries = new Map<string, DayStaffEntry>()
     for (const row of (schedulesRes.data ?? []) as any[]) {
       const sid = row.staff_id as string
       if (entries.has(sid)) continue
+      // Skip staff who have been moved to a different day via override
+      if (suppressedToday.has(sid)) continue
+      const ov = overrideForToday.get(sid)
       entries.set(sid, {
         staff_id:    sid,
         full_name:   row.internal_profiles?.full_name ?? 'Unknown',
         nickname:    row.internal_profiles?.nickname ?? null,
         avatar_url:  row.internal_profiles?.avatar_url ?? null,
-        branch_id:   row.branch_id ?? null,
-        shift:       row.shift,
-        jam_mulai:   row.jam_mulai?.slice(0, 5) ?? '08:00',
-        jam_selesai: row.jam_selesai?.slice(0, 5) ?? '17:00',
+        branch_id:   ov?.branch_id ?? row.branch_id ?? null,
+        shift:       ov?.shift ?? row.shift,
+        jam_mulai:   (ov?.jam_mulai ?? row.jam_mulai)?.slice(0, 5) ?? '08:00',
+        jam_selesai: (ov?.jam_selesai ?? row.jam_selesai)?.slice(0, 5) ?? '17:00',
         isOnLeave:   approvedLeaveMap.has(sid),
         leaveReason: approvedLeaveMap.get(sid) ?? null,
         hasSchedule: true,
         pendingLeave: pendingLeaveMap.get(sid) ?? null,
+        isOverride:  !!ov,
+        overrideId:  ov?.id ?? null,
+      })
+    }
+
+    // Add staff who appear via override but whose original schedule is on a different day
+    for (const [sid, ov] of overrideForToday) {
+      if (entries.has(sid)) continue  // already added from regular schedules
+      entries.set(sid, {
+        staff_id:    sid,
+        full_name:   ov.internal_profiles?.full_name ?? 'Unknown',
+        nickname:    ov.internal_profiles?.nickname ?? null,
+        avatar_url:  ov.internal_profiles?.avatar_url ?? null,
+        branch_id:   ov.branch_id ?? null,
+        shift:       ov.shift,
+        jam_mulai:   ov.jam_mulai?.slice(0, 5) ?? '08:00',
+        jam_selesai: ov.jam_selesai?.slice(0, 5) ?? '17:00',
+        isOnLeave:   approvedLeaveMap.has(sid),
+        leaveReason: approvedLeaveMap.get(sid) ?? null,
+        hasSchedule: true,
+        pendingLeave: pendingLeaveMap.get(sid) ?? null,
+        isOverride:  true,
+        overrideId:  ov.id,
       })
     }
 
@@ -116,6 +163,8 @@ export function useJadwalHarian() {
         leaveReason: approvedLeaveMap.get(sid) ?? null,
         hasSchedule: false,
         pendingLeave: pendingLeaveMap.get(sid) ?? null,
+        isOverride:  false,
+        overrideId:  null,
       })
     }
 
@@ -132,6 +181,7 @@ export function useJadwalHarian() {
           entry.full_name  = p.full_name
           entry.avatar_url = p.avatar_url ?? null
           entry.nickname   = p.nickname ?? null
+          // isOverride / overrideId already set correctly above
         }
       }
     }
