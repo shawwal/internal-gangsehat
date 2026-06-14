@@ -45,8 +45,8 @@ export function StatusListModal({ open, status, onClose }: Props) {
     // Group by staff_id
     const map = new Map<string, StaffGroup>()
     for (const row of data) {
-      const profile = row.internal_profiles as { full_name: string } | null
-      const branch  = row.branches as { name: string } | null
+      const profile = row.internal_profiles as unknown as { full_name: string } | null
+      const branch  = row.branches as unknown as { name: string } | null
       if (!map.has(row.staff_id)) {
         map.set(row.staff_id, {
           staff_id:    row.staff_id,
