@@ -189,7 +189,7 @@ CREATE TABLE public.homepage_services (id uuid PK, title_id text NOT NULL, title
 -- branches: id(pk) name address phone is_active
 CREATE TABLE public.branches (id uuid PK, name text NOT NULL, address text, phone text, is_active bool DEFAULT true, created_at timestamptz, updated_at timestamptz);
 
--- internal_profiles: id(pk,fk→auth.users) full_name email phone role[director|hr|finance|marketing|staff|therapist|manager]* branch_id(fk→branches) avatar_url is_active
+-- internal_profiles: id(pk,fk→auth.users) full_name email phone role[director|hr|finance|marketing|staff|therapist|manager]* branch_id(fk→branches) avatar_url is_active nickname
 -- NOTE: this is the identity table for all internal staff; id = auth.uid()
 -- therapist: branch-scoped clinical staff (patient_visits, own attendance/leave/targets)
 -- manager: branch-scoped director equivalent (full access within own branch)
@@ -198,8 +198,10 @@ CREATE TABLE public.internal_profiles (
   full_name text NOT NULL DEFAULT '', email text NOT NULL DEFAULT '',
   phone text, role internal_user_role NOT NULL DEFAULT 'marketing',
   branch_id uuid FK→branches, avatar_url text, is_active bool DEFAULT true,
+  nickname text,
   created_at timestamptz, updated_at timestamptz
 );
+-- Migration: ALTER TABLE public.internal_profiles ADD COLUMN IF NOT EXISTS nickname text;
 
 -- internal_jabatan: id(pk) nama  [position/job title lookup]
 CREATE TABLE public.internal_jabatan (id uuid PK, nama varchar NOT NULL, created_at timestamptz);

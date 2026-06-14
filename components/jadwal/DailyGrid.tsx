@@ -22,6 +22,10 @@ function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((n) => n[0] ?? '').join('').toUpperCase()
 }
 
+function displayName(entry: DayStaffEntry) {
+  return entry.nickname || entry.full_name
+}
+
 // Hours array: [8, 9, ..., 20]
 const HOURS = Array.from({ length: GRID_END - GRID_START }, (_, i) => GRID_START + i)
 
@@ -56,7 +60,7 @@ function StaffAvatar({ entry }: { entry: DayStaffEntry }) {
               : 'bg-white/20 text-white',
           ].join(' ')}
         >
-          {getInitials(entry.full_name)}
+          {getInitials(entry.nickname || entry.full_name)}
         </div>
       )}
     </div>
@@ -148,7 +152,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
 
               {/* Name */}
               <p className="text-[12px] font-semibold text-white text-center leading-tight line-clamp-2">
-                {s.full_name}
+                {displayName(s)}
               </p>
 
               {/* Shift + leave badges */}

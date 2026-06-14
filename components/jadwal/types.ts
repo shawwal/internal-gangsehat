@@ -13,6 +13,7 @@ export interface PendingLeaveInfo {
 export interface DayStaffEntry {
   staff_id: string
   full_name: string
+  nickname: string | null
   avatar_url: string | null
   branch_id: string | null
   shift: string           // 'PAGI' | 'SORE' | ''

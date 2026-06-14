@@ -10,6 +10,7 @@ import { StaffTable }  from '@/components/users/StaffTable'
 import { DirectorCards } from '@/components/users/DirectorCards'
 import { InviteModal } from '@/components/users/InviteModal'
 import { DeleteModal } from '@/components/users/DeleteModal'
+import { EditUserModal } from '@/components/users/EditUserModal'
 import { STAFF_ROLES } from '@/components/users/types'
 import type { UserRow, BranchOption, Tab, UserRole } from '@/components/users/types'
 
@@ -28,6 +29,7 @@ export default function UsersPage() {
   const [inviteMsg, setInviteMsg]     = useState('')
   const [savingId, setSavingId]       = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null)
+  const [editTarget, setEditTarget]   = useState<UserRow | null>(null)
   const [isPending, startTransition]  = useTransition()
 
   async function load() {
@@ -38,7 +40,7 @@ export default function UsersPage() {
     const [{ data: usersData }, { data: branchData }] = await Promise.all([
       supabase
         .from('internal_profiles')
-        .select('id, full_name, email, phone, role, branch_id, is_active, created_at, branches(name)')
+        .select('id, full_name, email, phone, role, branch_id, is_active, created_at, nickname, branches(name)')
         .order('full_name'),
       supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
     ])
@@ -49,7 +51,7 @@ export default function UsersPage() {
 
   useEffect(() => { load() }, [])
 
-  async function updateField(id: string, patch: Partial<Pick<UserRow, 'role' | 'branch_id' | 'is_active'>>) {
+  async function updateField(id: string, patch: Partial<Pick<UserRow, 'role' | 'branch_id' | 'is_active' | 'full_name' | 'phone' | 'nickname'>>) {
     setSavingId(id)
     await createClient().from('internal_profiles').update(patch).eq('id', id)
     setSavingId(null)
@@ -141,6 +143,7 @@ export default function UsersPage() {
           savingId={savingId}
           onUpdateField={updateField}
           onDeleteTarget={setDeleteTarget}
+          onEditDetails={setEditTarget}
         />
       ) : (
         <StaffTable
@@ -151,6 +154,7 @@ export default function UsersPage() {
           search={search}
           onUpdateField={updateField}
           onDeleteTarget={setDeleteTarget}
+          onEditDetails={setEditTarget}
         />
       )}
 
@@ -172,6 +176,16 @@ export default function UsersPage() {
           isPending={isPending}
           onCancel={() => setDeleteTarget(null)}
           onConfirm={confirmDelete}
+        />
+      )}
+
+      {editTarget && (
+        <EditUserModal
+          user={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSave={async (id, patch) => {
+            await updateField(id, patch)
+          }}
         />
       )}
     </div>

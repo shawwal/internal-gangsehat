@@ -1,4 +1,4 @@
-import { Crown, Loader2, Trash2 } from 'lucide-react'
+import { Crown, Loader2, Trash2, Pencil } from 'lucide-react'
 import { UserAvatar } from './UserAvatar'
 import { formatDate } from './types'
 import type { UserRow } from './types'
@@ -9,9 +9,10 @@ interface Props {
   savingId: string | null
   onUpdateField: (id: string, patch: Partial<Pick<UserRow, 'is_active'>>) => void
   onDeleteTarget: (user: UserRow) => void
+  onEditDetails: (user: UserRow) => void
 }
 
-export function DirectorCards({ users, currentUserId, savingId, onUpdateField, onDeleteTarget }: Props) {
+export function DirectorCards({ users, currentUserId, savingId, onUpdateField, onDeleteTarget, onEditDetails }: Props) {
   if (!users.length) {
     return <p className="text-sm text-muted-foreground col-span-3 text-center py-10">Belum ada direktur terdaftar.</p>
   }
@@ -29,17 +30,30 @@ export function DirectorCards({ users, currentUserId, savingId, onUpdateField, o
                   <p className="font-semibold text-foreground text-sm leading-tight truncate">
                     {u.full_name || '—'}
                   </p>
+                  {u.nickname && (
+                    <p className="text-[11px] text-primary/80 font-medium truncate">"{u.nickname}"</p>
+                  )}
                   <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                 </div>
               </div>
-              {!isSelf && (
+              <div className="flex items-center gap-1 shrink-0">
                 <button
-                  onClick={() => onDeleteTarget(u)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                  onClick={() => onEditDetails(u)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                  title="Edit detail"
                 >
-                  <Trash2 size={13} />
+                  <Pencil size={13} />
                 </button>
-              )}
+                {!isSelf && (
+                  <button
+                    onClick={() => onDeleteTarget(u)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    title="Hapus pengguna"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center justify-between pt-1 border-t border-border">

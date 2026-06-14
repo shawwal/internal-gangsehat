@@ -11,6 +11,7 @@ export interface UserRow {
   branch_id: string | null
   is_active: boolean
   created_at: string
+  nickname: string | null
   branches: { name: string } | null
 }
 

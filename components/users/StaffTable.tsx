@@ -1,4 +1,4 @@
-import { Loader2, Trash2, Building2 } from 'lucide-react'
+import { Loader2, Trash2, Building2, Pencil } from 'lucide-react'
 import { UserAvatar } from './UserAvatar'
 import { ROLE_LABELS, ROLE_COLOR, formatDate } from './types'
 import type { UserRow, BranchOption, UserRole } from './types'
@@ -11,9 +11,10 @@ interface Props {
   search: string
   onUpdateField: (id: string, patch: Partial<Pick<UserRow, 'role' | 'branch_id' | 'is_active'>>) => void
   onDeleteTarget: (user: UserRow) => void
+  onEditDetails: (user: UserRow) => void
 }
 
-export function StaffTable({ users, branches, currentUserId, savingId, search, onUpdateField, onDeleteTarget }: Props) {
+export function StaffTable({ users, branches, currentUserId, savingId, search, onUpdateField, onDeleteTarget, onEditDetails }: Props) {
   return (
     <div className="bg-card rounded-2xl border border-border overflow-hidden">
       <div className="overflow-x-auto">
@@ -43,6 +44,9 @@ export function StaffTable({ users, branches, currentUserId, savingId, search, o
                           {u.full_name || '—'}
                           {isSelf && <span className="ml-1 text-xs text-muted-foreground font-normal">(Anda)</span>}
                         </p>
+                        {u.nickname && (
+                          <p className="text-[11px] text-primary/80 font-medium truncate">"{u.nickname}"</p>
+                        )}
                         <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                       </div>
                     </div>
@@ -114,14 +118,26 @@ export function StaffTable({ users, branches, currentUserId, savingId, search, o
                   <td className="px-4 py-3 text-right">
                     {isSaving ? (
                       <Loader2 size={13} className="animate-spin text-muted-foreground ml-auto" />
-                    ) : !isSelf ? (
-                      <button
-                        onClick={() => onDeleteTarget(u)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    ) : null}
+                    ) : (
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => onEditDetails(u)}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                          title="Edit detail"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        {!isSelf && (
+                          <button
+                            onClick={() => onDeleteTarget(u)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            title="Hapus pengguna"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               )
