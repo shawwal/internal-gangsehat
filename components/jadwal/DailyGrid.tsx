@@ -77,10 +77,11 @@ interface Props {
   onDelete: (visitId: string) => void
   onOpen: (visitId: string) => void
   onPendingLeaveClick: (staffName: string, leave: PendingLeaveInfo) => void
+  onStaffClick: (staffId: string) => void
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick }: Props) {
+export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick }: Props) {
   const totalH = (GRID_END - GRID_START) * SLOT_H
 
   // Current time line
@@ -147,13 +148,17 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
               className="shrink-0 flex flex-col items-center gap-2 px-2 py-4 border-l border-white/10"
               style={{ width: STAFF_COL_W }}
             >
-              {/* Avatar */}
-              <StaffAvatar entry={s} />
-
-              {/* Name */}
-              <p className="text-[12px] font-semibold text-white text-center leading-tight line-clamp-2">
-                {displayName(s)}
-              </p>
+              {/* Avatar + Name — clickable, hover shows full name */}
+              <button
+                onClick={() => onStaffClick(s.staff_id)}
+                className="flex flex-col items-center gap-2 group/staff focus:outline-none"
+                title={s.nickname ? s.full_name : undefined}
+              >
+                <StaffAvatar entry={s} />
+                <p className="text-[12px] font-semibold text-white text-center leading-tight line-clamp-2 group-hover/staff:underline decoration-white/40 underline-offset-2">
+                  {displayName(s)}
+                </p>
+              </button>
 
               {/* Shift + leave badges */}
               <div className="flex items-center gap-1 flex-wrap justify-center">

@@ -12,6 +12,7 @@ import { PendingLeaveModal } from '@/components/jadwal/PendingLeaveModal'
 import { DailyGrid } from '@/components/jadwal/DailyGrid'
 import { AssignDialog } from '@/components/jadwal/AssignDialog'
 import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
+import { StaffDetailModal } from '@/components/jadwal/StaffDetailModal'
 import type { AssignTarget } from '@/components/jadwal/types'
 
 export default function JadwalHarianPage() {
@@ -25,6 +26,7 @@ export default function JadwalHarianPage() {
 
   const [assignTarget, setAssignTarget]       = useState<AssignTarget | null>(null)
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null)
 
   return (
     <>
@@ -68,6 +70,7 @@ export default function JadwalHarianPage() {
               onDelete={handleDelete}
               onOpen={setSelectedVisitId}
               onPendingLeaveClick={(staffName, leave) => setLeavePopover({ staffName, leave })}
+              onStaffClick={setSelectedStaffId}
             />
           )}
         </div>
@@ -101,6 +104,14 @@ export default function JadwalHarianPage() {
         onClose={() => setSelectedVisitId(null)}
         onSaved={() => { setSelectedVisitId(null); loadAll(selectedDate) }}
       />
+
+      {selectedStaffId && (
+        <StaffDetailModal
+          staffId={selectedStaffId}
+          entry={staff.find((s) => s.staff_id === selectedStaffId)!}
+          onClose={() => setSelectedStaffId(null)}
+        />
+      )}
     </>
   )
 }
