@@ -181,8 +181,8 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                     )}
                   </>
                 ) : (
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-white/40 font-bold">
-                    —
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-white/40 font-medium text-center leading-tight">
+                    Tidak ada jadwal
                   </span>
                 )}
 

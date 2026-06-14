@@ -46,7 +46,7 @@ export function useJadwalHarian() {
     const isoDate  = toIso(date)
     const hari     = toHariIndonesia(date)
 
-    const [schedulesRes, leavesRes, visitsData, overridesRes] = await Promise.all([
+    const [schedulesRes, leavesRes, visitsData, overridesRes, allTherapistsRes] = await Promise.all([
       supabase
         .from('schedules')
         .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(full_name, avatar_url, nickname)')
@@ -65,6 +65,12 @@ export function useJadwalHarian() {
         .eq('status', 'active')
         .lte('start_date', isoDate)
         .gte('end_date', isoDate),
+      supabase
+        .from('internal_profiles')
+        .select('id, full_name, nickname, avatar_url, branch_id')
+        .eq('role', 'therapist')
+        .eq('is_active', true)
+        .order('full_name'),
     ])
 
     // Separate approved vs pending leaves
@@ -168,6 +174,28 @@ export function useJadwalHarian() {
       })
     }
 
+    // Add all active therapists who have no schedule or visits today (shown when toggle is on)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const t of (allTherapistsRes.data ?? []) as any[]) {
+      if (entries.has(t.id)) continue
+      entries.set(t.id, {
+        staff_id:    t.id,
+        full_name:   t.full_name ?? 'Unknown',
+        nickname:    t.nickname ?? null,
+        avatar_url:  t.avatar_url ?? null,
+        branch_id:   t.branch_id ?? null,
+        shift:       '',
+        jam_mulai:   '08:00',
+        jam_selesai: '20:00',
+        isOnLeave:   approvedLeaveMap.has(t.id),
+        leaveReason: approvedLeaveMap.get(t.id) ?? null,
+        hasSchedule: false,
+        pendingLeave: pendingLeaveMap.get(t.id) ?? null,
+        isOverride:  false,
+        overrideId:  null,
+      })
+    }
+
     // Resolve names for edge-case staff
     const unknownIds = [...entries.values()].filter((s) => s.full_name === 'Staff').map((s) => s.staff_id)
     if (unknownIds.length > 0) {
@@ -186,10 +214,11 @@ export function useJadwalHarian() {
       }
     }
 
-    // Sort: on-leave last, then alphabetical
+    // Sort: scheduled first → unscheduled → on-leave last; alphabetical within each group
+    const rank = (s: DayStaffEntry) => s.isOnLeave ? 2 : s.hasSchedule ? 0 : 1
     const sorted = [...entries.values()].sort((a, b) => {
-      if (a.isOnLeave !== b.isOnLeave) return a.isOnLeave ? 1 : -1
-      return a.full_name.localeCompare(b.full_name)
+      const r = rank(a) - rank(b)
+      return r !== 0 ? r : a.full_name.localeCompare(b.full_name)
     })
 
     setStaff(sorted)
