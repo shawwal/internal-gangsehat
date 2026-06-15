@@ -60,7 +60,7 @@ export async function fetchPackageSessions(
     shift:          v.shift as PackageSession['shift'],
     kehadiran:      v.kehadiran as PackageSession['kehadiran'],
     status:         v.status,
-    therapist_name: (v.internal_profiles as { full_name: string } | null)?.full_name ?? null,
+    therapist_name: (v.internal_profiles as unknown as { full_name: string } | null)?.full_name ?? null,
   }))
 }
 
