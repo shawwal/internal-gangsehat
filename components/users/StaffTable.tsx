@@ -40,10 +40,19 @@ export function StaffTable({ users, branches, currentUserId, savingId, search, o
                     <div className="flex items-center gap-2.5">
                       <UserAvatar name={u.full_name} size="sm" />
                       <div className="min-w-0">
-                        <p className="font-medium text-foreground leading-tight truncate">
-                          {u.full_name || '—'}
-                          {isSelf && <span className="ml-1 text-xs text-muted-foreground font-normal">(Anda)</span>}
-                        </p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-medium text-foreground leading-tight truncate">
+                            {u.full_name || '—'}
+                            {isSelf && <span className="ml-1 text-xs text-muted-foreground font-normal">(Anda)</span>}
+                          </p>
+                          {u.gender === 'male' ? (
+                            <span className="text-[11px] font-bold text-blue-500 leading-none" title="Pria">♂</span>
+                          ) : u.gender === 'female' ? (
+                            <span className="text-[11px] font-bold text-[#FF0090] leading-none" title="Wanita">♀</span>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground/40 leading-none" title="Jenis kelamin belum diisi">⊘</span>
+                          )}
+                        </div>
                         {u.nickname && (
                           <p className="text-[11px] text-primary/80 font-medium truncate">"{u.nickname}"</p>
                         )}

@@ -27,9 +27,18 @@ export function DirectorCards({ users, currentUserId, savingId, onUpdateField, o
               <div className="flex items-center gap-3 min-w-0">
                 <UserAvatar name={u.full_name} size="lg" />
                 <div className="min-w-0">
-                  <p className="font-semibold text-foreground text-sm leading-tight truncate">
-                    {u.full_name || '—'}
-                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="font-semibold text-foreground text-sm leading-tight truncate">
+                      {u.full_name || '—'}
+                    </p>
+                    {u.gender === 'male' ? (
+                      <span className="text-[11px] font-bold text-blue-500 leading-none" title="Pria">♂</span>
+                    ) : u.gender === 'female' ? (
+                      <span className="text-[11px] font-bold text-[#FF0090] leading-none" title="Wanita">♀</span>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground/40 leading-none" title="Jenis kelamin belum diisi">⊘</span>
+                    )}
+                  </div>
                   {u.nickname && (
                     <p className="text-[11px] text-primary/80 font-medium truncate">"{u.nickname}"</p>
                   )}
