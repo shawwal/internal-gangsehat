@@ -5,18 +5,19 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import {
   ChevronLeft, Plus, Package, CheckCircle2, XCircle, Layers,
-  Pencil, Trash2, X,
+  Pencil, Trash2, X, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { fetchPatient } from '@/app/actions/patients'
 import {
   fetchPatientPackages,
+  fetchPackageSessions,
   createPatientPackage,
   updatePatientPackage,
   deletePatientPackage,
 } from '@/app/actions/packages'
 import { createClient } from '@/lib/supabase/client'
 import type {
-  PatientPackage, JenisPaket, PackageOperationalStatus,
+  PatientPackage, PackageSession, JenisPaket, PackageOperationalStatus,
   PackageCompletionStatus, PackageStatus,
 } from '@/types'
 
@@ -115,6 +116,19 @@ function PackageCard({
   onDelete: (id: string) => void
 }) {
   const pct = pkg.total_sessions > 0 ? (pkg.used_sessions / pkg.total_sessions) * 100 : 0
+  const [expanded, setExpanded] = useState(false)
+  const [sessions, setSessions] = useState<PackageSession[] | null>(null)
+  const [loadingSessions, setLoadingSessions] = useState(false)
+
+  async function toggleSessions() {
+    if (!expanded && sessions === null) {
+      setLoadingSessions(true)
+      const data = await fetchPackageSessions(pkg.id)
+      setSessions(data)
+      setLoadingSessions(false)
+    }
+    setExpanded((v) => !v)
+  }
 
   return (
     <div className="glass-card p-5 space-y-4">
@@ -185,6 +199,59 @@ function PackageCard({
           />
         </div>
       </div>
+
+      {/* Session drill-down toggle */}
+      <button
+        onClick={toggleSessions}
+        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors text-xs text-muted-foreground"
+      >
+        <span>Sesi Terpakai ({pkg.used_sessions})</span>
+        {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+      </button>
+
+      {/* Session list */}
+      {expanded && (
+        <div className="rounded-xl border border-border overflow-hidden">
+          {loadingSessions ? (
+            <div className="divide-y divide-border">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex gap-3 px-3 py-2.5 animate-pulse">
+                  <div className="h-3 bg-muted rounded w-20" />
+                  <div className="h-3 bg-muted rounded w-24" />
+                  <div className="h-3 bg-muted rounded w-12" />
+                </div>
+              ))}
+            </div>
+          ) : !sessions || sessions.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4">
+              Belum ada sesi yang tercatat untuk paket ini
+            </p>
+          ) : (
+            <div className="divide-y divide-border">
+              {sessions.map((s, i) => (
+                <div key={s.id} className={`flex items-center gap-2 px-3 py-2 text-xs ${i % 2 === 1 ? 'bg-muted/30' : ''}`}>
+                  <span className="text-muted-foreground shrink-0 w-20">
+                    {new Date(s.visit_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' })}
+                  </span>
+                  <span className="text-foreground truncate flex-1">{s.service_type}</span>
+                  {s.shift && (
+                    <span className="text-muted-foreground shrink-0">{s.shift}</span>
+                  )}
+                  <span className="shrink-0 flex items-center gap-1">
+                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${s.kehadiran === 'HADIR' ? 'bg-[#34C759]' : 'bg-destructive'}`} />
+                    <span className="text-muted-foreground">{s.kehadiran ?? '—'}</span>
+                  </span>
+                  {s.therapist_name && (
+                    <span className="text-muted-foreground truncate max-w-20 shrink-0 hidden sm:block">
+                      {s.therapist_name}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Bottom row */}
       <div className="flex items-center justify-between">

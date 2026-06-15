@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import type { PatientPackage } from '@/types'
+import type { PatientPackage, PackageSession } from '@/types'
 
 // ── Fetch all packages for a patient with computed session counts ───────────────
 // Reads from the patient_packages_with_stats view which joins patient_visits.
@@ -35,6 +35,32 @@ export async function fetchPatientPackages(
     completion_status:  (p.completion_status ?? null) as PatientPackage['completion_status'],
     created_at:         p.created_at,
     updated_at:         p.updated_at,
+  }))
+}
+
+// ── Fetch all visits linked to a specific package ──────────────────────────────
+export async function fetchPackageSessions(
+  packageId: string,
+): Promise<PackageSession[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('patient_visits')
+    .select('id, visit_date, service_type, shift, kehadiran, status, internal_profiles!attending_staff_id(full_name)')
+    .eq('package_id', packageId)
+    .neq('status', 'cancelled')
+    .order('visit_date', { ascending: true })
+
+  if (error || !data?.length) return []
+
+  return data.map((v) => ({
+    id:             v.id,
+    visit_date:     v.visit_date,
+    service_type:   v.service_type,
+    shift:          v.shift as PackageSession['shift'],
+    kehadiran:      v.kehadiran as PackageSession['kehadiran'],
+    status:         v.status,
+    therapist_name: (v.internal_profiles as { full_name: string } | null)?.full_name ?? null,
   }))
 }
 

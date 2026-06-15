@@ -139,6 +139,7 @@ export default function UsersPage() {
       ) : tab === 'director' ? (
         <DirectorCards
           users={filtered}
+          branches={branches}
           currentUserId={currentUserId}
           savingId={savingId}
           onUpdateField={updateField}

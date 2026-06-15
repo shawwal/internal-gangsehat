@@ -170,6 +170,16 @@ export interface PatientPackage {
   updated_at: string
 }
 
+export interface PackageSession {
+  id: string
+  visit_date: string
+  service_type: string
+  shift: 'PAGI' | 'SORE' | null
+  kehadiran: 'HADIR' | 'TIDAK HADIR' | null
+  status: string
+  therapist_name: string | null
+}
+
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'leave' | 'sick'
 
 export interface Attendance {

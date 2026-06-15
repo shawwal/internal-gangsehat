@@ -239,6 +239,64 @@ export async function fetchPatientStats(): Promise<PatientStats> {
   }
 }
 
+export async function fetchPatientsForExport(params: {
+  gender:    'all' | 'male' | 'female' | 'other'
+  search:    string
+  sortField: 'name' | 'created_at' | 'no_rm'
+  sortOrder: 'asc' | 'desc'
+}): Promise<PatientPlain[]> {
+  const supabase = await createClient()
+  const { gender, sortField, sortOrder } = params
+  const search   = params.search.trim().toLowerCase()
+  const ascending = sortOrder === 'asc'
+  const BATCH     = 1000
+
+  const fetchBatched = async (ordered: boolean) => {
+    const rows: Record<string, unknown>[] = []
+    let from = 0
+    while (true) {
+      let q = supabase.from('patients').select(SELECT_COLS).eq('is_active', true)
+      if (gender !== 'all') q = q.eq('gender', gender)
+      if (ordered) q = q.order(sortField, { ascending, nullsFirst: false }).order('id', { ascending: true })
+      else q = q.order('id', { ascending: true })
+      const { data, error } = await q.range(from, from + BATCH - 1)
+      if (error || !data || data.length === 0) break
+      rows.push(...(data as unknown as Record<string, unknown>[]))
+      if (data.length < BATCH) break
+      from += BATCH
+    }
+    return rows
+  }
+
+  if (!search && sortField !== 'name') {
+    const rows = await fetchBatched(true)
+    return rows.map(toPlain)
+  }
+
+  const rows = await fetchBatched(false)
+  let candidates = rows.map((row) => {
+    const pii = decryptPatientPII({
+      encrypted_name:  (row.encrypted_name as string)  ?? '',
+      encrypted_phone: (row.encrypted_phone as string) ?? '',
+    })
+    return { row, name: pii.name ?? '', phone: pii.phone ?? '' }
+  })
+  if (search) {
+    candidates = candidates.filter(
+      (c) => c.name.toLowerCase().includes(search) || c.phone.includes(search),
+    )
+  }
+  candidates.sort((a, b) => {
+    const mul = ascending ? 1 : -1
+    if (sortField === 'name') return mul * a.name.localeCompare(b.name, 'id')
+    if (sortField === 'no_rm') {
+      return mul * ((a.row.no_rm as string ?? '').localeCompare(b.row.no_rm as string ?? '', 'id'))
+    }
+    return mul * (new Date(a.row.created_at as string).getTime() - new Date(b.row.created_at as string).getTime())
+  })
+  return candidates.map((c) => toPlain(c.row))
+}
+
 export async function fetchPatientsPageWithStats(
   params: PatientsPageParams,
 ): Promise<PatientsPageResult & { stats: PatientStats }> {
