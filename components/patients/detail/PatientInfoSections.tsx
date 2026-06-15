@@ -45,7 +45,7 @@ export function PatientInfoSections({ patient }: PatientInfoSectionsProps) {
       <SectionCard title="Domisili" icon={<Home size={15} />}>
         <InfoRow label="Kelurahan"      value={patient.kelurahan} />
         <InfoRow label="Kecamatan"      value={patient.kecamatan} />
-        <InfoRow label="Kabupaten/Kota" value={patient.kabupaten_kota} icon={<MapPin size={13} />} />
+        <InfoRow label="Kabupaten/Kota" value={patient.kabupaten_kota} />
         <InfoRow label="Provinsi"       value={patient.provinsi} />
         {domisili && (
           <div className="pt-2 mt-1">
