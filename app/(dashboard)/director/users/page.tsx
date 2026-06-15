@@ -40,7 +40,7 @@ export default function UsersPage() {
     const [{ data: usersData }, { data: branchData }] = await Promise.all([
       supabase
         .from('internal_profiles')
-        .select('id, full_name, email, phone, role, branch_id, is_active, created_at, nickname, branches(name)')
+        .select('id, full_name, email, phone, role, branch_id, is_active, created_at, nickname, gender, branches(name)')
         .order('full_name'),
       supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
     ])
@@ -51,7 +51,7 @@ export default function UsersPage() {
 
   useEffect(() => { load() }, [])
 
-  async function updateField(id: string, patch: Partial<Pick<UserRow, 'role' | 'branch_id' | 'is_active' | 'full_name' | 'phone' | 'nickname'>>) {
+  async function updateField(id: string, patch: Partial<Pick<UserRow, 'role' | 'branch_id' | 'is_active' | 'full_name' | 'phone' | 'nickname' | 'gender'>>) {
     setSavingId(id)
     await createClient().from('internal_profiles').update(patch).eq('id', id)
     setSavingId(null)

@@ -62,7 +62,7 @@ export function useJadwalHarian() {
       applyBranch(
         supabase
           .from('schedules')
-          .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(full_name, avatar_url, nickname)')
+          .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(full_name, avatar_url, nickname, gender)')
           .eq('hari', hari)
           .eq('status', 'AKTIF'),
       ),
@@ -76,7 +76,7 @@ export function useJadwalHarian() {
       applyBranch(
         supabase
           .from('schedule_overrides')
-          .select('id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!staff_id(full_name, avatar_url, nickname)')
+          .select('id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!staff_id(full_name, avatar_url, nickname, gender)')
           .eq('status', 'active')
           .lte('start_date', isoDate)
           .gte('end_date', isoDate),
@@ -84,7 +84,7 @@ export function useJadwalHarian() {
       applyBranch(
         supabase
           .from('internal_profiles')
-          .select('id, full_name, nickname, avatar_url, branch_id')
+          .select('id, full_name, nickname, avatar_url, branch_id, gender')
           .eq('role', 'therapist')
           .eq('is_active', true)
           .order('full_name'),
@@ -137,6 +137,7 @@ export function useJadwalHarian() {
         nickname:    row.internal_profiles?.nickname ?? null,
         avatar_url:  row.internal_profiles?.avatar_url ?? null,
         branch_id:   ov?.branch_id ?? row.branch_id ?? null,
+        gender:      (row.internal_profiles?.gender ?? null) as 'male' | 'female' | null,
         shift:       ov?.shift ?? row.shift,
         jam_mulai:   (ov?.jam_mulai ?? row.jam_mulai)?.slice(0, 5) ?? '08:00',
         jam_selesai: (ov?.jam_selesai ?? row.jam_selesai)?.slice(0, 5) ?? '17:00',
@@ -158,6 +159,7 @@ export function useJadwalHarian() {
         nickname:    ov.internal_profiles?.nickname ?? null,
         avatar_url:  ov.internal_profiles?.avatar_url ?? null,
         branch_id:   ov.branch_id ?? null,
+        gender:      (ov.internal_profiles?.gender ?? null) as 'male' | 'female' | null,
         shift:       ov.shift,
         jam_mulai:   ov.jam_mulai?.slice(0, 5) ?? '08:00',
         jam_selesai: ov.jam_selesai?.slice(0, 5) ?? '17:00',
@@ -180,6 +182,7 @@ export function useJadwalHarian() {
         nickname:    null,
         avatar_url:  null,
         branch_id:   v.branch_id ?? null,
+        gender:      null,
         shift:       '',
         jam_mulai:   '08:00',
         jam_selesai: '20:00',
@@ -202,6 +205,7 @@ export function useJadwalHarian() {
         nickname:    t.nickname ?? null,
         avatar_url:  t.avatar_url ?? null,
         branch_id:   t.branch_id ?? null,
+        gender:      (t.gender ?? null) as 'male' | 'female' | null,
         shift:       '',
         jam_mulai:   '08:00',
         jam_selesai: '20:00',
@@ -219,7 +223,7 @@ export function useJadwalHarian() {
     if (unknownIds.length > 0) {
       const { data: profiles } = await supabase
         .from('internal_profiles')
-        .select('id, full_name, avatar_url, nickname')
+        .select('id, full_name, avatar_url, nickname, gender')
         .in('id', unknownIds)
       for (const p of profiles ?? []) {
         const entry = entries.get(p.id)
@@ -227,7 +231,7 @@ export function useJadwalHarian() {
           entry.full_name  = p.full_name
           entry.avatar_url = p.avatar_url ?? null
           entry.nickname   = p.nickname ?? null
-          // isOverride / overrideId already set correctly above
+          entry.gender     = (p.gender ?? null) as 'male' | 'female' | null
         }
       }
     }

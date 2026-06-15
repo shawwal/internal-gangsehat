@@ -16,6 +16,7 @@ export interface DayStaffEntry {
   nickname: string | null
   avatar_url: string | null
   branch_id: string | null
+  gender: 'male' | 'female' | null
   shift: string           // 'PAGI' | 'SORE' | ''
   jam_mulai: string       // 'HH:MM'
   jam_selesai: string     // 'HH:MM'

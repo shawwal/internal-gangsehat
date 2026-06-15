@@ -12,6 +12,7 @@ export interface UserRow {
   is_active: boolean
   created_at: string
   nickname: string | null
+  gender: 'male' | 'female' | null
   branches: { name: string } | null
 }
 

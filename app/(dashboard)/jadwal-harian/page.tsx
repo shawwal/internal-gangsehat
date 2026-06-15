@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Users, User } from 'lucide-react'
 import { useJadwalHarian } from '@/hooks/useJadwalHarian'
 import { toIso } from '@/components/jadwal/utils'
 import { PageHeader } from '@/components/jadwal/PageHeader'
@@ -35,6 +36,7 @@ export default function JadwalHarianPage() {
     if (typeof window === 'undefined') return false
     return localStorage.getItem(LS_KEY) === 'true'
   })
+  const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all')
 
   function toggleShowInactive() {
     const next = !showInactive
@@ -44,7 +46,10 @@ export default function JadwalHarianPage() {
 
   const activeStaff   = staff.filter((s) => s.hasSchedule && !s.isOnLeave)
   const inactiveStaff = staff.filter((s) => !s.hasSchedule || s.isOnLeave)
-  const visibleStaff  = showInactive ? staff : activeStaff
+  const baseStaff     = showInactive ? staff : activeStaff
+  const visibleStaff  = genderFilter === 'all'
+    ? baseStaff
+    : baseStaff.filter((s) => s.gender === genderFilter)
 
   return (
     <>
@@ -87,6 +92,51 @@ export default function JadwalHarianPage() {
         />
 
         {!loading && <VisitSummary visits={visits} staff={staff} />}
+
+        {/* Gender filter */}
+        {!loading && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Filter:</span>
+            <div className="flex items-center bg-muted/40 rounded-2xl p-1 gap-0.5">
+              {([
+                { value: 'all',    label: 'Semua',  icon: <Users size={13} /> },
+                { value: 'male',   label: 'Pria',   icon: <User  size={13} /> },
+                { value: 'female', label: 'Wanita', icon: <User  size={13} /> },
+              ] as const).map(({ value, label, icon }) => (
+                <button
+                  key={value}
+                  onClick={() => setGenderFilter(value)}
+                  aria-pressed={genderFilter === value}
+                  className={[
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer',
+                    genderFilter === value
+                      ? value === 'male'
+                        ? 'bg-blue-500 text-white shadow-sm shadow-blue-500/30'
+                        : value === 'female'
+                        ? 'bg-[#FF0090] text-white shadow-sm shadow-primary/30'
+                        : 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/10',
+                  ].join(' ')}
+                >
+                  {icon}
+                  {label}
+                  {genderFilter !== value && (
+                    <span className="text-[10px] opacity-60">
+                      {value === 'all'
+                        ? baseStaff.length
+                        : baseStaff.filter((s) => s.gender === value).length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            {genderFilter !== 'all' && (
+              <span className="text-xs text-muted-foreground">
+                {visibleStaff.length} terapis
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Inactive-staff toggle — only shown when there are inactive staff */}
         {!loading && inactiveStaff.length > 0 && (

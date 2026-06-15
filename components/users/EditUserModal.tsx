@@ -5,13 +5,14 @@ import type { UserRow } from './types'
 interface Props {
   user: UserRow
   onClose: () => void
-  onSave: (id: string, patch: Partial<Pick<UserRow, 'full_name' | 'phone' | 'nickname'>>) => Promise<void>
+  onSave: (id: string, patch: Partial<Pick<UserRow, 'full_name' | 'phone' | 'nickname' | 'gender'>>) => Promise<void>
 }
 
 export function EditUserModal({ user, onClose, onSave }: Props) {
   const [fullName, setFullName] = useState(user.full_name)
   const [nickname, setNickname] = useState(user.nickname ?? '')
   const [phone, setPhone]       = useState(user.phone ?? '')
+  const [gender, setGender]     = useState<'male' | 'female' | null>(user.gender ?? null)
   const [loading, setLoading]   = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -21,6 +22,7 @@ export function EditUserModal({ user, onClose, onSave }: Props) {
       full_name: fullName.trim() || user.full_name,
       nickname:  nickname.trim() || null,
       phone:     phone.trim() || null,
+      gender,
     })
     setLoading(false)
     onClose()
@@ -58,6 +60,32 @@ export function EditUserModal({ user, onClose, onSave }: Props) {
               className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <p className="text-[11px] text-muted-foreground mt-1">Ditampilkan di jadwal harian jika diisi.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">
+              Jenis Kelamin <span className="text-muted-foreground font-normal">(opsional)</span>
+            </label>
+            <div className="flex items-center gap-2">
+              {([
+                { value: 'male',   label: 'Pria',   color: 'bg-blue-500 text-white shadow-blue-500/25' },
+                { value: 'female', label: 'Wanita', color: 'bg-[#FF0090] text-white shadow-primary/25' },
+              ] as const).map(({ value, label, color }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setGender(gender === value ? null : value)}
+                  aria-pressed={gender === value}
+                  className={[
+                    'flex-1 py-2 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer border',
+                    gender === value
+                      ? `${color} border-transparent shadow-sm`
+                      : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted',
+                  ].join(' ')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-foreground mb-1">
