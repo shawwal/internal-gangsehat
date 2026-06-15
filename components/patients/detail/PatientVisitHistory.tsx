@@ -10,6 +10,7 @@ interface Visit {
   chief_complaint: string | null
   shift: string | null
   kehadiran: string | null
+  internal_profiles: { full_name: string } | null
 }
 
 interface PatientVisitHistoryProps {
@@ -48,7 +49,7 @@ export function PatientVisitHistory({ visits, totalVisits, patientId }: PatientV
               <tr className="border-b border-border/60">
                 <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4">Tanggal</th>
                 <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 hidden sm:table-cell">Layanan</th>
-                <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 hidden md:table-cell">Shift</th>
+                <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 hidden md:table-cell">Terapis</th>
                 <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 hidden md:table-cell">Kehadiran</th>
                 <th className="text-left text-xs font-medium text-muted-foreground pb-2">Status</th>
               </tr>
@@ -61,15 +62,19 @@ export function PatientVisitHistory({ visits, totalVisits, patientId }: PatientV
                 >
                   <td className="py-2.5 pr-4">
                     <p className="text-sm font-medium text-foreground">{v.visit_date}</p>
-                    {v.chief_complaint && (
+                    {v.shift ? (
+                      <p className="text-xs text-muted-foreground">{v.shift}</p>
+                    ) : v.chief_complaint ? (
                       <p className="text-xs text-muted-foreground truncate max-w-[160px]">{v.chief_complaint}</p>
-                    )}
+                    ) : null}
                   </td>
                   <td className="py-2.5 pr-4 hidden sm:table-cell">
                     <span className="text-xs text-muted-foreground">{v.service_type ?? '—'}</span>
                   </td>
                   <td className="py-2.5 pr-4 hidden md:table-cell">
-                    <span className="text-xs text-muted-foreground">{v.shift ?? '—'}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {v.internal_profiles?.full_name ?? '—'}
+                    </span>
                   </td>
                   <td className="py-2.5 pr-4 hidden md:table-cell">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${

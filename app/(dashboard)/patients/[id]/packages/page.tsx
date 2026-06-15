@@ -229,23 +229,25 @@ function PackageCard({
           ) : (
             <div className="divide-y divide-border">
               {sessions.map((s, i) => (
-                <div key={s.id} className={`flex items-center gap-2 px-3 py-2 text-xs ${i % 2 === 1 ? 'bg-muted/30' : ''}`}>
-                  <span className="text-muted-foreground shrink-0 w-20">
-                    {new Date(s.visit_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' })}
-                  </span>
-                  <span className="text-foreground truncate flex-1">{s.service_type}</span>
-                  {s.shift && (
-                    <span className="text-muted-foreground shrink-0">{s.shift}</span>
-                  )}
-                  <span className="shrink-0 flex items-center gap-1">
-                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${s.kehadiran === 'HADIR' ? 'bg-[#34C759]' : 'bg-destructive'}`} />
-                    <span className="text-muted-foreground">{s.kehadiran ?? '—'}</span>
-                  </span>
-                  {s.therapist_name && (
-                    <span className="text-muted-foreground truncate max-w-20 shrink-0 hidden sm:block">
-                      {s.therapist_name}
+                <div key={s.id} className={`px-3 py-2 text-xs ${i % 2 === 1 ? 'bg-muted/30' : ''}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground shrink-0">
+                      {new Date(s.visit_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' })}
                     </span>
-                  )}
+                    <span className="text-foreground font-medium truncate flex-1 text-center">{s.service_type}</span>
+                    <span className="shrink-0 flex items-center gap-1">
+                      <span className={`inline-block w-1.5 h-1.5 rounded-full ${s.kehadiran === 'HADIR' ? 'bg-[#34C759]' : 'bg-destructive'}`} />
+                      <span className="text-muted-foreground">{s.kehadiran ?? '—'}</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-muted-foreground/60 text-[10px]">
+                      {s.therapist_name ?? 'Terapis tidak tercatat'}
+                    </span>
+                    {s.shift && (
+                      <span className="text-[10px] text-muted-foreground/60">· {s.shift}</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
