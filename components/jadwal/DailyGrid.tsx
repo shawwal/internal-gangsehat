@@ -250,9 +250,15 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                 className="absolute w-full flex items-start justify-end pr-3 pt-1"
                 style={{ top: i * SLOT_H, height: SLOT_H }}
               >
-                <span className="text-[11px] text-muted-foreground/60 font-mono">
-                  {fmtHour(h)}
-                </span>
+                {h === 14 ? (
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-primary/70 leading-none">
+                    SORE
+                  </span>
+                ) : h !== 8 && h !== 12 && h !== 18 ? (
+                  <span className="text-[11px] text-muted-foreground/60 font-mono">
+                    {fmtHour(h)}
+                  </span>
+                ) : null}
               </div>
             ))}
           </div>
@@ -265,7 +271,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
             {HOURS.map((h, i) => (
               <div
                 key={h}
-                className="absolute inset-x-0 border-t border-border/40"
+                className={`absolute inset-x-0 border-t ${h === 14 ? 'border-primary/50' : 'border-border/40'}`}
                 style={{ top: i * SLOT_H }}
               />
             ))}

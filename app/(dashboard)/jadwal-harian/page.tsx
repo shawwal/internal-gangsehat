@@ -23,6 +23,7 @@ export default function JadwalHarianPage() {
     staff, visits, loading,
     leavePopover, setLeavePopover,
     leaveSaving, canApproveLeave,
+    branches, selectedBranchId, setSelectedBranchId,
     loadAll, handleStatusChange, handleDelete, handleLeaveAction,
   } = useJadwalHarian()
 
@@ -60,11 +61,24 @@ export default function JadwalHarianPage() {
 
       <div className="space-y-5 j-fade-in">
 
-        <PageHeader
-          date={selectedDate}
-          loading={loading}
-          onRefresh={() => loadAll(selectedDate)}
-        />
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <PageHeader
+            date={selectedDate}
+            loading={loading}
+            onRefresh={() => loadAll(selectedDate)}
+          />
+          {branches.length > 0 && (
+            <select
+              value={selectedBranchId ?? ''}
+              onChange={(e) => setSelectedBranchId(e.target.value || null)}
+              className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+            >
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
 
         <DateNav
           selectedDate={selectedDate}

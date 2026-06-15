@@ -21,22 +21,29 @@ export function useJadwalHarian() {
   const [leavePopover, setLeavePopover] = useState<LeavePopoverState | null>(null)
   const [leaveSaving, setLeaveSaving]   = useState(false)
   const [canApproveLeave, setCanApproveLeave] = useState(false)
+  const [branches, setBranches]               = useState<{ id: string; name: string }[]>([])
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null | undefined>(undefined)
   const today = new Date()
 
-  // Check if current user can approve leaves (hr / director / manager)
+  // Load user role, branch, and branches list on mount
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    async function loadMeta() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data } = await supabase
-        .from('internal_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-      if (data?.role && ['director', 'hr', 'manager'].includes(data.role)) {
+      const [{ data: profile }, { data: branchList }] = await Promise.all([
+        supabase.from('internal_profiles').select('role, branch_id').eq('id', user.id).single(),
+        supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
+      ])
+      if (profile?.role && ['director', 'hr', 'manager'].includes(profile.role)) {
         setCanApproveLeave(true)
       }
-    })
+      const list = branchList ?? []
+      setBranches(list)
+      // Non-directors default to their own branch; directors default to first branch
+      setSelectedBranchId(profile?.branch_id ?? list[0]?.id ?? null)
+    }
+    loadMeta()
   }, [])
 
   // Load schedules, leaves, and visits for a date
@@ -46,31 +53,42 @@ export function useJadwalHarian() {
     const isoDate  = toIso(date)
     const hari     = toHariIndonesia(date)
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    function applyBranch(q: any) {
+      return selectedBranchId ? q.eq('branch_id', selectedBranchId) : q
+    }
+
     const [schedulesRes, leavesRes, visitsData, overridesRes, allTherapistsRes] = await Promise.all([
-      supabase
-        .from('schedules')
-        .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(full_name, avatar_url, nickname)')
-        .eq('hari', hari)
-        .eq('status', 'AKTIF'),
+      applyBranch(
+        supabase
+          .from('schedules')
+          .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(full_name, avatar_url, nickname)')
+          .eq('hari', hari)
+          .eq('status', 'AKTIF'),
+      ),
       supabase
         .from('leave_requests')
         .select('id, staff_id, reason, status, start_date, end_date')
         .in('status', ['approved', 'pending'])
         .lte('start_date', isoDate)
         .gte('end_date', isoDate),
-      fetchDailyVisits(isoDate),
-      supabase
-        .from('schedule_overrides')
-        .select('id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!staff_id(full_name, avatar_url, nickname)')
-        .eq('status', 'active')
-        .lte('start_date', isoDate)
-        .gte('end_date', isoDate),
-      supabase
-        .from('internal_profiles')
-        .select('id, full_name, nickname, avatar_url, branch_id')
-        .eq('role', 'therapist')
-        .eq('is_active', true)
-        .order('full_name'),
+      fetchDailyVisits(isoDate, selectedBranchId),
+      applyBranch(
+        supabase
+          .from('schedule_overrides')
+          .select('id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!staff_id(full_name, avatar_url, nickname)')
+          .eq('status', 'active')
+          .lte('start_date', isoDate)
+          .gte('end_date', isoDate),
+      ),
+      applyBranch(
+        supabase
+          .from('internal_profiles')
+          .select('id, full_name, nickname, avatar_url, branch_id')
+          .eq('role', 'therapist')
+          .eq('is_active', true)
+          .order('full_name'),
+      ),
     ])
 
     // Separate approved vs pending leaves
@@ -224,9 +242,12 @@ export function useJadwalHarian() {
     setStaff(sorted)
     setVisits(visitsData)
     setLoading(false)
-  }, [])
+  }, [selectedBranchId])
 
-  useEffect(() => { loadAll(selectedDate) }, [selectedDate, loadAll])
+  useEffect(() => {
+    if (selectedBranchId === undefined) return
+    loadAll(selectedDate)
+  }, [selectedDate, selectedBranchId, loadAll])
 
   function handleStatusChange(visitId: string, status: VisitStatus) {
     setVisits((vs) => vs.map((v) => v.id === visitId ? { ...v, status } : v))
@@ -267,6 +288,9 @@ export function useJadwalHarian() {
     setLeavePopover,
     leaveSaving,
     canApproveLeave,
+    branches,
+    selectedBranchId,
+    setSelectedBranchId,
     loadAll,
     handleStatusChange,
     handleDelete,

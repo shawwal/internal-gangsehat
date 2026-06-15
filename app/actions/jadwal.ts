@@ -33,14 +33,16 @@ export interface CreateVisitInput {
 }
 
 // ── Fetch all visits for a date with decrypted patient names ───────────────────
-export async function fetchDailyVisits(date: string): Promise<DailyVisit[]> {
+export async function fetchDailyVisits(date: string, branchId?: string | null): Promise<DailyVisit[]> {
   const supabase = await createClient()
 
-  const { data: visits, error } = await supabase
+  let query = supabase
     .from('patient_visits')
     .select('id, patient_id, attending_staff_id, visit_date, visit_time, chief_complaint, diagnosis, treatment, status, notes, branch_id')
     .eq('visit_date', date)
     .order('visit_time', { ascending: true })
+  if (branchId) query = query.eq('branch_id', branchId)
+  const { data: visits, error } = await query
 
   if (error || !visits || visits.length === 0) return []
 
