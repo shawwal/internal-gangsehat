@@ -10,7 +10,7 @@ interface Visit {
   chief_complaint: string | null
   shift: string | null
   kehadiran: string | null
-  internal_profiles: { full_name: string } | null
+  internal_profiles: { full_name: string }[] | null
 }
 
 interface PatientVisitHistoryProps {
@@ -73,7 +73,7 @@ export function PatientVisitHistory({ visits, totalVisits, patientId }: PatientV
                   </td>
                   <td className="py-2.5 pr-4 hidden md:table-cell">
                     <span className="text-xs text-muted-foreground">
-                      {v.internal_profiles?.full_name ?? '—'}
+                      {v.internal_profiles?.[0]?.full_name ?? '—'}
                     </span>
                   </td>
                   <td className="py-2.5 pr-4 hidden md:table-cell">
