@@ -807,3 +807,19 @@ CREATE TABLE public.patient_packages (
   CONSTRAINT patient_packages_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
   CONSTRAINT patient_packages_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.internal_profiles(id)
 );
+-- View: patient_packages_with_stats
+-- Computes used_sessions and remaining_sessions from patient_visits.
+-- See supabase/025-patient-packages-view.sql for the migration.
+CREATE OR REPLACE VIEW public.patient_packages_with_stats AS
+SELECT
+  pp.*,
+  COALESCE(vc.used_sessions, 0)                          AS used_sessions,
+  pp.total_sessions - COALESCE(vc.used_sessions, 0)      AS remaining_sessions
+FROM public.patient_packages pp
+LEFT JOIN (
+  SELECT package_id, COUNT(*) AS used_sessions
+  FROM public.patient_visits
+  WHERE status != 'cancelled'
+    AND package_id IS NOT NULL
+  GROUP BY package_id
+) vc ON pp.id = vc.package_id;
