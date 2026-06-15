@@ -10,7 +10,6 @@ import type { PatientPackage, VisitStatus } from '@/types'
 
 import { fmtHour, toIso } from './assign/constants'
 import { PatientSearch } from './assign/PatientSearch'
-import { NewPatientForm } from './assign/NewPatientForm'
 import { PatientChip } from './assign/PatientChip'
 import { ModeTabs, type VisitMode } from './assign/ModeTabs'
 import { RecurringConfig } from './assign/RecurringConfig'
@@ -23,7 +22,7 @@ interface Props {
   onSaved: () => void
 }
 
-type DialogView = 'search' | 'new-patient' | 'details'
+type DialogView = 'search' | 'details'
 
 export function AssignDialog({ target, onClose, onSaved }: Props) {
   // ── View ────────────────────────────────────────────────────────────────────
@@ -113,11 +112,6 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
   function handleSelectPatient(p: PatientPlain) {
-    setSelected(p)
-    setView('details')
-  }
-
-  function handlePatientCreated(p: PatientPlain) {
     setSelected(p)
     setView('details')
   }
@@ -236,17 +230,8 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
                   searching={searching}
                   searchRef={searchRef}
                   onSelect={handleSelectPatient}
-                  onAddNew={() => setView('new-patient')}
                 />
               </div>
-            )}
-
-            {view === 'new-patient' && (
-              <NewPatientForm
-                prefillName={search.trim()}
-                onCreated={handlePatientCreated}
-                onCancel={() => setView('search')}
-              />
             )}
 
             {view === 'details' && selectedPatient && (

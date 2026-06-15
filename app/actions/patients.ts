@@ -262,7 +262,7 @@ export async function addPatient(input: {
   kecamatan?: string
   kabupaten_kota?: string
   provinsi?: string
-}): Promise<{ error: string | null }> {
+}): Promise<{ error: string | null; id: string | null }> {
   const supabase = await createClient()
   const enc = encryptPatientPII({
     name:      input.name,
@@ -270,7 +270,7 @@ export async function addPatient(input: {
     address:   input.address,
     birthDate: input.birthDate,
   })
-  const { error } = await supabase.from('patients').insert({
+  const { data, error } = await supabase.from('patients').insert({
     encrypted_name:       enc.encrypted_name,
     encrypted_phone:      enc.encrypted_phone,
     encrypted_address:    enc.encrypted_address   ?? null,
@@ -286,8 +286,8 @@ export async function addPatient(input: {
     kecamatan:            input.kecamatan      ?? null,
     kabupaten_kota:       input.kabupaten_kota ?? null,
     provinsi:             input.provinsi       ?? null,
-  })
-  return { error: error?.message ?? null }
+  }).select('id').single()
+  return { error: error?.message ?? null, id: data?.id ?? null }
 }
 
 export interface UpdatePatientInput {
