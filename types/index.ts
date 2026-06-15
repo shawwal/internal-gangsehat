@@ -153,22 +153,21 @@ export type PackageStatus = 'active' | 'completed' | 'cancelled'
 
 export interface PatientPackage {
   id: string
+  patient_id: string
+  branch_id: string | null
   package_name: string
   package_type: PackageType
   total_sessions: number
-  used_sessions: number   // computed from patient_visits
+  used_sessions: number       // computed from patient_visits via view
+  remaining_sessions: number  // computed: total_sessions - used_sessions
   notes: string | null
   status: PackageStatus
-  // Operational fields (migration 023)
-  jenis_paket: JenisPaket | null        // P1 = 5 sessions, P2 = 10 sessions
-  mulai_paket: 'NEW' | 'EXT.' | null   // NEW = first episode, EXT. = extension
-  operational_status: PackageOperationalStatus  // ON / OFF / PENDING
+  jenis_paket: JenisPaket | null
+  mulai_paket: 'NEW' | 'EXT.' | null
+  operational_status: PackageOperationalStatus
   completion_status: PackageCompletionStatus | null
-  // Individual session dates T1–T10 (t6–t10 are NULL for P1 packages)
-  t1: string | null; t2: string | null; t3: string | null
-  t4: string | null; t5: string | null; t6: string | null
-  t7: string | null; t8: string | null; t9: string | null
-  t10: string | null
+  created_at: string
+  updated_at: string
 }
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'leave' | 'sick'

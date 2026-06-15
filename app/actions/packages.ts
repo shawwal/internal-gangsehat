@@ -3,64 +3,55 @@
 import { createClient } from '@/lib/supabase/server'
 import type { PatientPackage } from '@/types'
 
-// ── Fetch all packages for a patient with computed used_sessions ───────────────
+// ── Fetch all packages for a patient with computed session counts ───────────────
+// Reads from the patient_packages_with_stats view which joins patient_visits.
 export async function fetchPatientPackages(
   patientId: string,
 ): Promise<PatientPackage[]> {
   const supabase = await createClient()
 
-  const { data: packages, error } = await supabase
-    .from('patient_packages')
-    .select('id, package_name, package_type, total_sessions, notes, status')
+  const { data, error } = await supabase
+    .from('patient_packages_with_stats')
+    .select('*')
     .eq('patient_id', patientId)
     .order('created_at', { ascending: false })
 
-  if (error || !packages?.length) return []
+  if (error || !data?.length) return []
 
-  // Count used sessions (non-cancelled visits linked to each package)
-  const packageIds = packages.map((p) => p.id)
-  const { data: visitRows } = await supabase
-    .from('patient_visits')
-    .select('package_id')
-    .in('package_id', packageIds)
-    .neq('status', 'cancelled')
-
-  const countMap = new Map<string, number>()
-  for (const v of visitRows ?? []) {
-    if (v.package_id) {
-      countMap.set(v.package_id, (countMap.get(v.package_id) ?? 0) + 1)
-    }
-  }
-
-  return packages.map((p) => ({
+  return data.map((p) => ({
     id:                 p.id,
+    patient_id:         p.patient_id,
+    branch_id:          p.branch_id ?? null,
     package_name:       p.package_name,
     package_type:       p.package_type as PatientPackage['package_type'],
     total_sessions:     p.total_sessions,
-    used_sessions:      countMap.get(p.id) ?? 0,
+    used_sessions:      Number(p.used_sessions ?? 0),
+    remaining_sessions: Number(p.remaining_sessions ?? p.total_sessions),
     notes:              p.notes ?? null,
     status:             p.status as PatientPackage['status'],
-    // Operational fields (migration 023) — not selected here, default to null/ON
-    jenis_paket:        null,
-    mulai_paket:        null,
-    operational_status: 'ON' as const,
-    completion_status:  null,
-    t1: null, t2: null, t3: null, t4: null, t5: null,
-    t6: null, t7: null, t8: null, t9: null, t10: null,
+    jenis_paket:        (p.jenis_paket ?? null) as PatientPackage['jenis_paket'],
+    mulai_paket:        (p.mulai_paket ?? null) as PatientPackage['mulai_paket'],
+    operational_status: (p.operational_status ?? 'ON') as PatientPackage['operational_status'],
+    completion_status:  (p.completion_status ?? null) as PatientPackage['completion_status'],
+    created_at:         p.created_at,
+    updated_at:         p.updated_at,
   }))
 }
 
 // ── Create a new patient package ───────────────────────────────────────────────
+// total_sessions is derived from jenis_paket (P1→5, P2→10) when provided.
 export async function createPatientPackage(input: {
   patient_id: string
-  branch_id: string
+  branch_id: string | null
   package_name: string
-  package_type: 'fixed' | 'flexible'
-  total_sessions: number
+  jenis_paket: 'P1' | 'P2'
+  mulai_paket: 'NEW' | 'EXT.'
   notes?: string | null
 }): Promise<{ id: string | null; error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  const total_sessions = input.jenis_paket === 'P1' ? 5 : 10
 
   const { data, error } = await supabase
     .from('patient_packages')
@@ -68,8 +59,10 @@ export async function createPatientPackage(input: {
       patient_id:     input.patient_id,
       branch_id:      input.branch_id,
       package_name:   input.package_name,
-      package_type:   input.package_type,
-      total_sessions: input.total_sessions,
+      package_type:   'fixed',
+      total_sessions,
+      jenis_paket:    input.jenis_paket,
+      mulai_paket:    input.mulai_paket,
       notes:          input.notes ?? null,
       created_by:     user?.id ?? null,
       updated_at:     new Date().toISOString(),
@@ -78,4 +71,48 @@ export async function createPatientPackage(input: {
     .single()
 
   return { id: data?.id ?? null, error: error?.message ?? null }
+}
+
+// ── Update an existing package ─────────────────────────────────────────────────
+export async function updatePatientPackage(
+  id: string,
+  patch: {
+    package_name?: string
+    jenis_paket?: 'P1' | 'P2'
+    mulai_paket?: 'NEW' | 'EXT.'
+    operational_status?: 'ON' | 'OFF' | 'PENDING'
+    completion_status?: 'LANJUT' | 'SEMBUH' | 'TIDAK LANJUT' | 'STOP' | null
+    status?: 'active' | 'completed' | 'cancelled'
+    notes?: string | null
+  },
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+
+  const update: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() }
+
+  // Sync total_sessions when jenis_paket changes
+  if (patch.jenis_paket) {
+    update.total_sessions = patch.jenis_paket === 'P1' ? 5 : 10
+  }
+
+  const { error } = await supabase
+    .from('patient_packages')
+    .update(update)
+    .eq('id', id)
+
+  return { error: error?.message ?? null }
+}
+
+// ── Soft-delete (cancel) a package ────────────────────────────────────────────
+export async function deletePatientPackage(
+  id: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('patient_packages')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  return { error: error?.message ?? null }
 }
