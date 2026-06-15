@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import {
-  ChevronLeft, Plus, Activity, CheckCircle2, Clock, UserX, FileText,
+  ChevronLeft, Plus, Activity, CheckCircle2, Clock, UserX, FileText, User,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchPatient } from '@/app/actions/patients'
@@ -125,11 +125,15 @@ export default function PatientVisitsPage() {
     const supabase = createClient()
     const [patient, { data: v }] = await Promise.all([
       fetchPatient(id),
-      supabase.from('patient_visits').select('*').eq('patient_id', id).order('visit_date', { ascending: false }),
+      supabase
+        .from('patient_visits')
+        .select('*, internal_profiles!attending_staff_id(id, full_name, nickname)')
+        .eq('patient_id', id)
+        .order('visit_date', { ascending: false }),
     ])
     setPatientName(patient?.name ?? '')
     setNoRm(patient?.no_rm ?? '')
-    setVisits((v ?? []) as PatientVisit[])
+    setVisits((v ?? []) as unknown as PatientVisit[])
     setLoading(false)
   }
 
@@ -215,6 +219,7 @@ export default function PatientVisitsPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide w-10">No</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Tanggal</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Layanan</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Terapis</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Regio</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Keluhan</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kehadiran</th>
@@ -226,7 +231,7 @@ export default function PatientVisitsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/50">
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    {Array.from({ length: 9 }).map((_, j) => (
                       <td key={j} className="px-4 py-3">
                         <div className="h-4 bg-muted animate-pulse rounded-lg" />
                       </td>
@@ -235,7 +240,7 @@ export default function PatientVisitsPage() {
                 ))
               ) : visits.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
+                  <td colSpan={9} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                         <FileText size={22} className="text-primary" />
@@ -269,6 +274,27 @@ export default function PatientVisitsPage() {
                           {v.service_type}
                         </span>
                       ) : <span className="text-muted-foreground/40 text-xs">—</span>}
+                    </td>
+
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      {(() => {
+                        const raw = (v as unknown as { internal_profiles: { id: string; full_name: string; nickname: string | null } | { id: string; full_name: string; nickname: string | null }[] | null }).internal_profiles
+                        const t = raw ? (Array.isArray(raw) ? raw[0] : raw) : null
+                        if (!t) return <span className="text-muted-foreground/40 text-xs">—</span>
+                        return (
+                          <Link href="/director/users" className="flex items-center gap-1.5 group w-fit">
+                            <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <User size={10} className="text-primary" />
+                            </span>
+                            <span className="text-xs text-foreground group-hover:text-primary transition-colors">
+                              {t.nickname
+                                ? <><span className="font-medium">{t.nickname}</span> · {t.full_name}</>
+                                : t.full_name
+                              }
+                            </span>
+                          </Link>
+                        )
+                      })()}
                     </td>
 
                     <td className="px-4 py-3">

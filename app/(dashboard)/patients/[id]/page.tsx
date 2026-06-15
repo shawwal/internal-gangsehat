@@ -111,7 +111,7 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
     supabase.from('internal_profiles').select('role').eq('id', user?.id ?? '').single(),
     supabase
       .from('patient_visits')
-      .select('id, visit_date, service_type, status, chief_complaint, shift, kehadiran, internal_profiles!attending_staff_id(full_name)')
+      .select('id, visit_date, service_type, status, chief_complaint, shift, kehadiran, internal_profiles!attending_staff_id(id, full_name, nickname)')
       .eq('patient_id', id)
       .order('visit_date', { ascending: false })
       .limit(5),
