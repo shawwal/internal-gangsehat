@@ -1,7 +1,7 @@
 import {
   AlertTriangle, BookOpen, Briefcase, CalendarDays,
-  Droplets, HeartPulse, Home, MapPin, Phone,
-  ShieldAlert, Stethoscope, User,
+  Droplets, HeartPulse, Home, MapPin, PersonStanding, Phone,
+  ShieldAlert, Smile, Stethoscope, User,
 } from 'lucide-react'
 import type { PatientPlain } from '@/app/actions/patients'
 import { GENDER_LABEL, calcAge, formatDate } from './constants'
@@ -34,11 +34,11 @@ export function PatientInfoSections({ patient }: PatientInfoSectionsProps) {
       <SectionCard title="Data Diri" icon={<User size={15} />}>
         <InfoRow label="Tanggal Lahir"  value={formatDate(patient.birthDate)}                       icon={<CalendarDays size={13} />} />
         <InfoRow label="Usia"           value={calcAge(patient.birthDate)}                          icon={<CalendarDays size={13} />} />
-        <InfoRow label="Jenis Kelamin"  value={patient.gender ? GENDER_LABEL[patient.gender] : null} />
+        <InfoRow label="Jenis Kelamin"  value={patient.gender ? GENDER_LABEL[patient.gender] : null} icon={<PersonStanding size={13} />} />
         <InfoRow label="Gol. Darah"     value={patient.blood_type}                                  icon={<Droplets size={13} />} />
         <InfoRow label="Agama"          value={patient.agama}                                       icon={<BookOpen size={13} />} />
         <InfoRow label="Pekerjaan"      value={patient.pekerjaan}                                   icon={<Briefcase size={13} />} />
-        <InfoRow label="Hobi"           value={patient.hobi} />
+        <InfoRow label="Hobi"           value={patient.hobi}                                        icon={<Smile size={13} />} />
       </SectionCard>
 
       {/* Domisili */}
