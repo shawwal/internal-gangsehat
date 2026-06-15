@@ -30,13 +30,14 @@ export interface PatientPlain {
   kecamatan: string | null
   kabupaten_kota: string | null
   provinsi: string | null
+  keluhan: string | null
 }
 
 const SELECT_COLS =
   'id, encrypted_name, encrypted_phone, encrypted_address, encrypted_birth_date, ' +
   'encrypted_id_number, encrypted_emergency_contact, ' +
   'gender, blood_type, allergies, medical_notes, is_active, created_at, updated_at, ' +
-  'no_rm, pekerjaan, agama, hobi, kelurahan, kecamatan, kabupaten_kota, provinsi'
+  'no_rm, pekerjaan, agama, hobi, kelurahan, kecamatan, kabupaten_kota, provinsi, keluhan'
 
 function toPlain(row: Record<string, unknown>): PatientPlain {
   const pii = decryptPatientPII({
@@ -73,6 +74,7 @@ function toPlain(row: Record<string, unknown>): PatientPlain {
     kecamatan:        (row.kecamatan as string | null)       ?? null,
     kabupaten_kota:   (row.kabupaten_kota as string | null)  ?? null,
     provinsi:         (row.provinsi as string | null)        ?? null,
+    keluhan:          (row.keluhan as string | null)         ?? null,
   }
 }
 
@@ -237,6 +239,22 @@ export async function fetchPatientStats(): Promise<PatientStats> {
   }
 }
 
+export async function fetchPatientsPageWithStats(
+  params: PatientsPageParams,
+): Promise<PatientsPageResult & { stats: PatientStats }> {
+  const [pageResult, stats] = await Promise.all([fetchPatientsPage(params), fetchPatientStats()])
+  return { ...pageResult, stats }
+}
+
+export async function deletePatient(id: string): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('patients')
+    .update({ is_active: false })
+    .eq('id', id)
+  return { error: error?.message ?? null }
+}
+
 export async function fetchPatient(id: string): Promise<PatientPlain | null> {
   const supabase = await createClient()
   const { data } = await supabase
@@ -262,6 +280,7 @@ export async function addPatient(input: {
   kecamatan?: string
   kabupaten_kota?: string
   provinsi?: string
+  keluhan?: string
 }): Promise<{ error: string | null; id: string | null }> {
   const supabase = await createClient()
   const enc = encryptPatientPII({
@@ -286,6 +305,7 @@ export async function addPatient(input: {
     kecamatan:            input.kecamatan      ?? null,
     kabupaten_kota:       input.kabupaten_kota ?? null,
     provinsi:             input.provinsi       ?? null,
+    keluhan:              input.keluhan        ?? null,
   }).select('id').single()
   return { error: error?.message ?? null, id: data?.id ?? null }
 }

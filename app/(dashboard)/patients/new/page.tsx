@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { UserPlus, CheckCircle, Loader2, ArrowLeft } from 'lucide-react'
 import { addPatient } from '@/app/actions/patients'
+import { RegionSelect } from '@/components/ui/RegionSelect'
+import { PROVINSI, getKabupatenByProvinsi } from '@/lib/indonesia-regions'
 
 type Gender = 'male' | 'female' | 'other'
 
@@ -18,6 +20,8 @@ const AGAMA_OPTIONS = [
   'ISLAM', 'KRISTEN PROTESTAN', 'KRISTEN KATOLIK',
   'HINDU', 'BUDHA', 'KONGHUCU', 'LAINNYA',
 ]
+
+const PROVINSI_NAMES = PROVINSI.map((p) => p.nama)
 
 const inputClass =
   'w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow'
@@ -33,25 +37,43 @@ function NewPatientPageInner() {
   const [gender, setGender]           = useState<Gender | null>(null)
   const [birthDate, setBirth]         = useState('')
   const [address, setAddress]         = useState('')
-  const [kelurahan, setKelurahan]     = useState('')
-  const [kecamatan, setKecamatan]     = useState('')
-  const [kabupatenKota, setKabupaten] = useState('')
   const [provinsi, setProvinsi]       = useState('')
+  const [kabupatenKota, setKabupaten] = useState('')
+  const [kecamatan, setKecamatan]     = useState('')
+  const [kelurahan, setKelurahan]     = useState('')
   const [agama, setAgama]             = useState('')
   const [pekerjaan, setPekerjaan]     = useState('')
   const [hobi, setHobi]               = useState('')
+  const [keluhan, setKeluhan]         = useState('')
 
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState<string | null>(null)
   const [createdId, setCreatedId]     = useState<string | null>(null)
   const [createdName, setCreatedName] = useState('')
 
+  const selectedProvinsiKode = useMemo(
+    () => PROVINSI.find((p) => p.nama === provinsi)?.kode ?? null,
+    [provinsi],
+  )
+
+  const kabupatenOptions = useMemo(
+    () => selectedProvinsiKode
+      ? getKabupatenByProvinsi(selectedProvinsiKode).map((k) => k.nama)
+      : [],
+    [selectedProvinsiKode],
+  )
+
+  function handleProvinsiChange(v: string) {
+    setProvinsi(v)
+    setKabupaten('')
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim())  { setError('Nama lengkap wajib diisi.'); return }
-    if (!phone.trim()) { setError('Nomor HP/WhatsApp wajib diisi.'); return }
-    if (!gender)       { setError('Jenis kelamin wajib dipilih.'); return }
-    if (!birthDate)    { setError('Tanggal lahir wajib diisi.'); return }
+    if (!name.trim())         { setError('Nama lengkap wajib diisi.'); return }
+    if (!phone.trim())        { setError('Nomor HP/WhatsApp wajib diisi.'); return }
+    if (!gender)              { setError('Jenis kelamin wajib dipilih.'); return }
+    if (!birthDate)           { setError('Tanggal lahir wajib diisi.'); return }
     if (!address.trim())      { setError('Alamat wajib diisi.'); return }
     if (!kelurahan.trim())    { setError('Kelurahan/Desa wajib diisi.'); return }
     if (!kecamatan.trim())    { setError('Kecamatan wajib diisi.'); return }
@@ -59,32 +81,31 @@ function NewPatientPageInner() {
     if (!provinsi.trim())     { setError('Provinsi wajib diisi.'); return }
     if (!agama)               { setError('Agama wajib dipilih.'); return }
     if (!pekerjaan.trim())    { setError('Pekerjaan wajib diisi.'); return }
+    if (!keluhan.trim())      { setError('Keluhan wajib diisi.'); return }
     if (!hobi.trim())         { setError('Hobi/Aktivitas wajib diisi.'); return }
 
     setSaving(true)
     setError(null)
 
     const { error: err, id } = await addPatient({
-      name:          name.trim(),
-      phone:         phone.trim(),
+      name:           name.trim(),
+      phone:          phone.trim(),
       gender,
       birthDate,
-      address:       address.trim(),
-      kelurahan:     kelurahan.trim(),
-      kecamatan:     kecamatan.trim(),
+      address:        address.trim(),
+      kelurahan:      kelurahan.trim(),
+      kecamatan:      kecamatan.trim(),
       kabupaten_kota: kabupatenKota.trim(),
-      provinsi:      provinsi.trim(),
+      provinsi:       provinsi.trim(),
       agama,
-      pekerjaan:     pekerjaan.trim(),
-      hobi:          hobi.trim(),
+      pekerjaan:      pekerjaan.trim(),
+      hobi:           hobi.trim(),
+      keluhan:        keluhan.trim(),
     })
 
     setSaving(false)
 
-    if (err) {
-      setError(err)
-      return
-    }
+    if (err) { setError(err); return }
 
     setCreatedId(id)
     setCreatedName(name.trim())
@@ -93,7 +114,7 @@ function NewPatientPageInner() {
     setName(''); setPhone(''); setGender(null); setBirth('')
     setAddress(''); setKelurahan(''); setKecamatan('')
     setKabupaten(''); setProvinsi(''); setAgama('')
-    setPekerjaan(''); setHobi('')
+    setPekerjaan(''); setHobi(''); setKeluhan('')
   }
 
   return (
@@ -147,6 +168,7 @@ function NewPatientPageInner() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="glass-card p-6 space-y-5">
+
         {/* Nama */}
         <div>
           <label className={labelClass}>
@@ -234,18 +256,35 @@ function NewPatientPageInner() {
           />
         </div>
 
+        {/* Provinsi & Kabupaten/Kota */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>
-              Kelurahan/Desa <span className="text-destructive">*</span>
+              Provinsi <span className="text-destructive">*</span>
             </label>
-            <input
-              value={kelurahan}
-              onChange={(e) => setKelurahan(e.target.value)}
-              placeholder="Sesuai KTP"
-              className={inputClass}
+            <RegionSelect
+              options={PROVINSI_NAMES}
+              value={provinsi}
+              onChange={handleProvinsiChange}
+              placeholder="Pilih provinsi..."
             />
           </div>
+          <div>
+            <label className={labelClass}>
+              Kabupaten/Kota <span className="text-destructive">*</span>
+            </label>
+            <RegionSelect
+              options={kabupatenOptions}
+              value={kabupatenKota}
+              onChange={setKabupaten}
+              placeholder={provinsi ? 'Pilih kab/kota...' : 'Pilih provinsi dulu'}
+              disabled={!provinsi}
+            />
+          </div>
+        </div>
+
+        {/* Kecamatan & Kelurahan */}
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>
               Kecamatan <span className="text-destructive">*</span>
@@ -257,27 +296,13 @@ function NewPatientPageInner() {
               className={inputClass}
             />
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>
-              Kabupaten/Kota <span className="text-destructive">*</span>
+              Kelurahan/Desa <span className="text-destructive">*</span>
             </label>
             <input
-              value={kabupatenKota}
-              onChange={(e) => setKabupaten(e.target.value)}
-              placeholder="Sesuai KTP"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>
-              Provinsi <span className="text-destructive">*</span>
-            </label>
-            <input
-              value={provinsi}
-              onChange={(e) => setProvinsi(e.target.value)}
+              value={kelurahan}
+              onChange={(e) => setKelurahan(e.target.value)}
               placeholder="Sesuai KTP"
               className={inputClass}
             />
@@ -314,6 +339,21 @@ function NewPatientPageInner() {
               className={inputClass}
             />
           </div>
+        </div>
+
+        {/* Keluhan */}
+        <div>
+          <label className={labelClass}>
+            Keluhan <span className="text-destructive">*</span>
+            <span className="text-xs font-normal text-muted-foreground ml-1">— keluhan utama yang membawa pasien datang</span>
+          </label>
+          <textarea
+            value={keluhan}
+            onChange={(e) => setKeluhan(e.target.value)}
+            placeholder="Contoh: NYERI PINGGANG BAWAH SEJAK 2 MINGGU"
+            rows={2}
+            className={inputClass + ' resize-none'}
+          />
         </div>
 
         {/* Hobi */}

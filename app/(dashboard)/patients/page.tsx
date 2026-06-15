@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircle2, PlusCircle, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Loader2, PlusCircle, Trash2, XCircle } from 'lucide-react'
 import {
   fetchPatientsPage,
+  fetchPatientsPageWithStats,
   fetchPatientStats,
   addPatient,
+  deletePatient,
   type PatientStats as PatientStatsData,
 } from '@/app/actions/patients'
 import { PatientStats }   from '@/components/patients/PatientStats'
@@ -18,6 +20,8 @@ import { Pagination }     from '@/components/leave/Pagination'
 import {
   DEFAULT_FILTERS,
   PAGE_SIZE,
+  AVATAR_COLORS,
+  getInitials,
   type PatientPlain,
   type PatientFiltersState,
   type ViewMode,
@@ -38,7 +42,10 @@ export default function PatientsPage() {
   const [filters,  setFilters]  = useState<PatientFiltersState>(DEFAULT_FILTERS)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [page,     setPage]     = useState(1)
-  const requestId = useRef(0)
+  const [deleteTarget, setDeleteTarget] = useState<PatientPlain | null>(null)
+  const [deleting,     setDeleting]     = useState(false)
+  const requestId       = useRef(0)
+  const initialLoadDone = useRef(false)
 
   function showToast(msg: string, ok: boolean) {
     setToast({ msg, ok })
@@ -48,6 +55,26 @@ export default function PatientsPage() {
   async function loadPage(p: number, f: PatientFiltersState) {
     const id = ++requestId.current
     setLoading(true)
+
+    // First load: fetch stats and first page in one server round-trip
+    if (!initialLoadDone.current) {
+      initialLoadDone.current = true
+      const { patients: data, total, stats } = await fetchPatientsPageWithStats({
+        page:      p,
+        pageSize:  PAGE_SIZE,
+        gender:    f.gender,
+        search:    f.search,
+        sortField: f.sortField,
+        sortOrder: f.sortOrder,
+      })
+      if (id !== requestId.current) return
+      setPatients(data)
+      setTotal(total)
+      setStats(stats)
+      setLoading(false)
+      return
+    }
+
     const { patients: data, total } = await fetchPatientsPage({
       page:      p,
       pageSize:  PAGE_SIZE,
@@ -56,7 +83,7 @@ export default function PatientsPage() {
       sortField: f.sortField,
       sortOrder: f.sortOrder,
     })
-    if (id !== requestId.current) return // a newer request superseded this one
+    if (id !== requestId.current) return
     setPatients(data)
     setTotal(total)
     setLoading(false)
@@ -65,8 +92,6 @@ export default function PatientsPage() {
   function loadStats() {
     fetchPatientStats().then(setStats)
   }
-
-  useEffect(() => { loadStats() }, [])
 
   // Reload on page/filter change — debounced so search doesn't fire per keystroke
   useEffect(() => {
@@ -94,6 +119,18 @@ export default function PatientsPage() {
     if (error) { showToast(error, false); return }
     showToast('Pasien berhasil ditambahkan!', true)
     closeForm()
+    loadPage(page, filters)
+    loadStats()
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const { error } = await deletePatient(deleteTarget.id)
+    setDeleting(false)
+    if (error) { showToast(error, false); setDeleteTarget(null); return }
+    showToast('Pasien berhasil dihapus.', true)
+    setDeleteTarget(null)
     loadPage(page, filters)
     loadStats()
   }
@@ -186,10 +223,10 @@ export default function PatientsPage() {
         <PatientEmpty totalPatients={totalPatients} onAdd={() => setShowForm(true)} />
       ) : viewMode === 'grid' ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {patients.map(p => <PatientCard key={p.id} patient={p} />)}
+          {patients.map(p => <PatientCard key={p.id} patient={p} onDelete={setDeleteTarget} />)}
         </div>
       ) : (
-        <PatientTable patients={patients} />
+        <PatientTable patients={patients} onDelete={setDeleteTarget} />
       )}
 
       {/* Pagination */}
@@ -200,6 +237,71 @@ export default function PatientsPage() {
           total={total}
           onPage={setPage}
         />
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => { if (!deleting) setDeleteTarget(null) }}
+        >
+          <div
+            className="glass-card p-6 max-w-sm w-full space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
+                <AlertTriangle size={18} className="text-destructive" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-foreground">Hapus Pasien</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Tindakan ini tidak dapat dibatalkan
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-muted/50 rounded-2xl p-3 flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
+                AVATAR_COLORS[deleteTarget.gender ?? 'other']
+              }`}>
+                {getInitials(deleteTarget.name)}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{deleteTarget.name}</p>
+                {deleteTarget.no_rm && (
+                  <p className="text-xs text-muted-foreground font-mono">{deleteTarget.no_rm}</p>
+                )}
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Data pasien akan dihapus secara permanen dari sistem dan{' '}
+              <span className="font-semibold text-foreground">tidak dapat dipulihkan</span> melalui aplikasi ini.
+            </p>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+                className="px-4 py-2 text-sm rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                {deleting
+                  ? <Loader2 size={13} className="animate-spin" />
+                  : <Trash2 size={13} />
+                }
+                {deleting ? 'Menghapus...' : 'Hapus Pasien'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

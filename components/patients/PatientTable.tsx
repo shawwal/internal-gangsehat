@@ -1,15 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { ChevronRight, Phone, Droplets, MapPin } from 'lucide-react'
+import { ChevronRight, Phone, Droplets, MapPin, Trash2 } from 'lucide-react'
 import { getInitials, formatDate, AVATAR_COLORS, GENDER_LABEL } from './types'
 import type { PatientPlain } from './types'
 
 interface Props {
   patients: PatientPlain[]
+  onDelete?: (p: PatientPlain) => void
 }
 
-export function PatientTable({ patients }: Props) {
+export function PatientTable({ patients, onDelete }: Props) {
   return (
     <div className="glass-card overflow-hidden">
       <div className="overflow-x-auto">
@@ -43,7 +44,7 @@ export function PatientTable({ patients }: Props) {
               <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 hidden xl:table-cell">
                 Tgl. Daftar
               </th>
-              <th className="px-4 py-3 w-8" />
+              <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
@@ -68,7 +69,7 @@ export function PatientTable({ patients }: Props) {
                       {getInitials(p.name)}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium text-foreground group-hover:text-primary transition-colors truncate max-w-[150px]">
+                      <p className="font-medium text-foreground group-hover:text-primary transition-colors truncate max-w-37.5">
                         {p.name}
                       </p>
                       {p.birthDate && (
@@ -125,7 +126,7 @@ export function PatientTable({ patients }: Props) {
                   {p.kabupaten_kota
                     ? <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <MapPin size={10} className="shrink-0" />
-                        <span className="truncate max-w-[100px]">{p.kabupaten_kota}</span>
+                        <span className="truncate max-w-25">{p.kabupaten_kota}</span>
                       </span>
                     : <span className="text-muted-foreground/40 text-xs">—</span>
                   }
@@ -133,7 +134,7 @@ export function PatientTable({ patients }: Props) {
 
                 {/* Pekerjaan */}
                 <td className="px-4 py-3 hidden xl:table-cell">
-                  <span className="text-xs text-muted-foreground truncate max-w-[100px] block">
+                  <span className="text-xs text-muted-foreground truncate max-w-25 block">
                     {p.pekerjaan ?? <span className="text-muted-foreground/40">—</span>}
                   </span>
                 </td>
@@ -145,15 +146,26 @@ export function PatientTable({ patients }: Props) {
                   </span>
                 </td>
 
-                {/* Chevron */}
+                {/* Actions */}
                 <td className="px-4 py-3">
-                  <Link
-                    href={`/patients/${p.id}`}
-                    className="flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors cursor-pointer"
-                    aria-label={`Lihat detail ${p.name}`}
-                  >
-                    <ChevronRight size={15} />
-                  </Link>
+                  <div className="flex items-center justify-end gap-1">
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(p)}
+                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive cursor-pointer"
+                        title="Hapus pasien"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                    <Link
+                      href={`/patients/${p.id}`}
+                      className="p-1.5 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors cursor-pointer"
+                      aria-label={`Lihat detail ${p.name}`}
+                    >
+                      <ChevronRight size={15} />
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
