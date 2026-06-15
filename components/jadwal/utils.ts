@@ -32,3 +32,10 @@ export function fmtHeaderDate(d: Date) {
 export function toHariIndonesia(d: Date) {
   return JS_DAY_TO_HARI[d.getDay()]
 }
+
+/** Returns the Monday of the week containing d (week starts Monday). */
+export function getMondayOf(d: Date): Date {
+  const day = d.getDay() // 0=Sun,1=Mon...6=Sat
+  const diff = day === 0 ? -6 : 1 - day
+  return addDays(d, diff)
+}

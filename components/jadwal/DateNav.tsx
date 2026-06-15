@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
-import { addDays, isSameDay, toIso, HARI_LABEL, JS_DAY_TO_HARI } from './utils'
+import { addDays, isSameDay, toIso, HARI_LABEL, JS_DAY_TO_HARI, getMondayOf } from './utils'
 
 interface DateNavProps {
   selectedDate: Date
@@ -12,13 +12,14 @@ interface DateNavProps {
 
 export function DateNav({ selectedDate, today, onSelect }: DateNavProps) {
   const dateInputRef = useRef<HTMLInputElement>(null)
-  const dateChips    = [-3, -2, -1, 0, 1, 2, 3].map((n) => addDays(selectedDate, n))
+  const weekMonday   = getMondayOf(selectedDate)
+  const dateChips    = [0, 1, 2, 3, 4, 5, 6].map((n) => addDays(weekMonday, n))
 
   return (
     <div className="glass-card p-3 flex items-center gap-2">
       <button
-        onClick={() => onSelect(addDays(selectedDate, -1))}
-        aria-label="Hari sebelumnya"
+        onClick={() => onSelect(addDays(weekMonday, -7))}
+        aria-label="Minggu sebelumnya"
         className="p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer text-muted-foreground hover:text-foreground shrink-0"
       >
         <ChevronLeft size={16} />
@@ -50,8 +51,8 @@ export function DateNav({ selectedDate, today, onSelect }: DateNavProps) {
       </div>
 
       <button
-        onClick={() => onSelect(addDays(selectedDate, 1))}
-        aria-label="Hari berikutnya"
+        onClick={() => onSelect(addDays(weekMonday, 7))}
+        aria-label="Minggu berikutnya"
         className="p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer text-muted-foreground hover:text-foreground shrink-0"
       >
         <ChevronRight size={16} />
@@ -80,12 +81,12 @@ export function DateNav({ selectedDate, today, onSelect }: DateNavProps) {
         />
       </div>
 
-      {!isSameDay(selectedDate, today) && (
+      {!isSameDay(weekMonday, getMondayOf(today)) && (
         <button
-          onClick={() => onSelect(new Date())}
+          onClick={() => onSelect(getMondayOf(today))}
           className="px-3 py-2 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors cursor-pointer text-muted-foreground shrink-0"
         >
-          Hari Ini
+          Minggu Ini
         </button>
       )}
     </div>

@@ -43,6 +43,9 @@ export default function SchedulesPage() {
   // ── Status list modal ────────────────────────────────────────────────────────
   const [statusModal, setStatusModal] = useState<'AKTIF' | 'OFF' | null>(null)
 
+  // ── Current user branch ──────────────────────────────────────────────────────
+  const [userBranchId, setUserBranchId] = useState<string | null | undefined>(undefined)
+
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [showSingle, setShowSingle]   = useState(false)
   const [showMonthly, setShowMonthly] = useState(false)
@@ -56,22 +59,28 @@ export default function SchedulesPage() {
   useEffect(() => {
     async function loadMeta() {
       const supabase = createClient()
-      const [{ data: staff }, { data: br }] = await Promise.all([
+      const { data: { user } } = await supabase.auth.getUser()
+      const [{ data: staff }, { data: br }, { data: profile }] = await Promise.all([
         supabase
           .from('internal_profiles')
           .select('id, full_name, branch_id, avatar_url')
           .in('role', ['therapist', 'staff', 'manager', 'director'])
           .order('full_name'),
         supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
+        supabase.from('internal_profiles').select('branch_id').eq('id', user!.id).single(),
       ])
       setStaffList((staff ?? []) as StaffOption[])
       setBranches((br ?? []) as BranchOption[])
+      setUserBranchId(profile?.branch_id ?? null)
     }
     loadMeta()
   }, [])
 
   // ── Load data ────────────────────────────────────────────────────────────────
-  useEffect(() => { load() }, [page, pageSize, hariFilter, shiftFilter, search]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (userBranchId === undefined) return
+    load()
+  }, [page, pageSize, hariFilter, shiftFilter, search, userBranchId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load() {
     setLoading(true)
@@ -95,9 +104,10 @@ export default function SchedulesPage() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function applyFilters(q: any) {
-      if (hariFilter)  q = q.eq('hari', hariFilter)
-      if (shiftFilter) q = q.eq('shift', shiftFilter)
-      if (staffIds)    q = q.in('staff_id', staffIds)
+      if (userBranchId) q = q.eq('branch_id', userBranchId)
+      if (hariFilter)   q = q.eq('hari', hariFilter)
+      if (shiftFilter)  q = q.eq('shift', shiftFilter)
+      if (staffIds)     q = q.in('staff_id', staffIds)
       return q
     }
 

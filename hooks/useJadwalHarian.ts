@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchDailyVisits, updateVisitStatus, deleteVisit } from '@/app/actions/jadwal'
-import { toIso, toHariIndonesia } from '@/components/jadwal/utils'
+import { toIso, toHariIndonesia, getMondayOf } from '@/components/jadwal/utils'
 import type { DayStaffEntry, PendingLeaveInfo } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { VisitStatus } from '@/types'
@@ -14,7 +14,7 @@ export interface LeavePopoverState {
 }
 
 export function useJadwalHarian() {
-  const [selectedDate, setSelectedDate] = useState(() => new Date())
+  const [selectedDate, setSelectedDate] = useState(() => getMondayOf(new Date()))
   const [staff, setStaff]               = useState<DayStaffEntry[]>([])
   const [visits, setVisits]             = useState<DailyVisit[]>([])
   const [loading, setLoading]           = useState(true)

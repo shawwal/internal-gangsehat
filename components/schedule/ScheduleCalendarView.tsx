@@ -562,7 +562,17 @@ export function ScheduleCalendarView({ staffList }: Props) {
                         className="absolute w-full flex items-start justify-end pr-2 pt-0.5"
                         style={{ top: i * SLOT_HEIGHT, height: SLOT_HEIGHT }}
                       >
-                        {slot.endsWith(':00') && (
+                        {slot === '08:00' && (
+                          <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40 leading-none">
+                            PAGI
+                          </span>
+                        )}
+                        {slot === '12:00' && (
+                          <span className="text-[8px] font-bold uppercase tracking-widest text-primary/50 leading-none">
+                            SORE
+                          </span>
+                        )}
+                        {slot.endsWith(':00') && slot !== '08:00' && slot !== '12:00' && slot !== '18:00' && (
                           <span className="text-[9px] text-muted-foreground/50 font-mono leading-none">
                             {slot}
                           </span>
@@ -576,10 +586,25 @@ export function ScheduleCalendarView({ staffList }: Props) {
                     {TIME_SLOTS.map((slot, i) => (
                       <div
                         key={slot}
-                        className={`absolute inset-x-0 border-t ${slot.endsWith(':00') ? 'border-border/20' : 'border-border/8'}`}
+                        className={`absolute inset-x-0 border-t ${
+                          slot === '12:00'
+                            ? 'border-primary/40'
+                            : slot.endsWith(':00')
+                            ? 'border-border/20'
+                            : 'border-border/8'
+                        }`}
                         style={{ top: i * SLOT_HEIGHT }}
                       />
                     ))}
+                    {/* PAGI / SORE label overlay at 12:00 */}
+                    <div
+                      className="absolute pointer-events-none flex items-center gap-1.5"
+                      style={{ top: (12 - GRID_START) * 2 * SLOT_HEIGHT - 9, left: 6 }}
+                    >
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-primary/50 bg-background/80 px-1 rounded">
+                        SORE
+                      </span>
+                    </div>
                   </div>
 
                   {/* Current time line */}
