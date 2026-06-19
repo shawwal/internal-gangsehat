@@ -81,12 +81,17 @@ export function DateNav({ selectedDate, today, onSelect }: DateNavProps) {
         />
       </div>
 
-      {!isSameDay(weekMonday, getMondayOf(today)) && (
+      {!isSameDay(selectedDate, today) && (
         <button
-          onClick={() => onSelect(getMondayOf(today))}
-          className="px-3 py-2 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors cursor-pointer text-muted-foreground shrink-0"
+          onClick={() => onSelect(new Date())}
+          aria-label="Kembali ke hari ini"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 transition-all duration-150 cursor-pointer shrink-0"
         >
-          Minggu Ini
+          <span className="relative flex h-1.5 w-1.5 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
+          </span>
+          Hari Ini
         </button>
       )}
     </div>

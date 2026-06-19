@@ -26,9 +26,6 @@ function displayName(entry: DayStaffEntry) {
   return entry.nickname || entry.full_name
 }
 
-// Hours array: [8, 9, ..., 20]
-const HOURS = Array.from({ length: GRID_END - GRID_START }, (_, i) => GRID_START + i)
-
 // ── Staff avatar ───────────────────────────────────────────────────────────────
 function StaffAvatar({ entry }: { entry: DayStaffEntry }) {
   const [imgError, setImgError] = useState(false)
@@ -82,14 +79,10 @@ interface Props {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick }: Props) {
-  const totalH = (GRID_END - GRID_START) * SLOT_H
-
-  // Current time line
-  const now    = new Date()
-  const today  = now.toISOString().split('T')[0]
-  const curH   = now.getHours() + now.getMinutes() / 60
-  const showNow = date === today && curH >= GRID_START && curH < GRID_END
-  const nowTop  = (curH - GRID_START) * SLOT_H
+  // Current time (used later for time line after range is known)
+  const now   = new Date()
+  const today = now.toISOString().split('T')[0]
+  const curH  = now.getHours() + now.getMinutes() / 60
 
   // Group visits: staffId → hour → visits[]
   const visitMap = new Map<string, Map<number, DailyVisit[]>>()
@@ -110,6 +103,27 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
     list.push(v)
     hourMap.set(hour, list)
   }
+
+  // Dynamic visible hour range — trim rows with no shifts or visits
+  const shiftHours: number[] = []
+  for (const s of staff) {
+    if (s.hasSchedule && !s.isOnLeave) {
+      shiftHours.push(parseHour(s.jam_mulai), parseHour(s.jam_selesai))
+    }
+  }
+  const visitHoursList: number[] = []
+  for (const v of visits) {
+    if (v.visit_time) visitHoursList.push(parseHour(v.visit_time))
+  }
+  const allDataHours  = [...shiftHours, ...visitHoursList]
+  const effectiveStart = allDataHours.length > 0 ? Math.max(GRID_START, Math.min(...allDataHours)) : GRID_START
+  const effectiveEnd   = allDataHours.length > 0 ? Math.min(GRID_END,   Math.max(...allDataHours) + 1) : GRID_END
+  const HOURS_VISIBLE  = Array.from({ length: effectiveEnd - effectiveStart }, (_, i) => effectiveStart + i)
+  const totalH         = HOURS_VISIBLE.length * SLOT_H
+
+  // Current time line
+  const showNow = date === today && curH >= effectiveStart && curH < effectiveEnd
+  const nowTop  = (curH - effectiveStart) * SLOT_H
 
   if (staff.length === 0) {
     return (
@@ -244,7 +258,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
             className="shrink-0 sticky left-0 z-10 bg-background/90 backdrop-blur-sm border-r border-border/40"
             style={{ width: TIME_COL_W, height: totalH }}
           >
-            {HOURS.map((h, i) => (
+            {HOURS_VISIBLE.map((h, i) => (
               <div
                 key={h}
                 className="absolute w-full flex items-start justify-end pr-3 pt-1"
@@ -268,7 +282,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
             className="absolute pointer-events-none"
             style={{ left: TIME_COL_W, right: 0, top: 0, bottom: 0 }}
           >
-            {HOURS.map((h, i) => (
+            {HOURS_VISIBLE.map((h, i) => (
               <div
                 key={h}
                 className={`absolute inset-x-0 border-t ${h === 14 ? 'border-primary/50' : 'border-border/40'}`}
@@ -293,8 +307,8 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
             const hourMap = visitMap.get(s.staff_id)
 
             // Shade the scheduled shift window
-            const shiftTop    = s.hasSchedule ? Math.max(0, (parseHour(s.jam_mulai) - GRID_START) * SLOT_H) : null
-            const shiftBottom = s.hasSchedule ? Math.min(totalH, (parseHour(s.jam_selesai) - GRID_START) * SLOT_H) : null
+            const shiftTop    = s.hasSchedule ? Math.max(0, (parseHour(s.jam_mulai) - effectiveStart) * SLOT_H) : null
+            const shiftBottom = s.hasSchedule ? Math.min(totalH, (parseHour(s.jam_selesai) - effectiveStart) * SLOT_H) : null
 
             return (
               <div
@@ -321,7 +335,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                 )}
 
                 {/* Time slot cells */}
-                {HOURS.map((h, i) => {
+                {HOURS_VISIBLE.map((h, i) => {
                   const cellVisits = hourMap?.get(h) ?? []
                   const isInShift  = s.hasSchedule && !s.isOnLeave
                     && parseHour(s.jam_mulai) <= h && h < parseHour(s.jam_selesai)
@@ -334,6 +348,13 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                       className="absolute inset-x-0 flex flex-col gap-1 p-1 group"
                       style={{ top: i * SLOT_H, height: SLOT_H }}
                     >
+                      {/* Hover time pill — orients user when far from the sticky time column */}
+                      {isInShift && !s.isOnLeave && (
+                        <span className="absolute top-1 left-1 text-[9px] font-mono text-primary/70 bg-background/70 backdrop-blur-sm px-1.5 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10 leading-none">
+                          {fmtHour(h)}
+                        </span>
+                      )}
+
                       {/* Outside-shift hatched overlay — pointer-events-none so visit cards stay clickable */}
                       {unavailable && (
                         <div

@@ -14,7 +14,7 @@ export interface LeavePopoverState {
 }
 
 export function useJadwalHarian() {
-  const [selectedDate, setSelectedDate] = useState(() => getMondayOf(new Date()))
+  const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [staff, setStaff]               = useState<DayStaffEntry[]>([])
   const [visits, setVisits]             = useState<DailyVisit[]>([])
   const [loading, setLoading]           = useState(true)
