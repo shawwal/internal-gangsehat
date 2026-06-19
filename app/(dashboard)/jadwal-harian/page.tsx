@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Users, User } from 'lucide-react'
+import { Users, User, ArrowUpAZ, ArrowDownAZ } from 'lucide-react'
 import { useJadwalHarian } from '@/hooks/useJadwalHarian'
 import { toIso } from '@/components/jadwal/utils'
 import { PageHeader } from '@/components/jadwal/PageHeader'
@@ -37,6 +37,7 @@ export default function JadwalHarianPage() {
     return localStorage.getItem(LS_KEY) === 'true'
   })
   const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all')
+  const [sortOrder, setSortOrder]       = useState<'asc' | 'desc'>('asc')
 
   function toggleShowInactive() {
     const next = !showInactive
@@ -47,9 +48,16 @@ export default function JadwalHarianPage() {
   const activeStaff   = staff.filter((s) => s.hasSchedule && !s.isOnLeave)
   const inactiveStaff = staff.filter((s) => !s.hasSchedule || s.isOnLeave)
   const baseStaff     = showInactive ? staff : activeStaff
-  const visibleStaff  = genderFilter === 'all'
+  const filteredStaff = genderFilter === 'all'
     ? baseStaff
     : baseStaff.filter((s) => s.gender === genderFilter)
+
+  const visibleStaff = [...filteredStaff].sort((a, b) => {
+    const nameA = (a.nickname?.trim() || a.full_name).toLowerCase()
+    const nameB = (b.nickname?.trim() || b.full_name).toLowerCase()
+    const cmp   = nameA.localeCompare(nameB, 'id')
+    return sortOrder === 'asc' ? cmp : -cmp
+  })
 
   return (
     <>
@@ -135,6 +143,15 @@ export default function JadwalHarianPage() {
                 {visibleStaff.length} terapis
               </span>
             )}
+
+            <button
+              onClick={() => setSortOrder((o) => o === 'asc' ? 'desc' : 'asc')}
+              title={sortOrder === 'asc' ? 'Urutan A→Z' : 'Urutan Z→A'}
+              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all duration-150 cursor-pointer"
+            >
+              {sortOrder === 'asc' ? <ArrowUpAZ size={13} /> : <ArrowDownAZ size={13} />}
+              Nama
+            </button>
           </div>
         )}
 
