@@ -185,7 +185,7 @@ export default function JadwalHarianPage() {
           </div>
         )}
 
-        <div className="glass-card overflow-hidden">
+        <div className="glass-card overflow-hidden" style={{ height: 'calc(100vh - 22rem)', minHeight: '400px' }}>
           {loading ? (
             <GridSkeleton />
           ) : (

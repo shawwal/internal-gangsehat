@@ -137,7 +137,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
   const minWidth = TIME_COL_W + staff.length * STAFF_COL_W
 
   return (
-    <div className="overflow-x-auto">
+    <div className="h-full overflow-auto">
       <div style={{ minWidth }}>
 
         {/* ── Column headers ─── */}
