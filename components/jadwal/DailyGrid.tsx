@@ -268,11 +268,11 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                   <span className="text-[9px] font-bold uppercase tracking-widest text-primary/70 leading-none">
                     SORE
                   </span>
-                ) : h !== 8 && h !== 12 && h !== 18 ? (
-                  <span className="text-[11px] text-muted-foreground/60 font-mono">
+                ) : (
+                  <span className="text-[13px] text-muted-foreground/60 font-mono">
                     {fmtHour(h)}
                   </span>
-                ) : null}
+                )}
               </div>
             ))}
           </div>
