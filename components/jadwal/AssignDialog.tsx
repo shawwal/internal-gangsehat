@@ -257,23 +257,21 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
                 )}
 
                 <VisitFields
-                  visitTime={visitTime}
-                  setVisitTime={setVisitTime}
                   chiefComplaint={chiefComplaint}
                   setChiefComplaint={setChief}
-                  status={status}
-                  setStatus={setStatus}
                   notes={notes}
                   setNotes={setNotes}
                 />
 
-                <PackageSelector
-                  packages={packages}
-                  pkgLoading={pkgLoading}
-                  selectedPkgId={selectedPkgId}
-                  setSelectedPkgId={setSelectedPkg}
-                  willCreate={willCreate}
-                />
+                {mode !== 'terapi_awal' && (
+                  <PackageSelector
+                    packages={packages}
+                    pkgLoading={pkgLoading}
+                    selectedPkgId={selectedPkgId}
+                    setSelectedPkgId={setSelectedPkg}
+                    willCreate={willCreate}
+                  />
+                )}
 
                 {error && (
                   <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-xl">
