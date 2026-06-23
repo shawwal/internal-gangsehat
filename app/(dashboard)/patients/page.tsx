@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { AlertTriangle, CheckCircle2, Loader2, PlusCircle, Trash2, XCircle } from 'lucide-react'
 import {
   fetchPatientsPage,
   fetchPatientsPageWithStats,
   fetchPatientStats,
-  addPatient,
   deletePatient,
   type PatientStats as PatientStatsData,
 } from '@/app/actions/patients'
@@ -14,7 +15,6 @@ import { PatientStats }   from '@/components/patients/PatientStats'
 import { PatientFilters } from '@/components/patients/PatientFilters'
 import { PatientCard }    from '@/components/patients/PatientCard'
 import { PatientTable }   from '@/components/patients/PatientTable'
-import { PatientForm, DEFAULT_PATIENT_FORM } from '@/components/patients/PatientForm'
 import { PatientEmpty }   from '@/components/patients/PatientEmpty'
 import { Pagination }     from '@/components/leave/Pagination'
 import {
@@ -26,18 +26,15 @@ import {
   type PatientFiltersState,
   type ViewMode,
 } from '@/components/patients/types'
-import type { PatientFormData } from '@/components/patients/PatientForm'
 
 const SEARCH_DEBOUNCE_MS = 350
 
 export default function PatientsPage() {
+  const router = useRouter()
   const [patients, setPatients] = useState<PatientPlain[]>([])
   const [total,    setTotal]    = useState(0)
   const [stats,    setStats]    = useState<PatientStatsData | null>(null)
   const [loading,  setLoading]  = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [form,     setForm]     = useState<PatientFormData>(DEFAULT_PATIENT_FORM)
-  const [saving,   setSaving]   = useState(false)
   const [toast,    setToast]    = useState<{ msg: string; ok: boolean } | null>(null)
   const [filters,  setFilters]  = useState<PatientFiltersState>(DEFAULT_FILTERS)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
@@ -100,29 +97,6 @@ export default function PatientsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, filters])
 
-  function closeForm() {
-    setShowForm(false)
-    setForm(DEFAULT_PATIENT_FORM)
-  }
-
-  async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setSaving(true)
-    const { error } = await addPatient({
-      name:      form.name,
-      phone:     form.phone,
-      address:   form.address || undefined,
-      birthDate: form.birthDate || undefined,
-      gender:    form.gender,
-    })
-    setSaving(false)
-    if (error) { showToast(error, false); return }
-    showToast('Pasien berhasil ditambahkan!', true)
-    closeForm()
-    loadPage(page, filters)
-    loadStats()
-  }
-
   async function handleDeleteConfirm() {
     if (!deleteTarget) return
     setDeleting(true)
@@ -156,13 +130,13 @@ export default function PatientsPage() {
           <h1 className="text-xl font-semibold text-foreground">Pasien</h1>
           <p className="text-sm text-muted-foreground">Kelola data pasien klinik</p>
         </div>
-        <button
-          onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0 shadow-sm cursor-pointer"
+        <Link
+          href="/patients/new?source=patients"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-[0.98] transition-all duration-200 shrink-0 shadow-sm"
         >
           <PlusCircle size={15} />
-          {showForm ? 'Tutup Form' : 'Tambah Pasien'}
-        </button>
+          Tambah Pasien
+        </Link>
       </div>
 
       {/* Toast */}
@@ -175,17 +149,6 @@ export default function PatientsPage() {
           {toast.ok ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
           {toast.msg}
         </div>
-      )}
-
-      {/* Add patient form */}
-      {showForm && (
-        <PatientForm
-          form={form}
-          saving={saving}
-          onClose={closeForm}
-          onChange={setForm}
-          onSubmit={handleAdd}
-        />
       )}
 
       {/* Stats */}
@@ -220,7 +183,7 @@ export default function PatientsPage() {
           </div>
         )
       ) : patients.length === 0 ? (
-        <PatientEmpty totalPatients={totalPatients} onAdd={() => setShowForm(true)} />
+        <PatientEmpty totalPatients={totalPatients} onAdd={() => router.push('/patients/new?source=patients')} />
       ) : viewMode === 'grid' ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {patients.map(p => <PatientCard key={p.id} patient={p} onDelete={setDeleteTarget} />)}

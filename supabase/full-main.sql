@@ -44,6 +44,8 @@ CREATE TABLE public.patients (
   kabupaten_kota text,
   provinsi text,
   phone_hash text,
+  name_normalized text,
+  keluhan text,
   CONSTRAINT patients_pkey PRIMARY KEY (id),
   CONSTRAINT patients_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id),
   CONSTRAINT patients_member_type_id_fkey FOREIGN KEY (member_type_id) REFERENCES public.member_type(id)
@@ -477,6 +479,8 @@ CREATE TABLE public.internal_profiles (
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  nickname text,
+  gender text CHECK (gender = ANY (ARRAY['male'::text, 'female'::text])),
   CONSTRAINT internal_profiles_pkey PRIMARY KEY (id),
   CONSTRAINT internal_profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
   CONSTRAINT internal_profiles_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id)
@@ -807,19 +811,22 @@ CREATE TABLE public.patient_packages (
   CONSTRAINT patient_packages_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
   CONSTRAINT patient_packages_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.internal_profiles(id)
 );
--- View: patient_packages_with_stats
--- Computes used_sessions and remaining_sessions from patient_visits.
--- See supabase/025-patient-packages-view.sql for the migration.
-CREATE OR REPLACE VIEW public.patient_packages_with_stats AS
-SELECT
-  pp.*,
-  COALESCE(vc.used_sessions, 0)                          AS used_sessions,
-  pp.total_sessions - COALESCE(vc.used_sessions, 0)      AS remaining_sessions
-FROM public.patient_packages pp
-LEFT JOIN (
-  SELECT package_id, COUNT(*) AS used_sessions
-  FROM public.patient_visits
-  WHERE status != 'cancelled'
-    AND package_id IS NOT NULL
-  GROUP BY package_id
-) vc ON pp.id = vc.package_id;
+CREATE TABLE public.schedule_overrides (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  staff_id uuid NOT NULL,
+  branch_id uuid,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  hari character varying NOT NULL CHECK (hari::text = ANY (ARRAY['SENIN'::character varying, 'SELASA'::character varying, 'RABU'::character varying, 'KAMIS'::character varying, 'JUMAT'::character varying, 'SABTU'::character varying, 'AHAD'::character varying]::text[])),
+  shift character varying NOT NULL CHECK (shift::text = ANY (ARRAY['PAGI'::character varying, 'SORE'::character varying]::text[])),
+  jam_mulai time without time zone NOT NULL DEFAULT '09:00:00'::time without time zone,
+  jam_selesai time without time zone NOT NULL DEFAULT '17:00:00'::time without time zone,
+  reason text,
+  created_by uuid,
+  status character varying NOT NULL DEFAULT 'active'::character varying CHECK (status::text = ANY (ARRAY['active'::character varying, 'cancelled'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT schedule_overrides_pkey PRIMARY KEY (id),
+  CONSTRAINT schedule_overrides_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.internal_profiles(id),
+  CONSTRAINT schedule_overrides_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT schedule_overrides_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.internal_profiles(id)
+);
