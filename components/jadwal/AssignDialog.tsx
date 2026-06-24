@@ -52,6 +52,9 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
     d.setDate(d.getDate() + 27)
     return toIso(d)
   })
+  const [recurDayTimes, setRecurDayTimes] = useState<Record<number, string>>(() => ({
+    [new Date(target.date + 'T00:00:00').getDay()]: `${String(target.hour).padStart(2, '0')}:00`,
+  }))
 
   // ── Packages ─────────────────────────────────────────────────────────────────
   const [packages, setPackages]          = useState<PatientPackage[]>([])
@@ -122,9 +125,18 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   }
 
   function toggleDay(dow: number) {
-    setRecurDays((prev) =>
-      prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow],
-    )
+    setRecurDays((prev) => {
+      if (prev.includes(dow)) {
+        setRecurDayTimes((t) => { const n = { ...t }; delete n[dow]; return n })
+        return prev.filter((d) => d !== dow)
+      }
+      setRecurDayTimes((t) => ({ ...t, [dow]: visitTime || '08:00' }))
+      return [...prev, dow]
+    })
+  }
+
+  function setDayTime(dow: number, time: string) {
+    setRecurDayTimes((t) => ({ ...t, [dow]: time }))
   }
 
   async function handleSave() {
@@ -158,7 +170,10 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
         setSaving(false)
         return
       }
-      const visits = recurDates.map((d) => ({ ...base, visit_date: d }))
+      const visits = recurDates.map((d) => {
+        const dow = new Date(d + 'T00:00:00').getDay()
+        return { ...base, visit_date: d, visit_time: recurDayTimes[dow] ?? base.visit_time }
+      })
       const { error: err } = await createBulkVisits(visits)
       setSaving(false)
       if (err) { setError(err); return }
@@ -251,8 +266,10 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
                     recurDays={recurDays}
                     recurEnd={recurEnd}
                     recurDates={recurDates}
+                    recurDayTimes={recurDayTimes}
                     onToggleDay={toggleDay}
                     onSetEnd={setRecurEnd}
+                    onSetDayTime={setDayTime}
                   />
                 )}
 

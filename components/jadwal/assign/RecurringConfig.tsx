@@ -8,11 +8,13 @@ interface Props {
   recurDays: number[]
   recurEnd: string
   recurDates: string[]
+  recurDayTimes: Record<number, string>
   onToggleDay: (dow: number) => void
   onSetEnd: (d: string) => void
+  onSetDayTime: (dow: number, time: string) => void
 }
 
-export function RecurringConfig({ targetDate, recurDays, recurEnd, recurDates, onToggleDay, onSetEnd }: Props) {
+export function RecurringConfig({ targetDate, recurDays, recurEnd, recurDates, recurDayTimes, onToggleDay, onSetEnd, onSetDayTime }: Props) {
   const minEnd = toIso(addDays(new Date(targetDate + 'T00:00:00'), 1))
   const dayLabels = DAY_CHIPS.filter((c) => recurDays.includes(c.dow)).map((c) => c.label).join(' & ')
 
@@ -38,6 +40,26 @@ export function RecurringConfig({ targetDate, recurDays, recurEnd, recurDates, o
           ))}
         </div>
       </div>
+
+      {/* Per-day time inputs */}
+      {recurDays.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-foreground mb-2">Jam per Hari</p>
+          <div className="space-y-2">
+            {DAY_CHIPS.filter((c) => recurDays.includes(c.dow)).map(({ dow, label }) => (
+              <div key={dow} className="flex items-center gap-2">
+                <span className="w-10 shrink-0 text-center text-xs font-bold text-primary">{label}</span>
+                <input
+                  type="time"
+                  value={recurDayTimes[dow] ?? '08:00'}
+                  onChange={(e) => onSetDayTime(dow, e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* End date */}
       <div>

@@ -261,15 +261,15 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
             {HOURS_VISIBLE.map((h, i) => (
               <div
                 key={h}
-                className="absolute w-full flex items-start justify-end pr-3 pt-1"
+                className="absolute w-full flex items-center justify-end pr-3"
                 style={{ top: i * SLOT_H, height: SLOT_H }}
               >
                 {h === 14 ? (
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-primary/70 leading-none">
-                    SORE
+                  <span className="text-[17px] text-muted-foreground/60 font-mono">
+                    14:00
                   </span>
                 ) : (
-                  <span className="text-[13px] text-muted-foreground/60 font-mono">
+                  <span className="text-[17px] text-muted-foreground/60 font-mono">
                     {fmtHour(h)}
                   </span>
                 )}
@@ -282,12 +282,53 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
             className="absolute pointer-events-none"
             style={{ left: TIME_COL_W, right: 0, top: 0, bottom: 0 }}
           >
-            {HOURS_VISIBLE.map((h, i) => (
+            {/* Afternoon tint — subtle warm overlay from 14:00 onwards */}
+            {HOURS_VISIBLE.includes(14) && (
               <div
-                key={h}
-                className={`absolute inset-x-0 border-t ${h === 14 ? 'border-primary/50' : 'border-border/40'}`}
-                style={{ top: i * SLOT_H }}
+                className="absolute inset-x-0 bottom-0 pointer-events-none"
+                style={{
+                  top: (HOURS_VISIBLE.indexOf(14)) * SLOT_H,
+                  background: 'linear-gradient(180deg, rgba(255,179,92,0.04) 0%, rgba(255,0,144,0.03) 100%)',
+                }}
               />
+            )}
+            {HOURS_VISIBLE.map((h, i) => (
+              h === 14 ? (
+                <div
+                  key={h}
+                  className="absolute inset-x-0 pointer-events-none"
+                  style={{ top: i * SLOT_H }}
+                >
+                  {/* Thick gradient divider line */}
+                  <div
+                    className="h-0.5 w-full"
+                    style={{
+                      background: 'linear-gradient(90deg, transparent 0%, #FF0090 12%, #FFB35C 50%, #FF0090 88%, transparent 100%)',
+                      opacity: 0.75,
+                    }}
+                  />
+                  {/* Centered "SHIFT SORE" label — transform centers it on the line */}
+                  <div className="absolute inset-x-0 flex justify-center" style={{ top: 0, transform: 'translateY(-50%)' }}>
+                    <span
+                      className="text-[9px] font-bold uppercase tracking-widest px-3 py-0.5 rounded-full border"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(255,0,144,0.18), rgba(255,179,92,0.15))',
+                        borderColor: 'rgba(255,0,144,0.35)',
+                        color: '#FFB35C',
+                        backdropFilter: 'blur(6px)',
+                      }}
+                    >
+                      ☀ Shift Sore
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  key={h}
+                  className="absolute inset-x-0 border-t border-border/40"
+                  style={{ top: i * SLOT_H }}
+                />
+              )
             ))}
           </div>
 
@@ -295,10 +336,20 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
           {showNow && (
             <div
               className="absolute z-20 pointer-events-none flex items-center"
-              style={{ top: nowTop, left: TIME_COL_W, right: 0 }}
+              style={{ top: nowTop, left: 0, right: 0 }}
             >
-              <div className="w-2 h-2 rounded-full bg-primary shrink-0 -ml-1" />
-              <div className="flex-1 h-px bg-primary/60" />
+              {/* Time label inside the time gutter */}
+              <div
+                className="shrink-0 flex items-center justify-end pr-2"
+                style={{ width: TIME_COL_W }}
+              >
+                <span className="text-[11px] font-bold font-mono text-primary bg-primary/15 px-1.5 py-0.5 rounded-md leading-none">
+                  {String(Math.floor(curH)).padStart(2, '0')}:{String(Math.round((curH % 1) * 60)).padStart(2, '0')}
+                </span>
+              </div>
+              {/* Dot + line */}
+              <div className="w-3 h-3 rounded-full bg-primary shrink-0 -ml-1.5 shadow-[0_0_8px_3px_rgba(255,0,144,0.5)]" />
+              <div className="flex-1 h-0.5 bg-linear-to-r from-primary to-primary/20" />
             </div>
           )}
 
@@ -319,7 +370,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                 {/* Shift window shading */}
                 {shiftTop !== null && shiftBottom !== null && !s.isOnLeave && (
                   <div
-                    className="absolute inset-x-0 bg-foreground/[0.04] pointer-events-none"
+                    className="absolute inset-x-0 bg-foreground/4 pointer-events-none"
                     style={{ top: shiftTop, height: shiftBottom - shiftTop }}
                   />
                 )}
@@ -331,7 +382,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
 
                 {/* Pending leave overlay */}
                 {s.pendingLeave && !s.isOnLeave && (
-                  <div className="absolute inset-0 bg-yellow-500/[0.06] pointer-events-none" />
+                  <div className="absolute inset-0 bg-yellow-500/6 pointer-events-none" />
                 )}
 
                 {/* Time slot cells */}
@@ -348,11 +399,16 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                       className="absolute inset-x-0 flex flex-col gap-1 p-1 group"
                       style={{ top: i * SLOT_H, height: SLOT_H }}
                     >
-                      {/* Hover time pill — orients user when far from the sticky time column */}
+                      {/* Hover tooltip — shows therapist name + time */}
                       {isInShift && !s.isOnLeave && (
-                        <span className="absolute top-1 left-1 text-[9px] font-mono text-primary/70 bg-background/70 backdrop-blur-sm px-1.5 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10 leading-none">
-                          {fmtHour(h)}
-                        </span>
+                        <div className="absolute top-1.5 left-1.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10">
+                          <span className="text-[17px] font-semibold text-white bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-md leading-none whitespace-nowrap">
+                            {displayName(s)}
+                          </span>
+                          <span className="text-[17px] font-mono text-primary/90 bg-background/80 backdrop-blur-sm px-1.5 py-0.5 rounded-md leading-none">
+                            {fmtHour(h)}
+                          </span>
+                        </div>
                       )}
 
                       {/* Outside-shift hatched overlay — pointer-events-none so visit cards stay clickable */}
