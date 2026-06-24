@@ -23,14 +23,11 @@ function initials(name: string) {
   return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
 }
 
-function calcAge(iso: string | null): number | null {
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des']
+function fmtBirthDate(iso: string | null): string | null {
   if (!iso) return null
-  const birth = new Date(iso + 'T00:00:00')
-  const today = new Date()
-  let age = today.getFullYear() - birth.getFullYear()
-  const notYet = today.getMonth() < birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
-  return notYet ? age - 1 : age
+  const [y, m, d] = iso.split('-')
+  return `${d} ${MONTHS[parseInt(m, 10) - 1]} ${y}`
 }
 
 export function PatientSearch({ search, setSearch, results, searching, searchRef, onSelect }: Props) {
@@ -86,7 +83,7 @@ export function PatientSearch({ search, setSearch, results, searching, searchRef
           })
           return results.map((p) => {
             const isDuplicate = (nameCounts.get(p.name.toLowerCase()) ?? 0) > 1
-            const age         = isDuplicate ? calcAge(p.birthDate) : null
+            const birthLabel  = isDuplicate ? fmtBirthDate(p.birthDate) : null
             return (
               <button
                 key={p.id}
@@ -100,9 +97,9 @@ export function PatientSearch({ search, setSearch, results, searching, searchRef
                   <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
                   <div className="flex items-center gap-2 flex-wrap">
                     {p.phone && <p className="text-xs text-muted-foreground">{p.phone}</p>}
-                    {age !== null && (
+                    {birthLabel && (
                       <span className="text-[10px] font-medium text-secondary bg-secondary/10 px-1.5 py-0.5 rounded-full shrink-0">
-                        {age} thn
+                        {birthLabel}
                       </span>
                     )}
                   </div>
