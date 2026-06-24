@@ -11,12 +11,13 @@ import {
   deletePatient,
   type PatientStats as PatientStatsData,
 } from '@/app/actions/patients'
-import { PatientStats }   from '@/components/patients/PatientStats'
-import { PatientFilters } from '@/components/patients/PatientFilters'
-import { PatientCard }    from '@/components/patients/PatientCard'
-import { PatientTable }   from '@/components/patients/PatientTable'
-import { PatientEmpty }   from '@/components/patients/PatientEmpty'
-import { Pagination }     from '@/components/leave/Pagination'
+import { PatientStats }        from '@/components/patients/PatientStats'
+import { PatientFilters }      from '@/components/patients/PatientFilters'
+import { PatientCard }         from '@/components/patients/PatientCard'
+import { PatientTable }        from '@/components/patients/PatientTable'
+import { PatientEmpty }        from '@/components/patients/PatientEmpty'
+import { PatientExportButton } from '@/components/patients/PatientExportButton'
+import { Pagination }          from '@/components/leave/Pagination'
 import {
   DEFAULT_FILTERS,
   PAGE_SIZE,
@@ -130,13 +131,16 @@ export default function PatientsPage() {
           <h1 className="text-xl font-semibold text-foreground">Pasien</h1>
           <p className="text-sm text-muted-foreground">Kelola data pasien klinik</p>
         </div>
-        <Link
-          href="/patients/new?source=patients"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-[0.98] transition-all duration-200 shrink-0 shadow-sm"
-        >
-          <PlusCircle size={15} />
-          Tambah Pasien
-        </Link>
+        <div className="flex items-center gap-2">
+          <PatientExportButton filters={filters} />
+          <Link
+            href="/patients/new?source=patients"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-[0.98] transition-all duration-200 shrink-0 shadow-sm"
+          >
+            <PlusCircle size={15} />
+            Tambah Pasien
+          </Link>
+        </div>
       </div>
 
       {/* Toast */}
