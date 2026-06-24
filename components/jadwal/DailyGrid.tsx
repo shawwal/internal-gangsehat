@@ -75,10 +75,11 @@ interface Props {
   onOpen: (visitId: string) => void
   onPendingLeaveClick: (staffName: string, leave: PendingLeaveInfo) => void
   onStaffClick: (staffId: string) => void
+  onNoShow?: (visitId: string) => void
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick }: Props) {
+export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick, onNoShow }: Props) {
   // Current time (used later for time line after range is known)
   const now   = new Date()
   const today = now.toISOString().split('T')[0]
@@ -242,6 +243,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                       onStatusChange={onStatusChange}
                       onDelete={onDelete}
                       onOpen={onOpen}
+                      onNoShow={onNoShow}
                     />
                   ))}
                 </div>
@@ -429,6 +431,7 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                           onStatusChange={onStatusChange}
                           onDelete={onDelete}
                           onOpen={onOpen}
+                          onNoShow={onNoShow}
                         />
                       ))}
 

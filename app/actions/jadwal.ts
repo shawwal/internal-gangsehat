@@ -213,6 +213,70 @@ export async function updateVisit(
   return { error: error?.message ?? null }
 }
 
+// ── Fetch active staff for a branch (therapist dropdown) ──────────────────────
+export interface BranchStaffMember {
+  id: string
+  full_name: string
+  nickname: string | null
+}
+
+export async function fetchBranchStaff(branchId: string): Promise<BranchStaffMember[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('internal_profiles')
+    .select('id, full_name, nickname')
+    .eq('branch_id', branchId)
+    .in('role', ['therapist', 'staff', 'manager'])
+    .eq('is_active', true)
+    .order('full_name')
+  return (data ?? []) as BranchStaffMember[]
+}
+
+// ── Mark visit as no-show and optionally create a rescheduled visit ────────────
+export interface RescheduleInput {
+  visit_date: string
+  visit_time: string | null
+  attending_staff_id: string | null
+  notes: string | null
+  shift: string | null
+}
+
+export async function markNoShowAndReschedule(
+  visitId: string,
+  reschedule?: RescheduleInput,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+
+  const { error: noShowErr } = await supabase
+    .from('patient_visits')
+    .update({ status: 'no_show', kehadiran: 'TIDAK HADIR', updated_at: new Date().toISOString() })
+    .eq('id', visitId)
+  if (noShowErr) return { error: noShowErr.message }
+
+  if (!reschedule) return { error: null }
+
+  const { data: original, error: fetchErr } = await supabase
+    .from('patient_visits')
+    .select('patient_id, branch_id, chief_complaint')
+    .eq('id', visitId)
+    .single()
+  if (fetchErr || !original) return { error: fetchErr?.message ?? 'Kunjungan asal tidak ditemukan' }
+
+  const { error: createErr } = await supabase.from('patient_visits').insert({
+    patient_id:         original.patient_id,
+    branch_id:          original.branch_id,
+    attending_staff_id: reschedule.attending_staff_id,
+    visit_date:         reschedule.visit_date,
+    visit_time:         reschedule.visit_time ?? null,
+    chief_complaint:    original.chief_complaint ?? null,
+    status:             'scheduled',
+    notes:              reschedule.notes ?? null,
+    shift:              reschedule.shift ?? null,
+    updated_at:         new Date().toISOString(),
+  })
+  return { error: createErr?.message ?? null }
+}
+
 // ── Bulk-create visits (recurring assignment) ──────────────────────────────────
 export async function createBulkVisits(
   inputs: CreateVisitInput[],

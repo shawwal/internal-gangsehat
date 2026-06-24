@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { AttendanceStatus } from '@/types'
+import { ExportButton } from '@/components/ui/ExportButton'
+import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 
 interface StaffRow { id: string; full_name: string }
 interface AttendanceRow { id: string; staff_id: string; date: string; status: AttendanceStatus }
@@ -105,6 +107,27 @@ export default function AttendancePage() {
     load()
   }
 
+  function handleExportAttendance() {
+    type AttRow = Record<string, string>
+    const exportRows: AttRow[] = staff.map((s) => {
+      const row: AttRow = { Nama: s.full_name }
+      for (let d = 1; d <= days; d++) {
+        const status = getStatus(s.id, d)
+        row[String(d)] = status ? STATUS_LABEL[status] : ''
+      }
+      return row
+    })
+    const cols: ExportColumn<AttRow>[] = [
+      { header: 'Nama', value: (r) => r['Nama'] },
+      ...dayNumbers.map((d) => ({
+        header: String(d),
+        value: (r: AttRow) => r[String(d)] ?? '',
+      })),
+    ]
+    exportToExcel(exportRows, cols, `absensi_${MONTHS[month]}_${year}`)
+    return Promise.resolve()
+  }
+
   function prevMonth() {
     if (month === 0) { setYear((y) => y - 1); setMonth(11) }
     else setMonth((m) => m - 1)
@@ -122,6 +145,9 @@ export default function AttendancePage() {
           <p className="text-sm text-muted-foreground">Kelola kehadiran staff bulanan</p>
         </div>
         <div className="flex items-center gap-2">
+          {!loading && staff.length > 0 && (
+            <ExportButton onExport={handleExportAttendance} />
+          )}
           <button onClick={prevMonth} className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors">
             <ChevronLeft size={16} />
           </button>

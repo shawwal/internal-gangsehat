@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { Plus, CheckCircle, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionType, TransactionStatus, PaymentMethod, PaymentDetailStatus } from '@/types'
+import { ExportButton } from '@/components/ui/ExportButton'
+import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 
 const TYPE_LABELS: Record<TransactionType, string>    = { income: 'Pemasukan', expense: 'Pengeluaran' }
 const STATUS_BADGE: Record<TransactionStatus, string> = {
@@ -161,6 +163,27 @@ export default function TransactionsPage() {
 
   const canConfirm = userRole === 'finance' || userRole === 'director'
 
+  const TRANSACTION_COLS: ExportColumn<Transaction>[] = [
+    { header: 'Tanggal',      value: (r) => r.transaction_date },
+    { header: 'Tipe',         value: (r) => TYPE_LABELS[r.type] },
+    { header: 'Kategori',     value: (r) => r.category },
+    { header: 'Harga',        value: (r) => r.harga ?? 0 },
+    { header: 'Diskon',       value: (r) => r.discount ?? 0 },
+    { header: 'Jumlah Bayar', value: (r) => r.amount },
+    { header: 'Sisa',         value: (r) => r.outstanding ?? 0 },
+    { header: 'Metode Bayar', value: (r) => r.payment_method ?? '' },
+    { header: 'Status Bayar', value: (r) => r.payment_status ?? '' },
+    { header: 'Status',       value: (r) => STATUS_LABEL[r.status] },
+    { header: 'Penjamin',     value: (r) => r.penjamin ?? '' },
+    { header: 'Keterangan',   value: (r) => r.description ?? '' },
+  ]
+
+  function handleExportTransactions() {
+    const today = new Date().toISOString().slice(0, 10)
+    exportToExcel(rows, TRANSACTION_COLS, `transaksi_${today}`)
+    return Promise.resolve()
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -168,12 +191,15 @@ export default function TransactionsPage() {
           <h1 className="text-xl font-semibold text-foreground">Transaksi</h1>
           <p className="text-sm text-muted-foreground">Catat dan kelola transaksi keuangan cabang</p>
         </div>
-        <button
-          onClick={() => { setForm(DEFAULT_FORM); setShowForm(true) }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus size={16} /> Tambah
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportButton onExport={handleExportTransactions} disabled={rows.length === 0} />
+          <button
+            onClick={() => { setForm(DEFAULT_FORM); setShowForm(true) }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={16} /> Tambah
+          </button>
+        </div>
       </div>
 
       {!branchId && !loading && (

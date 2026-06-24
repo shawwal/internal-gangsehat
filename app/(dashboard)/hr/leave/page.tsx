@@ -6,6 +6,8 @@ import {
   Eye, FileText, Users, X, XCircle,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { ExportButton } from '@/components/ui/ExportButton'
+import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 
 interface LeaveRow {
   id: string
@@ -190,12 +192,35 @@ export default function HRLeavePage() {
 
   const filtered = activeTab === 'all' ? requests : requests.filter((r) => r.status === activeTab)
 
+  const LEAVE_COLS: ExportColumn<LeaveRow>[] = [
+    { header: 'Nama',              value: (r) => r.internal_profiles?.full_name ?? '' },
+    { header: 'Email',             value: (r) => r.internal_profiles?.email ?? '' },
+    { header: 'Tgl Mulai',         value: (r) => r.start_date },
+    { header: 'Tgl Selesai',       value: (r) => r.end_date },
+    { header: 'Jumlah Hari',       value: (r) => dayCount(r.start_date, r.end_date) },
+    { header: 'Alasan',            value: (r) => r.reason },
+    { header: 'Status',            value: (r) => STATUS_LABEL[r.status] },
+    { header: 'Catatan Penolakan', value: (r) => r.rejection_note ?? '' },
+  ]
+
+  function handleExportLeave() {
+    const today = new Date().toISOString().slice(0, 10)
+    const suffix = activeTab !== 'all' ? `_${activeTab}` : ''
+    exportToExcel(filtered, LEAVE_COLS, `cuti${suffix}_${today}`)
+    return Promise.resolve()
+  }
+
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Pengajuan Cuti</h1>
-        <p className="text-sm text-muted-foreground">Tinjau dan kelola permintaan cuti staff</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Pengajuan Cuti</h1>
+          <p className="text-sm text-muted-foreground">Tinjau dan kelola permintaan cuti staff</p>
+        </div>
+        {!loading && requests.length > 0 && (
+          <ExportButton onExport={handleExportLeave} />
+        )}
       </div>
 
       {/* Stats */}

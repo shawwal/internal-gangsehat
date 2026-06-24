@@ -21,9 +21,10 @@ interface Props {
   onStatusChange: (id: string, status: VisitStatus) => void
   onDelete: (id: string) => void
   onOpen: (id: string) => void
+  onNoShow?: (id: string) => void
 }
 
-export function VisitCard({ visit, onStatusChange, onDelete, onOpen }: Props) {
+export function VisitCard({ visit, onStatusChange, onDelete, onOpen, onNoShow }: Props) {
   const [menuOpen, setMenuOpen]     = useState(false)
   const [menuPos, setMenuPos]       = useState<{ top: number; left: number } | null>(null)
   const btnRef  = useRef<HTMLButtonElement>(null)
@@ -121,7 +122,14 @@ export function VisitCard({ visit, onStatusChange, onDelete, onOpen }: Props) {
             {ALL_STATUSES.map((s) => (
               <button
                 key={s}
-                onClick={() => { onStatusChange(visit.id, s); setMenuOpen(false) }}
+                onClick={() => {
+                  if (s === 'no_show' && onNoShow) {
+                    onNoShow(visit.id)
+                  } else {
+                    onStatusChange(visit.id, s)
+                  }
+                  setMenuOpen(false)
+                }}
                 className={[
                   'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors cursor-pointer',
                   s === visit.status

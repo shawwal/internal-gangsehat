@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { Plus, Megaphone } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Campaign, CampaignChannel, CampaignStatus } from '@/types'
+import { ExportButton } from '@/components/ui/ExportButton'
+import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 
 const CHANNEL_LABELS: Record<CampaignChannel, string> = {
   social_media: 'Media Sosial', whatsapp: 'WhatsApp', email: 'Email', flyer: 'Flyer', other: 'Lainnya',
@@ -120,6 +122,25 @@ export default function CampaignsPage() {
     load()
   }
 
+  const CAMPAIGN_COLS: ExportColumn<Campaign>[] = [
+    { header: 'Judul',           value: (c) => c.title },
+    { header: 'Deskripsi',       value: (c) => c.description ?? '' },
+    { header: 'Channel',         value: (c) => c.channel ? CHANNEL_LABELS[c.channel] : '' },
+    { header: 'Status',          value: (c) => c.status },
+    { header: 'Anggaran',        value: (c) => c.budget },
+    { header: 'Pengeluaran',     value: (c) => c.actual_spend },
+    { header: 'Target Jangkauan', value: (c) => c.target_reach ?? '' },
+    { header: 'Jangkauan Aktual', value: (c) => c.actual_reach ?? '' },
+    { header: 'Tgl Mulai',       value: (c) => c.start_date ?? '' },
+    { header: 'Tgl Selesai',     value: (c) => c.end_date ?? '' },
+  ]
+
+  function handleExportCampaigns() {
+    const today = new Date().toISOString().slice(0, 10)
+    exportToExcel(campaigns, CAMPAIGN_COLS, `kampanye_${today}`)
+    return Promise.resolve()
+  }
+
   const totals = campaigns.reduce((acc, c) => ({
     count: acc.count + 1,
     budget: acc.budget + c.budget,
@@ -133,10 +154,13 @@ export default function CampaignsPage() {
           <h1 className="text-xl font-semibold text-foreground">Kampanye</h1>
           <p className="text-sm text-muted-foreground">Kelola kampanye marketing cabang</p>
         </div>
-        <button onClick={openNew}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-          <Plus size={16} /> Kampanye Baru
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportButton onExport={handleExportCampaigns} disabled={campaigns.length === 0} />
+          <button onClick={openNew}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+            <Plus size={16} /> Kampanye Baru
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">

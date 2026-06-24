@@ -14,7 +14,9 @@ import { DailyGrid } from '@/components/jadwal/DailyGrid'
 import { AssignDialog } from '@/components/jadwal/AssignDialog'
 import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
 import { StaffDetailModal } from '@/components/jadwal/StaffDetailModal'
+import { NoShowDialog } from '@/components/jadwal/NoShowDialog'
 import type { AssignTarget } from '@/components/jadwal/types'
+import type { DailyVisit } from '@/app/actions/jadwal'
 
 const LS_KEY = 'jadwal_showInactive'
 
@@ -31,6 +33,12 @@ export default function JadwalHarianPage() {
   const [assignTarget, setAssignTarget]       = useState<AssignTarget | null>(null)
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null)
+  const [noShowVisit, setNoShowVisit]         = useState<DailyVisit | null>(null)
+
+  function handleNoShow(visitId: string) {
+    const visit = visits.find((v) => v.id === visitId) ?? null
+    setNoShowVisit(visit)
+  }
 
   const [showInactive, setShowInactive] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
@@ -199,6 +207,7 @@ export default function JadwalHarianPage() {
               onOpen={setSelectedVisitId}
               onPendingLeaveClick={(staffName, leave) => setLeavePopover({ staffName, leave })}
               onStaffClick={setSelectedStaffId}
+              onNoShow={handleNoShow}
             />
           )}
         </div>
@@ -232,6 +241,14 @@ export default function JadwalHarianPage() {
         onClose={() => setSelectedVisitId(null)}
         onSaved={() => { setSelectedVisitId(null); loadAll(selectedDate) }}
       />
+
+      {noShowVisit && (
+        <NoShowDialog
+          visit={noShowVisit}
+          onClose={() => setNoShowVisit(null)}
+          onSaved={() => { setNoShowVisit(null); loadAll(selectedDate) }}
+        />
+      )}
 
       {selectedStaffId && (
         <StaffDetailModal
