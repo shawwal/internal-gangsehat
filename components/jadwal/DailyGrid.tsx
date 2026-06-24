@@ -69,6 +69,7 @@ interface Props {
   staff: DayStaffEntry[]
   visits: DailyVisit[]
   date: string           // ISO yyyy-mm-dd
+  userRole?: string | null
   onAssign: (target: AssignTarget) => void
   onStatusChange: (visitId: string, status: VisitStatus) => void
   onDelete: (visitId: string) => void
@@ -76,10 +77,11 @@ interface Props {
   onPendingLeaveClick: (staffName: string, leave: PendingLeaveInfo) => void
   onStaffClick: (staffId: string) => void
   onNoShow?: (visitId: string) => void
+  onPayment?: (visitId: string) => void
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick, onNoShow }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick, onNoShow, onPayment }: Props) {
   // Current time (used later for time line after range is known)
   const now   = new Date()
   const today = now.toISOString().split('T')[0]
@@ -240,10 +242,12 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                     <VisitCard
                       key={v.id}
                       visit={v}
+                      userRole={userRole}
                       onStatusChange={onStatusChange}
                       onDelete={onDelete}
                       onOpen={onOpen}
                       onNoShow={onNoShow}
+                      onPayment={onPayment}
                     />
                   ))}
                 </div>
@@ -428,10 +432,12 @@ export function DailyGrid({ staff, visits, date, onAssign, onStatusChange, onDel
                         <VisitCard
                           key={v.id}
                           visit={v}
+                          userRole={userRole}
                           onStatusChange={onStatusChange}
                           onDelete={onDelete}
                           onOpen={onOpen}
                           onNoShow={onNoShow}
+                          onPayment={onPayment}
                         />
                       ))}
 

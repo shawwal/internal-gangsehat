@@ -12,12 +12,17 @@ export interface DailyVisit {
   branch_id: string
   visit_date: string
   visit_time: string | null    // HH:MM or null
+  service_type: string | null
+  package_id: string | null    // set → visit is part of a package, payment already covered
   chief_complaint: string | null
   diagnosis: string | null
   treatment: string | null
   attending_staff_id: string | null
   status: VisitStatus
   notes: string | null
+  // Payment info — populated by fetchDailyVisits
+  has_payment: boolean
+  visit_payment_status: string | null
 }
 
 export interface CreateVisitInput {
@@ -38,7 +43,7 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
 
   let query = supabase
     .from('patient_visits')
-    .select('id, patient_id, attending_staff_id, visit_date, visit_time, chief_complaint, diagnosis, treatment, status, notes, branch_id')
+    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, chief_complaint, diagnosis, treatment, status, notes, branch_id')
     .eq('visit_date', date)
     .order('visit_time', { ascending: true })
   if (branchId) query = query.eq('branch_id', branchId)
@@ -66,20 +71,50 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
     }
   }
 
-  return visits.map((v) => ({
-    id:                 v.id,
-    patient_id:         v.patient_id,
-    patient_name:       nameMap.get(v.patient_id) ?? 'Pasien',
-    branch_id:          v.branch_id,
-    visit_date:         v.visit_date,
-    visit_time:         v.visit_time ? String(v.visit_time).slice(0, 5) : null,
-    chief_complaint:    v.chief_complaint,
-    diagnosis:          v.diagnosis,
-    treatment:          v.treatment,
-    attending_staff_id: v.attending_staff_id,
-    status:             v.status as VisitStatus,
-    notes:              v.notes,
-  }))
+  // Batch-fetch payment status for all visits
+  const visitIds = visits.map((v) => v.id)
+  const { data: txns } = await supabase
+    .from('transactions')
+    .select('visit_id, payment_status, outstanding, status')
+    .in('visit_id', visitIds)
+    .neq('status', 'rejected')
+
+  // Per-visit: last non-rejected transaction wins for display
+  const payMap = new Map<string, { payment_status: string | null; all_paid: boolean }>()
+  for (const t of txns ?? []) {
+    const vid = t.visit_id as string
+    const existing = payMap.get(vid)
+    if (!existing) {
+      payMap.set(vid, { payment_status: t.payment_status, all_paid: t.outstanding === 0 })
+    } else {
+      payMap.set(vid, {
+        payment_status: t.payment_status ?? existing.payment_status,
+        all_paid: existing.all_paid && t.outstanding === 0,
+      })
+    }
+  }
+
+  return visits.map((v) => {
+    const pay = payMap.get(v.id)
+    return {
+      id:                   v.id,
+      patient_id:           v.patient_id,
+      patient_name:         nameMap.get(v.patient_id) ?? 'Pasien',
+      branch_id:            v.branch_id,
+      visit_date:           v.visit_date,
+      visit_time:           v.visit_time ? String(v.visit_time).slice(0, 5) : null,
+      service_type:         v.service_type,
+      package_id:           v.package_id ?? null,
+      chief_complaint:      v.chief_complaint,
+      diagnosis:            v.diagnosis,
+      treatment:            v.treatment,
+      attending_staff_id:   v.attending_staff_id,
+      status:               v.status as VisitStatus,
+      notes:                v.notes,
+      has_payment:          !!pay,
+      visit_payment_status: pay ? (pay.all_paid ? 'LUNAS' : pay.payment_status) : null,
+    }
+  })
 }
 
 // ── Create a new visit ─────────────────────────────────────────────────────────

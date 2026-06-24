@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, X, UserX, MoreVertical, Trash2 } from 'lucide-react'
+import { Check, X, UserX, MoreVertical, Trash2, CreditCard, BanknoteArrowUp } from 'lucide-react'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL } from './types'
 import type { VisitStatus } from '@/types'
+
+const PAYMENT_ROLES = ['finance', 'manager', 'director']
 
 const ALL_STATUSES: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
 
@@ -18,30 +20,34 @@ const STATUS_ICON: Record<VisitStatus, React.ReactNode> = {
 
 interface Props {
   visit: DailyVisit
+  userRole?: string | null
   onStatusChange: (id: string, status: VisitStatus) => void
   onDelete: (id: string) => void
   onOpen: (id: string) => void
   onNoShow?: (id: string) => void
+  onPayment?: (id: string) => void
 }
 
-export function VisitCard({ visit, onStatusChange, onDelete, onOpen, onNoShow }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onNoShow, onPayment }: Props) {
   const [menuOpen, setMenuOpen]     = useState(false)
   const [menuPos, setMenuPos]       = useState<{ top: number; left: number } | null>(null)
   const btnRef  = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  const canRecordPayment = !!userRole && PAYMENT_ROLES.includes(userRole)
+  const showPaymentItem  = canRecordPayment && visit.status === 'completed' && !visit.package_id
+  const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && !visit.package_id
+
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
     if (!btnRef.current) return
     const rect = btnRef.current.getBoundingClientRect()
-    // Prefer opening to the left; if near right edge, adjust
-    const menuWidth = 208 // w-52
+    const menuWidth = 208
     const left = Math.min(rect.right, window.innerWidth - menuWidth - 8)
     setMenuPos({ top: rect.bottom + 4, left })
     setMenuOpen(true)
   }
 
-  // Close on outside click or scroll
   useEffect(() => {
     if (!menuOpen) return
     function close() { setMenuOpen(false) }
@@ -63,7 +69,7 @@ export function VisitCard({ visit, onStatusChange, onDelete, onOpen, onNoShow }:
       className={[
         'relative rounded-lg border px-2 py-1.5 flex flex-col gap-0.5 group/card cursor-default',
         'transition-all duration-150',
-        menuOpen ? '' : 'hover:scale-[1.02]',   // suppress scale while menu is open
+        menuOpen ? '' : 'hover:scale-[1.02]',
         colorCls,
       ].join(' ')}
     >
@@ -89,13 +95,34 @@ export function VisitCard({ visit, onStatusChange, onDelete, onOpen, onNoShow }:
       </div>
 
       {/* Time + status row */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
         {visit.visit_time && (
           <span className="text-[9px] font-mono opacity-70">{visit.visit_time}</span>
         )}
         <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${STATUS_BADGE[visit.status]}`}>
           {STATUS_LABEL[visit.status]}
         </span>
+
+        {/* Payment badge */}
+        {showUnpaidBadge && (
+          <span
+            className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-[#FFB35C]/20 text-[#FFB35C] border border-[#FFB35C]/30"
+            style={{ animation: 'vcBadgeIn 350ms cubic-bezier(0.34,1.56,0.64,1) forwards' }}
+          >
+            Belum Bayar
+          </span>
+        )}
+        {visit.status === 'completed' && visit.has_payment && (
+          <span
+            className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold border ${
+              visit.visit_payment_status === 'LUNAS'
+                ? 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/30'
+                : 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/30'
+            }`}
+          >
+            {visit.visit_payment_status ?? 'Bayar'}
+          </span>
+        )}
       </div>
 
       {/* Chief complaint preview */}
@@ -103,10 +130,10 @@ export function VisitCard({ visit, onStatusChange, onDelete, onOpen, onNoShow }:
         <span className="text-[9px] opacity-60 truncate">{visit.chief_complaint}</span>
       )}
 
-      {/* Context menu — portalled to body so it always paints above the grid */}
+      {/* Context menu */}
       {menuOpen && menuPos && createPortal(
         <>
-          {/* Transparent backdrop to catch outside clicks */}
+          <style>{`@keyframes vcBadgeIn { from{opacity:0;transform:scale(0.6)} to{opacity:1;transform:scale(1)} }`}</style>
           <div className="fixed inset-0 z-200" onClick={() => setMenuOpen(false)} />
 
           <div
@@ -145,6 +172,23 @@ export function VisitCard({ visit, onStatusChange, onDelete, onOpen, onNoShow }:
                 )}
               </button>
             ))}
+
+            {showPaymentItem && (
+              <>
+                <hr className="border-white/10 my-1.5" />
+                <button
+                  onClick={() => { onPayment?.(visit.id); setMenuOpen(false) }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-[#34C759] hover:bg-[#34C759]/10 transition-colors cursor-pointer"
+                  role="menuitem"
+                >
+                  {visit.has_payment
+                    ? <BanknoteArrowUp size={13} />
+                    : <CreditCard size={13} />
+                  }
+                  {visit.has_payment ? 'Tambah Pembayaran' : 'Catat Pembayaran'}
+                </button>
+              </>
+            )}
 
             <hr className="border-white/10 my-1.5" />
 

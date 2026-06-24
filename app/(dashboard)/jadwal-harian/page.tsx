@@ -15,6 +15,7 @@ import { AssignDialog } from '@/components/jadwal/AssignDialog'
 import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
 import { StaffDetailModal } from '@/components/jadwal/StaffDetailModal'
 import { NoShowDialog } from '@/components/jadwal/NoShowDialog'
+import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import type { AssignTarget } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 
@@ -26,6 +27,7 @@ export default function JadwalHarianPage() {
     staff, visits, loading,
     leavePopover, setLeavePopover,
     leaveSaving, canApproveLeave,
+    userRole,
     branches, selectedBranchId, setSelectedBranchId,
     loadAll, handleStatusChange, handleDelete, handleLeaveAction,
   } = useJadwalHarian()
@@ -34,10 +36,16 @@ export default function JadwalHarianPage() {
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null)
   const [noShowVisit, setNoShowVisit]         = useState<DailyVisit | null>(null)
+  const [paymentVisit, setPaymentVisit]       = useState<DailyVisit | null>(null)
 
   function handleNoShow(visitId: string) {
     const visit = visits.find((v) => v.id === visitId) ?? null
     setNoShowVisit(visit)
+  }
+
+  function handleOpenPayment(visitId: string) {
+    const visit = visits.find((v) => v.id === visitId) ?? null
+    setPaymentVisit(visit)
   }
 
   const [showInactive, setShowInactive] = useState<boolean>(() => {
@@ -313,6 +321,7 @@ export default function JadwalHarianPage() {
                 staff={visibleStaff}
                 visits={visits}
                 date={toIso(selectedDate)}
+                userRole={userRole}
                 onAssign={setAssignTarget}
                 onStatusChange={handleStatusChange}
                 onDelete={handleDelete}
@@ -320,6 +329,7 @@ export default function JadwalHarianPage() {
                 onPendingLeaveClick={(staffName, leave) => setLeavePopover({ staffName, leave })}
                 onStaffClick={setSelectedStaffId}
                 onNoShow={handleNoShow}
+                onPayment={handleOpenPayment}
               />
             )}
           </div>
@@ -369,6 +379,22 @@ export default function JadwalHarianPage() {
           entry={staff.find((s) => s.staff_id === selectedStaffId)!}
           onClose={() => setSelectedStaffId(null)}
           onSaved={() => loadAll(selectedDate)}
+        />
+      )}
+
+      {paymentVisit && (
+        <PaymentDialog
+          visit={{
+            id:                   paymentVisit.id,
+            patient_id:           paymentVisit.patient_id,
+            patient_name:         paymentVisit.patient_name,
+            visit_date:           paymentVisit.visit_date,
+            service_type:         paymentVisit.service_type,
+            attending_staff_name: staff.find((s) => s.staff_id === paymentVisit.attending_staff_id)?.nickname
+              || staff.find((s) => s.staff_id === paymentVisit.attending_staff_id)?.full_name,
+          }}
+          onClose={() => setPaymentVisit(null)}
+          onSuccess={() => loadAll(selectedDate)}
         />
       )}
     </>

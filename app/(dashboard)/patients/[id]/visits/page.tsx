@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import {
-  ChevronLeft, Plus, Activity, CheckCircle2, Clock, UserX, FileText, User,
+  ChevronLeft, Plus, Activity, CheckCircle2, Clock, UserX, FileText, User, CreditCard,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchPatient } from '@/app/actions/patients'
 import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
-import type { PatientVisit, VisitStatus, ServiceType, BodyRegion } from '@/types'
+import { PaymentDialog } from '@/components/visits/PaymentDialog'
+import type { PaymentVisitInfo } from '@/components/visits/PaymentDialog'
+import type { PatientVisit, VisitStatus, ServiceType, BodyRegion, UserRole } from '@/types'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const STATUS_OPTIONS: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
@@ -71,6 +73,20 @@ function formatDate(d: string) {
   })
 }
 
+interface LinkedTx { id: string; payment_status: string | null; outstanding: number; status: string }
+
+function getPaymentBadge(visit: PatientVisit): { label: string; cls: string; unpaid: boolean } | null {
+  if (visit.status !== 'completed') return null
+  // Package sessions are pre-paid via the package transaction — no per-visit payment needed
+  if ((visit as unknown as { package_id: string | null }).package_id) return null
+  const txs = ((visit as unknown as { transactions: LinkedTx[] | null }).transactions ?? [])
+    .filter((t) => t.status !== 'rejected')
+  if (txs.length === 0) return { label: 'Belum Bayar', cls: 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/25', unpaid: true }
+  const allPaid = txs.every((t) => t.outstanding === 0)
+  if (allPaid) return { label: 'Lunas', cls: 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/25', unpaid: false }
+  return { label: 'DP / Ada Sisa', cls: 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/25', unpaid: false }
+}
+
 // ── Stat card ──────────────────────────────────────────────────────────────────
 function StatCard({ label, value, icon: Icon, color, loading }: {
   label: string; value: number; icon: React.ElementType; color: string; loading?: boolean
@@ -105,8 +121,12 @@ export default function PatientVisitsPage() {
 
   const [userId, setUserId]     = useState<string | null>(null)
   const [branchId, setBranchId] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
 
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
+  const [paymentVisit, setPaymentVisit]       = useState<PaymentVisitInfo | null>(null)
+
+  const canRecordPayment = !!userRole && ['finance', 'manager', 'director'].includes(userRole)
 
   async function loadProfile() {
     const supabase = createClient()
@@ -114,11 +134,12 @@ export default function PatientVisitsPage() {
     if (!user) return
     const { data: profile } = await supabase
       .from('internal_profiles')
-      .select('branch_id')
+      .select('branch_id, role')
       .eq('id', user.id)
       .single()
     setUserId(user.id)
     setBranchId(profile?.branch_id ?? null)
+    setUserRole((profile?.role as UserRole) ?? null)
   }
 
   async function load() {
@@ -127,7 +148,7 @@ export default function PatientVisitsPage() {
       fetchPatient(id),
       supabase
         .from('patient_visits')
-        .select('*, internal_profiles!attending_staff_id(id, full_name, nickname)')
+        .select('*, internal_profiles!attending_staff_id(id, full_name, nickname), transactions!visit_id(id, payment_status, outstanding, status)')
         .eq('patient_id', id)
         .order('visit_date', { ascending: false }),
     ])
@@ -224,6 +245,7 @@ export default function PatientVisitsPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Keluhan</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kehadiran</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pembayaran</th>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rekam Medis</th>
               </tr>
             </thead>
@@ -240,7 +262,7 @@ export default function PatientVisitsPage() {
                 ))
               ) : visits.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-16 text-center">
+                  <td colSpan={10} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                         <FileText size={22} className="text-primary" />
@@ -324,6 +346,40 @@ export default function PatientVisitsPage() {
                       <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_BADGE[v.status]}`}>
                         {STATUS_LABEL[v.status]}
                       </span>
+                    </td>
+
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      {(() => {
+                        const badge = getPaymentBadge(v)
+                        if (!badge) return <span className="text-muted-foreground/40 text-xs">—</span>
+                        const therapist = (() => {
+                          const raw = (v as unknown as { internal_profiles: { id: string; full_name: string; nickname: string | null } | null }).internal_profiles
+                          return raw ? (raw.nickname || raw.full_name) : undefined
+                        })()
+                        return (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${badge.cls}`}>
+                              {badge.label}
+                            </span>
+                            {canRecordPayment && (
+                              <button
+                                onClick={() => setPaymentVisit({
+                                  id:                   v.id,
+                                  patient_id:           v.patient_id,
+                                  patient_name:         patientName,
+                                  visit_date:           v.visit_date,
+                                  service_type:         v.service_type,
+                                  attending_staff_name: therapist,
+                                })}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-[#34C759] hover:bg-[#34C759]/10 transition-colors border border-[#34C759]/20"
+                              >
+                                <CreditCard size={11} />
+                                {badge.unpaid ? 'Catat' : 'Tambah'}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </td>
 
                     <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
@@ -458,6 +514,15 @@ export default function PatientVisitsPage() {
         onClose={() => setSelectedVisitId(null)}
         onSaved={() => { setSelectedVisitId(null); load() }}
       />
+
+      {/* Payment dialog */}
+      {paymentVisit && (
+        <PaymentDialog
+          visit={paymentVisit}
+          onClose={() => setPaymentVisit(null)}
+          onSuccess={() => { setPaymentVisit(null); load() }}
+        />
+      )}
     </div>
   )
 }

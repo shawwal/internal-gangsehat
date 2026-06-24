@@ -23,6 +23,7 @@ export function useJadwalHarian() {
   const [canApproveLeave, setCanApproveLeave] = useState(false)
   const [branches, setBranches]               = useState<{ id: string; name: string }[]>([])
   const [selectedBranchId, setSelectedBranchId] = useState<string | null | undefined>(undefined)
+  const [userRole, setUserRole]               = useState<string | null>(null)
   const today = new Date()
 
   // Load user role, branch, and branches list on mount
@@ -38,6 +39,7 @@ export function useJadwalHarian() {
       if (profile?.role && ['director', 'hr', 'manager'].includes(profile.role)) {
         setCanApproveLeave(true)
       }
+      if (profile?.role) setUserRole(profile.role)
       const list = branchList ?? []
       setBranches(list)
       // Non-directors default to their own branch; directors default to first branch
@@ -292,6 +294,7 @@ export function useJadwalHarian() {
     setLeavePopover,
     leaveSaving,
     canApproveLeave,
+    userRole,
     branches,
     selectedBranchId,
     setSelectedBranchId,
