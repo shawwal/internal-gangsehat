@@ -92,7 +92,10 @@ export function useOrdersData(
         id, service_type, scheduled_date, scheduled_time, status,
         estimated_price, discounted_price, discount_percentage,
         guest_name, guest_phone, created_at,
-        patients ( encrypted_name ),
+        patients (
+          encrypted_name,
+          patient_packages ( id, package_name, total_sessions, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, status )
+        ),
         therapists ( profiles ( full_name ) ),
         internal_order_meta ( kode_transaksi, status_bayar )
       `, { count: 'exact' })

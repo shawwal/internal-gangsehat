@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ClipboardList, ExternalLink } from 'lucide-react'
 import { StatusBadge } from '@/components/internal/StatusBadge'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { getPatientName, getTrxCode, getPaymentStatus, getTherapistName } from './helpers'
+import { getPatientName, getTrxCode, getPaymentStatus, getTherapistName, getMatchingPackage, calcRemainingSessions } from './helpers'
 import type { OrderRow } from './types'
 
 interface OrdersTableProps {
@@ -34,6 +34,7 @@ export function OrdersTable({
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kode</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pasien</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Layanan</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Sisa Sesi</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fisio</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Jadwal</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
@@ -46,7 +47,7 @@ export function OrdersTable({
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-border/50">
-                  {Array.from({ length: 10 }).map((_, j) => (
+                  {Array.from({ length: 11 }).map((_, j) => (
                     <td key={j} className="px-4 py-3">
                       <div className="h-4 bg-muted animate-pulse rounded-lg" />
                     </td>
@@ -55,7 +56,7 @@ export function OrdersTable({
               ))
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-4 py-16 text-center">
+                <td colSpan={11} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                       <ClipboardList size={22} className="text-primary" />
@@ -94,6 +95,25 @@ export function OrdersTable({
 
                     <td className="px-4 py-3">
                       <p className="text-foreground/80 max-w-[140px] truncate text-xs">{row.service_type}</p>
+                    </td>
+
+                    <td className="px-4 py-3 text-center">
+                      {(() => {
+                        if (!row.service_type?.includes('PAKET')) return <span className="text-muted-foreground text-xs">—</span>
+                        const pkg = getMatchingPackage(row)
+                        if (!pkg) return <span className="text-muted-foreground text-xs">—</span>
+                        const remaining = calcRemainingSessions(pkg)
+                        const colorClass = remaining === 0
+                          ? 'text-destructive'
+                          : remaining <= 2
+                          ? 'text-secondary-foreground font-semibold'
+                          : 'text-green-600 dark:text-green-400'
+                        return (
+                          <span className={`text-xs font-medium tabular-nums ${colorClass}`}>
+                            {remaining}<span className="text-muted-foreground font-normal">/{pkg.total_sessions}</span>
+                          </span>
+                        )
+                      })()}
                     </td>
 
                     <td className="px-4 py-3">
