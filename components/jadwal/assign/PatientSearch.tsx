@@ -23,6 +23,16 @@ function initials(name: string) {
   return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
 }
 
+function calcAge(iso: string | null): number | null {
+  if (!iso) return null
+  const birth = new Date(iso + 'T00:00:00')
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const notYet = today.getMonth() < birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
+  return notYet ? age - 1 : age
+}
+
 export function PatientSearch({ search, setSearch, results, searching, searchRef, onSelect }: Props) {
   const hasQuery = search.trim().length >= 2
 
@@ -52,7 +62,7 @@ export function PatientSearch({ search, setSearch, results, searching, searchRef
       </div>
 
       {/* Results */}
-      <div className="space-y-1 max-h-56 overflow-y-auto">
+      <div className="space-y-1 max-h-60 overflow-y-auto pb-1">
         {!hasQuery ? (
           <p className="text-sm text-muted-foreground text-center py-6">
             Ketik minimal 2 huruf untuk mencari pasien.{' '}
@@ -68,23 +78,39 @@ export function PatientSearch({ search, setSearch, results, searching, searchRef
           <p className="text-sm text-muted-foreground text-center py-4">
             Pasien tidak ditemukan
           </p>
-        ) : (
-          results.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => onSelect(p)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer text-left border border-transparent hover:border-primary/30"
-            >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarClass(p.gender)}`}>
-                {initials(p.name)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
-                {p.phone && <p className="text-xs text-muted-foreground">{p.phone}</p>}
-              </div>
-            </button>
-          ))
-        )}
+        ) : (() => {
+          const nameCounts = new Map<string, number>()
+          results.forEach((p) => {
+            const key = p.name.toLowerCase()
+            nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1)
+          })
+          return results.map((p) => {
+            const isDuplicate = (nameCounts.get(p.name.toLowerCase()) ?? 0) > 1
+            const age         = isDuplicate ? calcAge(p.birthDate) : null
+            return (
+              <button
+                key={p.id}
+                onClick={() => onSelect(p)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer text-left border border-transparent hover:border-primary/30"
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarClass(p.gender)}`}>
+                  {initials(p.name)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {p.phone && <p className="text-xs text-muted-foreground">{p.phone}</p>}
+                    {age !== null && (
+                      <span className="text-[10px] font-medium text-secondary bg-secondary/10 px-1.5 py-0.5 rounded-full shrink-0">
+                        {age} thn
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            )
+          })
+        })()}
       </div>
     </div>
   )
