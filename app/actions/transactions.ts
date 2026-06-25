@@ -132,6 +132,83 @@ export async function createTransactionForVisit(
   return { error: null }
 }
 
+// ── Update an existing transaction ───────────────────────────────────────────
+
+export interface UpdateTransactionInput {
+  type?: string
+  category?: string
+  harga?: number
+  discount?: number
+  amount?: number
+  payment_method?: string | null
+  payment_status?: string | null
+  penjamin?: string | null
+  description?: string | null
+  transaction_date?: string
+  patient_id?: string | null
+}
+
+export async function updateTransaction(
+  id: string,
+  input: UpdateTransactionInput,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+
+  const { data: profile } = await supabase
+    .from('internal_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !PAYMENT_ROLES.includes(profile.role)) {
+    return { error: 'Tidak memiliki akses' }
+  }
+
+  const { error } = await supabase
+    .from('transactions')
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  return { error: error?.message ?? null }
+}
+
+// ── Reclassify an income transaction as expense ───────────────────────────────
+
+export async function reclassifyAsExpense(
+  transactionId: string,
+  category: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+
+  const { data: profile } = await supabase
+    .from('internal_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !PAYMENT_ROLES.includes(profile.role)) {
+    return { error: 'Tidak memiliki akses' }
+  }
+
+  const { error } = await supabase
+    .from('transactions')
+    .update({
+      type:           'expense',
+      category,
+      payment_status: null,
+      updated_at:     new Date().toISOString(),
+    })
+    .eq('id', transactionId)
+
+  return { error: error?.message ?? null }
+}
+
 // ── Create transaction manually (from finance/transactions page) ──────────────
 
 export interface CreateTransactionManualInput {

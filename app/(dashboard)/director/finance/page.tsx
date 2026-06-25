@@ -2,7 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { BranchFilter } from '@/components/overview/BranchFilter'
 import { SearchInput } from '@/components/director/finance/SearchInput'
-import { TrendingUp, TrendingDown, Landmark, AlertCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { AddTransactionSheet } from '@/components/director/finance/AddTransactionSheet'
+import { ReclassifyButton } from '@/components/director/finance/ReclassifyButton'
+import { EditTransactionSheet, type TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
+import { TrendingUp, TrendingDown, Landmark, AlertCircle, Clock, ChevronLeft, ChevronRight, UserX } from 'lucide-react'
 import Link from 'next/link'
 import { Suspense } from 'react'
 
@@ -54,14 +57,16 @@ function buildUrl(base: Record<string, string>, overrides: Record<string, string
 export default async function DirectorFinancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ branch?: string; month?: string; year?: string; page?: string; q?: string }>
+  searchParams: Promise<{ branch?: string; month?: string; year?: string; page?: string; q?: string; no_patient?: string; tx_type?: string }>
 }) {
-  const params   = await searchParams
-  const branchId = params.branch ?? ''
-  const month    = params.month  ?? ''
-  const year     = params.year   ?? String(new Date().getFullYear())
-  const q        = params.q?.trim() ?? ''
-  const page     = Math.max(1, Number(params.page) || 1)
+  const params      = await searchParams
+  const branchId    = params.branch ?? ''
+  const month       = params.month  ?? ''
+  const year        = params.year   ?? String(new Date().getFullYear())
+  const q           = params.q?.trim() ?? ''
+  const noPatient   = params.no_patient === '1'
+  const txType      = params.tx_type === 'income' ? 'income' : params.tx_type === 'expense' ? 'expense' : ''
+  const page        = Math.max(1, Number(params.page) || 1)
   const from     = (page - 1) * PAGE_SIZE
   const to       = from + PAGE_SIZE - 1
 
@@ -81,10 +86,12 @@ export default async function DirectorFinancePage({
 
   // Base params for URL building (excludes page so links can override it)
   const baseParams: Record<string, string> = {}
-  if (branchId) baseParams.branch = branchId
-  if (month)    baseParams.month  = month
-  if (year)     baseParams.year   = year
-  if (q)        baseParams.q      = q
+  if (branchId)  baseParams.branch     = branchId
+  if (month)     baseParams.month      = month
+  if (year)      baseParams.year       = year
+  if (q)         baseParams.q          = q
+  if (noPatient) baseParams.no_patient = '1'
+  if (txType)    baseParams.tx_type    = txType
 
   const supabase = await createClient()
 
@@ -124,7 +131,7 @@ export default async function DirectorFinancePage({
       let q2 = supabase
         .from('transactions')
         .select(
-          'id, branch_id, patient_id, type, category, harga, discount, amount, outstanding, payment_status, status, transaction_date, description, penjamin, branches!branch_id(name)',
+          'id, branch_id, patient_id, type, category, harga, discount, amount, outstanding, payment_method, payment_status, status, transaction_date, description, penjamin, branches!branch_id(name)',
           { count: 'exact' },
         )
         .neq('status', 'rejected')
@@ -134,7 +141,9 @@ export default async function DirectorFinancePage({
         .order('id', { ascending: false })
         .range(from, to)
 
-      if (branchId) q2 = q2.eq('branch_id', branchId)
+      if (branchId)  q2 = q2.eq('branch_id', branchId)
+      if (noPatient) q2 = q2.is('patient_id', null)
+      if (txType)    q2 = q2.eq('type', txType)
 
       if (q) {
         const orParts = [
@@ -225,12 +234,15 @@ export default async function DirectorFinancePage({
             {selectedBranch} · {periodLabel}
           </p>
         </div>
-        <BranchFilter
-          branches={branchList ?? []}
-          branchId={branchId}
-          month={month}
-          year={year}
-        />
+        <div className="flex items-center gap-3 flex-wrap">
+          <AddTransactionSheet />
+          <BranchFilter
+            branches={branchList ?? []}
+            branchId={branchId}
+            month={month}
+            year={year}
+          />
+        </div>
       </div>
 
       {/* Aggregate KPI cards */}
@@ -334,12 +346,50 @@ export default async function DirectorFinancePage({
       <div className="glass-card overflow-hidden">
         {/* Header + search bar */}
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Clock size={15} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">Transaksi</h2>
-            <span className="text-xs text-muted-foreground">
-              {txnTotal ?? 0} transaksi{q ? ` untuk "${q}"` : ''}
-            </span>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Clock size={15} className="text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground">Transaksi</h2>
+              <span className="text-xs text-muted-foreground">
+                {txnTotal ?? 0}{q ? ` untuk "${q}"` : ''}
+              </span>
+            </div>
+            {/* Income / Expense type filter */}
+            <div className="flex items-center gap-1 p-0.5 rounded-xl bg-white/5 border border-white/10">
+              <Link
+                href={buildUrl({ ...baseParams }, { tx_type: txType === 'income' ? undefined : 'income', page: undefined })}
+                className={`px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all ${
+                  txType === 'income'
+                    ? 'bg-[#34C759] text-white shadow'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Pemasukan
+              </Link>
+              <Link
+                href={buildUrl({ ...baseParams }, { tx_type: txType === 'expense' ? undefined : 'expense', page: undefined })}
+                className={`px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all ${
+                  txType === 'expense'
+                    ? 'bg-destructive text-white shadow'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Pengeluaran
+              </Link>
+            </div>
+
+            {/* No-patient filter toggle */}
+            <Link
+              href={buildUrl({ ...baseParams }, { no_patient: noPatient ? undefined : '1', page: undefined })}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                noPatient
+                  ? 'bg-[#FFB35C]/20 border-[#FFB35C]/40 text-[#FFB35C]'
+                  : 'border-white/10 text-muted-foreground hover:bg-white/8 hover:text-foreground'
+              }`}
+            >
+              <UserX size={12} />
+              Tanpa Pasien
+            </Link>
           </div>
           <Suspense>
             <SearchInput defaultValue={q} />
@@ -376,12 +426,37 @@ export default async function DirectorFinancePage({
                     <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Harga</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Bayar</th>
                     <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
-                    <th className="text-center px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pembayaran</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pembayaran</th>
+                    <th className="px-3 py-3 w-8" />
                   </tr>
                 </thead>
                 <tbody>
-                  {txns.map((tx) => (
-                    <tr key={tx.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                  {txns.map((tx) => {
+                    const isClinicalIncome = tx.type === 'income' &&
+                      ['TA KLINIK','SESI KLINIK','PAKET KLINIK','TA VISIT','SESI VISIT','PAKET VISIT'].includes(tx.category)
+                    // Reclassify only makes sense for LAINNYA income without a patient
+                    const showReclassify = !tx.patient_name && tx.type === 'income' && tx.category === 'LAINNYA'
+                    // Clinical income without patient: show a warning indicator instead
+                    const showMissingPatient = !tx.patient_name && isClinicalIncome
+
+                    const editTx: TransactionForEdit = {
+                      id:               tx.id,
+                      type:             tx.type,
+                      category:         tx.category,
+                      harga:            tx.harga as number | null,
+                      discount:         tx.discount as number | null,
+                      amount:           tx.amount as number | null,
+                      payment_method:   tx.payment_method as string | null,
+                      payment_status:   tx.payment_status as string | null,
+                      penjamin:         tx.penjamin as string | null,
+                      description:      tx.description as string | null,
+                      transaction_date: tx.transaction_date,
+                      patient_id:       tx.patient_id as string | null,
+                      patient_name:     tx.patient_name,
+                    }
+
+                    return (
+                    <tr key={tx.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                       <td className="px-5 py-3 text-xs font-mono text-muted-foreground whitespace-nowrap">
                         {new Date(tx.transaction_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
@@ -394,16 +469,30 @@ export default async function DirectorFinancePage({
                       {!branchId && (
                         <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{tx.branch_name}</td>
                       )}
-                      <td className="px-4 py-3 max-w-[180px]">
-                        {tx.patient_name ? (
-                          <span className="text-xs text-foreground/90">{tx.patient_name}</span>
-                        ) : tx.description ? (
-                          <span className="text-xs text-muted-foreground truncate block">{tx.description}</span>
-                        ) : tx.penjamin ? (
-                          <span className="text-xs text-muted-foreground/60">{tx.penjamin}</span>
-                        ) : (
-                          <span className="text-muted-foreground/40 text-xs">—</span>
-                        )}
+                      <td className="px-4 py-3 max-w-45">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex-1 min-w-0">
+                            {tx.patient_name ? (
+                              <span className="text-xs text-foreground/90">{tx.patient_name}</span>
+                            ) : tx.description ? (
+                              <span className="text-xs text-muted-foreground truncate block">{tx.description}</span>
+                            ) : tx.penjamin ? (
+                              <span className="text-xs text-muted-foreground/60">{tx.penjamin}</span>
+                            ) : (
+                              <span className="text-muted-foreground/40 text-xs">—</span>
+                            )}
+                          </div>
+                          {/* Clinical income missing patient → assign prompt */}
+                          {showMissingPatient && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#FFB35C]/15 border border-[#FFB35C]/30 text-[#FFB35C] font-semibold whitespace-nowrap">
+                              Tanpa pasien
+                            </span>
+                          )}
+                          {/* Reclassify: only for LAINNYA income without patient */}
+                          {showReclassify && (
+                            <ReclassifyButton transactionId={tx.id} />
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-xs text-foreground">
                         {formatRp(Number(tx.harga ?? 0))}
@@ -416,7 +505,7 @@ export default async function DirectorFinancePage({
                           {TX_STATUS_LABEL[tx.status] ?? tx.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-center">
+                      <td className="px-4 py-3 text-center">
                         {tx.payment_status ? (
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${PAY_STATUS_BADGE[tx.payment_status] ?? 'text-muted-foreground'}`}>
                             {tx.payment_status}
@@ -425,8 +514,13 @@ export default async function DirectorFinancePage({
                           <span className="text-muted-foreground/40 text-xs">—</span>
                         )}
                       </td>
+                      {/* Edit action */}
+                      <td className="px-3 py-3 text-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <EditTransactionSheet transaction={editTx} />
+                      </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
