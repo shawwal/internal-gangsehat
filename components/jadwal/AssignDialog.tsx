@@ -153,6 +153,7 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
       branch_id:          target.branchId,
       attending_staff_id: target.staffId,
       service_type:       mode === 'terapi_awal' ? 'TERAPI AWAL' : 'SESI TERAPI',
+      shift:              target.shift ?? null,
       visit_time:         visitTime || null,
       chief_complaint:    chiefComplaint.trim() || null,
       status,

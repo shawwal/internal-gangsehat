@@ -51,6 +51,20 @@ export interface OutstandingTransaction {
   payment_status: string | null
 }
 
+export async function fetchLayananHarga(serviceType: string, branchId?: string | null): Promise<number | null> {
+  const kategori = SERVICE_TO_CATEGORY[serviceType]
+  if (!kategori || kategori === 'LAINNYA') return null
+  const supabase = await createClient()
+  let query = supabase
+    .from('internal_layanan')
+    .select('harga')
+    .eq('kategori', kategori)
+    .eq('is_active', true)
+  if (branchId) query = query.eq('branch_id', branchId)
+  const { data } = await query.order('created_at', { ascending: true }).limit(1).single()
+  return data ? Number(data.harga) : null
+}
+
 export async function getPatientOutstanding(patientId: string): Promise<OutstandingTransaction[]> {
   const supabase = await createClient()
   const { data } = await supabase

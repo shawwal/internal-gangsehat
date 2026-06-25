@@ -34,6 +34,7 @@ export interface AssignTarget {
   branchId: string | null
   hour: number     // 8..19
   date: string     // ISO yyyy-mm-dd
+  shift?: string   // 'PAGI' | 'SORE'
 }
 
 export interface VisitCardProps {

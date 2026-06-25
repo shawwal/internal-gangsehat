@@ -24,6 +24,9 @@ const BODY_REGIONS: BodyRegion[] = [
 
 interface Props {
   visitId: string | null
+  contextShift?: string | null
+  contextServiceType?: string | null
+  contextKehadiran?: string | null
   onClose: () => void
   onSaved: () => void
 }
@@ -41,11 +44,11 @@ type FormState = {
   notes: string
 }
 
-function toForm(v: VisitWithPatient): FormState {
+function toForm(v: VisitWithPatient, contextShift?: string | null, contextServiceType?: string | null, contextKehadiran?: string | null): FormState {
   return {
-    service_type:    v.service_type    ?? '',
-    shift:           v.shift           ?? '',
-    kehadiran:       v.kehadiran       ?? '',
+    service_type:    v.service_type    ?? contextServiceType ?? '',
+    shift:           v.shift           ?? contextShift       ?? '',
+    kehadiran:       v.kehadiran       ?? contextKehadiran   ?? '',
     regio:           v.regio           ?? '',
     sumber_pasien:   v.sumber_pasien   ?? '',
     chief_complaint: v.chief_complaint ?? '',
@@ -56,7 +59,7 @@ function toForm(v: VisitWithPatient): FormState {
   }
 }
 
-export function MedicalRecordModal({ visitId, onClose, onSaved }: Props) {
+export function MedicalRecordModal({ visitId, contextShift, contextServiceType, contextKehadiran, onClose, onSaved }: Props) {
   const [visit, setVisit]   = useState<VisitWithPatient | null>(null)
   const [form, setForm]     = useState<FormState | null>(null)
   const [loading, setLoading] = useState(false)
@@ -69,7 +72,7 @@ export function MedicalRecordModal({ visitId, onClose, onSaved }: Props) {
     setError(null)
     fetchVisitWithPatient(visitId).then((data) => {
       setVisit(data)
-      setForm(data ? toForm(data) : null)
+      setForm(data ? toForm(data, contextShift, contextServiceType, contextKehadiran) : null)
       setLoading(false)
     })
   }, [visitId])
@@ -138,7 +141,7 @@ export function MedicalRecordModal({ visitId, onClose, onSaved }: Props) {
           <div className="flex items-center gap-1 shrink-0">
             {visit && (
               <Link
-                href={`/patients/${visit.patient_id}/visits`}
+                href={`/patients/${visit.patient_id}`}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 title="Lihat semua kunjungan pasien"
               >

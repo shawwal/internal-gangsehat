@@ -122,6 +122,14 @@ export const navigation: NavItem[] = [
     roles: ['director'],
     group: 'finance',
   },
+  {
+    key: 'director-layanan',
+    label: 'Tarif Layanan',
+    href: '/director/layanan',
+    icon: 'Tag',
+    roles: ['director'],
+    group: 'management',
+  },
 
   // Finance
   {

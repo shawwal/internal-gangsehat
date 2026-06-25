@@ -31,6 +31,8 @@ export interface CreateVisitInput {
   attending_staff_id: string | null
   visit_date: string
   visit_time: string | null
+  service_type?: string | null
+  shift?: string | null
   chief_complaint: string | null
   status: VisitStatus
   notes: string | null
@@ -128,6 +130,8 @@ export async function createVisit(input: CreateVisitInput): Promise<{ error: str
     attending_staff_id:  input.attending_staff_id ?? user?.id ?? null,
     visit_date:          input.visit_date,
     visit_time:          input.visit_time ?? null,
+    service_type:        input.service_type ?? null,
+    shift:               input.shift ?? null,
     chief_complaint:     input.chief_complaint ?? null,
     status:              input.status,
     notes:               input.notes ?? null,
@@ -326,6 +330,8 @@ export async function createBulkVisits(
     attending_staff_id:  input.attending_staff_id ?? user?.id ?? null,
     visit_date:          input.visit_date,
     visit_time:          input.visit_time ?? null,
+    service_type:        input.service_type ?? null,
+    shift:               input.shift ?? null,
     chief_complaint:     input.chief_complaint ?? null,
     status:              input.status,
     notes:               input.notes ?? null,

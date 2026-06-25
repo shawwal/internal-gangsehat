@@ -73,7 +73,7 @@ interface Props {
   onAssign: (target: AssignTarget) => void
   onStatusChange: (visitId: string, status: VisitStatus) => void
   onDelete: (visitId: string) => void
-  onOpen: (visitId: string) => void
+  onOpen: (visitId: string, shift?: string) => void
   onPendingLeaveClick: (staffName: string, leave: PendingLeaveInfo) => void
   onStaffClick: (staffId: string) => void
   onNoShow?: (visitId: string) => void
@@ -121,12 +121,27 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
   const allDataHours  = [...shiftHours, ...visitHoursList]
   const effectiveStart = allDataHours.length > 0 ? Math.max(GRID_START, Math.min(...allDataHours)) : GRID_START
   const effectiveEnd   = allDataHours.length > 0 ? Math.min(GRID_END,   Math.max(...allDataHours) + 1) : GRID_END
+  const SKIP_HOURS     = new Set([12, 18])
   const HOURS_VISIBLE  = Array.from({ length: effectiveEnd - effectiveStart }, (_, i) => effectiveStart + i)
+    .filter(h => !SKIP_HOURS.has(h))
   const totalH         = HOURS_VISIBLE.length * SLOT_H
+
+  // Convert an hour (possibly fractional) to a pixel offset within the visible grid
+  function hourToPx(h: number): number {
+    const floorH = Math.floor(h)
+    const frac   = h - floorH
+    if (SKIP_HOURS.has(floorH)) {
+      const nextIdx = HOURS_VISIBLE.findIndex(vh => vh > floorH)
+      return (nextIdx === -1 ? HOURS_VISIBLE.length : nextIdx) * SLOT_H
+    }
+    const idx = HOURS_VISIBLE.indexOf(floorH)
+    if (idx === -1) return floorH < (HOURS_VISIBLE[0] ?? 0) ? 0 : totalH
+    return idx * SLOT_H + frac * SLOT_H
+  }
 
   // Current time line
   const showNow = date === today && curH >= effectiveStart && curH < effectiveEnd
-  const nowTop  = (curH - effectiveStart) * SLOT_H
+  const nowTop  = hourToPx(curH)
 
   if (staff.length === 0) {
     return (
@@ -245,7 +260,7 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
                       userRole={userRole}
                       onStatusChange={onStatusChange}
                       onDelete={onDelete}
-                      onOpen={onOpen}
+                      onOpen={(id) => onOpen(id, s.shift || undefined)}
                       onNoShow={onNoShow}
                       onPayment={onPayment}
                     />
@@ -364,8 +379,8 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
             const hourMap = visitMap.get(s.staff_id)
 
             // Shade the scheduled shift window
-            const shiftTop    = s.hasSchedule ? Math.max(0, (parseHour(s.jam_mulai) - effectiveStart) * SLOT_H) : null
-            const shiftBottom = s.hasSchedule ? Math.min(totalH, (parseHour(s.jam_selesai) - effectiveStart) * SLOT_H) : null
+            const shiftTop    = s.hasSchedule ? Math.max(0, hourToPx(parseHour(s.jam_mulai))) : null
+            const shiftBottom = s.hasSchedule ? Math.min(totalH, hourToPx(parseHour(s.jam_selesai))) : null
 
             return (
               <div
@@ -435,7 +450,7 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
                           userRole={userRole}
                           onStatusChange={onStatusChange}
                           onDelete={onDelete}
-                          onOpen={onOpen}
+                          onOpen={(id) => onOpen(id, s.shift || undefined)}
                           onNoShow={onNoShow}
                           onPayment={onPayment}
                         />
@@ -451,6 +466,7 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
                               branchId:  s.branch_id,
                               hour:      h,
                               date,
+                              shift:     s.shift || undefined,
                             })
                           }
                           className="w-full flex-1 flex items-center justify-center rounded-lg border border-dashed opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer border-[#34C759]/40 hover:bg-[#34C759]/8 hover:border-[#34C759]/70"

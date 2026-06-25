@@ -114,7 +114,7 @@ export default async function DirectorFinancePage({
   ] = await Promise.all([
     supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
 
-    // All txns for aggregate (no search filter, no pagination)
+    // All txns for aggregate — .limit(99999) overrides PostgREST's default 1000-row cap
     (async () => {
       let q2 = supabase
         .from('transactions')
@@ -122,6 +122,7 @@ export default async function DirectorFinancePage({
         .neq('status', 'rejected')
         .gte('transaction_date', dateFrom)
         .lt('transaction_date', dateTo)
+        .limit(99999)
       if (branchId) q2 = q2.eq('branch_id', branchId)
       return q2
     })(),

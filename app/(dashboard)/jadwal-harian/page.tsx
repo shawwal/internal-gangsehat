@@ -33,7 +33,8 @@ export default function JadwalHarianPage() {
   } = useJadwalHarian()
 
   const [assignTarget, setAssignTarget]       = useState<AssignTarget | null>(null)
-  const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
+  const [selectedVisitId, setSelectedVisitId]     = useState<string | null>(null)
+  const [selectedVisitShift, setSelectedVisitShift] = useState<string | null>(null)
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null)
   const [noShowVisit, setNoShowVisit]         = useState<DailyVisit | null>(null)
   const [paymentVisit, setPaymentVisit]       = useState<DailyVisit | null>(null)
@@ -391,7 +392,7 @@ export default function JadwalHarianPage() {
                 onAssign={setAssignTarget}
                 onStatusChange={handleStatusChange}
                 onDelete={handleDelete}
-                onOpen={setSelectedVisitId}
+                onOpen={(id, shift) => { setSelectedVisitId(id); setSelectedVisitShift(shift ?? null) }}
                 onPendingLeaveClick={(staffName, leave) => setLeavePopover({ staffName, leave })}
                 onStaffClick={setSelectedStaffId}
                 onNoShow={handleNoShow}
@@ -427,8 +428,15 @@ export default function JadwalHarianPage() {
 
       <MedicalRecordModal
         visitId={selectedVisitId}
-        onClose={() => setSelectedVisitId(null)}
-        onSaved={() => { setSelectedVisitId(null); loadAll(selectedDate) }}
+        contextShift={selectedVisitShift}
+        contextServiceType={visits.find((v) => v.id === selectedVisitId)?.service_type ?? null}
+        contextKehadiran={
+          visits.find((v) => v.id === selectedVisitId)?.status === 'completed' ? 'HADIR'
+          : visits.find((v) => v.id === selectedVisitId)?.status === 'no_show' ? 'TIDAK HADIR'
+          : null
+        }
+        onClose={() => { setSelectedVisitId(null); setSelectedVisitShift(null) }}
+        onSaved={() => { setSelectedVisitId(null); setSelectedVisitShift(null); loadAll(selectedDate) }}
       />
 
       {noShowVisit && (
@@ -456,6 +464,7 @@ export default function JadwalHarianPage() {
             patient_name:         paymentVisit.patient_name,
             visit_date:           paymentVisit.visit_date,
             service_type:         paymentVisit.service_type,
+            branch_id:            paymentVisit.branch_id,
             attending_staff_name: staff.find((s) => s.staff_id === paymentVisit.attending_staff_id)?.nickname
               || staff.find((s) => s.staff_id === paymentVisit.attending_staff_id)?.full_name,
           }}

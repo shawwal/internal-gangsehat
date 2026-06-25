@@ -5,7 +5,7 @@ import {
   AlertTriangle, Calendar, CheckCircle2, ChevronDown, ChevronUp,
   CreditCard, Loader2, Stethoscope, User, X,
 } from 'lucide-react'
-import { createTransactionForVisit, getPatientOutstanding } from '@/app/actions/transactions'
+import { createTransactionForVisit, getPatientOutstanding, fetchLayananHarga } from '@/app/actions/transactions'
 import type { OutstandingTransaction } from '@/app/actions/transactions'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -15,6 +15,7 @@ export interface PaymentVisitInfo {
   patient_name: string
   visit_date: string
   service_type: string | null
+  branch_id?: string | null
   attending_staff_name?: string
 }
 
@@ -106,6 +107,13 @@ export function PaymentDialog({ visit, onClose, onSuccess }: Props) {
       setLoadingOuts(false)
     })
   }, [visit.patient_id])
+
+  useEffect(() => {
+    if (!visit.service_type) return
+    fetchLayananHarga(visit.service_type, visit.branch_id).then((price) => {
+      if (price != null) setHarga(String(price))
+    })
+  }, [visit.service_type, visit.branch_id])
 
   function handleClose() {
     if (submitting) return
