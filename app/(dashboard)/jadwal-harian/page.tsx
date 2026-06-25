@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Users, User, ArrowUpAZ, ArrowDownAZ, Maximize2, Minimize2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Users, User, ArrowUpAZ, ArrowDownAZ, Maximize2, ChevronLeft, ChevronRight, Calendar, X } from 'lucide-react'
 import { useJadwalHarian } from '@/hooks/useJadwalHarian'
-import { toIso } from '@/components/jadwal/utils'
+import { toIso, addDays, isSameDay, JS_DAY_TO_HARI, HARI_LABEL, MONTH_FULL } from '@/components/jadwal/utils'
 import { PageHeader } from '@/components/jadwal/PageHeader'
 import { DateNav } from '@/components/jadwal/DateNav'
 import { VisitSummary } from '@/components/jadwal/VisitSummary'
@@ -54,18 +54,18 @@ export default function JadwalHarianPage() {
   })
   const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all')
   const [sortOrder, setSortOrder]       = useState<'asc' | 'desc'>('asc')
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const focusDateInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!isFullscreen) return
-    document.body.style.overflow = 'hidden'
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false) }
+    if (!isFocused) return
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFocused(false) }
     document.addEventListener('keydown', handleKey)
-    return () => {
-      document.body.style.overflow = ''
-      document.removeEventListener('keydown', handleKey)
-    }
-  }, [isFullscreen])
+    return () => { document.removeEventListener('keydown', handleKey) }
+  }, [isFocused])
+
+  const dayLabel = HARI_LABEL[JS_DAY_TO_HARI[selectedDate.getDay()]]?.slice(0, 3).toUpperCase() ?? ''
+  const isToday  = isSameDay(selectedDate, today)
 
   function toggleShowInactive() {
     const next = !showInactive
@@ -95,42 +95,51 @@ export default function JadwalHarianPage() {
           to   { opacity: 1; transform: translateY(0); }
         }
         .j-fade-in { animation: jFadeIn 200ms ease-out both; }
+        @keyframes jBarSlide {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .j-bar-slide { animation: jBarSlide 180ms cubic-bezier(0.22,1,0.36,1) both; }
         @media (prefers-reduced-motion: reduce) {
-          .j-fade-in { animation: none; }
+          .j-fade-in, .j-bar-slide { animation: none; }
         }
       ` }} />
 
-      <div className="space-y-5 j-fade-in">
+      <div className={`j-fade-in ${isFocused ? '' : 'space-y-5'}`}>
 
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <PageHeader
-            date={selectedDate}
-            loading={loading}
-            onRefresh={() => loadAll(selectedDate)}
-          />
-          {branches.length > 0 && (
-            <select
-              value={selectedBranchId ?? ''}
-              onChange={(e) => setSelectedBranchId(e.target.value || null)}
-              className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
+        {!isFocused && (
+          <>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <PageHeader
+                date={selectedDate}
+                loading={loading}
+                onRefresh={() => loadAll(selectedDate)}
+              />
+              {branches.length > 0 && (
+                <select
+                  value={selectedBranchId ?? ''}
+                  onChange={(e) => setSelectedBranchId(e.target.value || null)}
+                  className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                >
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
 
-        <DateNav
-          selectedDate={selectedDate}
-          today={today}
-          onSelect={setSelectedDate}
-        />
+            <DateNav
+              selectedDate={selectedDate}
+              today={today}
+              onSelect={setSelectedDate}
+            />
 
-        {!loading && <VisitSummary visits={visits} staff={staff} />}
+            {!loading && <VisitSummary visits={visits} staff={staff} />}
+          </>
+        )}
 
         {/* Controls toolbar */}
-        {!loading && (
+        {!loading && !isFocused && (
           <div className="flex items-center gap-3 flex-wrap">
             {/* Gender filter pills */}
             <div className="flex items-center bg-muted/40 rounded-2xl p-1 gap-0.5">
@@ -209,65 +218,119 @@ export default function JadwalHarianPage() {
               )}
 
               <div className="w-px h-4 bg-border/60 mx-0.5" />
-              {/* <button
-                onClick={() => setIsFullscreen(true)}
-                title="Layar penuh"
+              <button
+                onClick={() => setIsFocused(true)}
+                title="Mode fokus (Esc untuk keluar)"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all duration-150 cursor-pointer"
               >
                 <Maximize2 size={13} />
-                Penuh
-              </button> */}
+                Fokus
+              </button>
             </div>
           </div>
         )}
 
         <div
-          className={isFullscreen
-            ? 'fixed inset-0 z-50 bg-background'
-            : 'glass-card overflow-hidden'
-          }
-          style={isFullscreen
-            ? { display: 'grid', gridTemplateRows: 'auto 1fr' }
+          className="glass-card overflow-hidden"
+          style={isFocused
+            ? { display: 'grid', gridTemplateRows: 'auto 1fr', height: 'calc(100vh - 4rem)', minHeight: '400px' }
             : { height: 'calc(100vh - 22rem)', minHeight: '400px' }
           }
         >
-          {/* Compact topbar shown only in fullscreen */}
-          {isFullscreen && (
-            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border flex-wrap bg-background/95 backdrop-blur-sm">
+          {/* Compact topbar — focus mode only */}
+          {isFocused && (
+            <div className="j-bar-slide flex items-center gap-2 px-3 py-2 border-b border-white/8 bg-background/98 backdrop-blur-md shrink-0">
+
+              {/* Branch select */}
               {branches.length > 0 && (
                 <select
                   value={selectedBranchId ?? ''}
                   onChange={(e) => setSelectedBranchId(e.target.value || null)}
-                  className="px-3 py-1.5 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                  className="px-2.5 py-1.5 border border-white/10 rounded-xl text-xs bg-white/5 hover:bg-white/10 focus:outline-none focus:ring-1 focus:ring-primary/60 cursor-pointer text-foreground transition-colors duration-150 max-w-[160px] truncate"
                 >
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
                 </select>
               )}
-              <DateNav selectedDate={selectedDate} today={today} onSelect={setSelectedDate} />
 
-              <div className="ml-auto flex items-center gap-3">
+              {/* Compact date nav pill */}
+              <div className="flex items-center bg-white/5 border border-white/8 rounded-2xl overflow-hidden">
+                <button
+                  onClick={() => setSelectedDate(addDays(selectedDate, -1))}
+                  aria-label="Hari sebelumnya"
+                  className="p-2 hover:bg-white/10 transition-colors duration-150 cursor-pointer text-muted-foreground hover:text-foreground"
+                >
+                  <ChevronLeft size={13} />
+                </button>
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 select-none">
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {dayLabel}
+                  </span>
+                  <span className={`text-sm font-bold leading-none tabular-nums ${isToday ? 'text-primary' : 'text-foreground'}`}>
+                    {selectedDate.getDate()}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    {MONTH_FULL[selectedDate.getMonth()].slice(0, 3)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+                  aria-label="Hari berikutnya"
+                  className="p-2 hover:bg-white/10 transition-colors duration-150 cursor-pointer text-muted-foreground hover:text-foreground"
+                >
+                  <ChevronRight size={13} />
+                </button>
+                <div className="w-px h-5 bg-white/10 self-center" />
+                <div className="relative">
+                  <button
+                    onClick={() => focusDateInputRef.current?.showPicker()}
+                    title="Pilih tanggal"
+                    aria-label="Pilih tanggal"
+                    className="p-2 hover:bg-white/10 transition-colors duration-150 cursor-pointer text-muted-foreground hover:text-foreground"
+                  >
+                    <Calendar size={13} />
+                  </button>
+                  <input
+                    ref={focusDateInputRef}
+                    type="date"
+                    value={toIso(selectedDate)}
+                    onChange={(e) => { if (e.target.value) setSelectedDate(new Date(e.target.value + 'T00:00:00')) }}
+                    className="absolute inset-0 opacity-0 w-full h-full pointer-events-none"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
+                </div>
+                {!isToday && (
+                  <button
+                    onClick={() => setSelectedDate(new Date())}
+                    aria-label="Kembali ke hari ini"
+                    className="px-2.5 py-1.5 text-[10px] font-semibold text-primary hover:bg-primary/10 transition-colors duration-150 cursor-pointer border-l border-white/8"
+                  >
+                    Hari ini
+                  </button>
+                )}
+              </div>
+
+              <div className="ml-auto flex items-center gap-2">
                 {/* Gender filter */}
-                <div className="flex items-center bg-muted/40 rounded-2xl p-1 gap-0.5">
+                <div className="flex items-center bg-white/5 border border-white/8 rounded-2xl p-0.5 gap-0.5">
                   {([
-                    { value: 'all',    label: 'Semua',  icon: <Users size={13} /> },
-                    { value: 'male',   label: 'Pria',   icon: <User  size={13} /> },
-                    { value: 'female', label: 'Wanita', icon: <User  size={13} /> },
+                    { value: 'all',    label: 'Semua', icon: <Users size={12} /> },
+                    { value: 'male',   label: 'Pria',  icon: <User  size={12} /> },
+                    { value: 'female', label: 'Wanita',icon: <User  size={12} /> },
                   ] as const).map(({ value, label, icon }) => (
                     <button
                       key={value}
                       onClick={() => setGenderFilter(value)}
                       aria-pressed={genderFilter === value}
                       className={[
-                        'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer',
+                        'flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-medium transition-all duration-150 cursor-pointer',
                         genderFilter === value
-                          ? value === 'male'
-                            ? 'bg-blue-500 text-white shadow-sm shadow-blue-500/30'
-                            : value === 'female'
-                            ? 'bg-[#FF0090] text-white shadow-sm shadow-primary/30'
-                            : 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-white/10',
+                          ? value === 'male'   ? 'bg-blue-500 text-white shadow-sm'
+                          : value === 'female' ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                          : 'bg-white/15 text-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-white/8',
                       ].join(' ')}
                     >
                       {icon}{label}
@@ -276,44 +339,47 @@ export default function JadwalHarianPage() {
                 </div>
 
                 {/* Sort + inactive + exit */}
-                <div className="flex items-center gap-0.5 bg-muted/40 rounded-2xl p-1">
+                <div className="flex items-center bg-white/5 border border-white/8 rounded-2xl p-0.5">
                   <button
                     onClick={() => setSortOrder((o) => o === 'asc' ? 'desc' : 'asc')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all duration-150 cursor-pointer"
+                    title={sortOrder === 'asc' ? 'A→Z' : 'Z→A'}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all duration-150 cursor-pointer"
                   >
-                    {sortOrder === 'asc' ? <ArrowUpAZ size={13} /> : <ArrowDownAZ size={13} />}
+                    {sortOrder === 'asc' ? <ArrowUpAZ size={12} /> : <ArrowDownAZ size={12} />}
                     Nama
                   </button>
                   {inactiveStaff.length > 0 && (
                     <>
-                      <div className="w-px h-4 bg-border/60 mx-0.5" />
+                      <div className="w-px h-4 bg-white/10 mx-0.5" />
                       <button
                         onClick={toggleShowInactive}
                         aria-pressed={showInactive}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all duration-150 cursor-pointer"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all duration-150 cursor-pointer"
                       >
-                        <span className="select-none">Nonaktif ({inactiveStaff.length})</span>
-                        <span className={`relative inline-flex h-4 w-7 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ${showInactive ? 'bg-primary' : 'bg-muted-foreground/40'}`}>
-                          <span className={`pointer-events-none inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-200 ${showInactive ? 'translate-x-3' : 'translate-x-0'}`} />
+                        <span className="select-none">Nonaktif</span>
+                        <span className={`relative inline-flex h-3.5 w-6 shrink-0 rounded-full border border-transparent transition-colors duration-200 ${showInactive ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+                          <span className={`pointer-events-none inline-block h-2.5 w-2.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${showInactive ? 'translate-x-2.5' : 'translate-x-0'}`} />
                         </span>
                       </button>
                     </>
                   )}
-                  <div className="w-px h-4 bg-border/60 mx-0.5" />
+                  <div className="w-px h-4 bg-white/10 mx-0.5" />
                   <button
-                    onClick={() => setIsFullscreen(false)}
-                    title="Keluar (Esc)"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all duration-150 cursor-pointer"
+                    onClick={() => setIsFocused(false)}
+                    title="Keluar mode fokus (Esc)"
+                    aria-label="Keluar mode fokus"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all duration-150 cursor-pointer"
                   >
-                    <Minimize2 size={13} />
+                    <X size={12} />
                     Keluar
                   </button>
                 </div>
               </div>
+
             </div>
           )}
 
-          <div className={isFullscreen ? 'min-h-0 overflow-hidden' : 'h-full'}>
+          <div className={isFocused ? 'min-h-0 overflow-hidden' : 'h-full'}>
             {loading ? (
               <GridSkeleton />
             ) : (
@@ -335,7 +401,7 @@ export default function JadwalHarianPage() {
           </div>
         </div>
 
-        <Legend />
+        {!isFocused && <Legend />}
       </div>
 
       {assignTarget && (
