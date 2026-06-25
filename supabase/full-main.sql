@@ -366,7 +366,9 @@ CREATE TABLE public.internal_layanan (
   harga numeric NOT NULL DEFAULT 0,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT internal_layanan_pkey PRIMARY KEY (id)
+  branch_id uuid NOT NULL,
+  CONSTRAINT internal_layanan_pkey PRIMARY KEY (id),
+  CONSTRAINT internal_layanan_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id)
 );
 CREATE TABLE public.internal_jam_shift (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -806,6 +808,7 @@ CREATE TABLE public.patient_packages (
   t8 date,
   t9 date,
   t10 date,
+  legacy_used_sessions integer NOT NULL DEFAULT 0,
   CONSTRAINT patient_packages_pkey PRIMARY KEY (id),
   CONSTRAINT patient_packages_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
   CONSTRAINT patient_packages_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
