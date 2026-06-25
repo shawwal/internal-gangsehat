@@ -4,7 +4,7 @@
     "pasien": "GIBRAN ATHALLAH",
     "layanan": "PAKET SILVER",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-06-09T16:00:00.000Z"
   },
   {
@@ -12,7 +12,7 @@
     "pasien": "SEKAR KINANTI HERPRADANTI",
     "layanan": "PAKET 2",
     "status": "active",
-    "sessionsDone": 10,
+    "sessionsDone": 6,
     "dibuatTgl": "2026-05-28T16:00:00.000Z"
   },
   {
@@ -20,7 +20,7 @@
     "pasien": "ELISABET ELISA",
     "layanan": "PAKET PENYESUAIAN",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 0,
     "dibuatTgl": "2026-05-27T16:00:00.000Z"
   },
   {
@@ -28,7 +28,7 @@
     "pasien": "NATAYA RAFIF",
     "layanan": "PAKET SILVER",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-05-12T16:00:00.000Z"
   },
   {
@@ -36,7 +36,7 @@
     "pasien": "GEORGE BUDIJANTO SALIM",
     "layanan": "PAKET GOLD",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 6,
     "dibuatTgl": "2026-05-11T16:00:00.000Z"
   },
   {
@@ -44,7 +44,7 @@
     "pasien": "GEORGE BUDIJANTO SALIM",
     "layanan": "PAKET GOLD",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2026-05-03T16:00:00.000Z"
   },
   {
@@ -52,7 +52,7 @@
     "pasien": "IKHSANUDIN",
     "layanan": "PAKET GOLD",
     "status": "active",
-    "sessionsDone": 10,
+    "sessionsDone": 9,
     "dibuatTgl": "2026-05-01T16:00:00.000Z"
   },
   {
@@ -60,7 +60,7 @@
     "pasien": "LIM OI KHIUN ALS RIANA",
     "layanan": "PAKET SILVER",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-04-28T16:00:00.000Z"
   },
   {
@@ -68,7 +68,7 @@
     "pasien": "SEKAR KINANTI HERPRADANTI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2026-04-20T16:00:00.000Z"
   },
   {
@@ -76,7 +76,7 @@
     "pasien": "YANTI01",
     "layanan": "PAKET SILVER",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-03-13T16:00:00.000Z"
   },
   {
@@ -84,7 +84,7 @@
     "pasien": "SEKAR KINANTI HERPRADANTI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 11,
     "dibuatTgl": "2026-03-12T16:00:00.000Z"
   },
   {
@@ -92,7 +92,7 @@
     "pasien": "AGNES VERONIKA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 4,
     "dibuatTgl": "2026-03-08T16:00:00.000Z"
   },
   {
@@ -100,7 +100,7 @@
     "pasien": "DWI RACHMAWAN",
     "layanan": "PAKET SILVER",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-03-02T16:00:00.000Z"
   },
   {
@@ -108,7 +108,7 @@
     "pasien": "YUBANADI",
     "layanan": "PAKET PENYESUAIAN",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 3,
     "dibuatTgl": "2026-02-26T16:00:00.000Z"
   },
   {
@@ -116,7 +116,7 @@
     "pasien": "ATHA HANIF PRADIPTA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-26T16:00:00.000Z"
   },
   {
@@ -124,7 +124,7 @@
     "pasien": "SILVIA",
     "layanan": "PAKET SILVER",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-24T16:00:00.000Z"
   },
   {
@@ -132,7 +132,7 @@
     "pasien": "VINA",
     "layanan": "PAKET PENYESUAIAN",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 2,
     "dibuatTgl": "2026-02-24T16:00:00.000Z"
   },
   {
@@ -140,7 +140,7 @@
     "pasien": "H MAHDI",
     "layanan": "PAKET SILVER",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-23T16:00:00.000Z"
   },
   {
@@ -148,7 +148,7 @@
     "pasien": "VINA",
     "layanan": "PAKET PENYESUAIAN",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 1,
     "dibuatTgl": "2026-02-21T16:00:00.000Z"
   },
   {
@@ -156,7 +156,7 @@
     "pasien": "SUMIATI 5405",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-21T16:00:00.000Z"
   },
   {
@@ -164,7 +164,7 @@
     "pasien": "ALGI FAHRI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-20T16:00:00.000Z"
   },
   {
@@ -172,7 +172,7 @@
     "pasien": "DWI RACHMAWAN",
     "layanan": "PAKET SILVER",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-19T16:00:00.000Z"
   },
   {
@@ -180,7 +180,7 @@
     "pasien": "EKA LESTARI",
     "layanan": "PAKET SILVER",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-14T16:00:00.000Z"
   },
   {
@@ -188,7 +188,7 @@
     "pasien": "MELISA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-11T16:00:00.000Z"
   },
   {
@@ -196,7 +196,7 @@
     "pasien": "SEKAR KINANTI HERPRADANTI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2026-02-10T16:00:00.000Z"
   },
   {
@@ -204,7 +204,7 @@
     "pasien": "JONO",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-10T16:00:00.000Z"
   },
   {
@@ -212,7 +212,7 @@
     "pasien": "ATHA HANIF PRADIPTA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-08T16:00:00.000Z"
   },
   {
@@ -220,7 +220,7 @@
     "pasien": "FEBRIANTO LIM",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-07T16:00:00.000Z"
   },
   {
@@ -228,7 +228,7 @@
     "pasien": "RIKA RIYANTI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-06T16:00:00.000Z"
   },
   {
@@ -236,7 +236,7 @@
     "pasien": "MARSHERLY LOVESENZIA",
     "layanan": "PAKET 1",
     "status": "active",
-    "sessionsDone": 6,
+    "sessionsDone": 4,
     "dibuatTgl": "2026-02-05T16:00:00.000Z"
   },
   {
@@ -244,7 +244,7 @@
     "pasien": "LENNY MARBUN",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-04T16:00:00.000Z"
   },
   {
@@ -252,7 +252,7 @@
     "pasien": "RIZQIROIHANMUSTOFA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-03T16:00:00.000Z"
   },
   {
@@ -260,7 +260,7 @@
     "pasien": "SUMIATI 5405",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-02-02T16:00:00.000Z"
   },
   {
@@ -268,7 +268,7 @@
     "pasien": "ROSDIANA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-01-29T16:00:00.000Z"
   },
   {
@@ -276,7 +276,7 @@
     "pasien": "ATHA HANIF PRADIPTA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-01-21T16:00:00.000Z"
   },
   {
@@ -284,7 +284,7 @@
     "pasien": "PERMATA DEWI ANDINI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-01-19T16:00:00.000Z"
   },
   {
@@ -292,7 +292,7 @@
     "pasien": "SEKAR KINANTI HERPRADANTI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2026-01-13T16:00:00.000Z"
   },
   {
@@ -300,7 +300,7 @@
     "pasien": "ELISABETH SUTINI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-01-06T16:00:00.000Z"
   },
   {
@@ -308,7 +308,7 @@
     "pasien": "LIM OI KHIUN ALS RIANA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-01-04T16:00:00.000Z"
   },
   {
@@ -316,7 +316,7 @@
     "pasien": "ATHA HANIF PRADIPTA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2026-01-04T16:00:00.000Z"
   },
   {
@@ -324,7 +324,7 @@
     "pasien": "KOLENIUS KOLAI",
     "layanan": "PAKET PENYESUAIAN",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 2,
     "dibuatTgl": "2026-01-04T16:00:00.000Z"
   },
   {
@@ -332,7 +332,7 @@
     "pasien": "EMMA",
     "layanan": "PAKET PENYESUAIAN",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 2,
     "dibuatTgl": "2026-01-04T16:00:00.000Z"
   },
   {
@@ -340,7 +340,7 @@
     "pasien": "SYARIF ZULFAN ADHA",
     "layanan": "PAKET PENYESUAIAN",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 2,
     "dibuatTgl": "2026-01-03T16:00:00.000Z"
   },
   {
@@ -348,7 +348,7 @@
     "pasien": "LIE SOI TJU",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-21T16:00:00.000Z"
   },
   {
@@ -356,7 +356,7 @@
     "pasien": "SOLIHIN AGUS",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-20T16:00:00.000Z"
   },
   {
@@ -364,7 +364,7 @@
     "pasien": "MEISYA FITRI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-17T16:00:00.000Z"
   },
   {
@@ -372,7 +372,7 @@
     "pasien": "SYARIF HANIF RAMADHAN",
     "layanan": "PAKET 1",
     "status": "active",
-    "sessionsDone": 5,
+    "sessionsDone": 0,
     "dibuatTgl": "2025-12-17T16:00:00.000Z"
   },
   {
@@ -380,7 +380,7 @@
     "pasien": "LIE KIM FA/KESUMAJADI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-12-14T16:00:00.000Z"
   },
   {
@@ -388,7 +388,7 @@
     "pasien": "SRI ESRI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-14T16:00:00.000Z"
   },
   {
@@ -396,7 +396,7 @@
     "pasien": "DWI BARI LUTHFIANUR",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-13T16:00:00.000Z"
   },
   {
@@ -404,7 +404,7 @@
     "pasien": "JO MIAUW MUI",
     "layanan": "PAKET 2",
     "status": "active",
-    "sessionsDone": 10,
+    "sessionsDone": 0,
     "dibuatTgl": "2025-12-12T16:00:00.000Z"
   },
   {
@@ -412,7 +412,7 @@
     "pasien": "SEKAR KINANTI HERPRADANTI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-12-10T16:00:00.000Z"
   },
   {
@@ -420,7 +420,7 @@
     "pasien": "AULI FATHIA PUTRIATI S.FARM, APT",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-09T16:00:00.000Z"
   },
   {
@@ -428,7 +428,7 @@
     "pasien": "KENNETH CARMEN",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-09T16:00:00.000Z"
   },
   {
@@ -436,7 +436,7 @@
     "pasien": "ADAM DAMIRI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-09T16:00:00.000Z"
   },
   {
@@ -444,7 +444,7 @@
     "pasien": "RENA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-08T16:00:00.000Z"
   },
   {
@@ -452,7 +452,7 @@
     "pasien": "DARMADI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-04T16:00:00.000Z"
   },
   {
@@ -460,7 +460,7 @@
     "pasien": "ZULKIFLI 8105",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-03T16:00:00.000Z"
   },
   {
@@ -468,7 +468,7 @@
     "pasien": "MARIYAMINA RUPINA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-03T16:00:00.000Z"
   },
   {
@@ -476,7 +476,7 @@
     "pasien": "DEVIN PANGESTU",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-01T16:00:00.000Z"
   },
   {
@@ -484,7 +484,7 @@
     "pasien": "RITA MUSTARI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-01T16:00:00.000Z"
   },
   {
@@ -492,7 +492,7 @@
     "pasien": "ALPAWI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-12-01T16:00:00.000Z"
   },
   {
@@ -500,7 +500,7 @@
     "pasien": "SOFIAN PHUA",
     "layanan": "PAKET 1",
     "status": "active",
-    "sessionsDone": 5,
+    "sessionsDone": 4,
     "dibuatTgl": "2025-11-30T16:00:00.000Z"
   },
   {
@@ -508,7 +508,7 @@
     "pasien": "YULIA WIDIANARTI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-29T16:00:00.000Z"
   },
   {
@@ -516,7 +516,7 @@
     "pasien": "ALKHAWARISMA",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-11-29T16:00:00.000Z"
   },
   {
@@ -524,7 +524,7 @@
     "pasien": "VIVIYANTI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-28T16:00:00.000Z"
   },
   {
@@ -532,7 +532,7 @@
     "pasien": "SRI ESRI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-28T16:00:00.000Z"
   },
   {
@@ -540,7 +540,7 @@
     "pasien": "DHUTA ERLANGGA SUPRAYITNO",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-26T16:00:00.000Z"
   },
   {
@@ -548,7 +548,7 @@
     "pasien": "SISKA DAMASTUTI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-25T16:00:00.000Z"
   },
   {
@@ -556,7 +556,7 @@
     "pasien": "LIM OI KHIUN ALS RIANA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-25T16:00:00.000Z"
   },
   {
@@ -564,7 +564,7 @@
     "pasien": "RIANTIN",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-23T16:00:00.000Z"
   },
   {
@@ -572,7 +572,7 @@
     "pasien": "SOLIHIN AGUS",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-23T16:00:00.000Z"
   },
   {
@@ -580,7 +580,7 @@
     "pasien": "DEVIN PANGESTU",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-23T16:00:00.000Z"
   },
   {
@@ -588,7 +588,7 @@
     "pasien": "DIVO",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-21T16:00:00.000Z"
   },
   {
@@ -596,7 +596,7 @@
     "pasien": "CHRISTIAN WIDIYANTO",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-20T16:00:00.000Z"
   },
   {
@@ -604,7 +604,7 @@
     "pasien": "LIM OI SIP ALS ERNY",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-20T16:00:00.000Z"
   },
   {
@@ -612,7 +612,7 @@
     "pasien": "MARIYAMINA RUPINA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-20T16:00:00.000Z"
   },
   {
@@ -620,7 +620,7 @@
     "pasien": "RINI SATMAWATI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-20T16:00:00.000Z"
   },
   {
@@ -628,7 +628,7 @@
     "pasien": "AKIAN",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-19T16:00:00.000Z"
   },
   {
@@ -636,7 +636,7 @@
     "pasien": "SETIO BONO SAPUTRO",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-19T16:00:00.000Z"
   },
   {
@@ -644,7 +644,7 @@
     "pasien": "MEISYA FITRI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-19T16:00:00.000Z"
   },
   {
@@ -652,7 +652,7 @@
     "pasien": "AGNES VERONIKA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-19T16:00:00.000Z"
   },
   {
@@ -660,7 +660,7 @@
     "pasien": "IDRIS",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-19T16:00:00.000Z"
   },
   {
@@ -668,7 +668,7 @@
     "pasien": "AULI FATHIA PUTRIATI S.FARM, APT",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-19T16:00:00.000Z"
   },
   {
@@ -676,7 +676,7 @@
     "pasien": "SOFIAN PHUA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-19T16:00:00.000Z"
   },
   {
@@ -684,7 +684,7 @@
     "pasien": "AZMI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-18T16:00:00.000Z"
   },
   {
@@ -692,7 +692,7 @@
     "pasien": "RATNAWITA",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-11-18T16:00:00.000Z"
   },
   {
@@ -700,7 +700,7 @@
     "pasien": "YESI VERDIANTI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 4,
     "dibuatTgl": "2025-11-16T16:00:00.000Z"
   },
   {
@@ -708,7 +708,7 @@
     "pasien": "SUSANTI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-16T16:00:00.000Z"
   },
   {
@@ -716,7 +716,7 @@
     "pasien": "STEVANI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-16T16:00:00.000Z"
   },
   {
@@ -724,7 +724,7 @@
     "pasien": "M. AHZA SYAHMI ARDI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-15T16:00:00.000Z"
   },
   {
@@ -732,7 +732,7 @@
     "pasien": "CANDY WIBOWO",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-11-15T16:00:00.000Z"
   },
   {
@@ -740,7 +740,7 @@
     "pasien": "AGATHA ARCADIA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-15T16:00:00.000Z"
   },
   {
@@ -748,7 +748,7 @@
     "pasien": "ZULKIFLI HASANUDDIN",
     "layanan": "PAKET 1",
     "status": "active",
-    "sessionsDone": 6,
+    "sessionsDone": 1,
     "dibuatTgl": "2025-11-11T16:00:00.000Z"
   },
   {
@@ -756,7 +756,7 @@
     "pasien": "ANDI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-10T16:00:00.000Z"
   },
   {
@@ -764,7 +764,7 @@
     "pasien": "FATIMA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-10T16:00:00.000Z"
   },
   {
@@ -772,7 +772,7 @@
     "pasien": "TAN TJHUN TIE ALS ROBERT",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-11-10T16:00:00.000Z"
   },
   {
@@ -780,7 +780,7 @@
     "pasien": "REI KHALFANI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-09T16:00:00.000Z"
   },
   {
@@ -788,7 +788,7 @@
     "pasien": "MARIYAMINA RUPINA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-09T16:00:00.000Z"
   },
   {
@@ -796,7 +796,7 @@
     "pasien": "DELLY MARINA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-08T16:00:00.000Z"
   },
   {
@@ -804,7 +804,7 @@
     "pasien": "ELY",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-07T16:00:00.000Z"
   },
   {
@@ -812,7 +812,7 @@
     "pasien": "MAWRICE CHUARESMO MARTIN",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-07T16:00:00.000Z"
   },
   {
@@ -820,7 +820,7 @@
     "pasien": "LIM OI KHIUN ALS RIANA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-05T16:00:00.000Z"
   },
   {
@@ -828,7 +828,7 @@
     "pasien": "GIRY XAVIRA PUTRI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-05T16:00:00.000Z"
   },
   {
@@ -836,7 +836,7 @@
     "pasien": "ARIEF SAPTA WENDRIANTO",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 7,
     "dibuatTgl": "2025-11-05T16:00:00.000Z"
   },
   {
@@ -844,7 +844,7 @@
     "pasien": "ANDI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-04T16:00:00.000Z"
   },
   {
@@ -852,7 +852,7 @@
     "pasien": "LISNA WARDATI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-04T16:00:00.000Z"
   },
   {
@@ -860,7 +860,7 @@
     "pasien": "MUHAMMAD FIRMAN SAPUTRA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-04T16:00:00.000Z"
   },
   {
@@ -868,7 +868,7 @@
     "pasien": "TOMMY YANSENS",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-04T16:00:00.000Z"
   },
   {
@@ -876,7 +876,7 @@
     "pasien": "AINIYATUL FITRIYAH",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-03T16:00:00.000Z"
   },
   {
@@ -884,7 +884,7 @@
     "pasien": "FADLURROHMAN ASSHIDDIQI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-11-03T16:00:00.000Z"
   },
   {
@@ -892,7 +892,7 @@
     "pasien": "RAJIDIN",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-11-03T16:00:00.000Z"
   },
   {
@@ -900,7 +900,7 @@
     "pasien": "SEKAR KINANTI HERPRADANTI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-11-02T16:00:00.000Z"
   },
   {
@@ -908,7 +908,7 @@
     "pasien": "JO MIAUW MUI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-11-01T16:00:00.000Z"
   },
   {
@@ -916,7 +916,7 @@
     "pasien": "DIANA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-29T16:00:00.000Z"
   },
   {
@@ -924,7 +924,7 @@
     "pasien": "BUJANG",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-29T16:00:00.000Z"
   },
   {
@@ -932,7 +932,7 @@
     "pasien": "DHUTA ERLANGGA SUPRAYITNO",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-28T16:00:00.000Z"
   },
   {
@@ -940,7 +940,7 @@
     "pasien": "SUHERMAN",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-28T16:00:00.000Z"
   },
   {
@@ -948,7 +948,7 @@
     "pasien": "MEISYA FITRI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-27T16:00:00.000Z"
   },
   {
@@ -956,7 +956,7 @@
     "pasien": "SHARON LIE",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-25T16:00:00.000Z"
   },
   {
@@ -964,7 +964,7 @@
     "pasien": "FRITA OLIVIA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-24T16:00:00.000Z"
   },
   {
@@ -972,7 +972,7 @@
     "pasien": "DEVIN PANGESTU",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-24T16:00:00.000Z"
   },
   {
@@ -980,7 +980,7 @@
     "pasien": "LICA",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-10-23T16:00:00.000Z"
   },
   {
@@ -988,7 +988,7 @@
     "pasien": "ALDO PUTRA DERMAWAN",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-10-21T16:00:00.000Z"
   },
   {
@@ -996,7 +996,7 @@
     "pasien": "MUHAMMAD FADLI LUTFIANDO",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-20T16:00:00.000Z"
   },
   {
@@ -1004,7 +1004,7 @@
     "pasien": "LIM OI SIP ALS ERNY",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-20T16:00:00.000Z"
   },
   {
@@ -1012,7 +1012,7 @@
     "pasien": "HELIE",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-20T16:00:00.000Z"
   },
   {
@@ -1020,7 +1020,7 @@
     "pasien": "ANDI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-10-18T16:00:00.000Z"
   },
   {
@@ -1028,7 +1028,7 @@
     "pasien": "AGATHA ARCADIA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-16T16:00:00.000Z"
   },
   {
@@ -1036,7 +1036,7 @@
     "pasien": "MENG NIAN ALIAS RUDI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-13T16:00:00.000Z"
   },
   {
@@ -1044,7 +1044,7 @@
     "pasien": "ROSKIAMY",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-10T16:00:00.000Z"
   },
   {
@@ -1052,7 +1052,7 @@
     "pasien": "RADINDA FARIDZYA FITRIYANTO",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-07T16:00:00.000Z"
   },
   {
@@ -1060,7 +1060,7 @@
     "pasien": "DIKIFIRNANDA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-07T16:00:00.000Z"
   },
   {
@@ -1068,7 +1068,7 @@
     "pasien": "BIBI NAIZA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-06T16:00:00.000Z"
   },
   {
@@ -1076,7 +1076,7 @@
     "pasien": "MEISYA FITRI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-06T16:00:00.000Z"
   },
   {
@@ -1084,7 +1084,7 @@
     "pasien": "OLIVIA NOVELIANTI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-10-06T16:00:00.000Z"
   },
   {
@@ -1092,7 +1092,7 @@
     "pasien": "MUTIARA DEWI A.Q",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-06T16:00:00.000Z"
   },
   {
@@ -1100,7 +1100,7 @@
     "pasien": "SINTA CLARENCIA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-06T16:00:00.000Z"
   },
   {
@@ -1108,7 +1108,7 @@
     "pasien": "ROSWITA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-05T16:00:00.000Z"
   },
   {
@@ -1116,7 +1116,7 @@
     "pasien": "SOLIHIN AGUS",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-05T16:00:00.000Z"
   },
   {
@@ -1124,7 +1124,7 @@
     "pasien": "RYUDINATA WILLIAM",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-04T16:00:00.000Z"
   },
   {
@@ -1132,7 +1132,7 @@
     "pasien": "LINAWARTI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-04T16:00:00.000Z"
   },
   {
@@ -1140,7 +1140,7 @@
     "pasien": "HARRY FURQAN",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-04T16:00:00.000Z"
   },
   {
@@ -1148,7 +1148,7 @@
     "pasien": "HELIE",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 2,
     "dibuatTgl": "2025-10-03T16:00:00.000Z"
   },
   {
@@ -1156,7 +1156,7 @@
     "pasien": "DIVO",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-03T16:00:00.000Z"
   },
   {
@@ -1164,7 +1164,7 @@
     "pasien": "DEVIN PANGESTU",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 3,
     "dibuatTgl": "2025-10-03T16:00:00.000Z"
   },
   {
@@ -1172,7 +1172,7 @@
     "pasien": "LENI DIANTAMI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-03T16:00:00.000Z"
   },
   {
@@ -1180,7 +1180,7 @@
     "pasien": "LIM OI KHIUN ALS RIANA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-03T16:00:00.000Z"
   },
   {
@@ -1188,7 +1188,7 @@
     "pasien": "LIM OI SIP ALS ERNY",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-10-03T16:00:00.000Z"
   },
   {
@@ -1196,7 +1196,7 @@
     "pasien": "NICHOLAS ARINDA PRASETYO",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 9,
     "dibuatTgl": "2025-10-03T16:00:00.000Z"
   },
   {
@@ -1204,7 +1204,7 @@
     "pasien": "LICA",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 8,
     "dibuatTgl": "2025-10-03T16:00:00.000Z"
   },
   {
@@ -1212,7 +1212,7 @@
     "pasien": "SEKAR KINANTI HERPRADANTI",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 8,
     "dibuatTgl": "2025-10-03T16:00:00.000Z"
   },
   {
@@ -1220,7 +1220,7 @@
     "pasien": "RIANTIN",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-09-30T16:00:00.000Z"
   },
   {
@@ -1228,7 +1228,7 @@
     "pasien": "EDY HARTONO",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-09-30T16:00:00.000Z"
   },
   {
@@ -1236,7 +1236,7 @@
     "pasien": "MEIVIAN GOUWYN",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-09-30T16:00:00.000Z"
   },
   {
@@ -1244,7 +1244,7 @@
     "pasien": "FATMAWATI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-09-28T16:00:00.000Z"
   },
   {
@@ -1252,7 +1252,7 @@
     "pasien": "MERRY",
     "layanan": "PAKET 2",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 10,
     "dibuatTgl": "2025-09-28T16:00:00.000Z"
   },
   {
@@ -1260,7 +1260,7 @@
     "pasien": "YURWARTINI",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-09-28T16:00:00.000Z"
   },
   {
@@ -1268,7 +1268,7 @@
     "pasien": "BOBY ANTA MAULANA",
     "layanan": "PAKET 1",
     "status": "completed",
-    "sessionsDone": null,
+    "sessionsDone": 5,
     "dibuatTgl": "2025-09-28T16:00:00.000Z"
   }
 ]

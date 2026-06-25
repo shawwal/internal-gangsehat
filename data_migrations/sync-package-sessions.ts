@@ -2,8 +2,10 @@
  * One-time migration: sync legacy session counts from old system into patient_packages.legacy_used_sessions
  *
  * Data sources:
- *   - orders_paket.json     → KODE, PASIEN, LAYANAN, STATUS, "TOTAL PERTEMUAN" ("7x" = 7 done)
- *   - orders_fisiotherapy.json → KODE, PASIEN, LAYANAN, STATUS, "DIBUAT TGL"
+ *   - orders_medical_records.json → session-level data: KODE + SESSION_STATUS="Sudah Ditangani"
+ *   - orders_fisiotherapy.json    → order-level data: KODE, PASIEN, LAYANAN, STATUS, DIBUAT TGL
+ *
+ * sessions_done per KODE = count of SESSION_STATUS="Sudah Ditangani" rows in medical_records
  *
  * Run with:
  *   npx tsx data_migrations/sync-package-sessions.ts
@@ -15,8 +17,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
+
 // ── env ────────────────────────────────────────────────────────────────────────
-// Load .env manually without dotenv dependency
 const envPath = path.join(__dirname, '../.env')
 if (fs.existsSync(envPath)) {
   for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
@@ -48,7 +50,7 @@ function isEncryptedFormat(text: string): boolean {
 function tryDecodeBase64(text: string): string | null {
   try {
     const decoded = Buffer.from(text, 'base64').toString('utf8')
-    const printable = decoded.replace(/[^\x20-\x7E -￿]/g, '')
+    const printable = decoded.replace(/[^\x20-\x7E -￿]/g, '')
     return printable.length >= decoded.length * 0.8 ? decoded : null
   } catch {
     return null
@@ -90,10 +92,6 @@ const STATUS_MAP: Record<string, 'active' | 'completed' | 'cancelled'> = {
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────
-function parseSessionsDone(totalPertemuan: string): number {
-  return parseInt(totalPertemuan.replace('x', '').trim(), 10) || 0
-}
-
 function normalizeName(name: string): string {
   return name.trim().toUpperCase()
 }
@@ -103,21 +101,16 @@ function daysBetween(a: Date, b: Date): number {
 }
 
 function parseIndonesianDate(dmy: string): Date | null {
-  // Format: "15-05-2026"
   const [d, m, y] = dmy.split('-')
   if (!d || !m || !y) return null
   return new Date(parseInt(y), parseInt(m) - 1, parseInt(d))
 }
 
 // ── load source data ───────────────────────────────────────────────────────────
-interface PaketRecord {
+interface MedicalRecord {
   KODE: string
   PASIEN: string
-  LAYANAN: string
-  STATUS: string
-  'TOTAL PERTEMUAN': string
-  'PERTEMUAN TERAKHIR': string
-  'PERTEMUAN SELANJUTNYA': string
+  SESSION_STATUS: string
 }
 
 interface FisioRecord {
@@ -133,54 +126,48 @@ interface MergedOrder {
   pasien: string
   layanan: string
   status: string
-  sessionsDone: number | null  // null = use total_sessions (completed but count unknown)
+  sessionsDone: number
   dibuatTgl: Date | null
 }
 
 const MIGRATION_DIR = __dirname
-const paketRaw: PaketRecord[] = JSON.parse(
-  fs.readFileSync(path.join(MIGRATION_DIR, 'orders_paket.json'), 'utf8')
+
+const medicalRaw: MedicalRecord[] = JSON.parse(
+  fs.readFileSync(path.join(MIGRATION_DIR, 'orders_medical_records.json'), 'utf8')
 )
 const fisioRaw: FisioRecord[] = JSON.parse(
   fs.readFileSync(path.join(MIGRATION_DIR, 'orders_fisiotherapy.json'), 'utf8')
 )
 
-// Build KODE → paket record map
-const paketByKode = new Map<string, PaketRecord>()
-for (const r of paketRaw) {
-  paketByKode.set(r.KODE, r)
+// Count "Sudah Ditangani" sessions per KODE (actual completed sessions in old system)
+const sessionsDoneByKode = new Map<string, number>()
+for (const r of medicalRaw) {
+  if (r.SESSION_STATUS === 'Sudah Ditangani') {
+    sessionsDoneByKode.set(r.KODE, (sessionsDoneByKode.get(r.KODE) ?? 0) + 1)
+  }
 }
 
-// Merge: iterate fisiotherapy (all orders), supplement with paket session counts
+// Build merged orders from fisiotherapy (all PAKET orders, non-cancelled)
 const merged: MergedOrder[] = []
 for (const f of fisioRaw) {
   const layanan = (f.LAYANAN || '').trim()
-  if (!layanan.toUpperCase().startsWith('PAKET')) continue  // skip non-packages
+  if (!layanan.toUpperCase().startsWith('PAKET')) continue
 
   const mappedStatus = STATUS_MAP[f.STATUS]
-  if (!mappedStatus || mappedStatus === 'cancelled') continue  // skip Batal
-
-  const paket = paketByKode.get(f.KODE)
-  let sessionsDone: number | null = null
-
-  if (paket) {
-    sessionsDone = parseSessionsDone(paket['TOTAL PERTEMUAN'])
-  } else if (mappedStatus === 'completed') {
-    // Completed but not in paket view → assume all sessions done; cap handled later
-    sessionsDone = null
-  }
+  if (!mappedStatus || mappedStatus === 'cancelled') continue
 
   merged.push({
     kode: f.KODE,
     pasien: normalizeName(f.PASIEN),
     layanan,
     status: mappedStatus,
-    sessionsDone,
+    sessionsDone: sessionsDoneByKode.get(f.KODE) ?? 0,
     dibuatTgl: f['DIBUAT TGL'] ? parseIndonesianDate(f['DIBUAT TGL']) : null,
   })
 }
 
-console.log(`Loaded ${merged.length} package orders to sync (${paketByKode.size} with session counts)`)
+console.log(`Loaded ${merged.length} PAKET orders from fisiotherapy`)
+console.log(`  ${merged.filter(m => m.sessionsDone > 0).length} have sessions done in medical_records`)
 
 // ── connect to Supabase ────────────────────────────────────────────────────────
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
@@ -229,20 +216,29 @@ async function main() {
     if (data.length < PAGE) break
     pkgFrom += PAGE
   }
-  const packages = allPackages
+  console.log(`  Loaded ${allPackages.length} packages`)
 
   // Group by patient_id for fast lookup
-  const pkgsByPatient = new Map<string, typeof packages>()
-  for (const pkg of packages) {
+  const pkgsByPatient = new Map<string, typeof allPackages>()
+  for (const pkg of allPackages) {
     const list = pkgsByPatient.get(pkg.patient_id) ?? []
     list.push(pkg)
     pkgsByPatient.set(pkg.patient_id, list)
   }
-  console.log(`  Loaded ${packages.length} packages`)
 
-  // 3. Match and build updates
+  // 3. Reset all packages to legacy_used_sessions = 0 first (clean slate)
+  console.log('\nResetting all legacy_used_sessions to 0...')
+  const { error: resetErr } = await supabase
+    .from('patient_packages')
+    .update({ legacy_used_sessions: 0 })
+    .gte('id', '00000000-0000-0000-0000-000000000000')  // match all rows
+  if (resetErr) throw new Error(`Reset failed: ${resetErr.message}`)
+  console.log('  Reset complete.')
+
+  // 4. Match each old order to a new-system package and build updates
   const updates: { id: string; legacy_used_sessions: number; status: string }[] = []
-  const unmatched: typeof merged = []
+  const unmatched: MergedOrder[] = []
+  const skippedOverflow: { order: MergedOrder; pkg: typeof allPackages[0]; proposed: number }[] = []
 
   for (const order of merged) {
     const patientId = nameToId.get(order.pasien)
@@ -252,10 +248,8 @@ async function main() {
     }
 
     const candidates = (pkgsByPatient.get(patientId) ?? []).filter((pkg) => {
-      // Match by package name keyword (case-insensitive)
       const upperPkgName = pkg.package_name.toUpperCase()
       const upperLayanan = order.layanan.toUpperCase()
-      // e.g. "PAKET GOLD" matches package_name "PAKET GOLD" or "GOLD"
       const keyword = upperLayanan.replace('PAKET ', '')
       return upperPkgName.includes(keyword) || upperPkgName.includes(upperLayanan)
     })
@@ -265,7 +259,7 @@ async function main() {
       continue
     }
 
-    // Pick closest by created_at vs DIBUAT TGL
+    // Pick closest created_at to DIBUAT TGL
     let best = candidates[0]
     if (candidates.length > 1 && order.dibuatTgl) {
       best = candidates.reduce((closest, pkg) => {
@@ -275,26 +269,29 @@ async function main() {
       })
     }
 
-    // Sessions done: cap at total_sessions
-    const sessionsDone = order.sessionsDone !== null
-      ? Math.min(order.sessionsDone, best.total_sessions)
-      : best.total_sessions  // null = assume all done
+    // Cap at total_sessions — a package cannot have more legacy sessions than its size
+    const capped = Math.min(order.sessionsDone, best.total_sessions)
+
+    if (order.sessionsDone > best.total_sessions) {
+      skippedOverflow.push({ order, pkg: best, proposed: order.sessionsDone })
+    }
 
     updates.push({
       id: best.id,
-      legacy_used_sessions: sessionsDone,
+      legacy_used_sessions: capped,
       status: order.status,
     })
   }
 
   console.log(`\nMatched: ${updates.length} | Unmatched: ${unmatched.length}`)
+  if (skippedOverflow.length > 0) {
+    console.log(`\nWarning: ${skippedOverflow.length} packages had sessionsDone > total_sessions (capped):`)
+    for (const s of skippedOverflow) {
+      console.log(`  ${s.order.kode} ${s.order.pasien} ${s.order.layanan}: proposed=${s.proposed} → capped to ${s.pkg.total_sessions}`)
+    }
+  }
 
   if (unmatched.length > 0) {
-    console.log('\n--- Unmatched orders (manual review needed) ---')
-    for (const u of unmatched) {
-      console.log(`  ${u.kode}  ${u.pasien}  ${u.layanan}  (${u.status})`)
-    }
-    // Write unmatched to file for review
     const outPath = path.join(MIGRATION_DIR, 'unmatched_packages.json')
     fs.writeFileSync(outPath, JSON.stringify(unmatched, null, 2))
     console.log(`\nUnmatched written to ${outPath}`)
@@ -305,7 +302,7 @@ async function main() {
     return
   }
 
-  // 4. Apply updates in batches
+  // 5. Apply updates
   console.log('\nApplying updates...')
   let successCount = 0
   let failCount = 0
