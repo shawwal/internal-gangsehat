@@ -64,7 +64,7 @@ export function Sidebar({ role, collapsed }: Props) {
       </div>
 
       {/* Nav groups */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 scrollbar-hide">
+      <nav className="flex-1 overflow-y-auto py-3 px-2 scrollbar-sidebar">
         {orderedGroupKeys.map((groupKey, gi) => (
           <div key={groupKey} className={gi > 0 ? 'mt-4' : ''}>
             {/* Group label — hidden when collapsed */}

@@ -135,7 +135,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
           <div
             ref={menuRef}
             role="menu"
-            className="fixed z-201 w-52 rounded-xl border border-white/15 p-1.5 shadow-2xl backdrop-blur-xl bg-gray-900/95"
+            className="dark fixed z-201 w-52 rounded-xl border border-white/15 p-1.5 shadow-2xl backdrop-blur-xl bg-gray-900/95"
             style={{ top: menuPos.top, left: menuPos.left }}
           >
             <p className="text-[10px] text-muted-foreground/70 px-2.5 pt-1 pb-2 uppercase tracking-widest font-semibold">

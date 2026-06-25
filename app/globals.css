@@ -213,6 +213,29 @@ html {
   background: transparent;
 }
 
+/* Sidebar scrollbar — uses sidebar-border token so it's visible in both light and dark mode */
+.scrollbar-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-border) transparent;
+}
+.scrollbar-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-sidebar::-webkit-scrollbar-thumb {
+  background: var(--sidebar-border);
+  border-radius: 999px;
+}
+.scrollbar-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+  opacity: 0.8;
+}
+.scrollbar-sidebar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Jadwal harian animations */
 @keyframes jFadeIn {
   from { opacity: 0; transform: translateY(8px); }
