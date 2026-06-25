@@ -420,8 +420,8 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
                       className="absolute inset-x-0 flex flex-col gap-1 p-1 group"
                       style={{ top: i * SLOT_H, height: SLOT_H }}
                     >
-                      {/* Hover tooltip — shows therapist name + time */}
-                      {isInShift && !s.isOnLeave && (
+                      {/* Hover tooltip — only on empty in-shift cells so it doesn't overlap visit cards */}
+                      {isInShift && !s.isOnLeave && cellVisits.length === 0 && (
                         <div className="absolute top-1.5 left-1.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10">
                           <span className="text-[17px] font-semibold text-white bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-md leading-none whitespace-nowrap">
                             {displayName(s)}

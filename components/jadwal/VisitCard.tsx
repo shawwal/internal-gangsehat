@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, X, UserX, MoreVertical, Trash2, CreditCard, BanknoteArrowUp } from 'lucide-react'
+import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp } from 'lucide-react'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL } from './types'
 import type { VisitStatus } from '@/types'
@@ -29,9 +29,9 @@ interface Props {
 }
 
 export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onNoShow, onPayment }: Props) {
-  const [menuOpen, setMenuOpen]     = useState(false)
-  const [menuPos, setMenuPos]       = useState<{ top: number; left: number } | null>(null)
-  const btnRef  = useRef<HTMLButtonElement>(null)
+  const [menuOpen, setMenuOpen]   = useState(false)
+  const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const canRecordPayment = !!userRole && PAYMENT_ROLES.includes(userRole)
@@ -40,11 +40,12 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
-    if (!btnRef.current) return
-    const rect = btnRef.current.getBoundingClientRect()
+    if (!cardRef.current) return
+    const rect      = cardRef.current.getBoundingClientRect()
     const menuWidth = 208
-    const left = Math.min(rect.right, window.innerWidth - menuWidth - 8)
-    setMenuPos({ top: rect.bottom + 4, left })
+    const left      = Math.min(rect.right, window.innerWidth - menuWidth - 8)
+    const top       = Math.min(rect.bottom + 4, window.innerHeight - 320)
+    setMenuPos({ top, left })
     setMenuOpen(true)
   }
 
@@ -66,31 +67,26 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
 
   return (
     <div
+      ref={cardRef}
       className={[
-        'relative rounded-lg border px-2 py-1.5 flex flex-col gap-0.5 group/card cursor-default',
-        'transition-all duration-150',
-        menuOpen ? '' : 'hover:scale-[1.02]',
+        'relative rounded-lg border px-2 py-1.5 flex flex-col gap-0.5',
+        'transition-all duration-150 cursor-pointer',
+        menuOpen ? 'scale-[1.02]' : 'hover:scale-[1.02]',
         colorCls,
       ].join(' ')}
+      onClick={openMenu}
+      onContextMenu={(e) => { e.preventDefault(); openMenu(e) }}
+      role="button"
+      aria-haspopup="menu"
+      aria-expanded={menuOpen}
     >
-      {/* Patient name + menu button */}
+      {/* Patient name — click drills to medical record, does NOT open menu */}
       <div className="flex items-start gap-1">
         <button
-          onClick={() => onOpen(visit.id)}
+          onClick={(e) => { e.stopPropagation(); onOpen(visit.id) }}
           className="text-[11px] font-semibold leading-tight flex-1 truncate text-left hover:underline cursor-pointer"
         >
           {visit.patient_name}
-        </button>
-        <button
-          ref={btnRef}
-          onClick={openMenu}
-          className={[
-            'p-0.5 rounded hover:bg-white/10 transition-all cursor-pointer shrink-0',
-            menuOpen ? 'opacity-100' : 'opacity-0 group-hover/card:opacity-100',
-          ].join(' ')}
-          aria-label="Menu kunjungan"
-        >
-          <MoreVertical size={10} />
         </button>
       </div>
 
