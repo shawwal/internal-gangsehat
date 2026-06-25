@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionType, TransactionStatus, PaymentMethod, PaymentDetailStatus } from '@/types'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
+import { createTransactionManual } from '@/app/actions/transactions'
 
 const TYPE_LABELS: Record<TransactionType, string>    = { income: 'Pemasukan', expense: 'Pengeluaran' }
 const STATUS_BADGE: Record<TransactionStatus, string> = {
@@ -72,7 +73,6 @@ export default function TransactionsPage() {
   const [rejectReason, setRejectReason] = useState('')
 
   const [userId, setUserId]     = useState<string | null>(null)
-  const [branchId, setBranchId] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
 
   async function loadProfile() {
@@ -81,11 +81,10 @@ export default function TransactionsPage() {
     if (!user) return
     const { data: profile } = await supabase
       .from('internal_profiles')
-      .select('branch_id, role')
+      .select('role')
       .eq('id', user.id)
       .single()
     setUserId(user.id)
-    setBranchId(profile?.branch_id ?? null)
     setUserRole(profile?.role ?? null)
   }
 
@@ -116,29 +115,21 @@ export default function TransactionsPage() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
-    if (!branchId) {
-      alert('Akun Anda belum terhubung ke cabang. Hubungi direktur.')
-      return
-    }
     setSaving(true)
-    const harga    = Number(form.harga)   || 0
-    const amount   = Number(form.amount)  || 0
-    const discount = Number(form.discount) || 0
-    await createClient().from('transactions').insert({
-      branch_id:        branchId,
-      recorded_by:      userId,
+    const { error } = await createTransactionManual({
       type:             form.type,
       category:         form.category,
-      amount,
-      description:      form.description || null,
-      transaction_date: form.transaction_date,
-      harga,
-      discount,
+      harga:            Number(form.harga)    || 0,
+      amount:           Number(form.amount)   || 0,
+      discount:         Number(form.discount) || 0,
       payment_method:   form.payment_method   || null,
       payment_status:   isIncome ? form.payment_status : null,
       penjamin:         isIncome ? (form.penjamin || null) : null,
+      description:      form.description || null,
+      transaction_date: form.transaction_date,
     })
     setSaving(false)
+    if (error) { alert(error); return }
     setShowForm(false)
     setForm(DEFAULT_FORM)
     load()
@@ -202,11 +193,6 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      {!branchId && !loading && (
-        <div className="bg-secondary/10 border border-secondary/30 rounded-xl px-4 py-3 text-sm text-secondary-foreground">
-          Akun Anda belum terhubung ke cabang. Hubungi direktur untuk pengaturan cabang.
-        </div>
-      )}
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Memuat...</p>
@@ -365,7 +351,7 @@ export default function TransactionsPage() {
 
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Batal</button>
-                <button type="submit" disabled={saving || !branchId} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
+                <button type="submit" disabled={saving} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
                   {saving ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>

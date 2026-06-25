@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const SERVICE_TO_CATEGORY: Record<string, string> = {
   'TERAPI AWAL':  'TA KLINIK',
@@ -13,6 +14,31 @@ const SERVICE_TO_CATEGORY: Record<string, string> = {
 }
 
 const PAYMENT_ROLES = ['finance', 'manager', 'director']
+
+function formatRp(n: number) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
+}
+
+async function sendPaymentNotification(harga: number, category: string) {
+  const admin = createAdminClient()
+  const dateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+  await admin.from('user_notifications').insert([
+    {
+      target_role: 'director',
+      title: 'Pembayaran Baru Dicatat',
+      message: `${formatRp(harga)} · ${category} · ${dateStr}`,
+      link: '/finance/transactions',
+    },
+    {
+      target_role: 'finance',
+      title: 'Pembayaran Baru Dicatat',
+      message: `${formatRp(harga)} · ${category} · ${dateStr}`,
+      link: '/finance/transactions',
+    },
+  ])
+}
+
+// ── Outstanding ───────────────────────────────────────────────────────────────
 
 export interface OutstandingTransaction {
   id: string
@@ -37,6 +63,8 @@ export async function getPatientOutstanding(patientId: string): Promise<Outstand
     .order('transaction_date', { ascending: false })
   return (data ?? []) as OutstandingTransaction[]
 }
+
+// ── Create transaction linked to a visit (from PaymentDialog) ─────────────────
 
 export interface CreateTransactionInput {
   harga: number
@@ -98,5 +126,68 @@ export async function createTransactionForVisit(
     updated_at:       new Date().toISOString(),
   })
 
-  return { error: error?.message ?? null }
+  if (error) return { error: error.message }
+
+  await sendPaymentNotification(input.harga, category)
+  return { error: null }
+}
+
+// ── Create transaction manually (from finance/transactions page) ──────────────
+
+export interface CreateTransactionManualInput {
+  type: string
+  category: string
+  harga: number
+  amount: number
+  discount: number
+  payment_method: string | null
+  payment_status: string | null
+  penjamin: string | null
+  description: string | null
+  transaction_date: string
+}
+
+export async function createTransactionManual(
+  input: CreateTransactionManualInput,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+
+  const { data: profile } = await supabase
+    .from('internal_profiles')
+    .select('role, branch_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !PAYMENT_ROLES.includes(profile.role)) {
+    return { error: 'Tidak memiliki akses untuk mencatat transaksi' }
+  }
+  if (!profile.branch_id) {
+    return { error: 'Akun Anda belum terhubung ke cabang. Hubungi direktur.' }
+  }
+
+  const { error } = await supabase.from('transactions').insert({
+    branch_id:        profile.branch_id,
+    recorded_by:      user.id,
+    type:             input.type,
+    category:         input.category,
+    harga:            input.harga,
+    amount:           input.amount,
+    discount:         input.discount,
+    payment_method:   input.payment_method,
+    payment_status:   input.type === 'income' ? input.payment_status : null,
+    penjamin:         input.type === 'income' ? (input.penjamin || null) : null,
+    description:      input.description || null,
+    transaction_date: input.transaction_date,
+    updated_at:       new Date().toISOString(),
+  })
+
+  if (error) return { error: error.message }
+
+  if (input.type === 'income') {
+    await sendPaymentNotification(input.harga, input.category)
+  }
+  return { error: null }
 }

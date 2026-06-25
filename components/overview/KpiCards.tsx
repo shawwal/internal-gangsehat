@@ -97,7 +97,8 @@ export function KpiCards({
         value={formatRp(totalIncome)}
         icon={<TrendingUp size={16} className="text-white" />}
         color="bg-[var(--chart-4)]"
-        sub={periodLabel}
+        sub="Lihat per cabang →"
+        href="/director/finance"
       />
       <GlassStatCard
         title={netProfit >= 0 ? 'Laba Bersih' : 'Rugi Bersih'}

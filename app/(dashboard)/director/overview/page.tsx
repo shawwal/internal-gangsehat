@@ -52,9 +52,9 @@ export default async function DirectorOverviewPage({
     .eq('status', 'active')
   if (branchId) packageQ = packageQ.eq('branch_id', branchId)
 
-  // ── Income for period (branch-aware via transactions.branch_id) ───────────
+  // ── Income for period — use harga-discount (net billed) not amount (collected) ──
   let incomeQ = supabase.from('transactions')
-    .select('amount')
+    .select('harga, discount')
     .eq('type', 'income')
     .neq('status', 'rejected')
     .gte('transaction_date', dateFrom)
@@ -74,7 +74,7 @@ export default async function DirectorOverviewPage({
   const now = new Date()
   const trend12From = new Date(now.getFullYear(), now.getMonth() - 11, 1).toISOString().split('T')[0]
   let trendQ = supabase.from('transactions')
-    .select('amount, type, transaction_date')
+    .select('amount, harga, discount, type, transaction_date')
     .neq('status', 'rejected')
     .gte('transaction_date', trend12From)
     .order('transaction_date')
@@ -82,7 +82,7 @@ export default async function DirectorOverviewPage({
 
   // ── Branch comparison chart: full year ────────────────────────────────────
   const branchChartQ = supabase.from('transactions')
-    .select('amount, type, branch_id, branches(name)')
+    .select('amount, harga, discount, type, branch_id, branches(name)')
     .neq('status', 'rejected')
     .gte('transaction_date', `${numYear}-01-01`)
     .lt('transaction_date', `${numYear + 1}-01-01`)
@@ -130,7 +130,7 @@ export default async function DirectorOverviewPage({
     pendingTargetsQ,
   ])
 
-  const totalIncome  = (incomeData  ?? []).reduce((s, r) => s + Number(r.amount), 0)
+  const totalIncome  = (incomeData  ?? []).reduce((s, r) => s + Number(r.harga ?? 0) - Number(r.discount ?? 0), 0)
   const totalExpense = (expenseData ?? []).reduce((s, r) => s + Number(r.amount), 0)
 
   const trendData  = buildTrendFromTransactions(trendTx)

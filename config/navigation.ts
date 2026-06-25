@@ -114,6 +114,14 @@ export const navigation: NavItem[] = [
     roles: ['director'],
     group: 'management',
   },
+  {
+    key: 'director-finance',
+    label: 'Keuangan',
+    href: '/director/finance',
+    icon: 'Landmark',
+    roles: ['director'],
+    group: 'finance',
+  },
 
   // Finance
   {

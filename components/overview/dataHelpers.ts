@@ -5,7 +5,7 @@ import type { MonthlyTrendData } from '@/components/dashboard/charts/MonthlyTren
 // ── Transaction-based builders (replaces branch_financial_reports approach) ──
 
 export function buildTrendFromTransactions(
-  transactions: { amount: number; type: string; transaction_date: string }[] | null,
+  transactions: { amount: number; harga?: number | null; discount?: number | null; type: string; transaction_date: string }[] | null,
 ): MonthlyTrendData[] {
   const byMonth: Record<string, { label: string; income: number; expense: number; profit: number }> = {}
 
@@ -20,7 +20,7 @@ export function buildTrendFromTransactions(
         profit:  0,
       }
     }
-    if (tx.type === 'income')  byMonth[key].income  += Number(tx.amount)
+    if (tx.type === 'income')  byMonth[key].income  += Number(tx.harga ?? 0) - Number(tx.discount ?? 0)
     if (tx.type === 'expense') byMonth[key].expense += Number(tx.amount)
   }
 
@@ -47,7 +47,7 @@ export function buildBranchChartFromTransactions(
         pengeluaran: 0,
       }
     }
-    if (tx.type === 'income')  byBranch[bid].pemasukan   += Number(tx.amount)
+    if (tx.type === 'income')  byBranch[bid].pemasukan   += Number(tx.harga ?? 0) - Number(tx.discount ?? 0)
     if (tx.type === 'expense') byBranch[bid].pengeluaran += Number(tx.amount)
   }
 
