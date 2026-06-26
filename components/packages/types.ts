@@ -1,9 +1,9 @@
 import type {
-  PatientPackage, JenisPaket, PackageOperationalStatus,
+  PatientPackage, PackageSession, JenisPaket, PackageOperationalStatus,
   PackageCompletionStatus, PackageStatus,
 } from '@/types'
 
-export type { PatientPackage, JenisPaket, PackageOperationalStatus, PackageCompletionStatus, PackageStatus }
+export type { PatientPackage, PackageSession, JenisPaket, PackageOperationalStatus, PackageCompletionStatus, PackageStatus }
 
 // ── Form ──────────────────────────────────────────────────────────────────────
 export const DEFAULT_FORM = {
