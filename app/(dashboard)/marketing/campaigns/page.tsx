@@ -42,10 +42,10 @@ export default function CampaignsPage() {
   const [userId, setUserId]     = useState<string | null>(null)
   const [branchId, setBranchId] = useState<string | null>(null)
 
-  async function loadProfile() {
+  async function loadProfile(): Promise<string | null> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) return null
     const { data: profile } = await supabase
       .from('internal_profiles')
       .select('branch_id')
@@ -53,18 +53,18 @@ export default function CampaignsPage() {
       .single()
     setUserId(user.id)
     setBranchId(profile?.branch_id ?? null)
+    return profile?.branch_id ?? null
   }
 
-  async function load() {
-    const { data } = await createClient()
-      .from('campaigns')
-      .select('*')
-      .order('created_at', { ascending: false })
+  async function load(bid: string | null = null) {
+    let q = createClient().from('campaigns').select('*').order('created_at', { ascending: false })
+    if (bid) q = q.eq('branch_id', bid)
+    const { data } = await q
     setCampaigns((data ?? []) as Campaign[])
     setLoading(false)
   }
 
-  useEffect(() => { loadProfile().then(() => load()) }, [])
+  useEffect(() => { loadProfile().then((bid) => load(bid)) }, [])
 
   function openNew() {
     setEditItem(null)
@@ -107,19 +107,19 @@ export default function CampaignsPage() {
     }
     setSaving(false)
     setShowForm(false)
-    load()
+    load(branchId)
   }
 
   async function advance(c: Campaign) {
     const next = STATUS_FLOW[c.status]
     if (!next) return
     await createClient().from('campaigns').update({ status: next }).eq('id', c.id)
-    load()
+    load(branchId)
   }
 
   async function cancel(id: string) {
     await createClient().from('campaigns').update({ status: 'cancelled' }).eq('id', id)
-    load()
+    load(branchId)
   }
 
   const CAMPAIGN_COLS: ExportColumn<Campaign>[] = [

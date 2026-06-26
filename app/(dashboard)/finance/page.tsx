@@ -94,25 +94,20 @@ export default function FinancePage() {
 
       const now = new Date()
       const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+      const branchId = prof?.branch_id ?? null
 
-      const [incomeRes, expenseRes, pendingRes, reportsRes] = await Promise.all([
-        supabase.from('transactions')
-          .select('amount')
-          .eq('type', 'income').eq('status', 'confirmed')
-          .gte('transaction_date', firstDay),
-        supabase.from('transactions')
-          .select('amount')
-          .eq('type', 'expense').eq('status', 'confirmed')
-          .gte('transaction_date', firstDay),
-        supabase.from('transactions')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'pending'),
-        supabase.from('branch_financial_reports')
-          .select('id, period_year, period_month, status, total_income, net_profit')
-          .order('period_year', { ascending: false })
-          .order('period_month', { ascending: false })
-          .limit(3),
-      ])
+      let incomeQ  = supabase.from('transactions').select('amount').eq('type', 'income').eq('status', 'confirmed').gte('transaction_date', firstDay)
+      let expenseQ = supabase.from('transactions').select('amount').eq('type', 'expense').eq('status', 'confirmed').gte('transaction_date', firstDay)
+      let pendingQ = supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+      let reportsQ = supabase.from('branch_financial_reports').select('id, period_year, period_month, status, total_income, net_profit').order('period_year', { ascending: false }).order('period_month', { ascending: false }).limit(3)
+      if (branchId) {
+        incomeQ  = incomeQ.eq('branch_id', branchId)
+        expenseQ = expenseQ.eq('branch_id', branchId)
+        pendingQ = pendingQ.eq('branch_id', branchId)
+        reportsQ = reportsQ.eq('branch_id', branchId)
+      }
+
+      const [incomeRes, expenseRes, pendingRes, reportsRes] = await Promise.all([incomeQ, expenseQ, pendingQ, reportsQ])
 
       const income  = (incomeRes.data ?? []).reduce((s, r) => s + Number(r.amount), 0)
       const expense = (expenseRes.data ?? []).reduce((s, r) => s + Number(r.amount), 0)

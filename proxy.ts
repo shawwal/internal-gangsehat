@@ -61,6 +61,27 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(dest, request.url))
   }
 
+  // Route-level role guard — prevents unauthorized URL access regardless of navigation
+  if (user && !isPublic) {
+    const routeAccess: Array<{ prefix: string; allowed: string[] }> = [
+      { prefix: '/director',  allowed: ['director'] },
+      { prefix: '/finance',   allowed: ['finance', 'director', 'manager'] },
+      { prefix: '/hr',        allowed: ['hr', 'director', 'manager'] },
+      { prefix: '/marketing', allowed: ['marketing', 'director', 'manager'] },
+    ]
+    const matched = routeAccess.find(r => pathname.startsWith(r.prefix))
+    if (matched) {
+      const { data: profile } = await supabase
+        .from('internal_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      if (!profile || !matched.allowed.includes(profile.role)) {
+        return NextResponse.redirect(new URL('/unauthorized', request.url))
+      }
+    }
+  }
+
   return response
 }
 

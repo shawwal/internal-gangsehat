@@ -135,10 +135,17 @@ export default function HRLeavePage() {
   const [saving, setSaving]       = useState(false)
 
   async function load() {
-    const { data, error } = await createClient()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    let q = supabase
       .from('leave_requests')
       .select('id, start_date, end_date, reason, status, rejection_note, proof_url, created_at, internal_profiles!staff_id(full_name, email)')
       .order('created_at', { ascending: false })
+    if (user) {
+      const { data: prof } = await supabase.from('internal_profiles').select('branch_id').eq('id', user.id).single()
+      if (prof?.branch_id) q = q.eq('branch_id', prof.branch_id)
+    }
+    const { data, error } = await q
     if (error) console.error('[hr/leave] load error:', error)
     setRequests((data ?? []) as unknown as LeaveRow[])
     setLoading(false)

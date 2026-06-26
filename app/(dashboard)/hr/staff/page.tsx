@@ -51,10 +51,9 @@ export default function HRStaffPage() {
     }
     setNoBranchWarning(false)
 
-    const { data } = await supabase
-      .from('internal_profiles')
-      .select('id, full_name, email, role, is_active')
-      .order('full_name')
+    let staffQ = supabase.from('internal_profiles').select('id, full_name, email, role, is_active')
+    if (myBranchId) staffQ = staffQ.eq('branch_id', myBranchId)
+    const { data } = await staffQ.order('full_name')
     setStaff((data ?? []) as StaffRow[])
     setLoading(false)
   }

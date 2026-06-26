@@ -77,25 +77,26 @@ export default function HRPage() {
       const supabase = createClient()
       const today = new Date().toISOString().split('T')[0]
 
+      const { data: { user } } = await supabase.auth.getUser()
+      const branchId = user
+        ? (await supabase.from('internal_profiles').select('branch_id').eq('id', user.id).single()).data?.branch_id ?? null
+        : null
+
+      let staffQ      = supabase.from('internal_profiles').select('id', { count: 'exact', head: true }).eq('is_active', true)
+      let pendingQ    = supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+      let onLeaveQ    = supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('status', 'approved').lte('start_date', today).gte('end_date', today)
+      let attendanceQ = supabase.from('attendance').select('status').eq('date', today)
+      let recentQ     = supabase.from('leave_requests').select('id, start_date, end_date, status, internal_profiles(full_name)').order('created_at', { ascending: false }).limit(5)
+      if (branchId) {
+        staffQ      = staffQ.eq('branch_id', branchId)
+        pendingQ    = pendingQ.eq('branch_id', branchId)
+        onLeaveQ    = onLeaveQ.eq('branch_id', branchId)
+        attendanceQ = attendanceQ.eq('branch_id', branchId)
+        recentQ     = recentQ.eq('branch_id', branchId)
+      }
+
       const [staffRes, pendingLeaveRes, onLeaveRes, attendanceRes, recentLeaveRes] = await Promise.all([
-        supabase.from('internal_profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('is_active', true),
-        supabase.from('leave_requests')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'pending'),
-        supabase.from('leave_requests')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'approved')
-          .lte('start_date', today)
-          .gte('end_date', today),
-        supabase.from('attendance')
-          .select('status')
-          .eq('date', today),
-        supabase.from('leave_requests')
-          .select('id, start_date, end_date, status, internal_profiles(full_name)')
-          .order('created_at', { ascending: false })
-          .limit(5),
+        staffQ, pendingQ, onLeaveQ, attendanceQ, recentQ,
       ])
 
       const attendanceToday = attendanceRes.data ?? []

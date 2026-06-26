@@ -75,32 +75,26 @@ export default function TransactionsPage() {
   const [userId, setUserId]     = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
 
-  async function loadProfile() {
+  async function load() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data: profile } = await supabase
+    const { data: prof } = await supabase
       .from('internal_profiles')
-      .select('role')
+      .select('role, branch_id')
       .eq('id', user.id)
       .single()
     setUserId(user.id)
-    setUserRole(profile?.role ?? null)
-  }
+    setUserRole(prof?.role ?? null)
 
-  async function load() {
-    const { data } = await createClient()
-      .from('transactions')
-      .select('*')
-      .order('transaction_date', { ascending: false })
-      .limit(100)
+    let q = supabase.from('transactions').select('*').order('transaction_date', { ascending: false }).limit(100)
+    if (prof?.branch_id) q = q.eq('branch_id', prof.branch_id)
+    const { data } = await q
     setRows((data ?? []) as Transaction[])
     setLoading(false)
   }
 
-  useEffect(() => {
-    loadProfile().then(() => load())
-  }, [])
+  useEffect(() => { load() }, [])
 
   // Reset category when type changes so the value stays valid
   useEffect(() => {

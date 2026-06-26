@@ -65,9 +65,12 @@ export default function AttendancePage() {
     let staffQuery = supabase.from('internal_profiles').select('id, full_name').eq('is_active', true).neq('role', 'staff')
     if (branchId) staffQuery = staffQuery.eq('branch_id', branchId)
 
+    let attQuery = supabase.from('attendance').select('id, staff_id, date, status').gte('date', startDate).lte('date', endDate)
+    if (branchId) attQuery = attQuery.eq('branch_id', branchId)
+
     const [{ data: staffData }, { data: attData }] = await Promise.all([
       staffQuery.order('full_name'),
-      supabase.from('attendance').select('id, staff_id, date, status').gte('date', startDate).lte('date', endDate),
+      attQuery,
     ])
     setStaff((staffData ?? []) as StaffRow[])
     setRecords((attData ?? []) as AttendanceRow[])

@@ -98,17 +98,21 @@ export default function MarketingPage() {
     async function load() {
       const supabase = createClient()
 
-      const [activeRes, allRes, recentRes] = await Promise.all([
-        supabase.from('campaigns')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'active'),
-        supabase.from('campaigns')
-          .select('budget, actual_spend, actual_reach, status'),
-        supabase.from('campaigns')
-          .select('id, title, status, channel, budget, actual_spend, start_date, end_date')
-          .order('created_at', { ascending: false })
-          .limit(4),
-      ])
+      const { data: { user } } = await supabase.auth.getUser()
+      const branchId = user
+        ? (await supabase.from('internal_profiles').select('branch_id').eq('id', user.id).single()).data?.branch_id ?? null
+        : null
+
+      let activeQ  = supabase.from('campaigns').select('id', { count: 'exact', head: true }).eq('status', 'active')
+      let allQ     = supabase.from('campaigns').select('budget, actual_spend, actual_reach, status')
+      let recentQ  = supabase.from('campaigns').select('id, title, status, channel, budget, actual_spend, start_date, end_date').order('created_at', { ascending: false }).limit(4)
+      if (branchId) {
+        activeQ = activeQ.eq('branch_id', branchId)
+        allQ    = allQ.eq('branch_id', branchId)
+        recentQ = recentQ.eq('branch_id', branchId)
+      }
+
+      const [activeRes, allRes, recentRes] = await Promise.all([activeQ, allQ, recentQ])
 
       const all = allRes.data ?? []
       const totalBudget = all.reduce((s, c) => s + Number(c.budget || 0), 0)

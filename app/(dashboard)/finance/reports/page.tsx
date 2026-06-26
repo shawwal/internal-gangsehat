@@ -30,10 +30,10 @@ export default function FinanceReportsPage() {
   const [userId, setUserId]     = useState<string | null>(null)
   const [branchId, setBranchId] = useState<string | null>(null)
 
-  async function loadProfile() {
+  async function loadProfile(): Promise<string | null> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) return null
     const { data: profile } = await supabase
       .from('internal_profiles')
       .select('branch_id')
@@ -41,20 +41,23 @@ export default function FinanceReportsPage() {
       .single()
     setUserId(user.id)
     setBranchId(profile?.branch_id ?? null)
+    return profile?.branch_id ?? null
   }
 
-  async function load() {
-    const { data } = await createClient()
+  async function load(bid: string | null = null) {
+    let q = createClient()
       .from('branch_financial_reports')
       .select('*')
       .order('period_year', { ascending: false })
       .order('period_month', { ascending: false })
+    if (bid) q = q.eq('branch_id', bid)
+    const { data } = await q
     setReports((data ?? []) as BranchFinancialReport[])
     setLoading(false)
   }
 
   useEffect(() => {
-    loadProfile().then(() => load())
+    loadProfile().then((bid) => load(bid))
   }, [])
 
   async function handleGenerate(e: React.FormEvent) {
@@ -114,7 +117,7 @@ export default function FinanceReportsPage() {
 
     setSaving(false)
     setShowForm(false)
-    load()
+    load(branchId)
   }
 
   async function submit(id: string) {
@@ -123,7 +126,7 @@ export default function FinanceReportsPage() {
       submitted_at: new Date().toISOString(),
       submitted_by: userId,
     }).eq('id', id)
-    load()
+    load(branchId)
   }
 
   return (
