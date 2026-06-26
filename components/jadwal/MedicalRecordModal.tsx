@@ -22,13 +22,19 @@ const BODY_REGIONS: BodyRegion[] = [
   'FOOT', 'CNS', 'PNS', 'SYSTEMIC', 'CARDIOVASCULAR', 'PULMONAL', 'PERFORMANCE',
 ]
 
+export interface MedicalRecordSavedContext {
+  service_type: string
+  status: VisitStatus
+  patient_id: string
+}
+
 interface Props {
   visitId: string | null
   contextShift?: string | null
   contextServiceType?: string | null
   contextKehadiran?: string | null
   onClose: () => void
-  onSaved: () => void
+  onSaved: (ctx?: MedicalRecordSavedContext) => void
 }
 
 type FormState = {
@@ -89,6 +95,11 @@ export function MedicalRecordModal({ visitId, contextShift, contextServiceType, 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!form || !visitId) return
+    if (form.status === 'completed') {
+      if (!form.diagnosis.trim())  { setError('Diagnosis wajib diisi sebelum menandai kunjungan sebagai Selesai.'); return }
+      if (!form.treatment.trim())  { setError('Tindakan wajib diisi sebelum menandai kunjungan sebagai Selesai.'); return }
+      if (!form.regio)             { setError('Regio wajib dipilih sebelum menandai kunjungan sebagai Selesai.'); return }
+    }
     setSaving(true)
     setError(null)
     const { error: err } = await updateVisit(visitId, {
@@ -105,7 +116,7 @@ export function MedicalRecordModal({ visitId, contextShift, contextServiceType, 
     })
     setSaving(false)
     if (err) { setError(err); return }
-    onSaved()
+    onSaved(visit ? { service_type: form.service_type, status: form.status, patient_id: visit.patient_id } : undefined)
   }
 
   function set(key: keyof FormState, value: string) {

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, CheckCircle2, Loader2, PlusCircle, Trash2, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Loader2, PlusCircle, Trash2, XCircle, User } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import {
   fetchPatientsPage,
   fetchPatientsPageWithStats,
@@ -42,8 +43,23 @@ export default function PatientsPage() {
   const [page,     setPage]     = useState(1)
   const [deleteTarget, setDeleteTarget] = useState<PatientPlain | null>(null)
   const [deleting,     setDeleting]     = useState(false)
+  const [isTherapistOrStaff, setIsTherapistOrStaff] = useState(false)
   const requestId       = useRef(0)
   const initialLoadDone = useRef(false)
+
+  useEffect(() => {
+    createClient().auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data: profile } = await createClient()
+        .from('internal_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      if (profile?.role === 'therapist' || profile?.role === 'staff') {
+        setIsTherapistOrStaff(true)
+      }
+    })
+  }, [])
 
   function showToast(msg: string, ok: boolean) {
     setToast({ msg, ok })
@@ -58,12 +74,13 @@ export default function PatientsPage() {
     if (!initialLoadDone.current) {
       initialLoadDone.current = true
       const { patients: data, total, stats } = await fetchPatientsPageWithStats({
-        page:      p,
-        pageSize:  PAGE_SIZE,
-        gender:    f.gender,
-        search:    f.search,
-        sortField: f.sortField,
-        sortOrder: f.sortOrder,
+        page:           p,
+        pageSize:       PAGE_SIZE,
+        gender:         f.gender,
+        search:         f.search,
+        sortField:      f.sortField,
+        sortOrder:      f.sortOrder,
+        myPatientsOnly: f.myPatientsOnly,
       })
       if (id !== requestId.current) return
       setPatients(data)
@@ -74,12 +91,13 @@ export default function PatientsPage() {
     }
 
     const { patients: data, total } = await fetchPatientsPage({
-      page:      p,
-      pageSize:  PAGE_SIZE,
-      gender:    f.gender,
-      search:    f.search,
-      sortField: f.sortField,
-      sortOrder: f.sortOrder,
+      page:           p,
+      pageSize:       PAGE_SIZE,
+      gender:         f.gender,
+      search:         f.search,
+      sortField:      f.sortField,
+      sortOrder:      f.sortOrder,
+      myPatientsOnly: f.myPatientsOnly,
     })
     if (id !== requestId.current) return
     setPatients(data)
@@ -132,6 +150,20 @@ export default function PatientsPage() {
           <p className="text-sm text-muted-foreground">Kelola data pasien klinik</p>
         </div>
         <div className="flex items-center gap-2">
+          {isTherapistOrStaff && (
+            <button
+              onClick={() => { setFilters((f) => ({ ...f, myPatientsOnly: !f.myPatientsOnly })); setPage(1) }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+                filters.myPatientsOnly
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                  : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+              title="Tampilkan hanya pasien yang pernah saya tangani"
+            >
+              <User size={14} />
+              Pasienku
+            </button>
+          )}
           <PatientExportButton filters={filters} />
           <Link
             href="/patients/new?source=patients"

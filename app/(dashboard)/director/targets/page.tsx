@@ -15,6 +15,8 @@ import { BranchTargetForm }    from '@/components/target/BranchTargetForm'
 import type { BranchTargetFormState } from '@/components/target/BranchTargetForm'
 
 import { Pagination } from '@/components/leave/Pagination'
+import { ExportButton } from '@/components/ui/ExportButton'
+import { exportToExcel } from '@/lib/excel-export'
 
 import type {
   TargetRow, BranchOption,
@@ -411,6 +413,39 @@ export default function DirectorTargetsPage() {
 
   const isManager = role === 'manager'
 
+  function handleExportStaffTargets() {
+    const today = new Date().toISOString().slice(0, 10)
+    exportToExcel(rows, [
+      { header: 'Nama',          value: (r) => (r as unknown as { internal_profiles: { full_name: string } }).internal_profiles?.full_name ?? '' },
+      { header: 'Cabang',        value: (r) => (r as unknown as { branches: { name: string } }).branches?.name ?? '' },
+      { header: 'Bulan',         value: (r) => r.bulan },
+      { header: 'Tahun',         value: (r) => r.tahun },
+      { header: 'Target TA',     value: (r) => r.target_ta },
+      { header: 'Target Paket',  value: (r) => r.target_paket_klinik },
+      { header: 'Target Kunjungan', value: (r) => r.target_kunjungan },
+      { header: 'Target Visit',  value: (r) => r.target_visit },
+      { header: 'Status',        value: (r) => r.status },
+      { header: 'Catatan',       value: (r) => r.notes ?? '' },
+    ], `target_staff_${today}`)
+    return Promise.resolve()
+  }
+
+  function handleExportBranchTargets() {
+    const today = new Date().toISOString().slice(0, 10)
+    exportToExcel(bRows, [
+      { header: 'Cabang',        value: (r) => (r as unknown as { branches: { name: string } }).branches?.name ?? '' },
+      { header: 'Bulan',         value: (r) => r.bulan },
+      { header: 'Tahun',         value: (r) => r.tahun },
+      { header: 'Target TA',     value: (r) => r.target_ta },
+      { header: 'Target Paket',  value: (r) => r.target_paket_klinik },
+      { header: 'Target Kunjungan', value: (r) => r.target_kunjungan },
+      { header: 'Target Visit',  value: (r) => r.target_visit },
+      { header: 'Status',        value: (r) => r.status },
+      { header: 'Catatan',       value: (r) => r.notes ?? '' },
+    ], `target_cabang_${today}`)
+    return Promise.resolve()
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
@@ -473,7 +508,12 @@ export default function DirectorTargetsPage() {
       {/* ── TAB: Staff Targets ── */}
       {activeTab === 'staff' && (
         <>
-          <TargetStats stats={stats} />
+          <div className="flex items-center justify-between gap-4">
+            <TargetStats stats={stats} />
+            {!loading && rows.length > 0 && (
+              <ExportButton onExport={handleExportStaffTargets} label="Export" />
+            )}
+          </div>
 
           <TargetFilters
             filters={filters}
@@ -525,7 +565,10 @@ export default function DirectorTargetsPage() {
         <>
           {/* Add button */}
           {!bShowForm && (
-            <div className="flex justify-end">
+            <div className="flex items-center justify-end gap-2">
+              {!bLoading && bRows.length > 0 && (
+                <ExportButton onExport={handleExportBranchTargets} label="Export" />
+              )}
               <button
                 onClick={openBCreate}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"

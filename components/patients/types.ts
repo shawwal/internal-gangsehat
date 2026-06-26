@@ -6,17 +6,19 @@ export type SortOrder   = 'asc' | 'desc'
 export type ViewMode    = 'grid' | 'table'
 
 export interface PatientFiltersState {
-  search:    string
-  gender:    GenderFilter
-  sortField: SortField
-  sortOrder: SortOrder
+  search:         string
+  gender:         GenderFilter
+  sortField:      SortField
+  sortOrder:      SortOrder
+  myPatientsOnly: boolean
 }
 
 export const DEFAULT_FILTERS: PatientFiltersState = {
-  search:    '',
-  gender:    'all',
-  sortField: 'created_at',
-  sortOrder: 'desc',
+  search:         '',
+  gender:         'all',
+  sortField:      'created_at',
+  sortOrder:      'desc',
+  myPatientsOnly: false,
 }
 
 export const PAGE_SIZE = 10

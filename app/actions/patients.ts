@@ -120,6 +120,7 @@ export interface PatientsPageParams {
   search: string
   sortField: 'name' | 'created_at' | 'no_rm'
   sortOrder: 'asc' | 'desc'
+  myPatientsOnly?: boolean
 }
 
 export interface PatientsPageResult {
@@ -146,6 +147,20 @@ export async function fetchPatientsPage(params: PatientsPageParams): Promise<Pat
   const ascending = sortOrder === 'asc'
   const from = (page - 1) * pageSize
 
+  // Resolve "my patients" — get distinct patient IDs where current user is attending staff
+  let myPatientIds: string[] | null = null
+  if (params.myPatientsOnly) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: visits } = await supabase
+        .from('patient_visits')
+        .select('patient_id')
+        .eq('attending_staff_id', user.id)
+      myPatientIds = [...new Set((visits ?? []).map((v: { patient_id: string }) => v.patient_id))]
+      if (myPatientIds.length === 0) return { patients: [], total: 0 }
+    }
+  }
+
   // Fast path — everything expressible in SQL
   if (!search && sortField !== 'name') {
     let query = supabase
@@ -153,6 +168,7 @@ export async function fetchPatientsPage(params: PatientsPageParams): Promise<Pat
       .select(SELECT_COLS, { count: 'exact' })
       .eq('is_active', true)
     if (gender !== 'all') query = query.eq('gender', gender)
+    if (myPatientIds) query = query.in('id', myPatientIds)
     const { data, count } = await query
       .order(sortField, { ascending, nullsFirst: false })
       .order('id', { ascending: true }) // stable tiebreaker across pages
@@ -173,6 +189,7 @@ export async function fetchPatientsPage(params: PatientsPageParams): Promise<Pat
       .select(SELECT_COLS)
       .eq('is_active', true)
     if (gender !== 'all') query = query.eq('gender', gender)
+    if (myPatientIds) query = query.in('id', myPatientIds)
     const { data, error } = await query
       .order('id', { ascending: true })
       .range(offset, offset + BATCH - 1)
@@ -240,10 +257,11 @@ export async function fetchPatientStats(): Promise<PatientStats> {
 }
 
 export async function fetchPatientsForExport(params: {
-  gender:    'all' | 'male' | 'female' | 'other'
-  search:    string
-  sortField: 'name' | 'created_at' | 'no_rm'
-  sortOrder: 'asc' | 'desc'
+  gender:         'all' | 'male' | 'female' | 'other'
+  search:         string
+  sortField:      'name' | 'created_at' | 'no_rm'
+  sortOrder:      'asc' | 'desc'
+  myPatientsOnly?: boolean
 }): Promise<PatientPlain[]> {
   const supabase = await createClient()
   const { gender, sortField, sortOrder } = params
@@ -251,12 +269,26 @@ export async function fetchPatientsForExport(params: {
   const ascending = sortOrder === 'asc'
   const BATCH     = 1000
 
+  let myPatientIds: string[] | null = null
+  if (params.myPatientsOnly) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: visits } = await supabase
+        .from('patient_visits')
+        .select('patient_id')
+        .eq('attending_staff_id', user.id)
+      myPatientIds = [...new Set((visits ?? []).map((v: { patient_id: string }) => v.patient_id))]
+      if (myPatientIds.length === 0) return []
+    }
+  }
+
   const fetchBatched = async (ordered: boolean) => {
     const rows: Record<string, unknown>[] = []
     let from = 0
     while (true) {
       let q = supabase.from('patients').select(SELECT_COLS).eq('is_active', true)
       if (gender !== 'all') q = q.eq('gender', gender)
+      if (myPatientIds) q = q.in('id', myPatientIds)
       if (ordered) q = q.order(sortField, { ascending, nullsFirst: false }).order('id', { ascending: true })
       else q = q.order('id', { ascending: true })
       const { data, error } = await q.range(from, from + BATCH - 1)

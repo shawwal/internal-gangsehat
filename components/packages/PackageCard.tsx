@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Pencil, Trash2, ChevronDown, ChevronUp, CalendarDays } from 'lucide-react'
 import { fetchPackageSessions } from '@/app/actions/packages'
 import { SessionList } from './SessionList'
 import {
@@ -11,12 +11,13 @@ import { formatDate, sessionBarColor, sessionTextColor } from './helpers'
 import type { PatientPackage, PackageSession } from './types'
 
 interface PackageCardProps {
-  pkg:      PatientPackage
-  onEdit:   (pkg: PatientPackage) => void
-  onDelete: (id: string) => void
+  pkg:        PatientPackage
+  onEdit:     (pkg: PatientPackage) => void
+  onDelete:   (id: string) => void
+  onSchedule?: (pkg: PatientPackage) => void
 }
 
-export function PackageCard({ pkg, onEdit, onDelete }: PackageCardProps) {
+export function PackageCard({ pkg, onEdit, onDelete, onSchedule }: PackageCardProps) {
   const pct = pkg.total_sessions > 0 ? (pkg.used_sessions / pkg.total_sessions) * 100 : 0
   const [expanded, setExpanded]             = useState(false)
   const [sessions, setSessions]             = useState<PackageSession[] | null>(null)
@@ -66,6 +67,16 @@ export function PackageCard({ pkg, onEdit, onDelete }: PackageCardProps) {
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          {onSchedule && pkg.status === 'active' && pkg.remaining_sessions > 0 && (
+            <button
+              onClick={() => onSchedule(pkg)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors border border-primary/20"
+              title="Jadwalkan sesi"
+            >
+              <CalendarDays size={12} />
+              Jadwalkan
+            </button>
+          )}
           <button
             onClick={() => onEdit(pkg)}
             className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"

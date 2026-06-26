@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle, XCircle, Clock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { ExportButton } from '@/components/ui/ExportButton'
+import { exportToExcel } from '@/lib/excel-export'
 import type { ReportStatus } from '@/types'
 
 interface Report {
@@ -65,11 +67,32 @@ export default function DirectorReportsPage() {
     load()
   }
 
+  function handleExportReports() {
+    exportToExcel(reports, [
+      { header: 'Cabang',         value: (r) => r.branches?.name ?? '' },
+      { header: 'Periode',        value: (r) => `${MONTH_NAMES[r.period_month - 1]} ${r.period_year}` },
+      { header: 'Bulan',          value: (r) => r.period_month },
+      { header: 'Tahun',          value: (r) => r.period_year },
+      { header: 'Total Pemasukan', value: (r) => r.total_income },
+      { header: 'Total Pengeluaran', value: (r) => r.total_expense },
+      { header: 'Net Profit',     value: (r) => r.net_profit },
+      { header: 'Status',         value: (r) => r.status },
+      { header: 'Catatan',        value: (r) => r.notes ?? '' },
+      { header: 'Dikirim',        value: (r) => r.submitted_at?.slice(0, 10) ?? '' },
+    ], `laporan_keuangan_${new Date().toISOString().slice(0, 10)}`)
+    return Promise.resolve()
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Laporan Bulanan</h1>
-        <p className="text-sm text-muted-foreground">Tinjau dan setujui laporan keuangan cabang</p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Laporan Bulanan</h1>
+          <p className="text-sm text-muted-foreground">Tinjau dan setujui laporan keuangan cabang</p>
+        </div>
+        {!loading && reports.length > 0 && (
+          <ExportButton onExport={handleExportReports} />
+        )}
       </div>
 
       {loading ? (

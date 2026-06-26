@@ -34,10 +34,11 @@ interface Props {
 export function PatientExportButton({ filters }: Props) {
   async function handleExport() {
     const data = await fetchPatientsForExport({
-      gender:    filters.gender,
-      search:    filters.search,
-      sortField: filters.sortField,
-      sortOrder: filters.sortOrder,
+      gender:         filters.gender,
+      search:         filters.search,
+      sortField:      filters.sortField,
+      sortOrder:      filters.sortOrder,
+      myPatientsOnly: filters.myPatientsOnly,
     })
     const today = new Date().toISOString().slice(0, 10)
     exportToExcel(data, COLUMNS, `pasien_${today}`)

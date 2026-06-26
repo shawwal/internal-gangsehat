@@ -10,7 +10,11 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchPatient } from '@/app/actions/patients'
 import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
+import { ExportButton } from '@/components/ui/ExportButton'
+import { exportToExcel } from '@/lib/excel-export'
+import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import type { PaymentVisitInfo } from '@/components/visits/PaymentDialog'
+import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 import type { PatientVisit, VisitStatus, ServiceType, BodyRegion, UserRole } from '@/types'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -125,6 +129,7 @@ export default function PatientVisitsPage() {
 
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
   const [paymentVisit, setPaymentVisit]       = useState<PaymentVisitInfo | null>(null)
+  const [packagePrompt, setPackagePrompt]     = useState<MedicalRecordSavedContext | null>(null)
 
   const canRecordPayment = !!userRole && ['finance', 'manager', 'director'].includes(userRole)
 
@@ -186,6 +191,29 @@ export default function PatientVisitsPage() {
     load()
   }
 
+  function handleExportVisits() {
+    const therapistName = (v: PatientVisit) => {
+      const raw = (v as unknown as { internal_profiles: { full_name: string; nickname: string | null } | null }).internal_profiles
+      if (!raw) return ''
+      return raw.nickname ? `${raw.nickname} · ${raw.full_name}` : raw.full_name
+    }
+    exportToExcel(visits, [
+      { header: 'Tanggal',      value: (v) => v.visit_date },
+      { header: 'Shift',        value: (v) => v.shift ?? '' },
+      { header: 'Layanan',      value: (v) => v.service_type ?? '' },
+      { header: 'Terapis',      value: therapistName },
+      { header: 'Regio',        value: (v) => v.regio ?? '' },
+      { header: 'Sumber',       value: (v) => v.sumber_pasien ?? '' },
+      { header: 'Keluhan',      value: (v) => v.chief_complaint ?? '' },
+      { header: 'Diagnosis',    value: (v) => v.diagnosis ?? '' },
+      { header: 'Tindakan',     value: (v) => v.treatment ?? '' },
+      { header: 'Kehadiran',    value: (v) => v.kehadiran ?? '' },
+      { header: 'Status',       value: (v) => STATUS_LABEL[v.status] },
+      { header: 'Catatan',      value: (v) => v.notes ?? '' },
+    ], `rekam_medis_${patientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}`)
+    return Promise.resolve()
+  }
+
   // Derived stats
   const total     = visits.length
   const completed = visits.filter((v) => v.status === 'completed').length
@@ -215,12 +243,17 @@ export default function PatientVisitsPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => { setForm(DEFAULT_FORM); setShowForm(true) }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus size={16} /> Tambah Kunjungan
-        </button>
+        <div className="flex items-center gap-2">
+          {!loading && visits.length > 0 && (
+            <ExportButton onExport={handleExportVisits} label="Export" />
+          )}
+          <button
+            onClick={() => { setForm(DEFAULT_FORM); setShowForm(true) }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={16} /> Tambah Kunjungan
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -512,7 +545,17 @@ export default function PatientVisitsPage() {
       <MedicalRecordModal
         visitId={selectedVisitId}
         onClose={() => setSelectedVisitId(null)}
-        onSaved={() => { setSelectedVisitId(null); load() }}
+        onSaved={(ctx) => {
+          setSelectedVisitId(null)
+          load()
+          if (
+            ctx &&
+            ctx.status === 'completed' &&
+            (ctx.service_type === 'TERAPI AWAL' || ctx.service_type === 'TA VISIT')
+          ) {
+            setPackagePrompt(ctx)
+          }
+        }}
       />
 
       {/* Payment dialog */}
@@ -521,6 +564,18 @@ export default function PatientVisitsPage() {
           visit={paymentVisit}
           onClose={() => setPaymentVisit(null)}
           onSuccess={() => { setPaymentVisit(null); load() }}
+        />
+      )}
+
+      {/* Post-assessment package recommendation */}
+      {packagePrompt && (
+        <PostAssessmentPackageDialog
+          patientId={packagePrompt.patient_id}
+          patientName={patientName}
+          branchId={branchId}
+          sourceServiceType={packagePrompt.service_type}
+          onClose={() => setPackagePrompt(null)}
+          onSuccess={() => { setPackagePrompt(null); load() }}
         />
       )}
     </div>

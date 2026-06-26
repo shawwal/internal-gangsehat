@@ -9,15 +9,36 @@ import { PackageCard }   from '@/components/packages/PackageCard'
 import { PackageModal }  from '@/components/packages/PackageModal'
 import { DeleteConfirm } from '@/components/packages/DeleteConfirm'
 import { usePackages }   from '@/components/packages/usePackages'
-import type { PatientPackage } from '@/components/packages/types'
+import { ExportButton }         from '@/components/ui/ExportButton'
+import { exportToExcel }        from '@/lib/excel-export'
+import { PackageSessionWizard } from '@/components/packages/PackageSessionWizard'
+import type { PatientPackage }  from '@/components/packages/types'
 
 export default function PatientPackagesPage() {
   const { id } = useParams() as { id: string }
   const { packages, patientName, noRm, branchId, loading, stats, load, handleDelete } = usePackages(id)
 
-  const [showModal, setShowModal]     = useState(false)
-  const [editTarget, setEditTarget]   = useState<PatientPackage | null>(null)
+  const [showModal, setShowModal]       = useState(false)
+  const [editTarget, setEditTarget]     = useState<PatientPackage | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [scheduleTarget, setScheduleTarget] = useState<PatientPackage | null>(null)
+
+  function handleExportPackages() {
+    exportToExcel(packages, [
+      { header: 'Nama Paket',       value: (p) => p.package_name },
+      { header: 'Jenis',            value: (p) => p.jenis_paket ?? '' },
+      { header: 'Mulai',            value: (p) => p.mulai_paket ?? '' },
+      { header: 'Total Sesi',       value: (p) => p.total_sessions },
+      { header: 'Terpakai',         value: (p) => p.used_sessions },
+      { header: 'Sisa',             value: (p) => p.remaining_sessions },
+      { header: 'Status',           value: (p) => p.status },
+      { header: 'Status Operasi',   value: (p) => p.operational_status },
+      { header: 'Status Selesai',   value: (p) => p.completion_status ?? '' },
+      { header: 'Catatan',          value: (p) => p.notes ?? '' },
+      { header: 'Dibuat',           value: (p) => p.created_at.slice(0, 10) },
+    ], `paket_${patientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}`)
+    return Promise.resolve()
+  }
 
   function openAdd() {
     setEditTarget(null)
@@ -49,12 +70,17 @@ export default function PatientPackagesPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus size={16} /> Tambah Paket
-        </button>
+        <div className="flex items-center gap-2">
+          {!loading && packages.length > 0 && (
+            <ExportButton onExport={handleExportPackages} label="Export" />
+          )}
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={16} /> Tambah Paket
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -92,6 +118,7 @@ export default function PatientPackagesPage() {
               pkg={pkg}
               onEdit={openEdit}
               onDelete={(pkgId) => setDeleteTarget(pkgId)}
+              onSchedule={(p) => setScheduleTarget(p)}
             />
           ))}
         </div>
@@ -112,6 +139,16 @@ export default function PatientPackagesPage() {
         <DeleteConfirm
           onConfirm={() => { handleDelete(deleteTarget); setDeleteTarget(null) }}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {scheduleTarget && (
+        <PackageSessionWizard
+          pkg={scheduleTarget}
+          patientId={id}
+          branchId={branchId}
+          onClose={() => setScheduleTarget(null)}
+          onSuccess={() => { setScheduleTarget(null); load() }}
         />
       )}
     </div>
