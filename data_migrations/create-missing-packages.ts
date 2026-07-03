@@ -299,7 +299,11 @@ async function main() {
       createdPkgs++
 
       // Import sessions
-      const doneSessions = order.sessions?.filter(s => s['NOMINAL BAYAR'] === 'Sudah Ditangani') ?? []
+      const doneSessions = order.sessions?.filter(
+        s => s['NOMINAL BAYAR'] === 'Sudah Ditangani'
+          || s.STATUS_SESI === 'Hadir'
+          || s.STATUS_SESI === 'Tidak Hadir'
+      ) ?? []
       if (doneSessions.length === 0) {
         console.log(`  CREATED ${order.KODE} → ${name} / ${order.LAYANAN} (0 done sessions)`)
         continue

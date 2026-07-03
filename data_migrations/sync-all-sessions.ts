@@ -114,9 +114,14 @@ for (const o of orders) {
   paketByPatient.set(name, list)
 }
 
-// Count completed sessions per order (only "Sudah Ditangani")
+// Sessions to import: attended (Hadir), missed (Tidak Hadir), or billing confirmed.
+// Excludes only sessions with no recorded status yet (STATUS_SESI = '-').
 function doneSessions(o: Order): Session[] {
-  return o.sessions?.filter(s => s['NOMINAL BAYAR'] === 'Sudah Ditangani') ?? []
+  return o.sessions?.filter(
+    s => s['NOMINAL BAYAR'] === 'Sudah Ditangani'
+      || s.STATUS_SESI === 'Hadir'
+      || s.STATUS_SESI === 'Tidak Hadir'
+  ) ?? []
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────

@@ -117,7 +117,7 @@ export function PackageCard({ pkg, onEdit, onDelete, onSchedule }: PackageCardPr
         onClick={toggleSessions}
         className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors text-xs text-muted-foreground"
       >
-        <span>Sesi Terpakai ({pkg.used_sessions})</span>
+        <span>Riwayat Sesi</span>
         {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
       </button>
 

@@ -17,5 +17,6 @@ LEFT JOIN (
   FROM public.patient_visits
   WHERE status != 'cancelled'
     AND package_id IS NOT NULL
+    AND kehadiran != 'TIDAK HADIR'
   GROUP BY package_id
 ) vc ON pp.id = vc.package_id;
