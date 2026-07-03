@@ -66,6 +66,15 @@ function daysBetween(a: Date, b: Date): number {
   return Math.abs((a.getTime() - b.getTime()) / 86_400_000)
 }
 
+function deriveVisitServiceType(layanan: string): string {
+  const u = layanan.toUpperCase()
+  if (u.startsWith('PAKET')) return u.includes('VISIT') ? 'PAKET VISIT' : 'PAKET TERAPI'
+  if (u === 'TERAPI AWAL') return 'TERAPI AWAL'
+  if (u === 'TA VISIT')    return 'TA VISIT'
+  if (u.includes('VISIT')) return 'SESI VISIT'
+  return 'SESI TERAPI'
+}
+
 function deriveShift(jam: string): 'PAGI' | 'SORE' {
   if (!jam || jam === '-') return 'PAGI'
   const [h] = jam.split(':').map(Number)
@@ -318,7 +327,7 @@ async function main() {
           branch_id:           BRANCH_ID,
           visit_date:          parseDate(s.TANGGAL),
           shift:               deriveShift(s.JAM),
-          service_type:        'SESI TERAPI',
+          service_type:        deriveVisitServiceType(order.LAYANAN),
           kehadiran:           deriveKehadiran(s.STATUS_SESI),
           status:              'completed',
           attending_staff_id:  matchTherapist(s.FISIO, profiles),
