@@ -101,7 +101,7 @@ for (const o of orders) orderByKode.set(o.KODE, o)
 
 // Group PAKET orders by patient name for fuzzy matching
 const STATUS_MAP: Record<string, 'active' | 'completed'> = {
-  Proses: 'active', Booking: 'active', Evaluasi: 'completed', Selesai: 'completed',
+  Proses: 'active', Booking: 'active', Evaluasi: 'completed', Selesai: 'completed', Stop: 'completed',
 }
 
 const paketByPatient = new Map<string, Order[]>()

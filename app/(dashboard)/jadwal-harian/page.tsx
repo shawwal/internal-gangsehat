@@ -17,8 +17,10 @@ import { NoShowDialog } from '@/components/jadwal/NoShowDialog'
 import { ControlsBar } from '@/components/jadwal/ControlsBar'
 import { FocusModeBar } from '@/components/jadwal/FocusModeBar'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
+import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import type { AssignTarget } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
+import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 
 const LS_KEY = 'jadwal_showInactive'
 
@@ -40,6 +42,9 @@ export default function JadwalHarianPage() {
   const [selectedStaffId, setSelectedStaffId]       = useState<string | null>(null)
   const [noShowVisit, setNoShowVisit]               = useState<DailyVisit | null>(null)
   const [paymentVisit, setPaymentVisit]             = useState<DailyVisit | null>(null)
+  const [packagePrompt, setPackagePrompt]           = useState<
+    (MedicalRecordSavedContext & { patientName: string; branchId: string | null }) | null
+  >(null)
 
   // Toolbar state
   const [showInactive, setShowInactive] = useState<boolean>(() => {
@@ -215,7 +220,15 @@ export default function JadwalHarianPage() {
           : null
         }
         onClose={() => { setSelectedVisitId(null); setSelectedVisitShift(null) }}
-        onSaved={() => { setSelectedVisitId(null); setSelectedVisitShift(null); loadAll(selectedDate) }}
+        onSaved={(ctx) => {
+          const visit = visits.find((v) => v.id === selectedVisitId)
+          setSelectedVisitId(null)
+          setSelectedVisitShift(null)
+          loadAll(selectedDate)
+          if (ctx?.status === 'completed' && (ctx.service_type === 'TERAPI AWAL' || ctx.service_type === 'TA VISIT')) {
+            setPackagePrompt({ ...ctx, patientName: visit?.patient_name ?? '', branchId: visit?.branch_id ?? null })
+          }
+        }}
       />
 
       {noShowVisit && (
@@ -250,6 +263,17 @@ export default function JadwalHarianPage() {
           }}
           onClose={() => setPaymentVisit(null)}
           onSuccess={() => loadAll(selectedDate)}
+        />
+      )}
+
+      {packagePrompt && (
+        <PostAssessmentPackageDialog
+          patientId={packagePrompt.patient_id}
+          patientName={packagePrompt.patientName}
+          branchId={packagePrompt.branchId}
+          sourceServiceType={packagePrompt.service_type}
+          onClose={() => setPackagePrompt(null)}
+          onSuccess={() => { setPackagePrompt(null); loadAll(selectedDate) }}
         />
       )}
     </>

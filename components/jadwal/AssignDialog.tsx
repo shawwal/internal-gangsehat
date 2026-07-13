@@ -113,6 +113,29 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
 
   const willCreate = mode === 'recurring' ? recurDates.length : 1
 
+  // ── Sync end date to selected package's remaining sessions ───────────────────
+  useEffect(() => {
+    if (mode !== 'recurring' || !selectedPkgId || recurDays.length === 0) return
+    const pkg = packages.find((p) => p.id === selectedPkgId)
+    if (!pkg) return
+    const remaining = pkg.total_sessions - pkg.used_sessions
+    if (remaining <= 0) return
+
+    const cur = new Date(target.date + 'T00:00:00')
+    let count = 0
+    let lastDate = target.date
+    let safety = 0
+    while (count < remaining && safety < 366) {
+      if (recurDays.includes(cur.getDay())) {
+        lastDate = toIso(cur)
+        count++
+      }
+      if (count < remaining) cur.setDate(cur.getDate() + 1)
+      safety++
+    }
+    setRecurEnd(lastDate)
+  }, [selectedPkgId, recurDays, packages, mode, target.date])
+
   // ── Handlers ──────────────────────────────────────────────────────────────────
   function handleSelectPatient(p: PatientPlain) {
     setSelected(p)

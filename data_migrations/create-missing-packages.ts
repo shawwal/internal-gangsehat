@@ -139,7 +139,7 @@ function deriveJenisPaket(layanan: string): 'P1' | 'P2' | null {
 }
 
 const STATUS_MAP: Record<string, 'active' | 'completed'> = {
-  Proses: 'active', Booking: 'active', Evaluasi: 'completed', Selesai: 'completed',
+  Proses: 'active', Booking: 'active', Evaluasi: 'completed', Selesai: 'completed', Stop: 'completed',
 }
 
 // ── load data ─────────────────────────────────────────────────────────────────
@@ -318,22 +318,29 @@ async function main() {
         continue
       }
 
-      const rows = doneSessions.map(s => {
+      const seenSlots = new Set<string>()
+      const rows = doneSessions.reduce<object[]>((acc, s) => {
+        const visitDate = parseDate(s.TANGGAL)
+        const shift = deriveShift(s.JAM)
+        const slotKey = `${visitDate}::${shift}`
+        if (seenSlots.has(slotKey)) return acc
+        seenSlots.add(slotKey)
         const keterangan = s.KETERANGAN?.trim()
         const isPaymentNote = /^Rp/.test(keterangan ?? '')
-        return {
+        acc.push({
           patient_id:          patId,
           package_id:          newPkg.id,
           branch_id:           BRANCH_ID,
-          visit_date:          parseDate(s.TANGGAL),
-          shift:               deriveShift(s.JAM),
+          visit_date:          visitDate,
+          shift,
           service_type:        deriveVisitServiceType(order.LAYANAN),
           kehadiran:           deriveKehadiran(s.STATUS_SESI),
           status:              'completed',
           attending_staff_id:  matchTherapist(s.FISIO, profiles),
           notes:               (!isPaymentNote && keterangan && keterangan !== '-') ? keterangan : null,
-        }
-      })
+        })
+        return acc
+      }, [])
 
       const { error: insertErr } = await supabase.from('patient_visits').insert(rows)
       if (insertErr) {
