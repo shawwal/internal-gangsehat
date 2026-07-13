@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { RegionSelect } from '@/components/ui/RegionSelect'
-import { PROVINSI, getKabupatenByProvinsi } from '@/lib/indonesia-regions'
+import { PROVINSI, KABUPATEN_KOTA, getKabupatenByProvinsi, getKecamatanByKabupaten } from '@/lib/indonesia-regions'
 
 export interface AddPatientFormData {
   name: string
@@ -61,8 +61,26 @@ export function AddPatientFormFields({ form, onChange }: Props) {
     [selectedProvinsiKode],
   )
 
+  const selectedKabupatenKode = useMemo(
+    () => KABUPATEN_KOTA.find(
+      (k) => k.provinsi_kode === selectedProvinsiKode && k.nama === form.kabupatenKota,
+    )?.kode ?? null,
+    [selectedProvinsiKode, form.kabupatenKota],
+  )
+
+  const kecamatanOptions = useMemo(
+    () => selectedKabupatenKode
+      ? getKecamatanByKabupaten(selectedKabupatenKode).map((k) => k.nama)
+      : [],
+    [selectedKabupatenKode],
+  )
+
   function handleProvinsiChange(v: string) {
-    onChange({ ...form, provinsi: v, kabupatenKota: '' })
+    onChange({ ...form, provinsi: v, kabupatenKota: '', kecamatan: '' })
+  }
+
+  function handleKabupatenChange(v: string) {
+    onChange({ ...form, kabupatenKota: v, kecamatan: '' })
   }
 
   return (
@@ -184,7 +202,7 @@ export function AddPatientFormFields({ form, onChange }: Props) {
               <RegionSelect
                 options={kabupatenOptions}
                 value={form.kabupatenKota}
-                onChange={(v) => set('kabupatenKota', v)}
+                onChange={handleKabupatenChange}
                 placeholder={form.provinsi ? 'Pilih kab/kota...' : 'Pilih provinsi dulu'}
                 disabled={!form.provinsi}
               />
@@ -196,11 +214,12 @@ export function AddPatientFormFields({ form, onChange }: Props) {
               <label className={labelCls}>
                 Kecamatan <span className="text-destructive">*</span>
               </label>
-              <input
+              <RegionSelect
+                options={kecamatanOptions}
                 value={form.kecamatan}
-                onChange={(e) => set('kecamatan', e.target.value)}
-                placeholder="Sesuai KTP"
-                className={inputCls}
+                onChange={(v) => set('kecamatan', v)}
+                placeholder={form.kabupatenKota ? 'Pilih atau ketik kecamatan...' : 'Pilih kab/kota dulu'}
+                disabled={!form.kabupatenKota}
               />
             </div>
             <div>

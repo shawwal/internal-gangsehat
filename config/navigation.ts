@@ -145,7 +145,7 @@ export const navigation: NavItem[] = [
     label: 'Transaksi',
     href: '/finance/transactions',
     icon: 'Receipt',
-    roles: ['finance'],
+    roles: ['finance', 'admin'],
     group: 'finance',
   },
   {
@@ -207,7 +207,7 @@ export const navigation: NavItem[] = [
     label: 'Jadwal Harian',
     href: '/jadwal-harian',
     icon: 'CalendarClock',
-    roles: ['director', 'hr', 'manager', 'therapist', 'staff'],
+    roles: ['director', 'hr', 'manager', 'therapist', 'staff', 'admin'],
     group: 'schedule',
   },
 
@@ -217,7 +217,7 @@ export const navigation: NavItem[] = [
     label: 'Jadwal Saya',
     href: '/my-schedule',
     icon: 'CalendarDays',
-    roles: ['director', 'hr', 'finance', 'marketing', 'therapist', 'staff', 'manager'],
+    roles: ['director', 'hr', 'finance', 'marketing', 'therapist', 'staff', 'manager', 'admin'],
     group: 'schedule',
   },
 
@@ -227,7 +227,17 @@ export const navigation: NavItem[] = [
     label: 'Pengajuan Cuti',
     href: '/leave',
     icon: 'CalendarOff',
-    roles: ['finance', 'marketing', 'therapist', 'manager'],
+    roles: ['finance', 'marketing', 'therapist', 'manager', 'admin'],
+    group: 'hr',
+  },
+
+  // Team leave view (read-only) — admin only
+  {
+    key: 'admin-leave',
+    label: 'Cuti Staff',
+    href: '/admin/leave',
+    icon: 'CalendarOff',
+    roles: ['admin'],
     group: 'hr',
   },
 
@@ -307,7 +317,7 @@ export const navigation: NavItem[] = [
     label: 'Pasien',
     href: '/patients',
     icon: 'HeartPulse',
-    roles: ['director', 'finance', 'hr', 'marketing', 'therapist', 'manager'],
+    roles: ['director', 'finance', 'hr', 'marketing', 'therapist', 'manager', 'admin'],
     group: 'clinic',
   },
   {
@@ -323,7 +333,7 @@ export const navigation: NavItem[] = [
     label: 'Notifikasi',
     href: '/notifications',
     icon: 'Bell',
-    roles: ['director', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'manager'],
+    roles: ['director', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'manager', 'admin'],
     group: 'system',
   },
   {
@@ -331,7 +341,7 @@ export const navigation: NavItem[] = [
     label: 'Pengaturan',
     href: '/settings',
     icon: 'Settings',
-    roles: ['director', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'manager'],
+    roles: ['director', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'manager', 'admin'],
     group: 'system',
   },
 ]

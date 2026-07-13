@@ -11,9 +11,9 @@ interface Props {
   leave: LeaveRow
   isSelected?: boolean
   onToggle?: (id: string) => void
-  onApprove: (id: string) => Promise<void>
-  onReject: (id: string, note: string) => Promise<void>
-  onDelete: (id: string) => Promise<void>
+  onApprove?: (id: string) => Promise<void>
+  onReject?: (id: string, note: string) => Promise<void>
+  onDelete?: (id: string) => Promise<void>
 }
 
 export function LeaveCard({ leave, isSelected, onToggle, onApprove, onReject, onDelete }: Props) {
@@ -30,13 +30,14 @@ export function LeaveCard({ leave, isSelected, onToggle, onApprove, onReject, on
   const isPending = leave.status === 'pending'
 
   async function handleApprove() {
+    if (!onApprove) return
     setLoading(true)
     await onApprove(leave.id)
     setLoading(false)
   }
 
   async function handleReject() {
-    if (!rejectNote.trim()) return
+    if (!onReject || !rejectNote.trim()) return
     setLoading(true)
     await onReject(leave.id, rejectNote.trim())
     setLoading(false)
@@ -45,6 +46,7 @@ export function LeaveCard({ leave, isSelected, onToggle, onApprove, onReject, on
   }
 
   async function handleDelete() {
+    if (!onDelete) return
     setLoading(true)
     await onDelete(leave.id)
     setLoading(false)
@@ -86,13 +88,15 @@ export function LeaveCard({ leave, isSelected, onToggle, onApprove, onReject, on
                 <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${STATUS_COLOR[leave.status]}`}>
                   {STATUS_LABEL[leave.status]}
                 </span>
-                <button
-                  onClick={() => setDeleteConfirm(true)}
-                  className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                  title="Hapus permanen"
-                >
-                  <Trash2 size={14} />
-                </button>
+                {onDelete && (
+                  <button
+                    onClick={() => setDeleteConfirm(true)}
+                    className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    title="Hapus permanen"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -127,7 +131,7 @@ export function LeaveCard({ leave, isSelected, onToggle, onApprove, onReject, on
         )}
 
         {/* Action buttons — always visible for pending */}
-        {isPending && !rejecting && (
+        {isPending && !rejecting && onApprove && onReject && (
           <div className="flex gap-2 pt-1 border-t border-border/40">
             <button
               onClick={handleApprove}

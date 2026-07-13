@@ -56,6 +56,7 @@ export async function proxy(request: NextRequest) {
       manager:   '/patients',
       therapist: '/patients',
       staff:     '/pending',
+      admin:     '/jadwal-harian',
     }
     const dest = roleHome[profile?.role ?? ''] ?? '/director/overview'
     return NextResponse.redirect(new URL(dest, request.url))
@@ -65,9 +66,10 @@ export async function proxy(request: NextRequest) {
   if (user && !isPublic) {
     const routeAccess: Array<{ prefix: string; allowed: string[] }> = [
       { prefix: '/director',  allowed: ['director'] },
-      { prefix: '/finance',   allowed: ['finance', 'director', 'manager'] },
+      { prefix: '/finance',   allowed: ['finance', 'director', 'manager', 'admin'] },
       { prefix: '/hr',        allowed: ['hr', 'director', 'manager'] },
       { prefix: '/marketing', allowed: ['marketing', 'director', 'manager'] },
+      { prefix: '/admin',     allowed: ['admin', 'director'] },
     ]
     const matched = routeAccess.find(r => pathname.startsWith(r.prefix))
     if (matched) {

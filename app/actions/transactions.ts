@@ -13,7 +13,7 @@ const SERVICE_TO_CATEGORY: Record<string, string> = {
   'LAINNYA':      'LAINNYA',
 }
 
-const PAYMENT_ROLES = ['finance', 'manager', 'director']
+const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
 
 function formatRp(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)

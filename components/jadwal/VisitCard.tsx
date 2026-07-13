@@ -7,7 +7,7 @@ import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL } from './types'
 import type { VisitStatus } from '@/types'
 
-const PAYMENT_ROLES = ['finance', 'manager', 'director']
+const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
 
 const ALL_STATUSES: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
 

@@ -15,17 +15,20 @@ Tokens in `app/globals.css` — **do not change**.
 - `--radius: 2rem`
 
 ## Roles
-Enum: `director | finance | hr | marketing | staff | therapist | manager`
+Enum: `director | finance | hr | marketing | staff | therapist | manager | admin`
 
-| Role      | Patients        | Finances     | HR          | Marketing    | Cross-branch |
-|-----------|-----------------|--------------|-------------|--------------|--------------|
-| director  | all             | all          | all         | all          | yes          |
-| finance   | read (own)      | full (own)   | —           | —            | no           |
-| hr        | —               | —            | full (own)  | —            | no           |
-| marketing | —               | —            | —           | full (own)   | no           |
-| therapist | visits (own br) | —            | own only    | —            | no           |
-| manager   | all (own br)    | all (own br) | all (own br)| all (own br) | no           |
-| staff     | visits (own br) | —            | own only    | —            | no           |
+| Role      | Patients        | Finances     | HR                | Marketing    | Cross-branch |
+|-----------|-----------------|--------------|-------------------|--------------|--------------|
+| director  | all             | all          | all               | all          | yes          |
+| finance   | read (own)      | full (own)   | —                 | —            | no           |
+| hr        | —               | —            | full (own)        | —            | no           |
+| marketing | —               | —            | —                 | full (own)   | no           |
+| therapist | visits (own br) | —            | own only          | —            | no           |
+| manager   | all (own br)    | all (own br) | all (own br)      | all (own br) | no           |
+| staff     | visits (own br) | —            | own only          | —            | no           |
+| admin     | all (own br)    | full (own)   | leave view-only   | —            | no           |
+
+- **admin**: branch-scoped operational role — schedule (`patient_visits`), payments (`transactions`, same rights as `finance`), add/view patients, and view `leave_requests` for their branch. Cannot approve/reject leave — that stays `director`-only (RLS grants admin `SELECT` only on `leave_requests`).
 
 - **director**: `branch_id = NULL` — cross-branch signal in RLS
 - **manager**: branch-scoped director equivalent

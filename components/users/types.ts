@@ -28,6 +28,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   staff:     'Staff',
   therapist: 'Terapis',
   manager:   'Manager',
+  admin:     'Admin',
 }
 
 export const ROLE_COLOR: Record<UserRole, string> = {
@@ -38,9 +39,10 @@ export const ROLE_COLOR: Record<UserRole, string> = {
   staff:     'bg-muted text-muted-foreground',
   therapist: 'bg-green-500/15 text-green-600',
   manager:   'bg-orange-500/15 text-orange-600',
+  admin:     'bg-cyan-500/15 text-cyan-600',
 }
 
-export const STAFF_ROLES: UserRole[] = ['finance', 'hr', 'marketing', 'staff', 'therapist', 'manager']
+export const STAFF_ROLES: UserRole[] = ['finance', 'hr', 'marketing', 'staff', 'therapist', 'manager', 'admin']
 
 export function formatDate(d: string) {
   return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
