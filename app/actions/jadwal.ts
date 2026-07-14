@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import type { VisitStatus } from '@/types'
 
@@ -17,6 +18,7 @@ export interface DailyVisit {
   chief_complaint: string | null
   diagnosis: string | null
   treatment: string | null
+  regio: string | null
   attending_staff_id: string | null
   status: VisitStatus
   notes: string | null
@@ -45,7 +47,7 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
 
   let query = supabase
     .from('patient_visits')
-    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, chief_complaint, diagnosis, treatment, status, notes, branch_id')
+    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, chief_complaint, diagnosis, treatment, regio, status, notes, branch_id')
     .eq('visit_date', date)
     .order('visit_time', { ascending: true })
   if (branchId) query = query.eq('branch_id', branchId)
@@ -110,6 +112,7 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
       chief_complaint:      v.chief_complaint,
       diagnosis:            v.diagnosis,
       treatment:            v.treatment,
+      regio:                v.regio,
       attending_staff_id:   v.attending_staff_id,
       status:               v.status as VisitStatus,
       notes:                v.notes,
@@ -341,4 +344,82 @@ export async function createBulkVisits(
 
   const { data, error } = await supabase.from('patient_visits').insert(rows).select('id')
   return { error: error?.message ?? null, created: data?.length ?? 0 }
+}
+
+// ── Send medical record reminder to a therapist ───────────────────────────────
+const REMIND_ROLES = ['admin', 'director', 'manager']
+
+export async function sendMedicalRecordReminder(
+  visitId: string,
+): Promise<{ error: string | null; alreadySent?: boolean }> {
+  const supabase = await createClient()
+  const admin    = createAdminClient()
+
+  // Auth: only REMIND_ROLES can send reminders
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase
+    .from('internal_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (!profile || !REMIND_ROLES.includes(profile.role)) return { error: 'Forbidden' }
+
+  // Fetch the visit
+  const { data: visit, error: visitErr } = await supabase
+    .from('patient_visits')
+    .select('id, status, diagnosis, treatment, regio, attending_staff_id, visit_date')
+    .eq('id', visitId)
+    .single()
+  if (visitErr || !visit) return { error: 'Kunjungan tidak ditemukan' }
+  if (visit.status !== 'completed') return { error: 'Kunjungan belum selesai' }
+  if (visit.diagnosis && visit.treatment && visit.regio) return { error: 'Rekam medis sudah lengkap' }
+  if (!visit.attending_staff_id) return { error: 'Tidak ada terapis yang ditugaskan' }
+
+  // Cooldown: skip if a reminder was already sent today for this visit
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const { data: existing } = await admin
+    .from('user_notifications')
+    .select('id')
+    .eq('user_id', visit.attending_staff_id)
+    .eq('title', 'Rekam Medis Belum Diisi')
+    .like('message', `%${visit.id}%`)
+    .gte('created_at', todayStart.toISOString())
+    .limit(1)
+  if (existing && existing.length > 0) return { error: null, alreadySent: true }
+
+  // Build message
+  const dateStr = new Date(visit.visit_date).toLocaleDateString('id-ID', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  })
+  const missing: string[] = []
+  if (!visit.diagnosis) missing.push('diagnosis')
+  if (!visit.treatment) missing.push('tindakan')
+  if (!visit.regio)     missing.push('regio')
+
+  await admin.from('user_notifications').insert({
+    user_id: visit.attending_staff_id,
+    title:   'Rekam Medis Belum Diisi',
+    message: `[${visit.id}] Kunjungan ${dateStr} perlu dilengkapi: ${missing.join(', ')}`,
+    link:    '/jadwal-harian',
+  })
+
+  return { error: null }
+}
+
+// ── Send reminders for multiple incomplete visits ─────────────────────────────
+export async function sendBulkMedicalRecordReminders(
+  visitIds: string[],
+): Promise<{ sent: number; skipped: number; error: string | null }> {
+  let sent = 0
+  let skipped = 0
+  for (const id of visitIds) {
+    const result = await sendMedicalRecordReminder(id)
+    if (result.error) return { sent, skipped, error: result.error }
+    if (result.alreadySent) skipped++
+    else sent++
+  }
+  return { sent, skipped, error: null }
 }

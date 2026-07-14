@@ -2,12 +2,13 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp } from 'lucide-react'
+import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing } from 'lucide-react'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL } from './types'
 import type { VisitStatus } from '@/types'
 
 const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
+const REMIND_ROLES  = ['admin', 'director', 'manager']
 
 const ALL_STATUSES: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
 
@@ -26,9 +27,10 @@ interface Props {
   onOpen: (id: string) => void
   onNoShow?: (id: string) => void
   onPayment?: (id: string) => void
+  onRemind?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onNoShow, onPayment }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onNoShow, onPayment, onRemind }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -37,6 +39,8 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const canRecordPayment = !!userRole && PAYMENT_ROLES.includes(userRole)
   const showPaymentItem  = canRecordPayment && visit.status === 'completed' && !visit.package_id
   const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && !visit.package_id
+  const isIncomplete     = visit.status === 'completed' && (!visit.diagnosis || !visit.treatment || !visit.regio)
+  const canRemind        = !!userRole && REMIND_ROLES.includes(userRole) && isIncomplete && !!onRemind
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
@@ -119,6 +123,16 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
             {visit.visit_payment_status ?? 'Bayar'}
           </span>
         )}
+
+        {/* Incomplete medical record warning */}
+        {isIncomplete && (
+          <span
+            className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-400 border border-amber-400/30"
+            title="Rekam medis belum lengkap"
+          >
+            Rekam Medis
+          </span>
+        )}
       </div>
 
       {/* Chief complaint preview */}
@@ -182,6 +196,20 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
                     : <CreditCard size={13} />
                   }
                   {visit.has_payment ? 'Tambah Pembayaran' : 'Catat Pembayaran'}
+                </button>
+              </>
+            )}
+
+            {canRemind && (
+              <>
+                <hr className="border-white/10 my-1.5" />
+                <button
+                  onClick={() => { onRemind!(visit.id); setMenuOpen(false) }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-amber-400 hover:bg-amber-400/10 transition-colors cursor-pointer"
+                  role="menuitem"
+                >
+                  <BellRing size={13} />
+                  Ingatkan Terapis
                 </button>
               </>
             )}
