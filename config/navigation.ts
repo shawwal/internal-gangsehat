@@ -243,7 +243,7 @@ export const navigation: NavItem[] = [
     label: 'Pengajuan Cuti',
     href: '/leave',
     icon: 'CalendarOff',
-    roles: ['finance', 'marketing', 'therapist', 'manager', 'admin'],
+    roles: ['finance', 'marketing', 'therapist', 'manager', 'admin', 'staff'],
     group: 'hr',
   },
 

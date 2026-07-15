@@ -4,19 +4,8 @@ import { useState } from 'react'
 import { Plus, Edit2, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { PAYMENT_METHODS } from '@/components/order/constants'
 import type { BookingPayment } from '@/app/actions/orders'
-
-const PAYMENT_METHODS = [
-  'Tunai',
-  'Non Tunai - BCA',
-  'Non Tunai - Mandiri',
-  'Non Tunai - BRI',
-  'Non Tunai - BNI',
-  'Non Tunai - BSI',
-  'Non Tunai - GoPay',
-  'Non Tunai - OVO',
-  'Non Tunai - QRIS',
-]
 
 interface Props {
   payments: BookingPayment[]

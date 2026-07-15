@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
 import { useOrdersData } from '@/components/orders/useOrdersData'
 import { OrdersStats } from '@/components/orders/OrdersStats'
 import { OrdersFilters } from '@/components/orders/OrdersFilters'
@@ -26,14 +28,22 @@ export default function DirectorOrdersPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Semua Order</h1>
           <p className="text-sm text-muted-foreground">Pantau seluruh order dari semua cabang</p>
         </div>
-        <span className="text-xs bg-muted px-3 py-1.5 rounded-2xl text-muted-foreground shrink-0 hidden sm:block">
-          {todayLabel}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs bg-muted px-3 py-1.5 rounded-2xl text-muted-foreground hidden sm:block">
+            {todayLabel}
+          </span>
+          <Link
+            href="/director/orders/new"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={15} /> Tambah Order
+          </Link>
+        </div>
       </div>
 
       <OrdersStats stats={stats} statsLoading={statsLoading} />

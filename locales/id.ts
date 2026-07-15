@@ -97,6 +97,7 @@ const id: Translations = {
     order: {
       title: 'Order',
       list_title: 'Daftar Order',
+      add_title: 'Tambah Order',
       packages_title: 'Tampilan Per Paket',
       packages_empty: 'Tidak ada paket aktif',
     },

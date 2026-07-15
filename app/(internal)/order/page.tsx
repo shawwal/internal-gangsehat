@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
 import { PageHeader } from '@/components/internal'
 import { OrdersStats } from '@/components/orders/OrdersStats'
 import { OrdersFilters } from '@/components/orders/OrdersFilters'
@@ -25,7 +27,18 @@ export default function OrderPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={t('page.order.list_title')} breadcrumb={t('nav.order')} />
+      <PageHeader
+        title={t('page.order.list_title')}
+        breadcrumb={t('nav.order')}
+        actions={
+          <Link
+            href="/order/new"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={15} /> {t('page.order.add_title')}
+          </Link>
+        }
+      />
 
       <OrdersStats stats={stats} statsLoading={statsLoading} />
 

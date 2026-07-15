@@ -95,6 +95,7 @@ const en = {
     order: {
       title: 'Order',
       list_title: 'Order List',
+      add_title: 'Add Order',
       packages_title: 'By Package View',
       packages_empty: 'No active packages found',
     },
