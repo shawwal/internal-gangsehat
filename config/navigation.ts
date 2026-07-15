@@ -43,6 +43,14 @@ export const navigation: NavItem[] = [
     group: 'management',
   },
   {
+    key: 'director-schedule-slots',
+    label: 'Slot Jadwal',
+    href: '/director/schedule-slots',
+    icon: 'Clock',
+    roles: ['director'],
+    group: 'management',
+  },
+  {
     key: 'director-reports',
     label: 'Laporan',
     href: '/director/reports',

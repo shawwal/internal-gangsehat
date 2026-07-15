@@ -26,6 +26,8 @@ export default function SchedulesPage() {
   const [loading, setLoading]       = useState(true)
   const [staffList, setStaffList]   = useState<StaffOption[]>([])
   const [branches, setBranches]     = useState<BranchOption[]>([])
+  const [morningSlots, setMorningSlots]     = useState<string[]>([])
+  const [afternoonSlots, setAfternoonSlots] = useState<string[]>([])
   const [viewMode, setViewMode]     = useState<ViewMode>('table')
 
   // ── Filters + pagination ─────────────────────────────────────────────────────
@@ -60,7 +62,7 @@ export default function SchedulesPage() {
     async function loadMeta() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      const [{ data: staff }, { data: br }, { data: profile }] = await Promise.all([
+      const [{ data: staff }, { data: br }, { data: profile }, { data: slots }] = await Promise.all([
         supabase
           .from('internal_profiles')
           .select('id, full_name, branch_id, avatar_url')
@@ -68,10 +70,13 @@ export default function SchedulesPage() {
           .order('full_name'),
         supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
         supabase.from('internal_profiles').select('branch_id').eq('id', user!.id).single(),
+        supabase.from('schedule_slots').select('shift, slot_time').eq('is_active', true).order('slot_time'),
       ])
       setStaffList((staff ?? []) as StaffOption[])
       setBranches((br ?? []) as BranchOption[])
       setUserBranchId(profile?.branch_id ?? null)
+      setMorningSlots((slots ?? []).filter((s) => s.shift === 'PAGI').map((s) => s.slot_time))
+      setAfternoonSlots((slots ?? []).filter((s) => s.shift === 'SORE').map((s) => s.slot_time))
     }
     loadMeta()
   }, [])
@@ -385,6 +390,8 @@ export default function SchedulesPage() {
         form={form}
         staffList={staffList}
         branches={branches}
+        morningSlots={morningSlots}
+        afternoonSlots={afternoonSlots}
         saving={saving}
         onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
         onSave={handleSave}

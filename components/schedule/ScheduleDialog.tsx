@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { X, RotateCcw, CheckSquare, ChevronDown, Clock, Search, Users } from 'lucide-react'
 import type { ScheduleForm, StaffOption, BranchOption } from './types'
-import { HARI_LIST, MORNING_SLOTS, AFTERNOON_SLOTS, ALL_SLOTS } from './constants'
+import { HARI_LIST } from './constants'
 
 interface Props {
   open: boolean
@@ -11,6 +11,8 @@ interface Props {
   form: ScheduleForm
   staffList: StaffOption[]
   branches: BranchOption[]
+  morningSlots: string[]
+  afternoonSlots: string[]
   saving: boolean
   onChange: (patch: Partial<ScheduleForm>) => void
   onSave: () => void
@@ -45,8 +47,8 @@ function addOneHour(time: string): string {
   return `${String(h + 1).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-function slotsFromJamMulai(jamMulai: string): string[] {
-  const match = ALL_SLOTS.find((s) => s === jamMulai)
+function slotsFromJamMulai(jamMulai: string, allSlots: string[]): string[] {
+  const match = allSlots.find((s) => s === jamMulai)
   return match ? [match] : []
 }
 
@@ -255,12 +257,15 @@ function StaffCheckboxList({ selectedIds, options, onChange }: StaffCheckboxList
 
 interface TimeSlotAccordionProps {
   selectedSlots: string[]
+  morningSlots: string[]
+  afternoonSlots: string[]
+  allSlots: string[]
   onToggle: (slot: string) => void
   onSelectAll: () => void
   onReset: () => void
 }
 
-function TimeSlotAccordion({ selectedSlots, onToggle, onSelectAll, onReset }: TimeSlotAccordionProps) {
+function TimeSlotAccordion({ selectedSlots, morningSlots, afternoonSlots, allSlots, onToggle, onSelectAll, onReset }: TimeSlotAccordionProps) {
   const [open, setOpen] = useState(false)
   const count = selectedSlots.length
   const sorted = [...selectedSlots].sort()
@@ -293,7 +298,7 @@ function TimeSlotAccordion({ selectedSlots, onToggle, onSelectAll, onReset }: Ti
             <button
               type="button"
               onClick={onSelectAll}
-              disabled={count === ALL_SLOTS.length}
+              disabled={count === allSlots.length}
               className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 disabled:text-muted-foreground disabled:cursor-not-allowed cursor-pointer"
             >
               <CheckSquare size={11} /> Pilih Semua
@@ -311,7 +316,7 @@ function TimeSlotAccordion({ selectedSlots, onToggle, onSelectAll, onReset }: Ti
           <div>
             <p className="text-[10px] font-semibold text-[color:var(--secondary)] uppercase tracking-wider mb-1.5">Pagi</p>
             <div className="flex flex-wrap gap-1.5">
-              {MORNING_SLOTS.map((slot) => (
+              {morningSlots.map((slot) => (
                 <button
                   key={slot}
                   type="button"
@@ -332,7 +337,7 @@ function TimeSlotAccordion({ selectedSlots, onToggle, onSelectAll, onReset }: Ti
           <div>
             <p className="text-[10px] font-semibold text-primary uppercase tracking-wider mb-1.5">Sore</p>
             <div className="flex flex-wrap gap-1.5">
-              {AFTERNOON_SLOTS.map((slot) => (
+              {afternoonSlots.map((slot) => (
                 <button
                   key={slot}
                   type="button"
@@ -358,11 +363,12 @@ function TimeSlotAccordion({ selectedSlots, onToggle, onSelectAll, onReset }: Ti
 // ── Main Dialog ────────────────────────────────────────────────────────────────
 
 export function ScheduleDialog({
-  open, editId, form, staffList, branches, saving,
+  open, editId, form, staffList, branches, morningSlots, afternoonSlots, saving,
   onChange, onSave, onClose,
 }: Props) {
+  const allSlots = [...morningSlots, ...afternoonSlots]
   const [selectedSlots, setSelectedSlots] = useState<string[]>(() =>
-    slotsFromJamMulai(form.jam_mulai),
+    slotsFromJamMulai(form.jam_mulai, allSlots),
   )
 
   if (!open) return null
@@ -396,8 +402,8 @@ export function ScheduleDialog({
   }
 
   function selectAllSlots() {
-    setSelectedSlots(ALL_SLOTS)
-    onChange(deriveFromSlots(ALL_SLOTS))
+    setSelectedSlots(allSlots)
+    onChange(deriveFromSlots(allSlots))
   }
 
   function resetSlots() { setSelectedSlots([]) }
@@ -529,6 +535,9 @@ export function ScheduleDialog({
             <label className={labelCls}>Waktu Kerja</label>
             <TimeSlotAccordion
               selectedSlots={selectedSlots}
+              morningSlots={morningSlots}
+              afternoonSlots={afternoonSlots}
+              allSlots={allSlots}
               onToggle={toggleSlot}
               onSelectAll={selectAllSlots}
               onReset={resetSlots}

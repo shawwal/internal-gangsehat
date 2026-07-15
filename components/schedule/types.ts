@@ -24,6 +24,13 @@ export interface BranchOption {
   name: string
 }
 
+export interface ScheduleSlot {
+  id: string
+  shift: 'PAGI' | 'SORE'
+  slot_time: string
+  is_active: boolean
+}
+
 export interface ScheduleForm {
   staff_ids: string[]  // multi-staff; single-element array when editing
   branch_id: string
