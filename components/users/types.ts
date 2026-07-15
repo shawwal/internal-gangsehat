@@ -21,28 +21,30 @@ export interface BranchOption { id: string; name: string }
 export type Tab = 'staff' | 'director'
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  director:  'Direktur',
-  finance:   'Keuangan',
-  hr:        'HR',
-  marketing: 'Marketing',
-  staff:     'Staff',
-  therapist: 'Terapis',
-  manager:   'Manager',
-  admin:     'Admin',
+  director:   'Direktur',
+  finance:    'Keuangan',
+  hr:         'HR',
+  marketing:  'Marketing',
+  staff:      'Staff',
+  therapist:  'Terapis',
+  manager:    'Manager',
+  admin:      'Admin',
+  'non-staff': 'Belum Ditetapkan',
 }
 
 export const ROLE_COLOR: Record<UserRole, string> = {
-  director:  'bg-primary/10 text-primary',
-  finance:   'bg-blue-500/15 text-blue-500',
-  hr:        'bg-violet-500/15 text-violet-500',
-  marketing: 'bg-secondary/20 text-secondary-foreground',
-  staff:     'bg-muted text-muted-foreground',
-  therapist: 'bg-green-500/15 text-green-600',
-  manager:   'bg-orange-500/15 text-orange-600',
-  admin:     'bg-cyan-500/15 text-cyan-600',
+  director:   'bg-primary/10 text-primary',
+  finance:    'bg-blue-500/15 text-blue-500',
+  hr:         'bg-violet-500/15 text-violet-500',
+  marketing:  'bg-secondary/20 text-secondary-foreground',
+  staff:      'bg-muted text-muted-foreground',
+  therapist:  'bg-green-500/15 text-green-600',
+  manager:    'bg-orange-500/15 text-orange-600',
+  admin:      'bg-cyan-500/15 text-cyan-600',
+  'non-staff': 'bg-destructive/10 text-destructive',
 }
 
-export const STAFF_ROLES: UserRole[] = ['finance', 'hr', 'marketing', 'staff', 'therapist', 'manager', 'admin']
+export const STAFF_ROLES: UserRole[] = ['finance', 'hr', 'marketing', 'staff', 'therapist', 'manager', 'admin', 'non-staff']
 
 export function formatDate(d: string) {
   return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })

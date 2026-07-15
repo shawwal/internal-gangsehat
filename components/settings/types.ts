@@ -19,12 +19,13 @@ export interface StatusState {
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  director:  'Direktur',
-  finance:   'Keuangan',
-  hr:        'HR',
-  marketing: 'Marketing',
-  staff:     'Staff',
-  manager:   'Manager',
-  therapist: 'Terapis',
-  admin:     'Admin',
+  director:   'Direktur',
+  finance:    'Keuangan',
+  hr:         'HR',
+  marketing:  'Marketing',
+  staff:      'Staff',
+  manager:    'Manager',
+  therapist:  'Terapis',
+  admin:      'Admin',
+  'non-staff': 'Belum Ditetapkan',
 }
