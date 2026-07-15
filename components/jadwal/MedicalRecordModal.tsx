@@ -92,6 +92,9 @@ export function MedicalRecordModal({ visitId, contextShift, contextServiceType, 
 
   if (!visitId) return null
 
+  const hideClinicalFields = form?.service_type === 'TERAPI AWAL'
+  const statusOptions = hideClinicalFields ? STATUS_OPTIONS.filter((s) => s !== 'completed') : STATUS_OPTIONS
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!form || !visitId) return
@@ -213,45 +216,53 @@ export function MedicalRecordModal({ visitId, contextShift, contextServiceType, 
                 <div>
                   <label className={labelCls}>Status</label>
                   <select value={form.status} onChange={(e) => set('status', e.target.value as VisitStatus)} className={inputCls}>
-                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                    {statusOptions.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div>
-                <label className={labelCls}>Regio</label>
-                <select value={form.regio} onChange={(e) => set('regio', e.target.value)} className={inputCls}>
-                  <option value="">— Pilih —</option>
-                  {BODY_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className={labelCls}>Sumber Pasien</label>
-                <input
-                  value={form.sumber_pasien}
-                  onChange={(e) => set('sumber_pasien', e.target.value)}
-                  placeholder="mis. Rekomendasi, sosial media"
-                  className={inputCls}
-                />
-              </div>
-
-              {([
-                ['chief_complaint', 'Keluhan Utama'],
-                ['diagnosis', 'Diagnosis'],
-                ['treatment', 'Tindakan'],
-                ['notes', 'Catatan'],
-              ] as const).map(([key, label]) => (
-                <div key={key}>
-                  <label className={labelCls}>{label}</label>
-                  <textarea
-                    value={form[key]}
-                    onChange={(e) => set(key, e.target.value)}
-                    rows={2}
-                    className={`${inputCls} resize-none`}
-                  />
+              {hideClinicalFields ? (
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
+                  Kunjungan Terapi Awal menggunakan Form Asesmen Lengkap (Regio, Diagnosis, Tindakan, dll). Simpan lalu lanjutkan ke form tersebut.
                 </div>
-              ))}
+              ) : (
+                <>
+                  <div>
+                    <label className={labelCls}>Regio</label>
+                    <select value={form.regio} onChange={(e) => set('regio', e.target.value)} className={inputCls}>
+                      <option value="">— Pilih —</option>
+                      {BODY_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Sumber Pasien</label>
+                    <input
+                      value={form.sumber_pasien}
+                      onChange={(e) => set('sumber_pasien', e.target.value)}
+                      placeholder="mis. Rekomendasi, sosial media"
+                      className={inputCls}
+                    />
+                  </div>
+
+                  {([
+                    ['chief_complaint', 'Keluhan Utama'],
+                    ['diagnosis', 'Diagnosis'],
+                    ['treatment', 'Tindakan'],
+                    ['notes', 'Catatan'],
+                  ] as const).map(([key, label]) => (
+                    <div key={key}>
+                      <label className={labelCls}>{label}</label>
+                      <textarea
+                        value={form[key]}
+                        onChange={(e) => set(key, e.target.value)}
+                        rows={2}
+                        className={`${inputCls} resize-none`}
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
 
               {error && (
                 <p className="text-xs text-destructive">{error}</p>

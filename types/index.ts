@@ -85,6 +85,55 @@ export interface PatientVisit {
   sumber_pasien: string | null
 }
 
+export type RedFlag =
+  | 'UNEXPLAINED_WEIGHT_LOSS'
+  | 'NIGHT_SWEATS_FEVER'
+  | 'BILATERAL_TINGLING_NUMBNESS'
+  | 'SADDLE_ANESTHESIA_BOWEL'
+  | 'NONE'
+
+export type PromType = 'LEFS' | 'SPADI' | 'ODI' | 'Other'
+export type AssessmentStatus = 'draft' | 'completed'
+
+// Guided MSK & Sports Assessment — one row per TERAPI AWAL patient_visits row (migration 031)
+export interface TerapiAwalAssessment {
+  id: string
+  visit_id: string
+  patient_id: string
+  branch_id: string
+  status: AssessmentStatus
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  // Step 1: Interview (Subjective & PIPs)
+  history_moi: string | null
+  aggravating_factors: string | null
+  easing_factors: string | null
+  red_flags: RedFlag[]
+  // Step 2: Physical Examination (Objective)
+  observation_gait_posture: string | null
+  rom_active_passive: string | null
+  muscle_strength_mmt: string | null
+  special_ortho_tests: string | null
+  palpation: string | null
+  // Step 3: Neurological Screening
+  dermatomes_sensory: string | null
+  myotomes_motor: string | null
+  reflexes_neural_tension: string | null
+  // Step 4: Objective Outcome Measures
+  prom_used: PromType | null
+  prom_baseline_score: number | null
+  functional_metric_test: string | null
+  functional_metric_baseline_value: string | null
+  // Step 5: Clinical Reasoning (HOAC II)
+  npips: string | null
+  diagnosis_hypothesis: string | null
+  // Step 6: Plan of Care & Goals
+  short_term_goals: string | null
+  long_term_goals: string | null
+  treatment_plan_today: string | null
+}
+
 export type TransactionType = 'income' | 'expense'
 export type TransactionStatus = 'pending' | 'confirmed' | 'rejected'
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { Users, User, ArrowUpAZ, ArrowDownAZ, ChevronLeft, ChevronRight, Calendar, X } from 'lucide-react'
+import { Users, User, ArrowUpAZ, ArrowDownAZ, ChevronLeft, ChevronRight, Calendar, Plus, X } from 'lucide-react'
 import { addDays, toIso, isSameDay, JS_DAY_TO_HARI, HARI_LABEL, MONTH_FULL } from './utils'
 import type { DayStaffEntry } from './types'
 
@@ -25,6 +25,8 @@ interface Props {
   toggleShowInactive: () => void
   inactiveStaff: DayStaffEntry[]
   onExit: () => void
+  canCreateOrder?: boolean
+  orderNewHref?: string
 }
 
 export function FocusModeBar({
@@ -35,6 +37,8 @@ export function FocusModeBar({
   showInactive, toggleShowInactive,
   inactiveStaff,
   onExit,
+  canCreateOrder,
+  orderNewHref,
 }: Props) {
   const focusDateInputRef = useRef<HTMLInputElement>(null)
   const isToday   = isSameDay(selectedDate, today)
@@ -113,6 +117,18 @@ export function FocusModeBar({
           </button>
         )}
       </div>
+
+      {canCreateOrder && orderNewHref && (
+        <a
+          href={orderNewHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Tambah order (tab baru)"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-primary text-primary-foreground text-[11px] font-semibold hover:bg-primary/90 transition-colors duration-150 cursor-pointer shrink-0"
+        >
+          <Plus size={13} /> Order
+        </a>
+      )}
 
       <div className="ml-auto flex items-center gap-2">
         {/* Gender filter */}

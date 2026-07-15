@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AlertTriangle, BellRing, CheckCircle2, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { AlertTriangle, BellRing, CheckCircle2, Plus, X } from 'lucide-react'
 import { useJadwalHarian } from '@/hooks/useJadwalHarian'
 import { toIso } from '@/components/jadwal/utils'
 import { PageHeader } from '@/components/jadwal/PageHeader'
@@ -33,6 +34,7 @@ type RemindToast = { type: 'success' | 'info' | 'error'; message: string }
 const LS_KEY = 'jadwal_showInactive'
 
 export default function JadwalHarianPage() {
+  const router = useRouter()
   const {
     today, selectedDate, setSelectedDate,
     staff, visits, loading,
@@ -126,6 +128,8 @@ export default function JadwalHarianPage() {
     !!v.attending_staff_id,
   )
   const canSendReminders = !!userRole && REMIND_ROLES.includes(userRole)
+  const canCreateOrder = !!userRole && userRole !== 'therapist' && userRole !== 'staff'
+  const orderNewHref = userRole === 'director' ? '/director/orders/new' : '/order/new'
 
   function showToast(toast: RemindToast) {
     setRemindToast(toast)
@@ -221,17 +225,29 @@ export default function JadwalHarianPage() {
                 loading={loading}
                 onRefresh={() => loadAll(selectedDate)}
               />
-              {branches.length > 0 && (
-                <select
-                  value={selectedBranchId ?? ''}
-                  onChange={(e) => setSelectedBranchId(e.target.value || null)}
-                  className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-                >
-                  {branches.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-              )}
+              <div className="flex items-center gap-2">
+                {branches.length > 0 && (
+                  <select
+                    value={selectedBranchId ?? ''}
+                    onChange={(e) => setSelectedBranchId(e.target.value || null)}
+                    className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                  >
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                )}
+                {canCreateOrder && (
+                  <a
+                    href={orderNewHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer"
+                  >
+                    <Plus size={14} /> Tambah Order
+                  </a>
+                )}
+              </div>
             </div>
 
             <DateNav
@@ -292,6 +308,8 @@ export default function JadwalHarianPage() {
               setSelectedDate={setSelectedDate}
               today={today}
               onExit={() => setIsFocused(false)}
+              canCreateOrder={canCreateOrder}
+              orderNewHref={orderNewHref}
             />
           )}
 
@@ -310,7 +328,14 @@ export default function JadwalHarianPage() {
                 onAssign={setAssignTarget}
                 onStatusChange={handleStatusChange}
                 onDelete={handleDelete}
-                onOpen={(id, shift) => { setSelectedVisitId(id); setSelectedVisitShift(shift ?? null) }}
+                onOpen={(id, shift) => {
+                  const v = visits.find((x) => x.id === id)
+                  if (v?.service_type === 'TERAPI AWAL') {
+                    router.push(`/visits/${id}/assessment?from=/jadwal-harian`)
+                    return
+                  }
+                  setSelectedVisitId(id); setSelectedVisitShift(shift ?? null)
+                }}
                 onPendingLeaveClick={(staffName, leave) => setLeavePopover({ staffName, leave })}
                 onStaffClick={setSelectedStaffId}
                 onNoShow={handleNoShow}
@@ -365,8 +390,12 @@ export default function JadwalHarianPage() {
           const visitId = selectedVisitId
           setSelectedVisitId(null)
           setSelectedVisitShift(null)
+          if (ctx?.service_type === 'TERAPI AWAL') {
+            if (visitId) router.push(`/visits/${visitId}/assessment?from=/jadwal-harian`)
+            return
+          }
           if (visitId) silentReload({ type: 'visit', visitId })
-          if (ctx?.status === 'completed' && (ctx.service_type === 'TERAPI AWAL' || ctx.service_type === 'TA VISIT')) {
+          if (ctx?.status === 'completed' && ctx.service_type === 'TA VISIT') {
             setPackagePrompt({ ...ctx, patientName: visit?.patient_name ?? '', branchId: visit?.branch_id ?? null })
           }
         }}

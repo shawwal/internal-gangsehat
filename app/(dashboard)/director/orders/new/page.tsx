@@ -35,38 +35,44 @@ export default function NewDirectorOrderPage() {
         </div>
       </div>
 
-      <div className="space-y-4 max-w-3xl">
-        <OrderPatientSection patient={form.patient} error={errors.patient} onSelect={selectPatient} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 space-y-4">
+          <OrderPatientSection patient={form.patient} error={errors.patient} onSelect={selectPatient} />
 
-        <OrderBranchSelect
-          branches={branches}
-          branchId={form.branchId}
-          onChange={selectBranch}
-        />
+          <OrderBranchSelect
+            branches={branches}
+            branchId={form.branchId}
+            onChange={selectBranch}
+          />
 
-        <OrderServiceSection
-          form={form}
-          errors={errors}
-          layananOptions={layananOptions}
-          loadingLayanan={loadingLayanan}
-          discountAmount={discountAmount}
-          totalAfterDiscount={totalAfterDiscount}
-          hargaNum={hargaNum}
-          dpNum={dpNum}
-          field={field}
-          selectLayanan={selectLayanan}
-        />
+          <OrderSessionsSection
+            form={form}
+            errors={errors}
+            therapists={therapists}
+            field={field}
+            generateSessions={generateSessions}
+            addSessionRow={addSessionRow}
+            removeSessionRow={removeSessionRow}
+            updateSessionRow={updateSessionRow}
+          />
+        </div>
 
-        <OrderSessionsSection
-          form={form}
-          errors={errors}
-          therapists={therapists}
-          field={field}
-          generateSessions={generateSessions}
-          addSessionRow={addSessionRow}
-          removeSessionRow={removeSessionRow}
-          updateSessionRow={updateSessionRow}
-        />
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-4">
+            <OrderServiceSection
+              form={form}
+              errors={errors}
+              layananOptions={layananOptions}
+              loadingLayanan={loadingLayanan}
+              discountAmount={discountAmount}
+              totalAfterDiscount={totalAfterDiscount}
+              hargaNum={hargaNum}
+              dpNum={dpNum}
+              field={field}
+              selectLayanan={selectLayanan}
+            />
+          </div>
+        </div>
       </div>
 
       <OrderFormActions

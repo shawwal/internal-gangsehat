@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import {
   ChevronLeft, Plus, Activity, CheckCircle2, Clock, UserX, FileText, User, CreditCard,
 } from 'lucide-react'
@@ -114,6 +114,7 @@ function StatCard({ label, value, icon: Icon, color, loading }: {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function PatientVisitsPage() {
   const { id } = useParams() as { id: string }
+  const router = useRouter()
 
   const [visits, setVisits]           = useState<PatientVisit[]>([])
   const [patientName, setPatientName] = useState('')
@@ -132,6 +133,14 @@ export default function PatientVisitsPage() {
   const [packagePrompt, setPackagePrompt]     = useState<MedicalRecordSavedContext | null>(null)
 
   const canRecordPayment = !!userRole && ['finance', 'manager', 'director'].includes(userRole)
+
+  function openVisit(v: PatientVisit) {
+    if (v.service_type === 'TERAPI AWAL') {
+      router.push(`/visits/${v.id}/assessment?from=/patients/${id}/visits`)
+      return
+    }
+    setSelectedVisitId(v.id)
+  }
 
   async function loadProfile() {
     const supabase = createClient()
@@ -309,7 +318,7 @@ export default function PatientVisitsPage() {
                 visits.map((v, i) => (
                   <tr
                     key={v.id}
-                    onClick={() => setSelectedVisitId(v.id)}
+                    onClick={() => openVisit(v)}
                     className="border-b border-border/50 hover:bg-primary/5 transition-colors cursor-pointer"
                   >
                     <td className="px-4 py-3 text-muted-foreground text-xs">{i + 1}</td>
@@ -417,7 +426,7 @@ export default function PatientVisitsPage() {
 
                     <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => setSelectedVisitId(v.id)}
+                        onClick={() => openVisit(v)}
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
                       >
                         <FileText size={12} />
@@ -546,12 +555,17 @@ export default function PatientVisitsPage() {
         visitId={selectedVisitId}
         onClose={() => setSelectedVisitId(null)}
         onSaved={(ctx) => {
+          const visitId = selectedVisitId
           setSelectedVisitId(null)
+          if (ctx?.service_type === 'TERAPI AWAL') {
+            if (visitId) router.push(`/visits/${visitId}/assessment?from=/patients/${id}/visits`)
+            return
+          }
           load()
           if (
             ctx &&
             ctx.status === 'completed' &&
-            (ctx.service_type === 'TERAPI AWAL' || ctx.service_type === 'TA VISIT')
+            ctx.service_type === 'TA VISIT'
           ) {
             setPackagePrompt(ctx)
           }
