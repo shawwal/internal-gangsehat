@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing } from 'lucide-react'
+import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2 } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL } from './types'
@@ -30,9 +30,10 @@ interface Props {
   onPayment?: (id: string) => void
   onRemind?: (id: string) => void
   onWhatsApp?: (id: string) => void
+  isRefreshing?: boolean
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onNoShow, onPayment, onRemind, onWhatsApp }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onNoShow, onPayment, onRemind, onWhatsApp, isRefreshing }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -87,6 +88,13 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
       aria-haspopup="menu"
       aria-expanded={menuOpen}
     >
+      {/* Refreshing indicator — a save for this visit is in flight */}
+      {isRefreshing && (
+        <div className="absolute top-1 right-1 z-10" title="Memperbarui...">
+          <Loader2 size={11} className="animate-spin opacity-70" />
+        </div>
+      )}
+
       {/* Patient name — click drills to medical record, does NOT open menu */}
       <div className="flex items-start gap-1">
         <button

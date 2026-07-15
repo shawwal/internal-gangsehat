@@ -48,9 +48,11 @@ export function useJadwalHarian() {
     loadMeta()
   }, [])
 
-  // Load schedules, leaves, and visits for a date
-  const loadAll = useCallback(async (date: Date) => {
-    setLoading(true)
+  // Load schedules, leaves, and visits for a date.
+  // `silent` skips the full-grid loading flag so an in-place refresh (after
+  // editing a single visit/cell) doesn't unmount the whole calendar into a skeleton.
+  const loadAll = useCallback(async (date: Date, opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true)
     const supabase = createClient()
     const isoDate  = toIso(date)
     const hari     = toHariIndonesia(date)

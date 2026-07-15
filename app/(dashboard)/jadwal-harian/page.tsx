@@ -22,7 +22,7 @@ import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentP
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders } from '@/app/actions/jadwal'
 import { fetchReminderTemplate } from '@/app/actions/reminder-template'
 import { fillTemplate, formatDate, formatWaNumber } from '@/lib/utils'
-import type { AssignTarget } from '@/components/jadwal/types'
+import type { AssignTarget, RefreshingCell } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 
@@ -53,6 +53,14 @@ export default function JadwalHarianPage() {
   const [packagePrompt, setPackagePrompt]           = useState<
     (MedicalRecordSavedContext & { patientName: string; branchId: string | null }) | null
   >(null)
+  const [refreshingCell, setRefreshingCell]         = useState<RefreshingCell | null>(null)
+
+  // Reload data in place (no full-grid skeleton), flashing a spinner only on `cell`.
+  async function silentReload(cell: RefreshingCell | null) {
+    setRefreshingCell(cell)
+    await loadAll(selectedDate, { silent: true })
+    setRefreshingCell(null)
+  }
 
   // Remind state
   const [remindLoading, setRemindLoading]   = useState<Set<string>>(new Set())
@@ -293,6 +301,7 @@ export default function JadwalHarianPage() {
                 onPayment={handleOpenPayment}
                 onRemind={canSendReminders ? handleRemind : undefined}
                 onWhatsApp={handleWhatsAppReminder}
+                refreshingCell={refreshingCell}
               />
             )}
           </div>
@@ -306,7 +315,11 @@ export default function JadwalHarianPage() {
         <AssignDialog
           target={assignTarget}
           onClose={() => setAssignTarget(null)}
-          onSaved={() => { setAssignTarget(null); loadAll(selectedDate) }}
+          onSaved={() => {
+            const { staffId, hour } = assignTarget
+            setAssignTarget(null)
+            silentReload({ type: 'cell', staffId, hour })
+          }}
         />
       )}
 
@@ -332,9 +345,10 @@ export default function JadwalHarianPage() {
         onClose={() => { setSelectedVisitId(null); setSelectedVisitShift(null) }}
         onSaved={(ctx) => {
           const visit = visits.find((v) => v.id === selectedVisitId)
+          const visitId = selectedVisitId
           setSelectedVisitId(null)
           setSelectedVisitShift(null)
-          loadAll(selectedDate)
+          if (visitId) silentReload({ type: 'visit', visitId })
           if (ctx?.status === 'completed' && (ctx.service_type === 'TERAPI AWAL' || ctx.service_type === 'TA VISIT')) {
             setPackagePrompt({ ...ctx, patientName: visit?.patient_name ?? '', branchId: visit?.branch_id ?? null })
           }
@@ -345,7 +359,11 @@ export default function JadwalHarianPage() {
         <NoShowDialog
           visit={noShowVisit}
           onClose={() => setNoShowVisit(null)}
-          onSaved={() => { setNoShowVisit(null); loadAll(selectedDate) }}
+          onSaved={() => {
+            const visitId = noShowVisit.id
+            setNoShowVisit(null)
+            silentReload({ type: 'visit', visitId })
+          }}
         />
       )}
 
@@ -354,7 +372,7 @@ export default function JadwalHarianPage() {
           staffId={selectedStaffId}
           entry={staff.find((s) => s.staff_id === selectedStaffId)!}
           onClose={() => setSelectedStaffId(null)}
-          onSaved={() => loadAll(selectedDate)}
+          onSaved={() => silentReload({ type: 'staff', staffId: selectedStaffId })}
         />
       )}
 
@@ -372,7 +390,11 @@ export default function JadwalHarianPage() {
               || undefined,
           }}
           onClose={() => setPaymentVisit(null)}
-          onSuccess={() => loadAll(selectedDate)}
+          onSuccess={() => {
+            const visitId = paymentVisit.id
+            setPaymentVisit(null)
+            silentReload({ type: 'visit', visitId })
+          }}
         />
       )}
 
@@ -383,7 +405,7 @@ export default function JadwalHarianPage() {
           branchId={packagePrompt.branchId}
           sourceServiceType={packagePrompt.service_type}
           onClose={() => setPackagePrompt(null)}
-          onSuccess={() => { setPackagePrompt(null); loadAll(selectedDate) }}
+          onSuccess={() => { setPackagePrompt(null); silentReload(null) }}
         />
       )}
 

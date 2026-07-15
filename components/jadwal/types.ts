@@ -37,6 +37,13 @@ export interface AssignTarget {
   shift?: string   // 'PAGI' | 'SORE'
 }
 
+// Identifies the single cell/card mid-refresh after a dialog save, so only
+// that spot shows a loading spinner instead of the whole grid.
+export type RefreshingCell =
+  | { type: 'visit'; visitId: string }
+  | { type: 'cell'; staffId: string; hour: number }
+  | { type: 'staff'; staffId: string }
+
 export interface VisitCardProps {
   visit: DailyVisit
   onStatusChange: (id: string, status: VisitStatus) => void

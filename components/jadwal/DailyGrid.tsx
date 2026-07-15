@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertCircle, CalendarX, Plus } from 'lucide-react'
-import type { DailyVisit, DayStaffEntry, AssignTarget, PendingLeaveInfo } from './types'
+import { AlertCircle, CalendarX, Loader2, Plus } from 'lucide-react'
+import type { DailyVisit, DayStaffEntry, AssignTarget, PendingLeaveInfo, RefreshingCell } from './types'
 import {
   GRID_START, GRID_END, SLOT_H, TIME_COL_W, STAFF_COL_W,
 } from './types'
@@ -80,10 +80,11 @@ interface Props {
   onPayment?: (visitId: string) => void
   onRemind?: (visitId: string) => void
   onWhatsApp?: (visitId: string) => void
+  refreshingCell?: RefreshingCell | null
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick, onNoShow, onPayment, onRemind, onWhatsApp }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick, onNoShow, onPayment, onRemind, onWhatsApp, refreshingCell }: Props) {
   // Current time (used later for time line after range is known)
   const now   = new Date()
   const today = now.toISOString().split('T')[0]
@@ -189,8 +190,11 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
                 title={s.nickname ? s.full_name : undefined}
               >
                 <StaffAvatar entry={s} />
-                <p className="text-[12px] font-semibold text-white text-center leading-tight line-clamp-2 group-hover/staff:underline decoration-white/40 underline-offset-2">
+                <p className="text-[12px] font-semibold text-white text-center leading-tight line-clamp-2 group-hover/staff:underline decoration-white/40 underline-offset-2 flex items-center gap-1">
                   {displayName(s)}
+                  {refreshingCell?.type === 'staff' && refreshingCell.staffId === s.staff_id && (
+                    <Loader2 size={10} className="animate-spin text-white/70 shrink-0" />
+                  )}
                 </p>
               </button>
 
@@ -267,6 +271,7 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
                       onPayment={onPayment}
                       onRemind={onRemind}
                       onWhatsApp={onWhatsApp}
+                      isRefreshing={refreshingCell?.type === 'visit' && refreshingCell.visitId === v.id}
                     />
                   ))}
                 </div>
@@ -459,11 +464,21 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
                           onPayment={onPayment}
                           onRemind={onRemind}
                           onWhatsApp={onWhatsApp}
+                          isRefreshing={refreshingCell?.type === 'visit' && refreshingCell.visitId === v.id}
                         />
                       ))}
 
+                      {/* Refreshing empty cell — a save is in flight for this exact slot */}
+                      {cellVisits.length === 0 && refreshingCell?.type === 'cell'
+                        && refreshingCell.staffId === s.staff_id && refreshingCell.hour === h && (
+                        <div className="w-full flex-1 flex items-center justify-center rounded-lg border border-dashed border-primary/40 bg-primary/5">
+                          <Loader2 size={14} className="animate-spin text-primary/60" />
+                        </div>
+                      )}
+
                       {/* Add button — only for in-shift, non-leave, empty cells */}
-                      {cellVisits.length === 0 && isInShift && !s.isOnLeave && (
+                      {cellVisits.length === 0 && isInShift && !s.isOnLeave
+                        && !(refreshingCell?.type === 'cell' && refreshingCell.staffId === s.staff_id && refreshingCell.hour === h) && (
                         <button
                           onClick={() =>
                             onAssign({
