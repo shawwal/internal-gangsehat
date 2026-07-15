@@ -58,7 +58,7 @@ export default function OrderDetailPage() {
   const [stopping, setStopping] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const isAdmin = profile?.role !== 'therapist'
+  const isAdmin = profile?.role !== 'therapist' && profile?.role !== 'staff'
   const canEdit = isAdmin
 
   const load = useCallback(async () => {

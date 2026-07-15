@@ -62,7 +62,7 @@ export default function AttendancePage() {
     const endDate   = `${year}-${String(month + 1).padStart(2, '0')}-${String(days).padStart(2, '0')}`
 
     // Staff query: filter by branch if the user has one (HR sees own branch only)
-    let staffQuery = supabase.from('internal_profiles').select('id, full_name').eq('is_active', true).neq('role', 'staff')
+    let staffQuery = supabase.from('internal_profiles').select('id, full_name').eq('is_active', true).neq('role', 'non-staff')
     if (branchId) staffQuery = staffQuery.eq('branch_id', branchId)
 
     let attQuery = supabase.from('attendance').select('id, staff_id, date, status').gte('date', startDate).lte('date', endDate)

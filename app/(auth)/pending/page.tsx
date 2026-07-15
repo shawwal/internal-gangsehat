@@ -29,7 +29,7 @@ export default function PendingPage() {
       if (!profile) { router.push('/login'); return }
 
       // If director has already assigned a real role, redirect to their dashboard
-      if (profile.role !== 'staff') {
+      if (profile.role !== 'non-staff') {
         router.push(roleDashboard(profile.role as UserRole))
         return
       }

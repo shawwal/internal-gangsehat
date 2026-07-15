@@ -140,7 +140,7 @@ export function StaffTable({ users, branches, currentUserId, savingId, search, o
                           <button
                             onClick={() => onDeleteTarget(u)}
                             className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                            title="Hapus pengguna"
+                            title="Nonaktifkan pengguna"
                           >
                             <Trash2 size={13} />
                           </button>

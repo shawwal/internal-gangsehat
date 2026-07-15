@@ -49,14 +49,15 @@ export async function proxy(request: NextRequest) {
       .single()
 
     const roleHome: Record<string, string> = {
-      director:  '/director/overview',
-      finance:   '/finance/transactions',
-      hr:        '/hr/staff',
-      marketing: '/marketing/campaigns',
-      manager:   '/patients',
-      therapist: '/patients',
-      staff:     '/pending',
-      admin:     '/jadwal-harian',
+      director:   '/director/overview',
+      finance:    '/finance/transactions',
+      hr:         '/hr/staff',
+      marketing:  '/marketing/campaigns',
+      manager:    '/patients',
+      therapist:  '/patients',
+      staff:      '/patients',
+      admin:      '/jadwal-harian',
+      'non-staff': '/pending',
     }
     const dest = roleHome[profile?.role ?? ''] ?? '/director/overview'
     return NextResponse.redirect(new URL(dest, request.url))
@@ -64,6 +65,17 @@ export async function proxy(request: NextRequest) {
 
   // Route-level role guard — prevents unauthorized URL access regardless of navigation
   if (user && !isPublic) {
+    const { data: profile } = await supabase
+      .from('internal_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    // Unapproved users can only ever sit on the pending screen
+    if (pathname !== '/pending' && profile?.role === 'non-staff') {
+      return NextResponse.redirect(new URL('/pending', request.url))
+    }
+
     const routeAccess: Array<{ prefix: string; allowed: string[] }> = [
       { prefix: '/director',  allowed: ['director'] },
       { prefix: '/finance',   allowed: ['finance', 'director', 'manager', 'admin'] },
@@ -73,11 +85,6 @@ export async function proxy(request: NextRequest) {
     ]
     const matched = routeAccess.find(r => pathname.startsWith(r.prefix))
     if (matched) {
-      const { data: profile } = await supabase
-        .from('internal_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
       if (!profile || !matched.allowed.includes(profile.role)) {
         return NextResponse.redirect(new URL('/unauthorized', request.url))
       }

@@ -36,7 +36,7 @@ export default async function DirectorOverviewPage({
   let staffQ = supabase.from('internal_profiles')
     .select('id', { count: 'exact', head: true })
     .eq('is_active', true)
-    .neq('role', 'staff')
+    .neq('role', 'non-staff')
   if (branchId) staffQ = staffQ.eq('branch_id', branchId)
 
   // ── Visits for period (branch-aware via patient_visits.branch_id) ─────────

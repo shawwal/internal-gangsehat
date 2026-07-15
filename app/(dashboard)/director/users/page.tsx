@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState, useTransition } from 'react'
-import { UserPlus, Loader2 } from 'lucide-react'
+import { UserPlus, Loader2, Archive } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { deleteInternalUser } from '@/app/actions/delete-user'
 import { UserTabs }    from '@/components/users/UserTabs'
@@ -61,9 +62,9 @@ export default function UsersPage() {
   function confirmDelete() {
     if (!deleteTarget) return
     const id = deleteTarget.id
-    setDeleteTarget(null)
     startTransition(async () => {
       const result = await deleteInternalUser(id)
+      setDeleteTarget(null)
       if (result.error) alert(result.error)
       else load()
     })
@@ -96,12 +97,20 @@ export default function UsersPage() {
           <h1 className="text-xl font-semibold text-foreground">Staff &amp; Pengguna</h1>
           <p className="text-sm text-muted-foreground">{users.length} akun terdaftar</p>
         </div>
-        <button
-          onClick={() => setShowInvite(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
-        >
-          <UserPlus size={15} /> Undang
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href="/director/users/deleted"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Archive size={15} /> Nonaktif
+          </Link>
+          <button
+            onClick={() => setShowInvite(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <UserPlus size={15} /> Undang
+          </button>
+        </div>
       </div>
 
       {inviteMsg && (
