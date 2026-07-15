@@ -46,7 +46,6 @@ export function RichTextEditor({ value, onChange, readOnly = false, placeholder 
     if (current === next) return
     if (editor.isFocused) return
     editor.commands.setContent(next)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor])
 
   useEffect(() => {
