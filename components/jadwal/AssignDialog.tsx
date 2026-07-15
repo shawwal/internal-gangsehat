@@ -17,7 +17,6 @@ import { RecurringConfig } from './assign/RecurringConfig'
 import { VisitFields } from './assign/VisitFields'
 import { PaketTab } from './assign/paket/PaketTab'
 import { ExistingPackagePicker } from './assign/paket/ExistingPackagePicker'
-import type { PaketSubMode } from './assign/paket/types'
 
 interface Props {
   target: AssignTarget
@@ -64,7 +63,6 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   const [pkgLoading, setPkgLoading]      = useState(false)
   const [selectedPkgId, setSelectedPkg]  = useState<string | null>(null)
   const [selectedLayanan, setSelectedLayanan] = useState<LayananRow | null>(null)
-  const [pkgSubMode, setPkgSubMode]      = useState<PaketSubMode>('baru')
   const [pkgSaving, setPkgSaving]        = useState(false)
 
   // ── Save state ────────────────────────────────────────────────────────────────
@@ -105,13 +103,6 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   // ── Save from the Paket tab ───────────────────────────────────────────────────
   async function handleSavePaket() {
     if (!selectedPatient) return
-
-    if (pkgSubMode === 'pilih') {
-      if (!selectedPkgId) return
-      setMode('single')
-      return
-    }
-
     if (!selectedLayanan) return
     if (!target.branchId) {
       setError('Terapis tidak memiliki branch. Hubungi HR.')
@@ -251,8 +242,6 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   const saveLabel = mode === 'paket'
     ? pkgSaving
       ? 'Menyimpan...'
-      : pkgSubMode === 'pilih'
-      ? 'Pilih Paket'
       : 'Simpan Paket'
     : saving
     ? 'Menyimpan...'
@@ -262,7 +251,7 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
     ? 'Simpan Terapi Awal'
     : 'Simpan Kunjungan'
 
-  const paketSaveDisabled = pkgSaving || (pkgSubMode === 'pilih' ? !selectedPkgId : !selectedLayanan)
+  const paketSaveDisabled = pkgSaving || !selectedLayanan
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
@@ -349,14 +338,8 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
                 {mode === 'paket' ? (
                   <PaketTab
                     branchId={target.branchId}
-                    packages={packages}
-                    pkgLoading={pkgLoading}
-                    subMode={pkgSubMode}
-                    setSubMode={setPkgSubMode}
                     selectedLayanan={selectedLayanan}
                     onSelectLayanan={setSelectedLayanan}
-                    selectedPkgId={selectedPkgId}
-                    onSelectExistingPkg={setSelectedPkg}
                   />
                 ) : (
                   <>
