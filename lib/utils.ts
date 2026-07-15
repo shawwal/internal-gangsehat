@@ -28,3 +28,10 @@ export function formatWaNumber(phone: string): string {
   if (clean.startsWith('62')) return clean
   return clean
 }
+
+export function fillTemplate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '')
+}
+
+export const DEFAULT_REMINDER_TEMPLATE =
+  'Halo {{nama}}, kami dari Fisioterapi Gang Sehat ingin mengingatkan jadwal terapi Anda pada {{tanggal}} pukul {{jam}} di {{cabang}}. Sampai jumpa!'

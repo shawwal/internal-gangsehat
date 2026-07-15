@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing } from 'lucide-react'
+import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL } from './types'
 import type { VisitStatus } from '@/types'
@@ -28,9 +29,10 @@ interface Props {
   onNoShow?: (id: string) => void
   onPayment?: (id: string) => void
   onRemind?: (id: string) => void
+  onWhatsApp?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onNoShow, onPayment, onRemind }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onNoShow, onPayment, onRemind, onWhatsApp }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -41,6 +43,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && !visit.package_id
   const isIncomplete     = visit.status === 'completed' && (!visit.diagnosis || !visit.treatment || !visit.regio)
   const canRemind        = !!userRole && REMIND_ROLES.includes(userRole) && isIncomplete && !!onRemind
+  const canSendWhatsApp  = visit.status === 'scheduled' && !!visit.patient_phone && !!onWhatsApp
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
@@ -210,6 +213,20 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
                 >
                   <BellRing size={13} />
                   Ingatkan Terapis
+                </button>
+              </>
+            )}
+
+            {canSendWhatsApp && (
+              <>
+                <hr className="border-white/10 my-1.5" />
+                <button
+                  onClick={() => { onWhatsApp!(visit.id); setMenuOpen(false) }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-[#25D366] hover:bg-[#25D366]/10 transition-colors cursor-pointer"
+                  role="menuitem"
+                >
+                  <FaWhatsapp size={13} />
+                  Kirim Pengingat WA
                 </button>
               </>
             )}

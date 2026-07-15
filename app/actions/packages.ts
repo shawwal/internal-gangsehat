@@ -99,6 +99,50 @@ export async function createPatientPackage(input: {
   return { id: data?.id ?? null, error: error?.message ?? null }
 }
 
+// ── Create a new patient package from the branch's service catalog ─────────────
+// package_name/total_sessions come from internal_layanan (see app/actions/layanan.ts).
+// jenis_paket is only set when jumlah_sesi matches the P1/P2 convention (5/10) —
+// nothing downstream requires it, so other session counts just leave it null.
+export async function createPackageFromLayanan(input: {
+  patient_id: string
+  branch_id: string | null
+  layanan_id: string
+}): Promise<{ id: string | null; error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: layanan, error: layananErr } = await supabase
+    .from('internal_layanan')
+    .select('nama, jumlah_sesi')
+    .eq('id', input.layanan_id)
+    .single()
+
+  if (layananErr || !layanan) {
+    return { id: null, error: layananErr?.message ?? 'Layanan tidak ditemukan.' }
+  }
+
+  const total_sessions = layanan.jumlah_sesi || 1
+  const jenis_paket = total_sessions === 5 ? 'P1' : total_sessions === 10 ? 'P2' : null
+
+  const { data, error } = await supabase
+    .from('patient_packages')
+    .insert({
+      patient_id:     input.patient_id,
+      branch_id:      input.branch_id,
+      package_name:   layanan.nama,
+      package_type:   'fixed',
+      total_sessions,
+      jenis_paket,
+      mulai_paket:    'NEW',
+      created_by:     user?.id ?? null,
+      updated_at:     new Date().toISOString(),
+    })
+    .select('id')
+    .single()
+
+  return { id: data?.id ?? null, error: error?.message ?? null }
+}
+
 // ── Update an existing package ─────────────────────────────────────────────────
 export async function updatePatientPackage(
   id: string,

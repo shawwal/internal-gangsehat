@@ -1,8 +1,8 @@
 'use client'
 
-import { User, CalendarDays, Repeat2 } from 'lucide-react'
+import { User, CalendarDays, Package } from 'lucide-react'
 
-export type VisitMode = 'terapi_awal' | 'single' | 'recurring'
+export type VisitMode = 'terapi_awal' | 'single' | 'recurring' | 'paket'
 
 interface Props {
   mode: VisitMode
@@ -12,7 +12,9 @@ interface Props {
 const TABS: { value: VisitMode; label: string; icon: React.ReactNode }[] = [
   { value: 'terapi_awal', label: 'Terapi Awal',      icon: <User size={12} /> },
   { value: 'single',      label: 'Satu Sesi',         icon: <CalendarDays size={12} /> },
-  { value: 'recurring',   label: 'Jadwal Berulang',   icon: <Repeat2 size={12} /> },
+  // 'Jadwal Berulang' temporarily hidden — logic kept in AssignDialog for an easy re-enable.
+  // { value: 'recurring', label: 'Jadwal Berulang', icon: <Repeat2 size={12} /> },
+  { value: 'paket',       label: 'Paket',             icon: <Package size={12} /> },
 ]
 
 export function ModeTabs({ mode, setMode }: Props) {

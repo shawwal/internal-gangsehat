@@ -20,6 +20,8 @@ import { FocusModeBar } from '@/components/jadwal/FocusModeBar'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders } from '@/app/actions/jadwal'
+import { fetchReminderTemplate } from '@/app/actions/reminder-template'
+import { fillTemplate, formatDate, formatWaNumber } from '@/lib/utils'
 import type { AssignTarget } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
@@ -56,6 +58,12 @@ export default function JadwalHarianPage() {
   const [remindLoading, setRemindLoading]   = useState<Set<string>>(new Set())
   const [remindAllLoading, setRemindAllLoading] = useState(false)
   const [remindToast, setRemindToast]       = useState<RemindToast | null>(null)
+
+  // WhatsApp reminder template — loaded once
+  const [reminderTemplate, setReminderTemplate] = useState<string | null>(null)
+  useEffect(() => {
+    fetchReminderTemplate().then(setReminderTemplate)
+  }, [])
 
   // Toolbar state
   const [showInactive, setShowInactive] = useState<boolean>(() => {
@@ -129,6 +137,27 @@ export default function JadwalHarianPage() {
     } finally {
       setRemindLoading((prev) => { const s = new Set(prev); s.delete(visitId); return s })
     }
+  }
+
+  function handleWhatsAppReminder(visitId: string) {
+    const visit = visits.find((v) => v.id === visitId)
+    if (!visit || !visit.patient_phone) return
+
+    const branchName    = branches.find((b) => b.id === visit.branch_id)?.name ?? ''
+    const attendingStaff = staff.find((s) => s.staff_id === visit.attending_staff_id)
+    const therapistName = attendingStaff?.nickname || attendingStaff?.full_name || ''
+
+    const msg = fillTemplate(reminderTemplate ?? '', {
+      nama:     visit.patient_name,
+      tanggal:  formatDate(visit.visit_date),
+      jam:      visit.visit_time ?? '',
+      layanan:  visit.service_type ?? '',
+      cabang:   branchName,
+      terapis:  therapistName,
+    })
+
+    const num = formatWaNumber(visit.patient_phone)
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
   async function handleRemindAll() {
@@ -263,6 +292,7 @@ export default function JadwalHarianPage() {
                 onNoShow={handleNoShow}
                 onPayment={handleOpenPayment}
                 onRemind={canSendReminders ? handleRemind : undefined}
+                onWhatsApp={handleWhatsAppReminder}
               />
             )}
           </div>

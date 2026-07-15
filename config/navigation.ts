@@ -130,6 +130,14 @@ export const navigation: NavItem[] = [
     roles: ['director'],
     group: 'management',
   },
+  {
+    key: 'director-reminder-template',
+    label: 'Template Pesan WA',
+    href: '/director/reminder-template',
+    icon: 'MessageCircle',
+    roles: ['director'],
+    group: 'management',
+  },
 
   // Finance
   {

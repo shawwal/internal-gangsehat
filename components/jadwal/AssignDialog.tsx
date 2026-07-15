@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { X, User, Clock } from 'lucide-react'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { createVisit, createBulkVisits } from '@/app/actions/jadwal'
-import { fetchPatientPackages } from '@/app/actions/packages'
+import { fetchPatientPackages, createPackageFromLayanan } from '@/app/actions/packages'
+import type { LayananRow } from '@/app/actions/layanan'
 import type { AssignTarget } from './types'
 import type { PatientPackage, VisitStatus } from '@/types'
 
@@ -14,7 +15,9 @@ import { PatientChip } from './assign/PatientChip'
 import { ModeTabs, type VisitMode } from './assign/ModeTabs'
 import { RecurringConfig } from './assign/RecurringConfig'
 import { VisitFields } from './assign/VisitFields'
-import { PackageSelector } from './assign/PackageSelector'
+import { PaketTab } from './assign/paket/PaketTab'
+import { ExistingPackagePicker } from './assign/paket/ExistingPackagePicker'
+import type { PaketSubMode } from './assign/paket/types'
 
 interface Props {
   target: AssignTarget
@@ -60,6 +63,9 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   const [packages, setPackages]          = useState<PatientPackage[]>([])
   const [pkgLoading, setPkgLoading]      = useState(false)
   const [selectedPkgId, setSelectedPkg]  = useState<string | null>(null)
+  const [selectedLayanan, setSelectedLayanan] = useState<LayananRow | null>(null)
+  const [pkgSubMode, setPkgSubMode]      = useState<PaketSubMode>('baru')
+  const [pkgSaving, setPkgSaving]        = useState(false)
 
   // ── Save state ────────────────────────────────────────────────────────────────
   const [saving, setSaving]              = useState(false)
@@ -96,6 +102,43 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
     })
   }, [selectedPatient])
 
+  // ── Save from the Paket tab ───────────────────────────────────────────────────
+  async function handleSavePaket() {
+    if (!selectedPatient) return
+
+    if (pkgSubMode === 'pilih') {
+      if (!selectedPkgId) return
+      setMode('single')
+      return
+    }
+
+    if (!selectedLayanan) return
+    if (!target.branchId) {
+      setError('Terapis tidak memiliki branch. Hubungi HR.')
+      return
+    }
+
+    setPkgSaving(true)
+    setError(null)
+    const { id, error: err } = await createPackageFromLayanan({
+      patient_id: selectedPatient.id,
+      branch_id:  target.branchId,
+      layanan_id: selectedLayanan.id,
+    })
+    if (err || !id) {
+      setPkgSaving(false)
+      setError(err ?? 'Gagal membuat paket.')
+      return
+    }
+
+    const pkgs = await fetchPatientPackages(selectedPatient.id)
+    setPackages(pkgs)
+    setSelectedPkg(id)
+    setSelectedLayanan(null)
+    setPkgSaving(false)
+    setMode('single')
+  }
+
   // ── Recurring dates ───────────────────────────────────────────────────────────
   const recurDates = useMemo<string[]>(() => {
     if (mode !== 'recurring' || recurDays.length === 0 || !recurEnd) return []
@@ -110,8 +153,6 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
     }
     return dates
   }, [mode, recurDays, target.date, recurEnd])
-
-  const willCreate = mode === 'recurring' ? recurDates.length : 1
 
   // ── Sync end date to selected package's remaining sessions ───────────────────
   useEffect(() => {
@@ -207,13 +248,21 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   }
 
   // ── Save button label ─────────────────────────────────────────────────────────
-  const saveLabel = saving
+  const saveLabel = mode === 'paket'
+    ? pkgSaving
+      ? 'Menyimpan...'
+      : pkgSubMode === 'pilih'
+      ? 'Pilih Paket'
+      : 'Simpan Paket'
+    : saving
     ? 'Menyimpan...'
     : mode === 'recurring' && recurDates.length > 0
     ? `Simpan ${recurDates.length} Sesi`
     : mode === 'terapi_awal'
     ? 'Simpan Terapi Awal'
     : 'Simpan Kunjungan'
+
+  const paketSaveDisabled = pkgSaving || (pkgSubMode === 'pilih' ? !selectedPkgId : !selectedLayanan)
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
@@ -297,21 +346,48 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
                   />
                 )}
 
-                <VisitFields
-                  chiefComplaint={chiefComplaint}
-                  setChiefComplaint={setChief}
-                  notes={notes}
-                  setNotes={setNotes}
-                />
-
-                {mode !== 'terapi_awal' && (
-                  <PackageSelector
+                {mode === 'paket' ? (
+                  <PaketTab
+                    branchId={target.branchId}
                     packages={packages}
                     pkgLoading={pkgLoading}
+                    subMode={pkgSubMode}
+                    setSubMode={setPkgSubMode}
+                    selectedLayanan={selectedLayanan}
+                    onSelectLayanan={setSelectedLayanan}
                     selectedPkgId={selectedPkgId}
-                    setSelectedPkgId={setSelectedPkg}
-                    willCreate={willCreate}
+                    onSelectExistingPkg={setSelectedPkg}
                   />
+                ) : (
+                  <>
+                    {/* Keluhan Utama / Catatan only apply to the initial assessment —
+                        hidden for Satu Sesi per request. */}
+                    {mode === 'terapi_awal' && (
+                      <VisitFields
+                        chiefComplaint={chiefComplaint}
+                        setChiefComplaint={setChief}
+                        notes={notes}
+                        setNotes={setNotes}
+                      />
+                    )}
+
+                    {mode === 'single' && (
+                      pkgLoading ? (
+                        <div className="h-10 rounded-xl bg-white/5 animate-pulse" />
+                      ) : packages.length > 0 ? (
+                        <ExistingPackagePicker
+                          packages={packages}
+                          pkgLoading={pkgLoading}
+                          selectedPkgId={selectedPkgId}
+                          setSelectedPkgId={setSelectedPkg}
+                        />
+                      ) : (
+                        <p className="text-xs text-muted-foreground bg-white/5 px-3 py-2.5 rounded-xl">
+                          Pasien belum memiliki paket — sesi ini akan dicatat sebagai Sesi Klinik (bayar per sesi).
+                        </p>
+                      )
+                    )}
+                  </>
                 )}
 
                 {error && (
@@ -333,8 +409,12 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
             </button>
             {view === 'details' && selectedPatient && (
               <button
-                onClick={handleSave}
-                disabled={saving || (mode === 'recurring' && recurDates.length === 0)}
+                onClick={mode === 'paket' ? handleSavePaket : handleSave}
+                disabled={
+                  mode === 'paket'
+                    ? paketSaveDisabled
+                    : saving || (mode === 'recurring' && recurDates.length === 0)
+                }
                 className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors cursor-pointer"
               >
                 {saveLabel}

@@ -10,6 +10,7 @@ export interface DailyVisit {
   id: string
   patient_id: string
   patient_name: string
+  patient_phone: string
   branch_id: string
   visit_date: string
   visit_time: string | null    // HH:MM or null
@@ -63,6 +64,7 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
     .in('id', patientIds)
 
   const nameMap = new Map<string, string>()
+  const phoneMap = new Map<string, string>()
   for (const p of patients ?? []) {
     try {
       const dec = decryptPatientPII({
@@ -70,8 +72,10 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
         encrypted_phone: p.encrypted_phone ?? '',
       })
       nameMap.set(p.id, dec.name || 'Pasien')
+      phoneMap.set(p.id, dec.phone || '')
     } catch {
       nameMap.set(p.id, 'Pasien')
+      phoneMap.set(p.id, '')
     }
   }
 
@@ -104,6 +108,7 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
       id:                   v.id,
       patient_id:           v.patient_id,
       patient_name:         nameMap.get(v.patient_id) ?? 'Pasien',
+      patient_phone:        phoneMap.get(v.patient_id) ?? '',
       branch_id:            v.branch_id,
       visit_date:           v.visit_date,
       visit_time:           v.visit_time ? String(v.visit_time).slice(0, 5) : null,
