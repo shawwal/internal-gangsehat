@@ -188,6 +188,18 @@ export default function JadwalHarianPage() {
     }
   }
 
+  function handleSellPackage(visitId: string) {
+    const visit = visits.find((v) => v.id === visitId)
+    if (!visit) return
+    setPackagePrompt({
+      patient_id:   visit.patient_id,
+      service_type: visit.service_type ?? '',
+      status:       'completed',
+      patientName:  visit.patient_name,
+      branchId:     visit.branch_id,
+    })
+  }
+
   const sharedBarProps = {
     genderFilter, setGenderFilter,
     sortOrder, setSortOrder,
@@ -302,6 +314,7 @@ export default function JadwalHarianPage() {
                 onRemind={canSendReminders ? handleRemind : undefined}
                 onWhatsApp={handleWhatsAppReminder}
                 refreshingCell={refreshingCell}
+                onSellPackage={handleSellPackage}
               />
             )}
           </div>

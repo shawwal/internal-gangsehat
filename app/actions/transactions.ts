@@ -51,7 +51,7 @@ export interface OutstandingTransaction {
   payment_status: string | null
 }
 
-export async function fetchLayananHarga(serviceType: string, branchId?: string | null): Promise<number | null> {
+export async function fetchLayananHarga(serviceType: string, branchId?: string | null, jumlahSesi?: number | null): Promise<number | null> {
   const kategori = SERVICE_TO_CATEGORY[serviceType]
   if (!kategori || kategori === 'LAINNYA') return null
   const supabase = await createClient()
@@ -61,6 +61,7 @@ export async function fetchLayananHarga(serviceType: string, branchId?: string |
     .eq('kategori', kategori)
     .eq('is_active', true)
   if (branchId) query = query.eq('branch_id', branchId)
+  if (jumlahSesi != null) query = query.eq('jumlah_sesi', jumlahSesi)
   const { data } = await query.order('created_at', { ascending: true }).limit(1).single()
   return data ? Number(data.harga) : null
 }

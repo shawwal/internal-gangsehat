@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Package, X } from 'lucide-react'
 import { createPatientPackage } from '@/app/actions/packages'
-import { createTransactionManual } from '@/app/actions/transactions'
+import { createTransactionManual, fetchLayananHarga } from '@/app/actions/transactions'
 import type { CreateTransactionManualInput } from '@/app/actions/transactions'
 
 export interface PostAssessmentPackageDialogProps {
@@ -41,6 +41,16 @@ export function PostAssessmentPackageDialog({
 
   const category = isVisit ? 'PAKET VISIT' : 'PAKET KLINIK'
   const sessions = jenis === 'P1' ? 5 : 10
+
+  // Auto-fill harga from the branch's price list (internal_layanan), keyed by category + session count
+  useEffect(() => {
+    let cancelled = false
+    const virtualServiceType = isVisit ? 'PAKET VISIT' : 'PAKET TERAPI'
+    fetchLayananHarga(virtualServiceType, branchId, sessions).then((price) => {
+      if (!cancelled) setHarga(price != null ? String(price) : '')
+    })
+    return () => { cancelled = true }
+  }, [isVisit, branchId, sessions])
 
   const hargaNum  = parseFloat(harga.replace(/\D/g, '')) || 0
   const amountNum = parseFloat(amount.replace(/\D/g, '')) || 0

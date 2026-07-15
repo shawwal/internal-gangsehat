@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2 } from 'lucide-react'
+import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL } from './types'
@@ -31,9 +31,10 @@ interface Props {
   onRemind?: (id: string) => void
   onWhatsApp?: (id: string) => void
   isRefreshing?: boolean
+  onSellPackage?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onNoShow, onPayment, onRemind, onWhatsApp, isRefreshing }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onNoShow, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -45,6 +46,10 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const isIncomplete     = visit.status === 'completed' && (!visit.diagnosis || !visit.treatment || !visit.regio)
   const canRemind        = !!userRole && REMIND_ROLES.includes(userRole) && isIncomplete && !!onRemind
   const canSendWhatsApp  = visit.status === 'scheduled' && !!visit.patient_phone && !!onWhatsApp
+
+  const isAssessmentVisit   = visit.service_type === 'TERAPI AWAL' || visit.service_type === 'TA VISIT'
+  const showSellPackageItem = canRecordPayment && isAssessmentVisit && visit.status === 'completed'
+    && !visit.package_id && visit.has_payment && visit.visit_payment_status === 'LUNAS'
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
@@ -235,6 +240,20 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
                 >
                   <FaWhatsapp size={13} />
                   Kirim Pengingat WA
+                </button>
+              </>
+            )}
+
+            {showSellPackageItem && (
+              <>
+                <hr className="border-white/10 my-1.5" />
+                <button
+                  onClick={() => { onSellPackage?.(visit.id); setMenuOpen(false) }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                  role="menuitem"
+                >
+                  <Package size={13} />
+                  Jual Paket
                 </button>
               </>
             )}
