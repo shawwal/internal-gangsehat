@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { X, User, Clock } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { createVisit, createBulkVisits } from '@/app/actions/jadwal'
 import { fetchPatientPackages, createPackageFromLayanan } from '@/app/actions/packages'
@@ -57,6 +58,8 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   const [recurDayTimes, setRecurDayTimes] = useState<Record<number, string>>(() => ({
     [new Date(target.date + 'T00:00:00').getDay()]: `${String(target.hour).padStart(2, '0')}:00`,
   }))
+  const [pagiHours, setPagiHours] = useState<number[]>([8, 9, 10, 11, 12, 13])
+  const [soreHours, setSoreHours] = useState<number[]>([14, 15, 16, 17, 18, 19, 20])
 
   // ── Packages ─────────────────────────────────────────────────────────────────
   const [packages, setPackages]          = useState<PatientPackage[]>([])
@@ -72,6 +75,27 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   // ── Focus search on open ──────────────────────────────────────────────────────
   useEffect(() => {
     setTimeout(() => searchRef.current?.focus(), 100)
+  }, [])
+
+  // ── Recurring hour picker options — director-configurable, falls back to
+  //    the defaults above if schedule_slots is empty or the fetch fails ────────
+  useEffect(() => {
+    let cancelled = false
+    async function loadSlots() {
+      const { data } = await createClient()
+        .from('schedule_slots')
+        .select('shift, slot_time')
+        .eq('is_active', true)
+        .order('slot_time')
+      if (cancelled || !data || data.length === 0) return
+      const toHour = (t: string) => parseInt(t.split(':')[0], 10)
+      const pagi = [...new Set(data.filter((s) => s.shift === 'PAGI').map((s) => toHour(s.slot_time)))]
+      const sore = [...new Set(data.filter((s) => s.shift === 'SORE').map((s) => toHour(s.slot_time)))]
+      if (pagi.length > 0) setPagiHours(pagi)
+      if (sore.length > 0) setSoreHours(sore)
+    }
+    loadSlots()
+    return () => { cancelled = true }
   }, [])
 
   // ── Debounced patient search ──────────────────────────────────────────────────
@@ -329,6 +353,8 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
                     recurEnd={recurEnd}
                     recurDates={recurDates}
                     recurDayTimes={recurDayTimes}
+                    pagiHours={pagiHours}
+                    soreHours={soreHours}
                     onToggleDay={toggleDay}
                     onSetEnd={setRecurEnd}
                     onSetDayTime={setDayTime}

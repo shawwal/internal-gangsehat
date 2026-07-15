@@ -24,6 +24,9 @@ export function useJadwalHarian() {
   const [branches, setBranches]               = useState<{ id: string; name: string }[]>([])
   const [selectedBranchId, setSelectedBranchId] = useState<string | null | undefined>(undefined)
   const [userRole, setUserRole]               = useState<string | null>(null)
+  const [soreDividerHour, setSoreDividerHour] = useState(14)
+  const [gridStart, setGridStart]             = useState(8)
+  const [gridEnd, setGridEnd]                 = useState(21)
   const today = new Date()
 
   // Load user role, branch, and branches list on mount
@@ -32,9 +35,10 @@ export function useJadwalHarian() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const [{ data: profile }, { data: branchList }] = await Promise.all([
+      const [{ data: profile }, { data: branchList }, { data: slots }] = await Promise.all([
         supabase.from('internal_profiles').select('role, branch_id').eq('id', user.id).single(),
         supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
+        supabase.from('schedule_slots').select('shift, slot_time').eq('is_active', true).order('slot_time'),
       ])
       if (profile?.role && ['director', 'hr', 'manager'].includes(profile.role)) {
         setCanApproveLeave(true)
@@ -44,6 +48,15 @@ export function useJadwalHarian() {
       setBranches(list)
       // Non-directors default to their own branch; directors default to first branch
       setSelectedBranchId(profile?.branch_id ?? list[0]?.id ?? null)
+
+      if (slots && slots.length > 0) {
+        const toHour = (t: string) => parseInt(t.split(':')[0], 10)
+        const hours = slots.map((s) => toHour(s.slot_time))
+        setGridStart(Math.min(...hours))
+        setGridEnd(Math.max(...hours) + 1)
+        const soreHours = slots.filter((s) => s.shift === 'SORE').map((s) => toHour(s.slot_time))
+        if (soreHours.length > 0) setSoreDividerHour(Math.min(...soreHours))
+      }
     }
     loadMeta()
   }, [])
@@ -297,6 +310,9 @@ export function useJadwalHarian() {
     leaveSaving,
     canApproveLeave,
     userRole,
+    soreDividerHour,
+    gridStart,
+    gridEnd,
     branches,
     selectedBranchId,
     setSelectedBranchId,

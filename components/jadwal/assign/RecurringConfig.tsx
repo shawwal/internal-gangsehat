@@ -3,9 +3,6 @@
 import { Repeat2 } from 'lucide-react'
 import { DAY_CHIPS, addDays, toIso } from './constants'
 
-const PAGI_HOURS = [8, 9, 10, 11, 12, 13]
-const SORE_HOURS = [14, 15, 16, 17, 18, 19, 20]
-
 function toHHMM(h: number) {
   return `${String(h).padStart(2, '0')}:00`
 }
@@ -16,12 +13,14 @@ interface Props {
   recurEnd: string
   recurDates: string[]
   recurDayTimes: Record<number, string>
+  pagiHours: number[]
+  soreHours: number[]
   onToggleDay: (dow: number) => void
   onSetEnd: (d: string) => void
   onSetDayTime: (dow: number, time: string) => void
 }
 
-export function RecurringConfig({ targetDate, recurDays, recurEnd, recurDates, recurDayTimes, onToggleDay, onSetEnd, onSetDayTime }: Props) {
+export function RecurringConfig({ targetDate, recurDays, recurEnd, recurDates, recurDayTimes, pagiHours, soreHours, onToggleDay, onSetEnd, onSetDayTime }: Props) {
   const minEnd = toIso(addDays(new Date(targetDate + 'T00:00:00'), 1))
   const dayLabels = DAY_CHIPS.filter((c) => recurDays.includes(c.dow)).map((c) => c.label).join(' & ')
 
@@ -67,7 +66,7 @@ export function RecurringConfig({ targetDate, recurDays, recurEnd, recurDates, r
                 <div className="flex items-center gap-1.5">
                   <span className="text-[9px] font-semibold text-muted-foreground/60 uppercase tracking-widest w-7 shrink-0">Pagi</span>
                   <div className="flex gap-1 flex-wrap">
-                    {PAGI_HOURS.map((h) => (
+                    {pagiHours.map((h) => (
                       <button
                         key={h}
                         onClick={() => onSetDayTime(dow, toHHMM(h))}
@@ -88,7 +87,7 @@ export function RecurringConfig({ targetDate, recurDays, recurEnd, recurDates, r
                 <div className="flex items-center gap-1.5">
                   <span className="text-[9px] font-semibold text-muted-foreground/60 uppercase tracking-widest w-7 shrink-0">Sore</span>
                   <div className="flex gap-1 flex-wrap">
-                    {SORE_HOURS.map((h) => (
+                    {soreHours.map((h) => (
                       <button
                         key={h}
                         onClick={() => onSetDayTime(dow, toHHMM(h))}

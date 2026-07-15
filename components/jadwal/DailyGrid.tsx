@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { AlertCircle, CalendarX, Loader2, Plus } from 'lucide-react'
 import type { DailyVisit, DayStaffEntry, AssignTarget, PendingLeaveInfo, RefreshingCell } from './types'
 import {
-  GRID_START, GRID_END, SLOT_H, TIME_COL_W, STAFF_COL_W,
+  SLOT_H, TIME_COL_W, STAFF_COL_W,
 } from './types'
 import type { VisitStatus } from '@/types'
 import { VisitCard } from './VisitCard'
@@ -70,6 +70,9 @@ interface Props {
   visits: DailyVisit[]
   date: string           // ISO yyyy-mm-dd
   userRole?: string | null
+  soreDividerHour?: number
+  gridStart?: number
+  gridEnd?: number
   onAssign: (target: AssignTarget) => void
   onStatusChange: (visitId: string, status: VisitStatus) => void
   onDelete: (visitId: string) => void
@@ -85,7 +88,7 @@ interface Props {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick, onNoShow, onPayment, onRemind, onWhatsApp, refreshingCell, onSellPackage }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick, onNoShow, onPayment, onRemind, onWhatsApp, refreshingCell, onSellPackage }: Props) {
   // Current time (used later for time line after range is known)
   const now   = new Date()
   const today = now.toISOString().split('T')[0]
@@ -111,20 +114,11 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
     hourMap.set(hour, list)
   }
 
-  // Dynamic visible hour range — trim rows with no shifts or visits
-  const shiftHours: number[] = []
-  for (const s of staff) {
-    if (s.hasSchedule && !s.isOnLeave) {
-      shiftHours.push(parseHour(s.jam_mulai), parseHour(s.jam_selesai))
-    }
-  }
-  const visitHoursList: number[] = []
-  for (const v of visits) {
-    if (v.visit_time) visitHoursList.push(parseHour(v.visit_time))
-  }
-  const allDataHours  = [...shiftHours, ...visitHoursList]
-  const effectiveStart = allDataHours.length > 0 ? Math.max(GRID_START, Math.min(...allDataHours)) : GRID_START
-  const effectiveEnd   = allDataHours.length > 0 ? Math.min(GRID_END,   Math.max(...allDataHours) + 1) : GRID_END
+  // Visible hour range follows the configured schedule_slots bounds directly
+  // (gridStart/gridEnd), so the grid is consistent day-to-day regardless of
+  // which staff happen to be scheduled that particular day.
+  const effectiveStart = gridStart
+  const effectiveEnd   = gridEnd
   const SKIP_HOURS     = new Set([12, 18])
   const HOURS_VISIBLE  = Array.from({ length: effectiveEnd - effectiveStart }, (_, i) => effectiveStart + i)
     .filter(h => !SKIP_HOURS.has(h))
@@ -296,15 +290,9 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
                 className="absolute w-full flex items-center justify-end pr-3"
                 style={{ top: i * SLOT_H, height: SLOT_H }}
               >
-                {h === 14 ? (
-                  <span className="text-[17px] text-muted-foreground/60 font-mono">
-                    14:00
-                  </span>
-                ) : (
-                  <span className="text-[17px] text-muted-foreground/60 font-mono">
-                    {fmtHour(h)}
-                  </span>
-                )}
+                <span className="text-[17px] text-muted-foreground/60 font-mono">
+                  {fmtHour(h)}
+                </span>
               </div>
             ))}
           </div>
@@ -314,18 +302,18 @@ export function DailyGrid({ staff, visits, date, userRole, onAssign, onStatusCha
             className="absolute pointer-events-none"
             style={{ left: TIME_COL_W, right: 0, top: 0, bottom: 0 }}
           >
-            {/* Afternoon tint — subtle warm overlay from 14:00 onwards */}
-            {HOURS_VISIBLE.includes(14) && (
+            {/* Afternoon tint — subtle warm overlay from the Sore shift boundary onwards */}
+            {HOURS_VISIBLE.includes(soreDividerHour) && (
               <div
                 className="absolute inset-x-0 bottom-0 pointer-events-none"
                 style={{
-                  top: (HOURS_VISIBLE.indexOf(14)) * SLOT_H,
+                  top: (HOURS_VISIBLE.indexOf(soreDividerHour)) * SLOT_H,
                   background: 'linear-gradient(180deg, rgba(255,179,92,0.04) 0%, rgba(255,0,144,0.03) 100%)',
                 }}
               />
             )}
             {HOURS_VISIBLE.map((h, i) => (
-              h === 14 ? (
+              h === soreDividerHour ? (
                 <div
                   key={h}
                   className="absolute inset-x-0 pointer-events-none"
