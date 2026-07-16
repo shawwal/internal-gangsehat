@@ -441,8 +441,6 @@ export default function JadwalHarianPage() {
             visit_date:           paymentVisit.visit_date,
             service_type:         paymentVisit.service_type,
             branch_id:            paymentVisit.branch_id,
-            layanan_id:           paymentVisit.layanan_id,
-            layanan_nama:         paymentVisit.layanan_nama,
             attending_staff_name: staff.find((s) => s.staff_id === paymentVisit.attending_staff_id)?.nickname
               || staff.find((s) => s.staff_id === paymentVisit.attending_staff_id)?.full_name
               || undefined,

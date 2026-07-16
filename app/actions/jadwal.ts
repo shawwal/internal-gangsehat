@@ -16,8 +16,6 @@ export interface DailyVisit {
   visit_time: string | null    // HH:MM or null
   service_type: string | null
   package_id: string | null    // set → visit is part of a package, payment already covered
-  layanan_id: string | null    // set → specific internal_layanan row chosen for a no-package visit
-  layanan_nama: string | null
   chief_complaint: string | null
   diagnosis: string | null
   treatment: string | null
@@ -42,7 +40,6 @@ export interface CreateVisitInput {
   status: VisitStatus
   notes: string | null
   package_id?: string | null
-  layanan_id?: string | null
 }
 
 // ── Fetch all visits for a date with decrypted patient names ───────────────────
@@ -51,7 +48,7 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
 
   let query = supabase
     .from('patient_visits')
-    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, layanan_id, internal_layanan!layanan_id(nama), chief_complaint, diagnosis, treatment, regio, status, notes, branch_id')
+    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, chief_complaint, diagnosis, treatment, regio, status, notes, branch_id')
     .eq('visit_date', date)
     .order('visit_time', { ascending: true })
   if (branchId) query = query.eq('branch_id', branchId)
@@ -117,8 +114,6 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
       visit_time:           v.visit_time ? String(v.visit_time).slice(0, 5) : null,
       service_type:         v.service_type,
       package_id:           v.package_id ?? null,
-      layanan_id:           v.layanan_id ?? null,
-      layanan_nama:         (v.internal_layanan as unknown as { nama: string } | null)?.nama ?? null,
       chief_complaint:      v.chief_complaint,
       diagnosis:            v.diagnosis,
       treatment:            v.treatment,
@@ -149,7 +144,6 @@ export async function createVisit(input: CreateVisitInput): Promise<{ error: str
     status:              input.status,
     notes:               input.notes ?? null,
     package_id:          input.package_id ?? null,
-    layanan_id:          input.layanan_id ?? null,
     updated_at:          new Date().toISOString(),
   })
 
@@ -350,7 +344,6 @@ export async function createBulkVisits(
     status:              input.status,
     notes:               input.notes ?? null,
     package_id:          input.package_id ?? null,
-    layanan_id:          input.layanan_id ?? null,
     updated_at:          new Date().toISOString(),
   }))
 

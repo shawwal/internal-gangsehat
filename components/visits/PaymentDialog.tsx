@@ -17,8 +17,6 @@ export interface PaymentVisitInfo {
   service_type: string | null
   branch_id?: string | null
   attending_staff_name?: string
-  layanan_id?: string | null
-  layanan_nama?: string | null
 }
 
 interface Props {
@@ -111,11 +109,11 @@ export function PaymentDialog({ visit, onClose, onSuccess }: Props) {
   }, [visit.patient_id])
 
   useEffect(() => {
-    if (!visit.service_type && !visit.layanan_id) return
-    fetchLayananHarga(visit.service_type ?? '', visit.branch_id, null, visit.layanan_id).then((price) => {
+    if (!visit.service_type) return
+    fetchLayananHarga(visit.service_type, visit.branch_id).then((price) => {
       if (price != null) setHarga(String(price))
     })
-  }, [visit.service_type, visit.branch_id, visit.layanan_id])
+  }, [visit.service_type, visit.branch_id])
 
   function handleClose() {
     if (submitting) return
@@ -213,7 +211,7 @@ export function PaymentDialog({ visit, onClose, onSuccess }: Props) {
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-xl bg-primary/8 border border-primary/10 px-3 py-2.5">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Layanan</p>
-                  <p className="text-xs font-semibold text-foreground">{visit.layanan_nama ?? visit.service_type ?? '—'}</p>
+                  <p className="text-xs font-semibold text-foreground">{visit.service_type ?? '—'}</p>
                 </div>
                 <div className="rounded-xl bg-muted/30 border border-border/40 px-3 py-2.5">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Kategori</p>

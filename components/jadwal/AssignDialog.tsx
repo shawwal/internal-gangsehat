@@ -16,7 +16,6 @@ import { PatientChip } from './assign/PatientChip'
 import { ModeTabs, type VisitMode } from './assign/ModeTabs'
 import { RecurringConfig } from './assign/RecurringConfig'
 import { VisitFields } from './assign/VisitFields'
-import { LayananSearchPicker } from './assign/LayananSearchPicker'
 import { PaketTab } from './assign/paket/PaketTab'
 import { ExistingPackagePicker } from './assign/paket/ExistingPackagePicker'
 
@@ -69,9 +68,6 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   const [selectedLayanan, setSelectedLayanan] = useState<LayananRow | null>(null)
   const [pkgSaving, setPkgSaving]        = useState(false)
 
-  // ── Single-session service (optional, when no package applies) ──────────────
-  const [selectedSingleLayanan, setSelectedSingleLayanan] = useState<LayananRow | null>(null)
-
   // ── Save state ────────────────────────────────────────────────────────────────
   const [saving, setSaving]              = useState(false)
   const [error, setError]                = useState<string | null>(null)
@@ -115,7 +111,6 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
 
   // ── Load packages on patient select ──────────────────────────────────────────
   useEffect(() => {
-    setSelectedSingleLayanan(null)
     if (!selectedPatient) {
       setPackages([])
       setSelectedPkg(null)
@@ -243,7 +238,6 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
       status,
       notes:              notes.trim() || null,
       package_id:         selectedPkgId ?? null,
-      layanan_id:         mode === 'single' ? selectedSingleLayanan?.id ?? null : null,
     }
 
     if (mode === 'terapi_awal' || mode === 'single') {
@@ -387,31 +381,20 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
                     )}
 
                     {mode === 'single' && (
-                      <div className="space-y-3">
-                        {pkgLoading ? (
-                          <div className="h-10 rounded-xl bg-white/5 animate-pulse" />
-                        ) : packages.length > 0 ? (
-                          <ExistingPackagePicker
-                            packages={packages}
-                            pkgLoading={pkgLoading}
-                            selectedPkgId={selectedPkgId}
-                            setSelectedPkgId={setSelectedPkg}
-                          />
-                        ) : (
-                          <p className="text-xs text-muted-foreground bg-white/5 px-3 py-2.5 rounded-xl">
-                            Pasien belum memiliki paket — sesi ini akan dicatat sebagai Sesi Klinik (bayar per sesi).
-                          </p>
-                        )}
-
-                        {/* Always available, regardless of package status — a
-                            patient with a package can still pay per-session for
-                            a different service today (e.g. Sport Massage). */}
-                        <LayananSearchPicker
-                          branchId={target.branchId}
-                          selected={selectedSingleLayanan}
-                          onSelect={setSelectedSingleLayanan}
+                      pkgLoading ? (
+                        <div className="h-10 rounded-xl bg-white/5 animate-pulse" />
+                      ) : packages.length > 0 ? (
+                        <ExistingPackagePicker
+                          packages={packages}
+                          pkgLoading={pkgLoading}
+                          selectedPkgId={selectedPkgId}
+                          setSelectedPkgId={setSelectedPkg}
                         />
-                      </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground bg-white/5 px-3 py-2.5 rounded-xl">
+                          Pasien belum memiliki paket — sesi ini akan dicatat sebagai Sesi Klinik (bayar per sesi).
+                        </p>
+                      )
                     )}
                   </>
                 )}
