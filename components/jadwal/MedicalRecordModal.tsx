@@ -6,6 +6,7 @@ import { X, ExternalLink, FileText, Loader2 } from 'lucide-react'
 import { fetchVisitWithPatient, updateVisit } from '@/app/actions/jadwal'
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { VisitStatus, ServiceType, BodyRegion } from '@/types'
+import { getVisitFormRoute } from '@/lib/visitRouting'
 import { STATUS_LABEL } from './types'
 
 const STATUS_OPTIONS: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
@@ -92,7 +93,8 @@ export function MedicalRecordModal({ visitId, contextShift, contextServiceType, 
 
   if (!visitId) return null
 
-  const hideClinicalFields = form?.service_type === 'TERAPI AWAL'
+  const formRoute = getVisitFormRoute(form?.service_type)
+  const hideClinicalFields = formRoute !== null
   const statusOptions = hideClinicalFields ? STATUS_OPTIONS.filter((s) => s !== 'completed') : STATUS_OPTIONS
 
   async function handleSave(e: React.FormEvent) {
@@ -223,7 +225,9 @@ export function MedicalRecordModal({ visitId, contextShift, contextServiceType, 
 
               {hideClinicalFields ? (
                 <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
-                  Kunjungan Terapi Awal menggunakan Form Asesmen Lengkap (Regio, Diagnosis, Tindakan, dll). Simpan lalu lanjutkan ke form tersebut.
+                  {formRoute === 'assessment'
+                    ? 'Kunjungan Terapi Awal menggunakan Form Asesmen Lengkap (Regio, Diagnosis, Tindakan, dll). Simpan lalu lanjutkan ke form tersebut.'
+                    : 'Kunjungan ini menggunakan Form Catatan Sesi (SOAP). Simpan lalu lanjutkan ke form tersebut.'}
                 </div>
               ) : (
                 <>

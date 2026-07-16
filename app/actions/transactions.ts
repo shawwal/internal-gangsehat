@@ -51,10 +51,28 @@ export interface OutstandingTransaction {
   payment_status: string | null
 }
 
-export async function fetchLayananHarga(serviceType: string, branchId?: string | null, jumlahSesi?: number | null): Promise<number | null> {
+export async function fetchLayananHarga(
+  serviceType: string,
+  branchId?: string | null,
+  jumlahSesi?: number | null,
+  layananId?: string | null,
+): Promise<number | null> {
+  const supabase = await createClient()
+
+  // Exact match: the visit already recorded which internal_layanan row was
+  // chosen (e.g. a specific SESI KLINIK sub-type like "Sport Massage") —
+  // trust it instead of guessing from the category below.
+  if (layananId) {
+    const { data } = await supabase
+      .from('internal_layanan')
+      .select('harga')
+      .eq('id', layananId)
+      .single()
+    return data ? Number(data.harga) : null
+  }
+
   const kategori = SERVICE_TO_CATEGORY[serviceType]
   if (!kategori || kategori === 'LAINNYA') return null
-  const supabase = await createClient()
   let query = supabase
     .from('internal_layanan')
     .select('harga')

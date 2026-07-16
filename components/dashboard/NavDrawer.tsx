@@ -36,6 +36,7 @@ const ICON_GRADIENTS: Record<string, string> = {
   CalendarDays:    'from-sky-400 to-blue-500',
   BarChart2:       'from-violet-400 to-violet-600',
   ClipboardList:   'from-cyan-400 to-cyan-600',
+  TrendingUp:      'from-fuchsia-400 to-pink-600',
 }
 
 function gradientFor(icon: string) {

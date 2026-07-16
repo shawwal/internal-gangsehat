@@ -252,3 +252,50 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .j-fade-in, .j-bar-slide { animation: none; }
 }
+
+/* Mobile-first range slider (e.g. pain scale) */
+.range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--muted);
+  outline: none;
+  cursor: pointer;
+}
+.range-slider--pain-gradient {
+  background: linear-gradient(to right, #34C759, #FFB35C, var(--destructive));
+}
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+.range-slider::-moz-range-thumb {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+.range-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+.range-slider--pain-gradient::-moz-range-track {
+  background: linear-gradient(to right, #34C759, #FFB35C, var(--destructive));
+}
+.range-slider:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

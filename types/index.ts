@@ -134,6 +134,38 @@ export interface TerapiAwalAssessment {
   treatment_plan_today: string | null
 }
 
+export type SymptomTrend = 'IMPROVING' | 'SAME' | 'WORSENING'
+export type TreatmentPerformed =
+  | 'MANUAL_THERAPY'
+  | 'THERAPEUTIC_EXERCISE'
+  | 'TAPING_STRAPPING'
+  | 'ELECTROTHERAPY_TENS_US'
+  | 'EDUCATION_ADVICE'
+
+// Follow-up SOAP session note — one row per SESI/PAKET TERAPI|VISIT patient_visits row (migration 033)
+export interface SessionNote {
+  id: string
+  visit_id: string
+  patient_id: string
+  branch_id: string
+  status: AssessmentStatus
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  // 1. Subjective
+  pain_scale: number | null
+  symptom_trend: SymptomTrend | null
+  subjective_notes: string | null
+  // 2. Objective
+  objective_findings: string | null
+  // 3. Assessment
+  clinical_impression: string | null
+  // 4. Plan & Interventions Today
+  treatments_performed: TreatmentPerformed[]
+  hep_given: string | null
+  next_plan: string | null
+}
+
 export type TransactionType = 'income' | 'expense'
 export type TransactionStatus = 'pending' | 'confirmed' | 'rejected'
 

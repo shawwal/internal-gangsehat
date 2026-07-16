@@ -13,6 +13,7 @@ import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel } from '@/lib/excel-export'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
+import { getVisitFormRoute } from '@/lib/visitRouting'
 import type { PaymentVisitInfo } from '@/components/visits/PaymentDialog'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 import type { PatientVisit, VisitStatus, ServiceType, BodyRegion, UserRole } from '@/types'
@@ -135,8 +136,9 @@ export default function PatientVisitsPage() {
   const canRecordPayment = !!userRole && ['finance', 'manager', 'director'].includes(userRole)
 
   function openVisit(v: PatientVisit) {
-    if (v.service_type === 'TERAPI AWAL') {
-      router.push(`/visits/${v.id}/assessment?from=/patients/${id}/visits`)
+    const route = getVisitFormRoute(v.service_type)
+    if (route) {
+      router.push(`/visits/${v.id}/${route}?from=/patients/${id}/visits`)
       return
     }
     setSelectedVisitId(v.id)
@@ -557,8 +559,9 @@ export default function PatientVisitsPage() {
         onSaved={(ctx) => {
           const visitId = selectedVisitId
           setSelectedVisitId(null)
-          if (ctx?.service_type === 'TERAPI AWAL') {
-            if (visitId) router.push(`/visits/${visitId}/assessment?from=/patients/${id}/visits`)
+          const route = getVisitFormRoute(ctx?.service_type)
+          if (route) {
+            if (visitId) router.push(`/visits/${visitId}/${route}?from=/patients/${id}/visits`)
             return
           }
           load()

@@ -266,6 +266,14 @@ export const navigation: NavItem[] = [
     roles: ['finance', 'hr', 'marketing', 'staff', 'therapist', 'manager'],
     group: 'hr',
   },
+  {
+    key: 'target-progress',
+    label: 'Progress Target',
+    href: '/target-progress',
+    icon: 'TrendingUp',
+    roles: ['director', 'manager', 'finance', 'hr', 'marketing', 'staff', 'therapist'],
+    group: 'hr',
+  },
 
   // Marketing
   {

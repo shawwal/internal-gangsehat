@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Loader2, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, Loader2, AlertTriangle, Printer } from 'lucide-react'
 import { fetchVisitWithPatient } from '@/app/actions/jadwal'
 import { fetchAssessment, saveAssessmentDraft, completeAssessment } from '@/app/actions/assessments'
 import type { VisitWithPatient } from '@/app/actions/jadwal'
+import type { TerapiAwalAssessment } from '@/types'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
+import { generateAssessmentPdf } from '@/components/assessment/generateAssessmentPdf'
 import { StepProgress } from '@/components/assessment/StepProgress'
 import { AssessmentFooter } from '@/components/assessment/AssessmentFooter'
 import { VisitInfoBar } from '@/components/assessment/VisitInfoBar'
@@ -32,6 +34,7 @@ export default function TerapiAwalAssessmentPage() {
   const [form, setForm]             = useState<AssessmentFormState | null>(null)
   const [visitInfo, setVisitInfo]   = useState<VisitInfoState>({ shift: '', kehadiran: '', regio: '', sumber_pasien: '' })
   const [alreadyCompleted, setAlreadyCompleted] = useState(false)
+  const [completedAssessment, setCompletedAssessment] = useState<TerapiAwalAssessment | null>(null)
 
   const [currentStep, setCurrentStep]   = useState(0)
   const [furthestStep, setFurthestStep] = useState(0)
@@ -53,6 +56,7 @@ export default function TerapiAwalAssessmentPage() {
       setVisit(v)
       setForm(fromAssessment(a))
       setAlreadyCompleted(a?.status === 'completed')
+      setCompletedAssessment(a?.status === 'completed' ? a : null)
       setVisitInfo({
         shift: v.shift ?? '',
         kehadiran: v.kehadiran ?? '',
@@ -95,6 +99,11 @@ export default function TerapiAwalAssessmentPage() {
 
   function handleJumpStep(step: number) {
     setCurrentStep(step)
+  }
+
+  function handlePrint() {
+    if (!visit || !completedAssessment) return
+    generateAssessmentPdf(visit, completedAssessment)
   }
 
   async function handleComplete() {
@@ -154,6 +163,15 @@ export default function TerapiAwalAssessmentPage() {
             </p>
           </div>
         </div>
+        {alreadyCompleted && (
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors shrink-0"
+          >
+            <Printer size={13} /> Cetak PDF
+          </button>
+        )}
       </div>
 
       <VisitInfoBar visitId={visit.id} value={visitInfo} onChange={setVisitInfo} />

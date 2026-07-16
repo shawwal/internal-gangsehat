@@ -1,0 +1,30 @@
+'use client'
+
+import { RichTextEditor } from '@/components/assessment/RichTextEditor'
+import type { SessionNoteFormState } from './types'
+
+interface Props {
+  value: SessionNoteFormState
+  onChange: (patch: Partial<SessionNoteFormState>) => void
+}
+
+const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
+
+export function SectionObjective({ value, onChange }: Props) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-muted/40 border-y border-border">
+        <h3 className="text-sm font-semibold text-foreground">2. Objective (Temuan Klinis)</h3>
+      </div>
+
+      <div>
+        <label className={labelCls}>ROM, Strength (MMT), Palpation, dan Special Tests</label>
+        <RichTextEditor
+          value={value.objective_findings}
+          onChange={(html) => onChange({ objective_findings: html })}
+          placeholder="Contoh: (+) Lachman, Knee Flexion AROM 90°, Quad MMT 4/5"
+        />
+      </div>
+    </div>
+  )
+}

@@ -22,6 +22,7 @@ import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders } from '@/app/actions/jadwal'
 import { fetchReminderTemplate } from '@/app/actions/reminder-template'
+import { getVisitFormRoute } from '@/lib/visitRouting'
 import { fillTemplate, formatDate, formatWaNumber } from '@/lib/utils'
 import type { AssignTarget, RefreshingCell } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
@@ -330,8 +331,9 @@ export default function JadwalHarianPage() {
                 onDelete={handleDelete}
                 onOpen={(id, shift) => {
                   const v = visits.find((x) => x.id === id)
-                  if (v?.service_type === 'TERAPI AWAL') {
-                    router.push(`/visits/${id}/assessment?from=/jadwal-harian`)
+                  const route = getVisitFormRoute(v?.service_type)
+                  if (route) {
+                    router.push(`/visits/${id}/${route}?from=/jadwal-harian`)
                     return
                   }
                   setSelectedVisitId(id); setSelectedVisitShift(shift ?? null)
@@ -390,8 +392,9 @@ export default function JadwalHarianPage() {
           const visitId = selectedVisitId
           setSelectedVisitId(null)
           setSelectedVisitShift(null)
-          if (ctx?.service_type === 'TERAPI AWAL') {
-            if (visitId) router.push(`/visits/${visitId}/assessment?from=/jadwal-harian`)
+          const route = getVisitFormRoute(ctx?.service_type)
+          if (route) {
+            if (visitId) router.push(`/visits/${visitId}/${route}?from=/jadwal-harian`)
             return
           }
           if (visitId) silentReload({ type: 'visit', visitId })
@@ -431,6 +434,8 @@ export default function JadwalHarianPage() {
             visit_date:           paymentVisit.visit_date,
             service_type:         paymentVisit.service_type,
             branch_id:            paymentVisit.branch_id,
+            layanan_id:           paymentVisit.layanan_id,
+            layanan_nama:         paymentVisit.layanan_nama,
             attending_staff_name: staff.find((s) => s.staff_id === paymentVisit.attending_staff_id)?.nickname
               || staff.find((s) => s.staff_id === paymentVisit.attending_staff_id)?.full_name
               || undefined,
