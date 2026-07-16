@@ -101,7 +101,7 @@ get_my_branch()        → uuid   -- branch_id of auth.uid(); NULL for director
 | Table | Staff | Director |
 |-------|-------|----------|
 | branches | SELECT own branch | ALL |
-| internal_profiles | SELECT own row; HR SELECT own branch | ALL |
+| internal_profiles | SELECT own row; HR/admin SELECT own branch | ALL |
 | patients | SELECT all (migration 008) | ALL |
 | patient_visits | ALL own branch | ALL |
 | transactions | ALL own branch (finance) | ALL |
