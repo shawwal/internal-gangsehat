@@ -94,7 +94,7 @@ export async function completeSessionNote(
   if (noteErr) return { error: noteErr.message }
 
   const treatmentLabels = (fields.treatments_performed ?? []).map((t) => TREATMENTS_PERFORMED_LABEL[t]).join(', ')
-  const treatment = [treatmentLabels, stripHtml(fields.hep_given)].filter(Boolean).join(' — ') || null
+  const treatment = [treatmentLabels, stripHtml(fields.treatment_notes), stripHtml(fields.hep_given)].filter(Boolean).join(' — ') || null
 
   // Regio isn't set anywhere at scheduling time for follow-up visits — carry it
   // forward from the patient's most recent visit that has one, so the therapist
@@ -122,7 +122,7 @@ export async function completeSessionNote(
       kehadiran: visitInfo.kehadiran || 'HADIR',
       regio,
       sumber_pasien: visitInfo.sumber_pasien || null,
-      diagnosis: fields.clinical_impression || null,
+      diagnosis: stripHtml(fields.clinical_impression) || null,
       treatment,
       chief_complaint: stripHtml(fields.subjective_notes),
       updated_at: new Date().toISOString(),

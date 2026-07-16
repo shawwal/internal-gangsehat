@@ -45,6 +45,7 @@ export interface SessionNoteFormState {
   objective_findings: string
   clinical_impression: string
   treatments_performed: TreatmentPerformed[]
+  treatment_notes: string
   hep_given: string
   next_plan: string
 }
@@ -56,6 +57,7 @@ export const EMPTY_SESSION_NOTE_FORM: SessionNoteFormState = {
   objective_findings: '',
   clinical_impression: '',
   treatments_performed: [],
+  treatment_notes: '',
   hep_given: '',
   next_plan: '',
 }
@@ -72,6 +74,7 @@ export function toFieldsInput(f: SessionNoteFormState): SessionNoteFieldsInput {
     objective_findings: f.objective_findings || null,
     clinical_impression: f.clinical_impression || null,
     treatments_performed: f.treatments_performed,
+    treatment_notes: f.treatment_notes || null,
     hep_given: f.hep_given || null,
     next_plan: f.next_plan || null,
   }
@@ -84,6 +87,7 @@ export function fromSessionNote(a: {
   objective_findings: string | null
   clinical_impression: string | null
   treatments_performed: TreatmentPerformed[]
+  treatment_notes: string | null
   hep_given: string | null
   next_plan: string | null
 } | null | undefined): SessionNoteFormState {
@@ -95,6 +99,7 @@ export function fromSessionNote(a: {
     objective_findings: a.objective_findings ?? '',
     clinical_impression: a.clinical_impression ?? '',
     treatments_performed: a.treatments_performed ?? [],
+    treatment_notes: a.treatment_notes ?? '',
     hep_given: a.hep_given ?? '',
     next_plan: a.next_plan ?? '',
   }

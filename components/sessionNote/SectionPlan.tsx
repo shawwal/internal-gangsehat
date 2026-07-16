@@ -10,7 +10,6 @@ interface Props {
   onChange: (patch: Partial<SessionNoteFormState>) => void
 }
 
-const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
 
 export function SectionPlan({ value, onChange }: Props) {
@@ -45,6 +44,15 @@ export function SectionPlan({ value, onChange }: Props) {
       </div>
 
       <div>
+        <label className={labelCls}>Catatan Tindakan</label>
+        <RichTextEditor
+          value={value.treatment_notes}
+          onChange={(html) => onChange({ treatment_notes: html })}
+          placeholder="Detail tambahan tindakan yang dilakukan hari ini"
+        />
+      </div>
+
+      <div>
         <label className={labelCls}>Home Exercise Program (HEP) yang Diberikan</label>
         <RichTextEditor
           value={value.hep_given}
@@ -55,10 +63,9 @@ export function SectionPlan({ value, onChange }: Props) {
 
       <div>
         <label className={labelCls}>Plan untuk Sesi Berikutnya / Timeline Kembali Berlatih</label>
-        <input
+        <RichTextEditor
           value={value.next_plan}
-          onChange={(e) => onChange({ next_plan: e.target.value })}
-          className={inputCls}
+          onChange={(html) => onChange({ next_plan: html })}
         />
       </div>
     </div>

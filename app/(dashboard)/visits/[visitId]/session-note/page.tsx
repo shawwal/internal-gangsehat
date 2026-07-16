@@ -17,6 +17,7 @@ import { SectionPlan } from '@/components/sessionNote/SectionPlan'
 import { generateSessionNotePdf } from '@/components/sessionNote/generateSessionNotePdf'
 import { fromSessionNote, toFieldsInput } from '@/components/sessionNote/types'
 import type { SessionNoteFormState } from '@/components/sessionNote/types'
+import { stripHtml } from '@/lib/richtext'
 
 export default function SessionNotePage() {
   const { visitId } = useParams<{ visitId: string }>()
@@ -74,7 +75,7 @@ export default function SessionNotePage() {
 
   async function handleComplete() {
     if (!visit || !form) return
-    if (!form.clinical_impression.trim()) { setError('Clinical Impression / Physio Diagnosis wajib diisi.'); return }
+    if (!stripHtml(form.clinical_impression)) { setError('Clinical Impression / Physio Diagnosis wajib diisi.'); return }
 
     setSaving(true)
     setError(null)

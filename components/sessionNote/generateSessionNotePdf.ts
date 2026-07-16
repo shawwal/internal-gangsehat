@@ -56,14 +56,15 @@ export function generateSessionNotePdf(
 
     <div class="section">
       <div class="section-title">3. Assessment</div>
-      ${pdfField('Clinical Impression / Physio Diagnosis', `<p>${note.clinical_impression ?? '—'}</p>`)}
+      ${pdfField('Clinical Impression / Physio Diagnosis', note.clinical_impression)}
     </div>
 
     <div class="section">
       <div class="section-title">4. Plan &amp; Intervensi Hari Ini</div>
       ${pdfField('Tindakan yang Dilakukan', `<p>${treatments}</p>`)}
+      ${pdfField('Catatan Tindakan', note.treatment_notes)}
       ${pdfField('Home Exercise Program (HEP)', note.hep_given)}
-      ${pdfField('Plan Sesi Berikutnya', `<p>${note.next_plan ?? '—'}</p>`)}
+      ${pdfField('Plan Sesi Berikutnya', note.next_plan)}
     </div>
 
     <div class="sigs">

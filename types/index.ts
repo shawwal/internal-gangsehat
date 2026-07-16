@@ -168,6 +168,7 @@ export interface SessionNote {
   clinical_impression: string | null
   // 4. Plan & Interventions Today
   treatments_performed: TreatmentPerformed[]
+  treatment_notes: string | null
   hep_given: string | null
   next_plan: string | null
 }

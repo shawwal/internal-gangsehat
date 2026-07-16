@@ -1,5 +1,6 @@
 'use client'
 
+import { RichTextEditor } from '@/components/assessment/RichTextEditor'
 import type { SessionNoteFormState } from './types'
 
 interface Props {
@@ -7,7 +8,6 @@ interface Props {
   onChange: (patch: Partial<SessionNoteFormState>) => void
 }
 
-const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
 
 export function SectionAssessment({ value, onChange }: Props) {
@@ -19,10 +19,9 @@ export function SectionAssessment({ value, onChange }: Props) {
 
       <div>
         <label className={labelCls}>Clinical Impression / Physio Diagnosis</label>
-        <input
+        <RichTextEditor
           value={value.clinical_impression}
-          onChange={(e) => onChange({ clinical_impression: e.target.value })}
-          className={inputCls}
+          onChange={(html) => onChange({ clinical_impression: html })}
         />
       </div>
     </div>
