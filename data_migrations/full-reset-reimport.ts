@@ -174,6 +174,7 @@ function buildVisitRows(
       package_id:         packageId,
       branch_id:          BRANCH_ID,
       visit_date:         visitDate,
+      visit_time:         s.JAM && s.JAM !== '-' ? s.JAM : null,
       shift,
       service_type:       deriveVisitServiceType(order.LAYANAN),
       kehadiran:          deriveKehadiran(s.STATUS_SESI),

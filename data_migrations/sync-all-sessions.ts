@@ -340,6 +340,7 @@ async function main() {
         package_id:          pkg.id,
         branch_id:           BRANCH_ID,
         visit_date:          parseDate(s.TANGGAL),
+        visit_time:          s.JAM && s.JAM !== '-' ? s.JAM : null,
         shift:               deriveShift(s.JAM),
         service_type:        deriveVisitServiceType(matchedOrder.LAYANAN),
         kehadiran:           deriveKehadiran(s.STATUS_SESI),

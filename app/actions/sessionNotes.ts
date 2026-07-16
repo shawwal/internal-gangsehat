@@ -96,13 +96,31 @@ export async function completeSessionNote(
   const treatmentLabels = (fields.treatments_performed ?? []).map((t) => TREATMENTS_PERFORMED_LABEL[t]).join(', ')
   const treatment = [treatmentLabels, stripHtml(fields.hep_given)].filter(Boolean).join(' — ') || null
 
+  // Regio isn't set anywhere at scheduling time for follow-up visits — carry it
+  // forward from the patient's most recent visit that has one, so the therapist
+  // never has to re-pick it and the "Rekam Medis Belum Diisi" reminder doesn't
+  // permanently flag every follow-up session.
+  let regio = visitInfo.regio
+  if (!regio) {
+    const { data: prior } = await supabase
+      .from('patient_visits')
+      .select('regio')
+      .eq('patient_id', patientId)
+      .not('regio', 'is', null)
+      .neq('id', visitId)
+      .order('visit_date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    regio = prior?.regio ?? null
+  }
+
   const { error: visitErr } = await supabase
     .from('patient_visits')
     .update({
       status: 'completed' satisfies VisitStatus,
       shift: visitInfo.shift || null,
       kehadiran: visitInfo.kehadiran || 'HADIR',
-      regio: visitInfo.regio || null,
+      regio,
       sumber_pasien: visitInfo.sumber_pasien || null,
       diagnosis: fields.clinical_impression || null,
       treatment,

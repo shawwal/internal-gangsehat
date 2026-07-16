@@ -10,8 +10,6 @@ import {
 } from '@/app/actions/sessionNotes'
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { SessionNote, TerapiAwalAssessment } from '@/types'
-import { VisitInfoBar } from '@/components/assessment/VisitInfoBar'
-import type { VisitInfoState } from '@/components/assessment/VisitInfoBar'
 import { SectionSubjective } from '@/components/sessionNote/SectionSubjective'
 import { SectionObjective } from '@/components/sessionNote/SectionObjective'
 import { SectionAssessment } from '@/components/sessionNote/SectionAssessment'
@@ -29,7 +27,6 @@ export default function SessionNotePage() {
   const [loading, setLoading] = useState(true)
   const [visit, setVisit]     = useState<VisitWithPatient | null>(null)
   const [form, setForm]       = useState<SessionNoteFormState | null>(null)
-  const [visitInfo, setVisitInfo] = useState<VisitInfoState>({ shift: '', kehadiran: '', regio: '', sumber_pasien: '' })
   const [alreadyCompleted, setAlreadyCompleted] = useState(false)
   const [completedNote, setCompletedNote] = useState<SessionNote | null>(null)
 
@@ -54,12 +51,6 @@ export default function SessionNotePage() {
       setForm(fromSessionNote(n))
       setAlreadyCompleted(n?.status === 'completed')
       setCompletedNote(n?.status === 'completed' ? n : null)
-      setVisitInfo({
-        shift: v.shift ?? '',
-        kehadiran: v.kehadiran ?? '',
-        regio: v.regio ?? '',
-        sumber_pasien: v.sumber_pasien ?? '',
-      })
       setLoading(false)
 
       fetchLatestCompletedAssessment(v.patient_id).then((a) => { if (!cancelled) setPriorAssessment(a) })
@@ -83,13 +74,13 @@ export default function SessionNotePage() {
 
   async function handleComplete() {
     if (!visit || !form) return
-    if (!visitInfo.regio) { setError('Regio wajib dipilih pada Info Kunjungan.'); return }
     if (!form.clinical_impression.trim()) { setError('Clinical Impression / Physio Diagnosis wajib diisi.'); return }
 
     setSaving(true)
     setError(null)
     const { error: err } = await completeSessionNote(
-      visit.id, visit.patient_id, visit.branch_id, toFieldsInput(form), visitInfo,
+      visit.id, visit.patient_id, visit.branch_id, toFieldsInput(form),
+      { shift: visit.shift, kehadiran: visit.kehadiran, regio: visit.regio, sumber_pasien: visit.sumber_pasien },
     )
     setSaving(false)
     if (err) { setError(err); return }
@@ -129,15 +120,15 @@ export default function SessionNotePage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {previousNote && (
-            <button
-              type="button"
-              onClick={handleCopyPrevious}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors"
-            >
-              <Copy size={13} /> Salin dari Sesi Sebelumnya
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleCopyPrevious}
+            disabled={!previousNote}
+            title={previousNote ? undefined : 'Belum ada sesi sebelumnya'}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+          >
+            <Copy size={13} /> Salin dari Sesi Sebelumnya
+          </button>
           {alreadyCompleted && (
             <button
               type="button"
@@ -159,8 +150,6 @@ export default function SessionNotePage() {
           />
         </div>
       )}
-
-      <VisitInfoBar visitId={visit.id} value={visitInfo} onChange={setVisitInfo} />
 
       <div className="glass-card p-4 sm:p-6 space-y-6">
         <SectionSubjective value={form} onChange={patchForm} />

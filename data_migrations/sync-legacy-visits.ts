@@ -159,6 +159,7 @@ async function main() {
         package_id:          pkg.id,
         branch_id:           BRANCH_ID,
         visit_date:          visitDate,
+        visit_time:          s.SESSION_JAM && s.SESSION_JAM !== '-' ? s.SESSION_JAM : null,
         shift:               deriveShift(s.SESSION_JAM),
         service_type:        'SESI TERAPI',
         kehadiran:           'HADIR',
