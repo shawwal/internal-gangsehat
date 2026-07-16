@@ -136,11 +136,17 @@ export interface TerapiAwalAssessment {
 
 export type SymptomTrend = 'IMPROVING' | 'SAME' | 'WORSENING'
 export type TreatmentPerformed =
-  | 'MANUAL_THERAPY'
-  | 'THERAPEUTIC_EXERCISE'
-  | 'TAPING_STRAPPING'
-  | 'ELECTROTHERAPY_TENS_US'
-  | 'EDUCATION_ADVICE'
+  | 'IR'
+  | 'TENS'
+  | 'EMS'
+  | 'US'
+  | 'ESWT'
+  | 'TRAKSI'
+  | 'MOBILISASI'
+  | 'MASSAGE'
+  | 'STRETCHING'
+  | 'DRY_NEEDLING'
+  | 'TAPING'
 
 // Follow-up SOAP session note — one row per SESI/PAKET TERAPI|VISIT patient_visits row (migration 033)
 export interface SessionNote {

@@ -11,19 +11,31 @@ export const SYMPTOM_TREND_LABEL: Record<SymptomTrend, string> = {
 }
 
 export const TREATMENTS_PERFORMED_OPTIONS: TreatmentPerformed[] = [
-  'MANUAL_THERAPY',
-  'THERAPEUTIC_EXERCISE',
-  'TAPING_STRAPPING',
-  'ELECTROTHERAPY_TENS_US',
-  'EDUCATION_ADVICE',
+  'IR',
+  'TENS',
+  'EMS',
+  'US',
+  'ESWT',
+  'TRAKSI',
+  'MOBILISASI',
+  'MASSAGE',
+  'STRETCHING',
+  'DRY_NEEDLING',
+  'TAPING',
 ]
 
 export const TREATMENTS_PERFORMED_LABEL: Record<TreatmentPerformed, string> = {
-  MANUAL_THERAPY:          'Terapi Manual',
-  THERAPEUTIC_EXERCISE:    'Latihan Terapeutik',
-  TAPING_STRAPPING:        'Taping / Strapping',
-  ELECTROTHERAPY_TENS_US:  'Elektroterapi (TENS/US)',
-  EDUCATION_ADVICE:        'Edukasi / Saran',
+  IR:            'IR',
+  TENS:          'TENS',
+  EMS:           'EMS',
+  US:            'US',
+  ESWT:          'ESWT',
+  TRAKSI:        'Traksi',
+  MOBILISASI:    'Mobilisasi',
+  MASSAGE:       'Massage',
+  STRETCHING:    'Stretching',
+  DRY_NEEDLING:  'Dry Needling',
+  TAPING:        'Taping',
 }
 
 export interface SessionNoteFormState {
