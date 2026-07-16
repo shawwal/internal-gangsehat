@@ -32,6 +32,7 @@ import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecor
 const REMIND_ROLES = ['admin', 'director', 'manager']
 
 const LS_KEY = 'jadwal_showInactive'
+const LS_SHIFT_KEY = 'jadwal_shiftFilter'
 
 export default function JadwalHarianPage() {
   const router = useRouter()
@@ -84,6 +85,16 @@ export default function JadwalHarianPage() {
   const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all')
   const [sortOrder, setSortOrder]       = useState<'asc' | 'desc'>('asc')
   const [isFocused, setIsFocused]       = useState(true)
+  const [shiftFilter, setShiftFilter]   = useState<'all' | 'pagi' | 'sore'>(() => {
+    if (typeof window === 'undefined') return 'all'
+    const v = localStorage.getItem(LS_SHIFT_KEY)
+    return v === 'pagi' || v === 'sore' ? v : 'all'
+  })
+
+  function handleSetShiftFilter(v: 'all' | 'pagi' | 'sore') {
+    setShiftFilter(v)
+    localStorage.setItem(LS_SHIFT_KEY, v)
+  }
 
   // Escape key exits focus mode
   useEffect(() => {
@@ -205,6 +216,7 @@ export default function JadwalHarianPage() {
     sortOrder, setSortOrder,
     showInactive, toggleShowInactive,
     inactiveStaff,
+    shiftFilter, setShiftFilter: handleSetShiftFilter,
   }
 
   return (
@@ -320,6 +332,7 @@ export default function JadwalHarianPage() {
                 soreDividerHour={soreDividerHour}
                 gridStart={gridStart}
                 gridEnd={gridEnd}
+                shiftFilter={shiftFilter}
                 onAssign={setAssignTarget}
                 onStatusChange={handleStatusChange}
                 onDelete={handleDelete}

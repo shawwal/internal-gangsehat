@@ -1,6 +1,6 @@
 'use client'
 
-import { Users, User, ArrowUpAZ, ArrowDownAZ, Maximize2 } from 'lucide-react'
+import { Users, User, ArrowUpAZ, ArrowDownAZ, Maximize2, Sun, Sunset } from 'lucide-react'
 import type { DayStaffEntry } from './types'
 
 interface Props {
@@ -13,6 +13,8 @@ interface Props {
   inactiveStaff: DayStaffEntry[]
   baseStaff: DayStaffEntry[]
   visibleStaff: DayStaffEntry[]
+  shiftFilter: 'all' | 'pagi' | 'sore'
+  setShiftFilter: (v: 'all' | 'pagi' | 'sore') => void
   onFocus: () => void
 }
 
@@ -21,6 +23,7 @@ export function ControlsBar({
   sortOrder, setSortOrder,
   showInactive, toggleShowInactive,
   inactiveStaff, baseStaff, visibleStaff,
+  shiftFilter, setShiftFilter,
   onFocus,
 }: Props) {
   return (
@@ -65,6 +68,30 @@ export function ControlsBar({
           {visibleStaff.length} terapis
         </span>
       )}
+
+      {/* Shift filter pills — hide morning or afternoon to focus scheduling */}
+      <div className="flex items-center bg-muted/40 rounded-2xl p-1 gap-0.5">
+        {([
+          { value: 'all',  label: 'Semua Shift', icon: null },
+          { value: 'pagi', label: 'Pagi',         icon: <Sun    size={13} /> },
+          { value: 'sore', label: 'Sore',         icon: <Sunset size={13} /> },
+        ] as const).map(({ value, label, icon }) => (
+          <button
+            key={value}
+            onClick={() => setShiftFilter(value)}
+            aria-pressed={shiftFilter === value}
+            className={[
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer',
+              shiftFilter === value
+                ? 'bg-secondary text-secondary-foreground shadow-sm shadow-secondary/30'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/10',
+            ].join(' ')}
+          >
+            {icon}
+            {label}
+          </button>
+        ))}
+      </div>
 
       {/* View controls: sort + inactive toggle + focus */}
       <div className="ml-auto flex items-center gap-0.5 bg-muted/40 rounded-2xl p-1">

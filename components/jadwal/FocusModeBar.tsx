@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { Users, User, ArrowUpAZ, ArrowDownAZ, ChevronLeft, ChevronRight, Calendar, Plus, X } from 'lucide-react'
+import { Users, User, ArrowUpAZ, ArrowDownAZ, ChevronLeft, ChevronRight, Calendar, Plus, X, Sun, Sunset } from 'lucide-react'
 import { addDays, toIso, isSameDay, JS_DAY_TO_HARI, HARI_LABEL, MONTH_FULL } from './utils'
 import type { DayStaffEntry } from './types'
 
@@ -24,6 +24,8 @@ interface Props {
   showInactive: boolean
   toggleShowInactive: () => void
   inactiveStaff: DayStaffEntry[]
+  shiftFilter: 'all' | 'pagi' | 'sore'
+  setShiftFilter: (v: 'all' | 'pagi' | 'sore') => void
   onExit: () => void
   canCreateOrder?: boolean
   orderNewHref?: string
@@ -36,6 +38,7 @@ export function FocusModeBar({
   sortOrder, setSortOrder,
   showInactive, toggleShowInactive,
   inactiveStaff,
+  shiftFilter, setShiftFilter,
   onExit,
   canCreateOrder,
   orderNewHref,
@@ -148,6 +151,29 @@ export function FocusModeBar({
                   ? value === 'male'   ? 'bg-blue-500 text-white shadow-sm'
                   : value === 'female' ? 'bg-primary text-white shadow-sm shadow-primary/30'
                   : 'bg-white/15 text-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-white/8',
+              ].join(' ')}
+            >
+              {icon}{label}
+            </button>
+          ))}
+        </div>
+
+        {/* Shift filter — hide morning or afternoon to focus scheduling */}
+        <div className="flex items-center bg-white/5 border border-white/8 rounded-2xl p-0.5 gap-0.5">
+          {([
+            { value: 'all',  label: 'Shift',  icon: null },
+            { value: 'pagi', label: 'Pagi',   icon: <Sun    size={12} /> },
+            { value: 'sore', label: 'Sore',   icon: <Sunset size={12} /> },
+          ] as const).map(({ value, label, icon }) => (
+            <button
+              key={value}
+              onClick={() => setShiftFilter(value)}
+              aria-pressed={shiftFilter === value}
+              className={[
+                'flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-medium transition-all duration-150 cursor-pointer',
+                shiftFilter === value
+                  ? 'bg-secondary text-secondary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-white/8',
               ].join(' ')}
             >

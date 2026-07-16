@@ -73,6 +73,7 @@ interface Props {
   soreDividerHour?: number
   gridStart?: number
   gridEnd?: number
+  shiftFilter?: 'all' | 'pagi' | 'sore'
   onAssign: (target: AssignTarget) => void
   onStatusChange: (visitId: string, status: VisitStatus) => void
   onDelete: (visitId: string) => void
@@ -88,7 +89,7 @@ interface Props {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick, onNoShow, onPayment, onRemind, onWhatsApp, refreshingCell, onSellPackage }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick, onNoShow, onPayment, onRemind, onWhatsApp, refreshingCell, onSellPackage }: Props) {
   // Current time (used later for time line after range is known)
   const now   = new Date()
   const today = now.toISOString().split('T')[0]
@@ -122,6 +123,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
   const SKIP_HOURS     = new Set([12, 18])
   const HOURS_VISIBLE  = Array.from({ length: effectiveEnd - effectiveStart }, (_, i) => effectiveStart + i)
     .filter(h => !SKIP_HOURS.has(h))
+    .filter(h => shiftFilter === 'all' ? true : shiftFilter === 'pagi' ? h < soreDividerHour : h >= soreDividerHour)
   const totalH         = HOURS_VISIBLE.length * SLOT_H
 
   // Convert an hour (possibly fractional) to a pixel offset within the visible grid
@@ -139,6 +141,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
 
   // Current time line
   const showNow = date === today && curH >= effectiveStart && curH < effectiveEnd
+    && (shiftFilter === 'all' ? true : shiftFilter === 'pagi' ? curH < soreDividerHour : curH >= soreDividerHour)
   const nowTop  = hourToPx(curH)
 
   if (staff.length === 0) {
@@ -303,7 +306,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
             style={{ left: TIME_COL_W, right: 0, top: 0, bottom: 0 }}
           >
             {/* Afternoon tint — subtle warm overlay from the Sore shift boundary onwards */}
-            {HOURS_VISIBLE.includes(soreDividerHour) && (
+            {shiftFilter === 'all' && HOURS_VISIBLE.includes(soreDividerHour) && (
               <div
                 className="absolute inset-x-0 bottom-0 pointer-events-none"
                 style={{
@@ -313,7 +316,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
               />
             )}
             {HOURS_VISIBLE.map((h, i) => (
-              h === soreDividerHour ? (
+              shiftFilter === 'all' && h === soreDividerHour ? (
                 <div
                   key={h}
                   className="absolute inset-x-0 pointer-events-none"
