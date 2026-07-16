@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { StatusMessage } from './StatusMessage'
-import type { SettingsProfile, StatusState } from './types'
+import { useToast } from '@/context/ToastContext'
+import { uploadErrorMessage } from '@/lib/storageErrors'
+import type { SettingsProfile } from './types'
 
 interface Props {
   initialData: Pick<SettingsProfile, 'id' | 'full_name' | 'phone' | 'avatar_url'>
@@ -19,7 +20,7 @@ export function ProfileCard({ initialData }: Props) {
   const [preview, setPreview]     = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving]       = useState(false)
-  const [status, setStatus]       = useState<StatusState | null>(null)
+  const { showToast }             = useToast()
   const fileRef                   = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -27,8 +28,7 @@ export function ProfileCard({ initialData }: Props) {
   }, [preview])
 
   function flash(message: string, ok: boolean) {
-    setStatus({ message, ok })
-    setTimeout(() => setStatus(null), 4000)
+    showToast(message, ok ? 'success' : 'error')
   }
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -58,7 +58,7 @@ export function ProfileCard({ initialData }: Props) {
       .upload(path, file, { upsert: true, contentType: file.type })
 
     if (uploadError) {
-      flash('Gagal mengunggah foto.', false)
+      flash(uploadErrorMessage(uploadError.message), false)
       URL.revokeObjectURL(objectUrl)
       setPreview(null)
       setUploading(false)
@@ -197,8 +197,6 @@ export function ProfileCard({ initialData }: Props) {
             />
           </div>
         </div>
-
-        <StatusMessage status={status} />
 
         <button
           type="submit"

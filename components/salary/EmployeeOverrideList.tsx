@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Pencil, X, Save, Loader2, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/context/ToastContext'
 import type { EmployeeSalary, SalarySetting } from './types'
 import { ROLE_LABELS, formatRupiah } from './types'
 
@@ -30,7 +31,7 @@ export function EmployeeOverrideList({ overrides, settings, currentUserId, onUpd
   const [editId, setEditId] = useState<string | null>(null)
   const [draft, setDraft] = useState<EditDraft | null>(null)
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState('')
+  const { showToast } = useToast()
 
   function startEdit(o: EmployeeSalary) {
     const def = getRoleDefault(settings, o.internal_profiles?.role ?? '')
@@ -71,13 +72,12 @@ export function EmployeeOverrideList({ overrides, settings, currentUserId, onUpd
 
     setSaving(false)
     if (error) {
-      setToast('Gagal menyimpan: ' + error.message)
+      showToast('Gagal menyimpan: ' + error.message, 'error')
     } else {
-      setToast('Override berhasil disimpan')
+      showToast('Override berhasil disimpan', 'success')
       cancelEdit()
       onUpdated()
     }
-    setTimeout(() => setToast(''), 4000)
   }
 
   function numChange(field: keyof EditDraft) {
@@ -221,11 +221,6 @@ export function EmployeeOverrideList({ overrides, settings, currentUserId, onUpd
         })}
       </div>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background text-sm font-medium px-5 py-3 rounded-2xl shadow-xl">
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

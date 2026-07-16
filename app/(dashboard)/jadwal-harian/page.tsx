@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, BellRing, CheckCircle2, Plus, X } from 'lucide-react'
+import { AlertTriangle, BellRing, Plus } from 'lucide-react'
 import { useJadwalHarian } from '@/hooks/useJadwalHarian'
+import { useToast } from '@/context/ToastContext'
 import { toIso } from '@/components/jadwal/utils'
 import { PageHeader } from '@/components/jadwal/PageHeader'
 import { DateNav } from '@/components/jadwal/DateNav'
@@ -29,8 +30,6 @@ import type { DailyVisit } from '@/app/actions/jadwal'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 
 const REMIND_ROLES = ['admin', 'director', 'manager']
-
-type RemindToast = { type: 'success' | 'info' | 'error'; message: string }
 
 const LS_KEY = 'jadwal_showInactive'
 
@@ -69,7 +68,7 @@ export default function JadwalHarianPage() {
   // Remind state
   const [remindLoading, setRemindLoading]   = useState<Set<string>>(new Set())
   const [remindAllLoading, setRemindAllLoading] = useState(false)
-  const [remindToast, setRemindToast]       = useState<RemindToast | null>(null)
+  const { showToast } = useToast()
 
   // WhatsApp reminder template — loaded once
   const [reminderTemplate, setReminderTemplate] = useState<string | null>(null)
@@ -132,21 +131,16 @@ export default function JadwalHarianPage() {
   const canCreateOrder = !!userRole && userRole !== 'therapist' && userRole !== 'staff'
   const orderNewHref = userRole === 'director' ? '/director/orders/new' : '/order/new'
 
-  function showToast(toast: RemindToast) {
-    setRemindToast(toast)
-    setTimeout(() => setRemindToast(null), 4000)
-  }
-
   async function handleRemind(visitId: string) {
     setRemindLoading((prev) => new Set(prev).add(visitId))
     try {
       const result = await sendMedicalRecordReminder(visitId)
       if (result.alreadySent) {
-        showToast({ type: 'info', message: 'Pengingat sudah dikirim hari ini' })
+        showToast('Pengingat sudah dikirim hari ini', 'info')
       } else if (result.error) {
-        showToast({ type: 'error', message: result.error })
+        showToast(result.error, 'error')
       } else {
-        showToast({ type: 'success', message: 'Pengingat terkirim ke terapis' })
+        showToast('Pengingat terkirim ke terapis', 'success')
       }
     } finally {
       setRemindLoading((prev) => { const s = new Set(prev); s.delete(visitId); return s })
@@ -180,14 +174,14 @@ export default function JadwalHarianPage() {
     try {
       const result = await sendBulkMedicalRecordReminders(incompleteVisits.map((v) => v.id))
       if (result.error) {
-        showToast({ type: 'error', message: result.error })
+        showToast(result.error, 'error')
       } else if (result.sent === 0 && result.skipped > 0) {
-        showToast({ type: 'info', message: `Semua pengingat sudah dikirim hari ini (${result.skipped} terapis)` })
+        showToast(`Semua pengingat sudah dikirim hari ini (${result.skipped} terapis)`, 'info')
       } else {
         const parts: string[] = []
         if (result.sent > 0) parts.push(`${result.sent} terkirim`)
         if (result.skipped > 0) parts.push(`${result.skipped} sudah dikirim`)
-        showToast({ type: 'success', message: `Pengingat rekam medis: ${parts.join(', ')}` })
+        showToast(`Pengingat rekam medis: ${parts.join(', ')}`, 'success')
       }
     } finally {
       setRemindAllLoading(false)
@@ -460,31 +454,6 @@ export default function JadwalHarianPage() {
         />
       )}
 
-      {/* Remind toast */}
-      {remindToast && (
-        <div
-          className={[
-            'fixed bottom-6 left-1/2 -translate-x-1/2 z-[300]',
-            'flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-medium',
-            'animate-in fade-in slide-in-from-bottom-4 duration-300',
-            remindToast.type === 'success' ? 'bg-[#34C759]/15 border-[#34C759]/30 text-[#34C759]'
-            : remindToast.type === 'info'    ? 'bg-blue-500/15 border-blue-400/30 text-blue-300'
-            : 'bg-destructive/15 border-destructive/30 text-destructive',
-          ].join(' ')}
-        >
-          {remindToast.type === 'success' ? <CheckCircle2 size={15} />
-           : remindToast.type === 'info'  ? <BellRing size={15} />
-           : <AlertTriangle size={15} />}
-          <span>{remindToast.message}</span>
-          <button
-            onClick={() => setRemindToast(null)}
-            className="ml-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-            aria-label="Tutup"
-          >
-            <X size={13} />
-          </button>
-        </div>
-      )}
     </>
   )
 }

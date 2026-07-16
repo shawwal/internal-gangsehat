@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, CheckCircle2, Loader2, PlusCircle, Trash2, XCircle, User } from 'lucide-react'
+import { AlertTriangle, Loader2, PlusCircle, Trash2, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/context/ToastContext'
 import {
   fetchPatientsPage,
   fetchPatientsPageWithStats,
@@ -37,7 +38,7 @@ export default function PatientsPage() {
   const [total,    setTotal]    = useState(0)
   const [stats,    setStats]    = useState<PatientStatsData | null>(null)
   const [loading,  setLoading]  = useState(true)
-  const [toast,    setToast]    = useState<{ msg: string; ok: boolean } | null>(null)
+  const { showToast } = useToast()
   const [filters,  setFilters]  = useState<PatientFiltersState>(DEFAULT_FILTERS)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [page,     setPage]     = useState(1)
@@ -60,11 +61,6 @@ export default function PatientsPage() {
       }
     })
   }, [])
-
-  function showToast(msg: string, ok: boolean) {
-    setToast({ msg, ok })
-    setTimeout(() => setToast(null), 4000)
-  }
 
   async function loadPage(p: number, f: PatientFiltersState) {
     const id = ++requestId.current
@@ -121,8 +117,8 @@ export default function PatientsPage() {
     setDeleting(true)
     const { error } = await deletePatient(deleteTarget.id)
     setDeleting(false)
-    if (error) { showToast(error, false); setDeleteTarget(null); return }
-    showToast('Pasien berhasil dihapus.', true)
+    if (error) { showToast(error, 'error'); setDeleteTarget(null); return }
+    showToast('Pasien berhasil dihapus.', 'success')
     setDeleteTarget(null)
     loadPage(page, filters)
     loadStats()
@@ -175,17 +171,6 @@ export default function PatientsPage() {
         </div>
       </div>
 
-      {/* Toast */}
-      {toast && (
-        <div className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl text-sm font-medium ${
-          toast.ok
-            ? 'bg-chart-4/10 text-chart-4 border border-chart-4/20'
-            : 'bg-destructive/10 text-destructive border border-destructive/20'
-        }`}>
-          {toast.ok ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
-          {toast.msg}
-        </div>
-      )}
 
       {/* Stats */}
       <PatientStats stats={stats} loading={stats === null} />

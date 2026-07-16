@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Wallet, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/context/ToastContext'
 
 import { usePayrollIdentity }  from './_hooks/usePayrollIdentity'
 import { usePayrollRecords }   from './_hooks/usePayrollRecords'
@@ -26,23 +27,15 @@ const TABS: { key: TopTab; label: string; directorOnly?: boolean }[] = [
   { key: 'overrides', label: 'Override Karyawan', directorOnly: true },
 ]
 
-// ── Toast (local — no context needed for a single-page feature) ───────────────
-
-function useToast(duration = 4000) {
-  const [toast, setToast] = useState('')
-  // useCallback keeps the reference stable so hooks that depend on showToast
-  // don't re-run on every render (which would cause an infinite loading loop).
-  const showToast = useCallback((msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), duration)
-  }, [duration])
-  return { toast, showToast }
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PayrollPage() {
-  const { toast, showToast } = useToast()
+  const { showToast: globalShowToast } = useToast()
+  // useCallback keeps the reference stable so hooks that depend on showToast
+  // don't re-run on every render (which would cause an infinite loading loop).
+  const showToast = useCallback((msg: string) => {
+    globalShowToast(msg, msg.toLowerCase().startsWith('gagal') ? 'error' : 'success')
+  }, [globalShowToast])
   const identity = usePayrollIdentity()
   const payroll  = usePayrollRecords({
     role:      identity.role,
@@ -198,13 +191,6 @@ export default function PayrollPage() {
             onUpdated={loadOverrides}
           />
         )
-      )}
-
-      {/* ── Toast ────────────────────────────────────────────────────────── */}
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background text-sm font-medium px-5 py-3 rounded-2xl shadow-xl pointer-events-none">
-          {toast}
-        </div>
       )}
 
     </div>

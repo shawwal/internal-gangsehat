@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/context/ToastContext'
+import { uploadErrorMessage } from '@/lib/storageErrors'
 import { LeaveStats } from '@/components/leave/LeaveStats'
 import { MyLeaveHeader } from '@/components/leave/MyLeaveHeader'
-import { MyLeaveToast } from '@/components/leave/MyLeaveToast'
 import { MyLeaveForm } from '@/components/leave/MyLeaveForm'
 import { MyLeaveList } from '@/components/leave/MyLeaveList'
 import type { StatusFilter } from '@/components/leave/types'
@@ -41,12 +42,7 @@ export default function MyLeavePage() {
   const [proofFile, setProofFile]         = useState<File | null>(null)
   const [proofPreview, setProofPreview]   = useState('')
   const [saving, setSaving]               = useState(false)
-  const [toast, setToast]                 = useState<{ msg: string; ok: boolean } | null>(null)
-
-  function showToast(msg: string, ok: boolean) {
-    setToast({ msg, ok })
-    setTimeout(() => setToast(null), 4000)
-  }
+  const { showToast } = useToast()
 
   async function load() {
     const supabase = createClient()
@@ -80,7 +76,7 @@ export default function MyLeavePage() {
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     if (form.end_date < form.start_date) {
-      showToast('Tanggal akhir tidak boleh sebelum tanggal mulai.', false)
+      showToast('Tanggal akhir tidak boleh sebelum tanggal mulai.', 'error')
       return
     }
     setSaving(true)
@@ -103,7 +99,7 @@ export default function MyLeavePage() {
         .upload(path, proofFile, { upsert: false })
       if (uploadError) {
         setSaving(false)
-        showToast('Gagal mengunggah bukti. Coba lagi.', false)
+        showToast(uploadErrorMessage(uploadError.message), 'error')
         return
       }
       const { data: { publicUrl } } = supabase.storage.from('leave-proofs').getPublicUrl(path)
@@ -121,12 +117,16 @@ export default function MyLeavePage() {
 
     setSaving(false)
     if (error) {
-      showToast('Gagal mengajukan cuti.', false)
+      showToast('Gagal mengajukan cuti.', 'error')
     } else {
-      showToast('Pengajuan cuti berhasil dikirim!', true)
+      showToast('Pengajuan cuti berhasil dikirim!', 'success')
       closeForm()
       load()
     }
+  }
+
+  function handleFileError(msg: string) {
+    showToast(msg, 'error')
   }
 
   const pendingCount  = requests.filter(r => r.status === 'pending').length
@@ -137,8 +137,6 @@ export default function MyLeavePage() {
     <div className="space-y-6">
       <MyLeaveHeader showForm={showForm} onToggle={() => setShowForm(v => !v)} />
 
-      <MyLeaveToast toast={toast} />
-
       {showForm && (
         <MyLeaveForm
           form={form}
@@ -147,6 +145,7 @@ export default function MyLeavePage() {
           saving={saving}
           onChange={setForm}
           onFileChange={handleFileChange}
+          onFileError={handleFileError}
           onSubmit={handleSubmit}
           onClose={closeForm}
         />

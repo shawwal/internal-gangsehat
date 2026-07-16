@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Building2, PlusCircle, Target } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/context/ToastContext'
 
 import { TargetStats }   from '@/components/target/TargetStats'
 import { TargetFilters } from '@/components/target/TargetFilters'
@@ -79,7 +80,7 @@ export default function DirectorTargetsPage() {
   const [bEditTarget, setBEditTarget] = useState<BranchTargetRow | null>(null)
   const [bForm, setBForm]             = useState<BranchTargetFormState>(defaultBranchForm())
   const [bSaving, setBSaving]         = useState(false)
-  const [bToast, setBToast]           = useState<{ msg: string; ok: boolean } | null>(null)
+  const { showToast: showBToast }     = useToast()
 
   // ── Init: detect role + load branches ─────────────────────────────────
   useEffect(() => {
@@ -112,12 +113,6 @@ export default function DirectorTargetsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // auto-dismiss toast
-  useEffect(() => {
-    if (!bToast) return
-    const t = setTimeout(() => setBToast(null), 4000)
-    return () => clearTimeout(t)
-  }, [bToast])
 
   // ── Staff targets logic (unchanged) ───────────────────────────────────
 
@@ -402,9 +397,9 @@ export default function DirectorTargetsPage() {
       const msg = (error as any).code === '23505'
         ? 'Target bulan ini sudah ada. Gunakan tombol Edit.'
         : 'Gagal menyimpan target. Coba lagi.'
-      setBToast({ msg, ok: false })
+      showBToast(msg, 'error')
     } else {
-      setBToast({ msg: bEditTarget ? 'Target berhasil diperbarui.' : 'Target berhasil dikirim.', ok: true })
+      showBToast(bEditTarget ? 'Target berhasil diperbarui.' : 'Target berhasil dikirim.', 'success')
       cancelBForm()
       loadBStats(bFilters)
       loadBRows(bPage, bFilters)
@@ -449,13 +444,6 @@ export default function DirectorTargetsPage() {
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* Toast */}
-      {bToast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl shadow-lg text-sm font-medium text-white transition-all ${bToast.ok ? 'bg-chart-4' : 'bg-destructive'}`}>
-          {bToast.msg}
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>

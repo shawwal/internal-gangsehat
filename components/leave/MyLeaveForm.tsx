@@ -3,6 +3,7 @@ import { CalendarRange, FileText, Upload, X } from 'lucide-react'
 import { dayCount } from './types'
 
 const today = new Date().toISOString().split('T')[0]
+const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 interface FormState {
   start_date: string
@@ -17,19 +18,25 @@ interface Props {
   saving: boolean
   onChange: (form: FormState) => void
   onFileChange: (file: File | null, preview: string) => void
+  onFileError: (msg: string) => void
   onSubmit: (e: React.SyntheticEvent<HTMLFormElement>) => void
   onClose: () => void
 }
 
 export function MyLeaveForm({
   form, proofFile, proofPreview, saving,
-  onChange, onFileChange, onSubmit, onClose,
+  onChange, onFileChange, onFileError, onSubmit, onClose,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > MAX_SIZE_BYTES) {
+      onFileError('Ukuran file maksimal 5 MB.')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
     if (proofPreview) URL.revokeObjectURL(proofPreview)
     const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : ''
     onFileChange(file, preview)
@@ -110,7 +117,7 @@ export function MyLeaveForm({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,application/pdf"
+            accept="image/*,application/pdf"
             onChange={handleFileChange}
             className="hidden"
             id="proof-upload"

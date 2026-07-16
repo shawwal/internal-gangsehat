@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { StatusMessage } from './StatusMessage'
-import type { StatusState } from './types'
+import { useToast } from '@/context/ToastContext'
 
 interface PwForm {
   next: string
@@ -25,11 +24,10 @@ export function PasswordCard() {
   const [form, setForm]     = useState<PwForm>({ next: '', confirm: '' })
   const [show, setShow]     = useState<ShowState>({ next: false, confirm: false })
   const [saving, setSaving] = useState(false)
-  const [status, setStatus] = useState<StatusState | null>(null)
+  const { showToast }       = useToast()
 
   function flash(message: string, ok: boolean) {
-    setStatus({ message, ok })
-    setTimeout(() => setStatus(null), 4000)
+    showToast(message, ok ? 'success' : 'error')
   }
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
@@ -85,8 +83,6 @@ export function PasswordCard() {
           </div>
         </div>
       ))}
-
-      <StatusMessage status={status} />
 
       <button
         type="submit"

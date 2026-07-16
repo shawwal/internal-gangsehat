@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Save, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/context/ToastContext'
 import type { SalarySetting } from './types'
 import { ROLE_LABELS, ALL_ROLES } from './types'
 import { CurrencyInput } from './CurrencyInput'
@@ -39,7 +40,7 @@ export function SalarySettingsTable({ settings, onSaved }: Props) {
     return map
   })
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState('')
+  const { showToast } = useToast()
 
   function setIDR(role: string, field: 'base_salary' | 'transport_allowance' | 'meal_allowance', value: number) {
     setDrafts(d => ({ ...d, [role]: { ...(d[role] ?? EMPTY_ROW), [field]: value } }))
@@ -73,12 +74,11 @@ export function SalarySettingsTable({ settings, onSaved }: Props) {
 
     setSaving(false)
     if (error) {
-      setToast('Gagal menyimpan: ' + error.message)
+      showToast('Gagal menyimpan: ' + error.message, 'error')
     } else {
-      setToast('Formula gaji berhasil disimpan')
+      showToast('Formula gaji berhasil disimpan', 'success')
       if (data) onSaved(data as SalarySetting[])
     }
-    setTimeout(() => setToast(''), 4000)
   }
 
   return (
@@ -186,11 +186,6 @@ export function SalarySettingsTable({ settings, onSaved }: Props) {
         Contoh: Gaji pokok Rp 5.000.000 dengan bonus 10% → bonus Rp 500.000 jika target tercapai penuh.
       </p>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background text-sm font-medium px-5 py-3 rounded-2xl shadow-xl">
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

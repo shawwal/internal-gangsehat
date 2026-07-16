@@ -13,11 +13,6 @@ export interface SettingsProfile {
   avatar_url: string | null
 }
 
-export interface StatusState {
-  message: string
-  ok: boolean
-}
-
 export const ROLE_LABELS: Record<UserRole, string> = {
   director:   'Direktur',
   finance:    'Keuangan',

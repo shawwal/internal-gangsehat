@@ -6,6 +6,7 @@ import { Header } from './Header'
 import { BottomTabBar } from './BottomTabBar'
 import { NavDrawer } from './NavDrawer'
 import { LocaleProvider } from '@/context/LocaleContext'
+import { ToastProvider } from '@/context/ToastContext'
 import type { UserRole } from '@/types'
 
 interface Props {
@@ -26,6 +27,7 @@ export function DashboardShell({ profile, children }: Props) {
 
   return (
     <LocaleProvider>
+    <ToastProvider>
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar — hidden on mobile */}
       <div className="hidden md:flex">
@@ -51,6 +53,7 @@ export function DashboardShell({ profile, children }: Props) {
       {/* Mobile full-menu drawer */}
       <NavDrawer role={profile.role} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
+    </ToastProvider>
     </LocaleProvider>
   )
 }

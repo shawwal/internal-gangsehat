@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react'
 import { PlusCircle, Target } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/context/ToastContext'
 import { TargetStats } from '@/components/target/TargetStats'
 import { TargetForm } from '@/components/target/TargetForm'
 import { MyTargetsHeader } from '@/components/target/MyTargetsHeader'
-import { MyTargetsToast } from '@/components/target/MyTargetsToast'
 import { CurrentMonthPrompt } from '@/components/target/CurrentMonthPrompt'
 import { MyTargetsHistory } from '@/components/target/MyTargetsHistory'
 import type { TargetRow, StatusFilter } from '@/components/target/types'
@@ -42,14 +42,9 @@ export default function MyTargetsPage() {
   const [editTarget, setEditTarget] = useState<TargetRow | null>(null)
   const [form, setForm]             = useState<FormState>(defaultForm())
   const [saving, setSaving]         = useState(false)
-  const [toast, setToast]           = useState<{ msg: string; ok: boolean } | null>(null)
+  const { showToast }               = useToast()
   const [activeTab, setActiveTab]   = useState<StatusFilter>('all')
   const [viewYear, setViewYear]     = useState(now.getFullYear())
-
-  function showToast(msg: string, ok: boolean) {
-    setToast({ msg, ok })
-    setTimeout(() => setToast(null), 4000)
-  }
 
   async function load() {
     const supabase = createClient()
@@ -131,14 +126,14 @@ export default function MyTargetsPage() {
     if (error) {
       console.error('[my-targets] save error:', error)
       if (error.code === '23505') {
-        showToast('Sudah ada target untuk bulan/tahun ini. Gunakan tombol Edit.', false)
+        showToast('Sudah ada target untuk bulan/tahun ini. Gunakan tombol Edit.', 'error')
       } else if (error.code === '23502') {
-        showToast('Data profil tidak lengkap. Pastikan cabang sudah diatur.', false)
+        showToast('Data profil tidak lengkap. Pastikan cabang sudah diatur.', 'error')
       } else {
-        showToast(`Gagal menyimpan: ${error.message}`, false)
+        showToast(`Gagal menyimpan: ${error.message}`, 'error')
       }
     } else {
-      showToast(editTarget ? 'Target berhasil diperbarui.' : 'Target berhasil diajukan!', true)
+      showToast(editTarget ? 'Target berhasil diperbarui.' : 'Target berhasil diajukan!', 'success')
       cancel()
       load()
     }
@@ -154,8 +149,6 @@ export default function MyTargetsPage() {
   return (
     <div className="space-y-6">
       <MyTargetsHeader showForm={showForm} onCreateClick={openCreate} />
-
-      <MyTargetsToast toast={toast} />
 
       {showForm && (
         <TargetForm

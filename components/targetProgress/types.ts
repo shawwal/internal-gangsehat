@@ -14,11 +14,9 @@ export const CATEGORY_DEFS: CategoryDef[] = [
   { key: 'paket_visit',  label: 'Paket Visit',  color: 'var(--destructive)' },
 ]
 
-export interface StaffOption {
+export interface BranchOption {
   id: string
-  full_name: string
-  branch_id: string | null
-  branches: { name: string } | null
+  name: string
 }
 
 export interface VisitForProgress {
@@ -27,7 +25,7 @@ export interface VisitForProgress {
   service_type: string | null
 }
 
-export interface StaffTargetForProgress {
+export interface BranchTargetForProgress {
   target_ta: number
   target_paket_klinik: number
   target_kunjungan: number
