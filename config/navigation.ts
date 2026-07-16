@@ -271,7 +271,7 @@ export const navigation: NavItem[] = [
     label: 'Progress Target',
     href: '/target-progress',
     icon: 'TrendingUp',
-    roles: ['director', 'manager', 'finance', 'hr', 'marketing', 'staff', 'therapist'],
+    roles: ['director', 'manager', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'admin'],
     group: 'hr',
   },
 

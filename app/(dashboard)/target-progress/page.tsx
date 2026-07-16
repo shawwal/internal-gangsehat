@@ -20,7 +20,7 @@ import {
 import { daysInMonth, buildDailyCounts, sum, getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR } from '@/components/targetProgress/utils'
 
 type Tab = 'klasik' | 'visual'
-type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | null
+type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'admin' | null
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'klasik', label: 'Klasik', icon: <Table2 size={15} /> },
