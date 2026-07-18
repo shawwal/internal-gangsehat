@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ChevronLeft, Package } from 'lucide-react'
+import { ChevronLeft, Package, Table2 } from 'lucide-react'
 import { BackfillCard } from '@/components/import/BackfillCard'
 import { UploadCard } from '@/components/import/UploadCard'
 
@@ -30,6 +30,20 @@ export default function ImportPasienPage() {
         <div>
           <p className="text-sm font-semibold text-foreground">Import Paket Terapi</p>
           <p className="text-xs text-muted-foreground">Dari sheet PEMASUKAN (Catatan Keuangan) →</p>
+        </div>
+      </Link>
+
+      {/* Quick link to the editable-preview importer for the newer template */}
+      <Link
+        href="/director/import/patients-v2"
+        className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors group"
+      >
+        <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+          <Table2 size={17} className="text-primary" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Import dari Template Pasien Baru</p>
+          <p className="text-xs text-muted-foreground">Cocokkan lokasi otomatis, tinjau &amp; edit sebelum simpan →</p>
         </div>
       </Link>
 
