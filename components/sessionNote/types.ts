@@ -20,6 +20,7 @@ export const TREATMENTS_PERFORMED_OPTIONS: TreatmentPerformed[] = [
   'MOBILISASI',
   'MASSAGE',
   'STRETCHING',
+  'IASTM',
   'DRY_NEEDLING',
   'TAPING',
 ]
@@ -34,6 +35,7 @@ export const TREATMENTS_PERFORMED_LABEL: Record<TreatmentPerformed, string> = {
   MOBILISASI:    'Mobilisasi',
   MASSAGE:       'Massage',
   STRETCHING:    'Stretching',
+  IASTM:         'IASTM',
   DRY_NEEDLING:  'Dry Needling',
   TAPING:        'Taping',
 }

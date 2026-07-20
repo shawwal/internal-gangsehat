@@ -145,6 +145,7 @@ export type TreatmentPerformed =
   | 'MOBILISASI'
   | 'MASSAGE'
   | 'STRETCHING'
+  | 'IASTM'
   | 'DRY_NEEDLING'
   | 'TAPING'
 
