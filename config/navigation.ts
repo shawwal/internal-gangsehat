@@ -345,6 +345,14 @@ export const navigation: NavItem[] = [
     group: 'clinic',
   },
   {
+    key: 'medical-records',
+    label: 'Rekam Medis',
+    href: '/medical-records',
+    icon: 'ClipboardCheck',
+    roles: ['director', 'manager', 'admin', 'therapist', 'staff'],
+    group: 'clinic',
+  },
+  {
     key: 'patient-analytics',
     label: 'Analitik Pasien',
     href: '/director/patients',

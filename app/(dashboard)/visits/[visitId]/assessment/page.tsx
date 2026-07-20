@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, Loader2, AlertTriangle, Printer } from 'lucide-react'
@@ -42,6 +42,17 @@ export default function TerapiAwalAssessmentPage() {
   const [completing, setCompleting] = useState(false)
   const [error, setError]           = useState<string | null>(null)
   const [showPackagePrompt, setShowPackagePrompt] = useState(false)
+
+  const topRef = useRef<HTMLDivElement>(null)
+  const isFirstStepRender = useRef(true)
+
+  // Scroll back to the top of the step whenever the user moves between
+  // steps — otherwise the next step renders wherever the previous one
+  // left the scroll position (often mid-form on mobile).
+  useEffect(() => {
+    if (isFirstStepRender.current) { isFirstStepRender.current = false; return }
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [currentStep])
 
   useEffect(() => {
     if (!visitId) return
@@ -167,9 +178,10 @@ export default function TerapiAwalAssessmentPage() {
           <button
             type="button"
             onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors shrink-0"
+            title="Cetak PDF"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors shrink-0"
           >
-            <Printer size={13} /> Cetak PDF
+            <Printer size={13} /> <span className="hidden sm:inline">Cetak PDF</span>
           </button>
         )}
       </div>
@@ -177,6 +189,7 @@ export default function TerapiAwalAssessmentPage() {
       <VisitInfoBar visitId={visit.id} value={visitInfo} onChange={setVisitInfo} />
 
       <div className="glass-card p-4 sm:p-6 space-y-5">
+        <div ref={topRef} className="scroll-mt-4" />
         <StepProgress currentStep={currentStep} furthestStep={furthestStep} onJump={handleJumpStep} />
 
         <StepComponent value={form} onChange={patchForm} />
