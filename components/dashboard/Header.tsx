@@ -70,10 +70,11 @@ export function Header({ fullName, email, avatarUrl, onToggleSidebar }: Props) {
     .toUpperCase() || 'U'
 
   return (
-    <header className="h-14 flex items-center justify-between px-4 border-b border-border bg-card shrink-0">
+    <header className="h-14 flex items-center justify-end md:justify-between px-4 border-b border-border bg-card shrink-0">
+      {/* Sidebar collapse toggle — desktop only, mobile uses the bottom tab bar instead */}
       <button
         onClick={onToggleSidebar}
-        className="p-2 rounded-lg hover:bg-muted transition-colors text-foreground/60 hover:text-foreground"
+        className="hidden md:flex p-2 rounded-lg hover:bg-muted transition-colors text-foreground/60 hover:text-foreground"
         aria-label="Toggle sidebar"
       >
         <Menu size={18} />

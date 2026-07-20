@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import * as Icons from 'lucide-react'
-import { X } from 'lucide-react'
+import { X, Search } from 'lucide-react'
 import { navForRole, NAV_GROUP_LABELS } from '@/config/navigation'
-import type { NavGroup } from '@/config/navigation'
+import type { NavGroup, NavItem } from '@/config/navigation'
 import type { UserRole } from '@/types'
 
 function NavIcon({ name, className }: { name: string; className?: string }) {
@@ -43,6 +43,35 @@ function gradientFor(icon: string) {
   return ICON_GRADIENTS[icon] ?? 'from-primary to-primary/70'
 }
 
+function NavGridItem({ item, isActive, isDark }: { item: NavItem; isActive: boolean; isDark: boolean }) {
+  return (
+    <Link
+      href={item.href!}
+      className="flex flex-col items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-2xl transition-all active:scale-95"
+      title={item.label}
+      style={{
+        background: isActive
+          ? isDark ? 'rgba(255,0,144,0.12)' : 'rgba(255,0,144,0.08)'
+          : isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+      }}
+    >
+      <div className={`p-2 sm:p-2.5 rounded-xl bg-gradient-to-br ${gradientFor(item.icon)} shadow-md`}>
+        <NavIcon name={item.icon} className="text-white" />
+      </div>
+      <span
+        className="text-[11px] font-medium text-center leading-tight"
+        style={{
+          color: isActive
+            ? '#FF0090'
+            : isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.55)',
+        }}
+      >
+        {item.label}
+      </span>
+    </Link>
+  )
+}
+
 interface Props {
   role: UserRole
   isOpen: boolean
@@ -52,6 +81,7 @@ interface Props {
 export function NavDrawer({ role, isOpen, onClose }: Props) {
   const pathname = usePathname()
   const [isDark, setIsDark] = useState(false)
+  const [search, setSearch] = useState('')
   const sheetRef = useRef<HTMLDivElement>(null)
 
   // Detect dark mode
@@ -66,6 +96,9 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
   // Close on route change
   useEffect(() => { onClose() }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Clear search once the sheet is dismissed
+  useEffect(() => { if (!isOpen) setSearch('') }, [isOpen])
+
   // Trap body scroll when open
   useEffect(() => {
     if (isOpen) {
@@ -77,6 +110,16 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
   }, [isOpen])
 
   const items = navForRole(role)
+
+  function isItemActive(item: NavItem) {
+    if (!item.href) return false
+    const isParent = items.some(i => i.href && i.href !== item.href && i.href.startsWith(item.href + '/'))
+    if (item.href === '/') return pathname === '/'
+    return isParent ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + '/')
+  }
+
+  const query = search.trim().toLowerCase()
+  const searchResults = query ? items.filter(i => i.label.toLowerCase().includes(query)) : []
 
   // Build ordered groups, preserving nav order
   const orderedGroupKeys = [...new Set(items.map(i => i.group))] as NavGroup[]
@@ -117,7 +160,7 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
         }}
       >
         <div
-          className="rounded-t-[2rem] overflow-hidden"
+          className="rounded-t-[2rem] overflow-hidden flex flex-col"
           style={{
             background: sheetBg,
             backdropFilter: 'blur(40px) saturate(180%)',
@@ -126,10 +169,11 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
             borderLeft: sheetBorder,
             borderRight: sheetBorder,
             boxShadow: '0 -8px 60px rgba(0,0,0,0.22)',
+            maxHeight: '85dvh',
           }}
         >
           {/* Drag handle */}
-          <div className="flex justify-center pt-3 pb-1">
+          <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div
               className="w-9 h-1 rounded-full"
               style={{ background: isDark ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.15)' }}
@@ -137,7 +181,7 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
           </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-2 sm:py-3">
+          <div className="flex items-center justify-between px-5 py-2 sm:py-3 shrink-0">
             <span
               className="text-xs font-semibold tracking-widest uppercase"
               style={{ color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.40)' }}
@@ -154,63 +198,74 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
             </button>
           </div>
 
-          {/* Nav groups */}
-          <div className="px-3 sm:px-4 pb-3 sm:pb-4 space-y-2 sm:space-y-4">
-            {orderedGroupKeys.map((groupKey) => (
-              <div key={groupKey}>
-                {/* Group label — hidden on mobile to save space */}
-                <p
-                  className="hidden sm:block text-[10px] font-semibold tracking-widest uppercase mb-1 sm:mb-2 px-1"
-                  style={{ color: isDark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.30)' }}
-                >
-                  {NAV_GROUP_LABELS[groupKey]}
-                </p>
-
-                {/* Items grid — 4 cols (icon-only) on mobile, 3 cols with labels on sm+ */}
-                <div className="grid grid-cols-4 sm:grid-cols-3 gap-2">
-                  {groupedItems[groupKey].map((item) => {
-                    const isParent = item.href
-                      ? items.some(i => i.href && i.href !== item.href && i.href.startsWith(item.href + '/'))
-                      : false
-                    const isActive = item.href
-                      ? (item.href === '/' ? pathname === '/' : isParent ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + '/'))
-                      : false
-
-                    return (
-                      <Link
-                        key={item.key}
-                        href={item.href!}
-                        className="flex flex-col items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-2xl transition-all active:scale-95"
-                        title={item.label}
-                        style={{
-                          background: isActive
-                            ? isDark ? 'rgba(255,0,144,0.12)' : 'rgba(255,0,144,0.08)'
-                            : isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-                        }}
-                      >
-                        <div className={`p-2 sm:p-2.5 rounded-xl bg-gradient-to-br ${gradientFor(item.icon)} shadow-md`}>
-                          <NavIcon name={item.icon} className="text-white" />
-                        </div>
-                        <span
-                          className="text-[11px] font-medium text-center leading-tight"
-                          style={{
-                            color: isActive
-                              ? '#FF0090'
-                              : isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.55)',
-                          }}
-                        >
-                          {item.label}
-                        </span>
-                      </Link>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
+          {/* Search */}
+          <div className="px-5 pb-2 sm:pb-3 shrink-0">
+            <div className="relative">
+              <Search
+                size={14}
+                style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)' }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari menu..."
+                className="w-full pl-8 pr-3 py-2 rounded-xl text-sm bg-transparent focus:outline-none"
+                style={{
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.10)',
+                  color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.80)',
+                }}
+              />
+            </div>
           </div>
 
-          {/* Safe area spacer */}
-          <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)', minHeight: 8 }} />
+          {/* Scrollable nav content */}
+          <div className="overflow-y-auto flex-1 min-h-0">
+            {query ? (
+              /* Search results — flat grid, no group headers */
+              <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+                {searchResults.length > 0 ? (
+                  <div className="grid grid-cols-4 sm:grid-cols-3 gap-2">
+                    {searchResults.map((item) => (
+                      <NavGridItem key={item.key} item={item} isActive={isItemActive(item)} isDark={isDark} />
+                    ))}
+                  </div>
+                ) : (
+                  <p
+                    className="text-center text-sm py-8"
+                    style={{ color: isDark ? 'rgba(255,255,255,0.40)' : 'rgba(0,0,0,0.40)' }}
+                  >
+                    Tidak ada menu yang cocok dengan &ldquo;{search.trim()}&rdquo;
+                  </p>
+                )}
+              </div>
+            ) : (
+              /* Nav groups */
+              <div className="px-3 sm:px-4 pb-3 sm:pb-4 space-y-2 sm:space-y-4">
+                {orderedGroupKeys.map((groupKey) => (
+                  <div key={groupKey}>
+                    {/* Group label — hidden on mobile to save space */}
+                    <p
+                      className="hidden sm:block text-[10px] font-semibold tracking-widest uppercase mb-1 sm:mb-2 px-1"
+                      style={{ color: isDark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.30)' }}
+                    >
+                      {NAV_GROUP_LABELS[groupKey]}
+                    </p>
+
+                    {/* Items grid — 4 cols (icon-only) on mobile, 3 cols with labels on sm+ */}
+                    <div className="grid grid-cols-4 sm:grid-cols-3 gap-2">
+                      {groupedItems[groupKey].map((item) => (
+                        <NavGridItem key={item.key} item={item} isActive={isItemActive(item)} isDark={isDark} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Safe area spacer */}
+            <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)', minHeight: 8 }} />
+          </div>
         </div>
       </div>
     </>
