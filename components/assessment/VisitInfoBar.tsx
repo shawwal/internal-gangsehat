@@ -13,6 +13,17 @@ const BODY_REGIONS: BodyRegion[] = [
   'FOOT', 'CNS', 'PNS', 'SYSTEMIC', 'CARDIOVASCULAR', 'PULMONAL', 'PERFORMANCE',
 ]
 
+const SUMBER_PASIEN_OPTIONS = [
+  'Rekomendasi orang lain',
+  'Pasien lama',
+  'Media sosial',
+  'Pencarian Google',
+  'Iklan/ads',
+  'Event',
+  'Rujukan dokter',
+  'Lainnya',
+]
+
 export interface VisitInfoState {
   shift: string
   kehadiran: string
@@ -31,6 +42,10 @@ const labelCls = 'block text-xs font-medium text-foreground mb-1'
 
 export function VisitInfoBar({ visitId, value, onChange }: Props) {
   const [saved, setSaved] = useState(false)
+
+  const knownOptions = SUMBER_PASIEN_OPTIONS.filter((o) => o !== 'Lainnya')
+  const isCustomSumber = value.sumber_pasien !== '' && !knownOptions.includes(value.sumber_pasien)
+  const sumberSelectValue = isCustomSumber ? 'Lainnya' : value.sumber_pasien
 
   async function persist(next: VisitInfoState) {
     setSaved(false)
@@ -62,31 +77,7 @@ export function VisitInfoBar({ visitId, value, onChange }: Props) {
           </span>
         )}
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div>
-          <label className={labelCls}>Shift</label>
-          <select
-            value={value.shift}
-            onChange={(e) => persist(set('shift', e.target.value))}
-            className={inputCls}
-          >
-            <option value="">— Pilih —</option>
-            <option value="PAGI">PAGI</option>
-            <option value="SORE">SORE</option>
-          </select>
-        </div>
-        <div>
-          <label className={labelCls}>Kehadiran</label>
-          <select
-            value={value.kehadiran}
-            onChange={(e) => persist(set('kehadiran', e.target.value))}
-            className={inputCls}
-          >
-            <option value="">— Pilih —</option>
-            <option value="HADIR">HADIR</option>
-            <option value="TIDAK HADIR">TIDAK HADIR</option>
-          </select>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className={labelCls}>Regio</label>
           <RegionSelect
@@ -97,13 +88,29 @@ export function VisitInfoBar({ visitId, value, onChange }: Props) {
         </div>
         <div>
           <label className={labelCls}>Sumber Pasien</label>
-          <input
-            value={value.sumber_pasien}
-            onChange={(e) => set('sumber_pasien', e.target.value)}
-            onBlur={() => persist(value)}
-            placeholder="mis. Rekomendasi, sosial media"
+          <select
+            value={sumberSelectValue}
+            onChange={(e) => {
+              const v = e.target.value
+              persist(set('sumber_pasien', v === 'Lainnya' ? '' : v))
+            }}
             className={inputCls}
-          />
+          >
+            <option value="">— Pilih —</option>
+            {SUMBER_PASIEN_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+          {sumberSelectValue === 'Lainnya' && (
+            <input
+              value={value.sumber_pasien}
+              onChange={(e) => set('sumber_pasien', e.target.value)}
+              onBlur={() => persist(value)}
+              placeholder="Sebutkan sumber pasien"
+              className={`${inputCls} mt-2`}
+              autoFocus
+            />
+          )}
         </div>
       </div>
     </div>
