@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
             encrypted_address:    encPii.encrypted_address    ?? null,
             encrypted_birth_date: encPii.encrypted_birth_date ?? null,
             phone_hash:           hash,
+            name_normalized:      name.toLowerCase(),
             gender:               row.gender,
             no_rm,
             pekerjaan:      row.pekerjaan?.trim()      || null,

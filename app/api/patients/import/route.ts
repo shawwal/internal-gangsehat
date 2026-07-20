@@ -189,6 +189,7 @@ export async function POST(request: NextRequest) {
               encrypted_address:    enc2.encrypted_address    ?? null,
               encrypted_birth_date: enc2.encrypted_birth_date ?? null,
               phone_hash:           hash,
+              name_normalized:      name.toLowerCase(),
               gender,
               no_rm:          effectiveRm,
               pekerjaan:      cellStr(row, hMap.get('pekerjaan'))      || null,
