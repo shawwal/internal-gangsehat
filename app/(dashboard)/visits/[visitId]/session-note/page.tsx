@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Loader2, AlertTriangle, Printer, Copy } from 'lucide-react'
+import { ChevronLeft, Loader2, AlertTriangle, Printer, Copy, History } from 'lucide-react'
 import { fetchVisitWithPatient } from '@/app/actions/jadwal'
 import {
   fetchSessionNote, fetchLatestCompletedAssessment, fetchPreviousSessionNote, completeSessionNote,
@@ -121,6 +121,12 @@ export default function SessionNotePage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href={`/patients/${visit.patient_id}/visits`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors"
+          >
+            <History size={13} /> Riwayat Pasien
+          </Link>
           <button
             type="button"
             onClick={handleCopyPrevious}
