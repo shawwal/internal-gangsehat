@@ -40,6 +40,9 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const cardRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // Therapists/staff view the schedule but don't manage it — no status changes,
+  // deletes, payments, or reminders from the quick-action menu.
+  const canManageVisit   = !!userRole && !['therapist', 'staff'].includes(userRole)
   const canRecordPayment = !!userRole && PAYMENT_ROLES.includes(userRole)
   const showPaymentItem  = canRecordPayment && visit.status === 'completed' && !visit.package_id
   const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && !visit.package_id
@@ -53,6 +56,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
+    if (!canManageVisit) { onOpen(visit.id); return }
     if (!cardRef.current) return
     const rect      = cardRef.current.getBoundingClientRect()
     const menuWidth = 208
@@ -90,8 +94,8 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
       onClick={openMenu}
       onContextMenu={(e) => { e.preventDefault(); openMenu(e) }}
       role="button"
-      aria-haspopup="menu"
-      aria-expanded={menuOpen}
+      aria-haspopup={canManageVisit ? 'menu' : undefined}
+      aria-expanded={canManageVisit ? menuOpen : undefined}
     >
       {/* Refreshing indicator — a save for this visit is in flight */}
       {isRefreshing && (

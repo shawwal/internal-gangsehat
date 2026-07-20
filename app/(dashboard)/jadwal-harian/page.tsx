@@ -77,19 +77,20 @@ export default function JadwalHarianPage() {
     fetchReminderTemplate().then(setReminderTemplate)
   }, [])
 
-  // Toolbar state
-  const [showInactive, setShowInactive] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem(LS_KEY) === 'true'
-  })
+  // Toolbar state — start with the SSR-safe default; the real localStorage
+  // value is applied post-mount below so the client's first render still
+  // matches the server-rendered HTML (avoids a hydration mismatch).
+  const [showInactive, setShowInactive] = useState(false)
   const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all')
   const [sortOrder, setSortOrder]       = useState<'asc' | 'desc'>('asc')
   const [isFocused, setIsFocused]       = useState(true)
-  const [shiftFilter, setShiftFilter]   = useState<'all' | 'pagi' | 'sore'>(() => {
-    if (typeof window === 'undefined') return 'all'
+  const [shiftFilter, setShiftFilter]   = useState<'all' | 'pagi' | 'sore'>('all')
+
+  useEffect(() => {
+    setShowInactive(localStorage.getItem(LS_KEY) === 'true')
     const v = localStorage.getItem(LS_SHIFT_KEY)
-    return v === 'pagi' || v === 'sore' ? v : 'all'
-  })
+    if (v === 'pagi' || v === 'sore') setShiftFilter(v)
+  }, [])
 
   function handleSetShiftFilter(v: 'all' | 'pagi' | 'sore') {
     setShiftFilter(v)
