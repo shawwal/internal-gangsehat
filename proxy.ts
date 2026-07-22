@@ -78,6 +78,7 @@ export async function proxy(request: NextRequest) {
 
     const routeAccess: Array<{ prefix: string; allowed: string[] }> = [
       { prefix: '/director',  allowed: ['director'] },
+      { prefix: '/import',    allowed: ['director', 'admin'] },
       { prefix: '/finance',   allowed: ['finance', 'director', 'manager', 'admin'] },
       { prefix: '/hr',        allowed: ['hr', 'director', 'manager'] },
       { prefix: '/marketing', allowed: ['marketing', 'director', 'manager'] },

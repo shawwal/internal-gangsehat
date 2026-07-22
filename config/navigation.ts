@@ -123,6 +123,14 @@ export const navigation: NavItem[] = [
     group: 'management',
   },
   {
+    key: 'import-patients-v2',
+    label: 'Import Pasien (Baru)',
+    href: '/import/patients-v2',
+    icon: 'FileUp',
+    roles: ['director', 'admin'],
+    group: 'clinic',
+  },
+  {
     key: 'director-finance',
     label: 'Keuangan',
     href: '/director/finance',

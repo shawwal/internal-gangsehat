@@ -8,7 +8,7 @@ export default function ImportPatientsV2Page() {
   return (
     <div className="space-y-6 max-w-6xl">
       <div className="flex items-center gap-3">
-        <Link href="/director/import" className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground">
+        <Link href="/patients" className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground">
           <ChevronLeft size={16} />
         </Link>
         <div>
