@@ -78,7 +78,21 @@ function formatDate(d: string) {
   })
 }
 
-interface LinkedTx { id: string; payment_status: string | null; outstanding: number; status: string }
+interface LinkedTx { id: string; payment_status: string | null; outstanding: number; status: string; amount: number }
+
+function formatCurrency(n: number) {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency', currency: 'IDR', minimumFractionDigits: 0,
+  }).format(n)
+}
+
+function getAmountPaid(visit: PatientVisit): number | null {
+  if ((visit as unknown as { package_id: string | null }).package_id) return null
+  const txs = ((visit as unknown as { transactions: LinkedTx[] | null }).transactions ?? [])
+    .filter((t) => t.status !== 'rejected')
+  if (txs.length === 0) return null
+  return txs.reduce((sum, t) => sum + (t.amount ?? 0), 0)
+}
 
 function getPaymentBadge(visit: PatientVisit): { label: string; cls: string; unpaid: boolean } | null {
   if (visit.status !== 'completed') return null
@@ -133,7 +147,7 @@ export default function PatientVisitsPage() {
   const [paymentVisit, setPaymentVisit]       = useState<PaymentVisitInfo | null>(null)
   const [packagePrompt, setPackagePrompt]     = useState<(MedicalRecordSavedContext & { visitId: string }) | null>(null)
 
-  const canRecordPayment = !!userRole && ['finance', 'manager', 'director'].includes(userRole)
+  const canRecordPayment = !!userRole && ['finance', 'manager', 'director', 'admin'].includes(userRole)
 
   function openVisit(v: PatientVisit) {
     const route = getVisitFormRoute(v.service_type)
@@ -164,7 +178,7 @@ export default function PatientVisitsPage() {
       fetchPatient(id),
       supabase
         .from('patient_visits')
-        .select('*, internal_profiles!attending_staff_id(id, full_name, nickname), transactions!visit_id(id, payment_status, outstanding, status)')
+        .select('*, internal_profiles!attending_staff_id(id, full_name, nickname), transactions!visit_id(id, payment_status, outstanding, status, amount)')
         .eq('patient_id', id)
         .order('visit_date', { ascending: false }),
     ])
@@ -220,6 +234,7 @@ export default function PatientVisitsPage() {
       { header: 'Tindakan',     value: (v) => v.treatment ?? '' },
       { header: 'Kehadiran',    value: (v) => v.kehadiran ?? '' },
       { header: 'Status',       value: (v) => STATUS_LABEL[v.status] },
+      { header: 'Nominal Dibayar', value: (v) => getAmountPaid(v) ?? '' },
       { header: 'Catatan',      value: (v) => v.notes ?? '' },
     ], `rekam_medis_${patientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}`)
     return Promise.resolve()
@@ -290,6 +305,7 @@ export default function PatientVisitsPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kehadiran</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pembayaran</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Nominal Dibayar</th>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rekam Medis</th>
               </tr>
             </thead>
@@ -297,7 +313,7 @@ export default function PatientVisitsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/50">
-                    {Array.from({ length: 9 }).map((_, j) => (
+                    {Array.from({ length: 11 }).map((_, j) => (
                       <td key={j} className="px-4 py-3">
                         <div className="h-4 bg-muted animate-pulse rounded-lg" />
                       </td>
@@ -306,7 +322,7 @@ export default function PatientVisitsPage() {
                 ))
               ) : visits.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-16 text-center">
+                  <td colSpan={11} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                         <FileText size={22} className="text-primary" />
@@ -423,6 +439,14 @@ export default function PatientVisitsPage() {
                             )}
                           </div>
                         )
+                      })()}
+                    </td>
+
+                    <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      {(() => {
+                        const paid = getAmountPaid(v)
+                        if (paid === null) return <span className="text-muted-foreground/40 text-xs">—</span>
+                        return <span className="text-xs font-medium text-foreground tabular-nums">{formatCurrency(paid)}</span>
                       })()}
                     </td>
 

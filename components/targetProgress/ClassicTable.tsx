@@ -1,18 +1,35 @@
 'use client'
 
+import { useState } from 'react'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
+import { DetailModal } from './DetailModal'
 import { formatPct, progressColor } from './utils'
-import type { CategorySummary } from './types'
+import type { CategoryKey, CategorySummary } from './types'
 
 interface ClassicTableProps {
   summaries: CategorySummary[]
   days: number
   monthLabel: string
+  branchId: string
+  month: number
+  year: number
 }
 
-export function ClassicTable({ summaries, days, monthLabel }: ClassicTableProps) {
+interface DetailTarget {
+  date: string
+  category: CategoryKey
+  label: string
+}
+
+export function ClassicTable({ summaries, days, monthLabel, branchId, month, year }: ClassicTableProps) {
   const dayNumbers = Array.from({ length: days }, (_, i) => i + 1)
+  const [detail, setDetail] = useState<DetailTarget | null>(null)
+
+  function openDetail(category: CategoryKey, label: string, day: number) {
+    const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    setDetail({ date, category, label })
+  }
 
   function handleExport() {
     type Row = Record<string, string | number>
@@ -80,7 +97,8 @@ export function ClassicTable({ summaries, days, monthLabel }: ClassicTableProps)
                   {s.daily.map((v, i) => (
                     <td
                       key={i}
-                      className="px-1 py-2 text-center font-medium"
+                      onClick={v > 0 ? () => openDetail(s.key, s.label, i + 1) : undefined}
+                      className={`px-1 py-2 text-center font-medium ${v > 0 ? 'cursor-pointer hover:underline' : ''}`}
                       style={{ color: v > 0 ? 'var(--chart-5)' : 'var(--muted-foreground)' }}
                     >
                       {v}
@@ -92,6 +110,15 @@ export function ClassicTable({ summaries, days, monthLabel }: ClassicTableProps)
           </tbody>
         </table>
       </div>
+
+      <DetailModal
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        branchId={branchId}
+        date={detail?.date ?? null}
+        category={detail?.category ?? null}
+        label={detail?.label ?? ''}
+      />
     </div>
   )
 }

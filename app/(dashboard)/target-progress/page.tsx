@@ -192,7 +192,14 @@ export default function TargetProgressPage() {
 
           <div key={tab} className="animate-fade-in">
             {tab === 'klasik' && (
-              <ClassicTable summaries={summaries} days={days} monthLabel={monthLabel} />
+              <ClassicTable
+                summaries={summaries}
+                days={days}
+                monthLabel={monthLabel}
+                branchId={selectedBranchId}
+                month={month}
+                year={year}
+              />
             )}
             {tab === 'visual' && (
               <ModernView summaries={summaries} days={days} />

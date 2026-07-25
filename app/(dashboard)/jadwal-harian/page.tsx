@@ -341,7 +341,7 @@ export default function JadwalHarianPage() {
                 onOpen={(id, shift) => {
                   const v = visits.find((x) => x.id === id)
                   if (userRole === 'admin') {
-                    if (v) window.open(`/patients/${v.patient_id}/packages`, '_blank', 'noopener,noreferrer')
+                    if (v) window.open(`/patients/${v.patient_id}/visits`, '_blank', 'noopener,noreferrer')
                     return
                   }
                   const route = getVisitFormRoute(v?.service_type)
