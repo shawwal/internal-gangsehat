@@ -51,7 +51,7 @@ export async function fetchTargetProgressDetail(
   const { data, error } = await query
   if (error || !data) return []
 
-  const attended = (data as unknown as VisitRow[]).filter((v) => isAttended(v, todayISO))
+  const attended = (data as unknown as VisitRow[]).filter(isHadir)
   let rows: VisitRow[]
 
   if (category === 'paket_klinik' || category === 'paket_visit') {

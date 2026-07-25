@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import { fetchTargetProgressDetail, type TargetProgressDetailRow } from '@/app/actions/targetProgress'
-import { TODAY_ISO } from '@/components/performance/utils'
 import type { CategoryKey } from './types'
 
 interface DetailModalProps {
@@ -22,7 +21,7 @@ export function DetailModal({ open, onClose, branchId, date, category, label }: 
   useEffect(() => {
     if (!open || !date || !category) return
     setLoading(true)
-    fetchTargetProgressDetail(branchId, date, category, TODAY_ISO)
+    fetchTargetProgressDetail(branchId, date, category)
       .then(setRows)
       .finally(() => setLoading(false))
   }, [open, date, category, branchId])
