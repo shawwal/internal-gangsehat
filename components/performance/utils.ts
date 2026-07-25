@@ -3,9 +3,13 @@ export const CURRENT_YEAR = new Date().getFullYear()
 export const CURRENT_MONTH = new Date().getMonth() + 1
 export const YEARS = Array.from({ length: Math.max(CURRENT_YEAR - 2022, 1) }, (_, i) => CURRENT_YEAR - i)
 
+// Clinics operate in Asia/Jakarta — compute "today" in that timezone explicitly
+// rather than the machine's local clock, so a device set to a different
+// timezone (or a server running in UTC) can't shift the day boundary and
+// leak an extra day's unmarked visits into "attended" via the isAttended()
+// past-date fallback below.
 function todayISO(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date())
 }
 export const TODAY_ISO = todayISO()
 
@@ -104,6 +108,14 @@ export function isAttended(
   if (v.kehadiran === 'HADIR') return true
   if (v.kehadiran == null && v.visit_date < todayISO) return true
   return false
+}
+
+// Strict attendance: counts only visits explicitly marked HADIR on
+// jadwal-harian — no "assumed attended" fallback for past unmarked visits.
+// Used by target-progress, where every category (TA/Paket/Kunjungan) must
+// reflect actual recorded attendance, not an estimate.
+export function isHadir(v: { kehadiran?: 'HADIR' | 'TIDAK HADIR' | null }): boolean {
+  return v.kehadiran === 'HADIR'
 }
 
 // Paket Klinik / Paket Visit are counted once per package — on the date of

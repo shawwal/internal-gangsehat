@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
-import { VISIT_STATUS_FILTER, isAttended, firstPackageVisits } from '@/components/performance/utils'
+import { VISIT_STATUS_FILTER, isHadir, firstPackageVisits } from '@/components/performance/utils'
 import type { CategoryKey } from '@/components/targetProgress/types'
 
 const TA_TYPES = ['TERAPI AWAL', 'TA VISIT']
@@ -31,7 +31,6 @@ export async function fetchTargetProgressDetail(
   branchId: string,
   visitDate: string,
   category: CategoryKey,
-  todayISO: string,
 ): Promise<TargetProgressDetailRow[]> {
   const supabase = await createClient()
 

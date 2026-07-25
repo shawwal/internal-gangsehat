@@ -4,7 +4,7 @@ import './target-progress-styles.css'
 import { useCallback, useEffect, useState } from 'react'
 import { Table2, TrendingUp, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { VISIT_STATUS_FILTER, TODAY_ISO } from '@/components/performance/utils'
+import { VISIT_STATUS_FILTER } from '@/components/performance/utils'
 import { MonthPicker } from '@/components/targetProgress/MonthPicker'
 import { BranchPicker } from '@/components/targetProgress/BranchPicker'
 import { ClassicTable } from '@/components/targetProgress/ClassicTable'
@@ -102,7 +102,7 @@ export default function TargetProgressPage() {
     ])
 
     const days = daysInMonth(year, month)
-    const daily = buildDailyCounts((visits ?? []) as VisitForProgress[], days, TODAY_ISO)
+    const daily = buildDailyCounts((visits ?? []) as VisitForProgress[], days)
     const t = targetRow as BranchTargetForProgress | null
     const targetFields: Record<CategoryKey, number> = {
       ta: t?.target_ta ?? 0,

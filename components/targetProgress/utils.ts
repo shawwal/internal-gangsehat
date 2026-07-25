@@ -1,10 +1,9 @@
-import { TA_TYPES, isAttended, firstPackageVisits } from '@/components/performance/utils'
+import { TA_TYPES, isHadir, firstPackageVisits } from '@/components/performance/utils'
 import type { CategoryKey, DailyCounts, VisitForProgress } from './types'
 
 export {
   pctValue, formatPct, progressColor,
   getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR, YEARS,
-  isAttended,
 } from '@/components/performance/utils'
 
 export function daysInMonth(year: number, month: number): number {
@@ -19,7 +18,7 @@ function classify(serviceType: string | null): CategoryKey | null {
   return null
 }
 
-export function buildDailyCounts(visits: VisitForProgress[], days: number, todayISO: string): DailyCounts {
+export function buildDailyCounts(visits: VisitForProgress[], days: number): DailyCounts {
   const daily: DailyCounts = {
     ta: Array(days).fill(0),
     paket_klinik: Array(days).fill(0),
@@ -27,7 +26,7 @@ export function buildDailyCounts(visits: VisitForProgress[], days: number, today
     paket_visit: Array(days).fill(0),
   }
 
-  const attended = visits.filter((v) => isAttended(v, todayISO))
+  const attended = visits.filter(isHadir)
   const paket = attended.filter((v) => v.service_type === 'PAKET TERAPI' || v.service_type === 'PAKET VISIT')
 
   for (const v of attended) {
