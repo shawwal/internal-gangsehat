@@ -26,6 +26,7 @@ export interface DailyVisit {
   // Payment info — populated by fetchDailyVisits
   has_payment: boolean
   visit_payment_status: string | null
+  visit_package_price: number | null
 }
 
 export interface CreateVisitInput {
@@ -83,12 +84,13 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
   const visitIds = visits.map((v) => v.id)
   const { data: txns } = await supabase
     .from('transactions')
-    .select('visit_id, payment_status, outstanding, status')
+    .select('visit_id, category, harga, payment_status, outstanding, status')
     .in('visit_id', visitIds)
     .neq('status', 'rejected')
 
   // Per-visit: last non-rejected transaction wins for display
   const payMap = new Map<string, { payment_status: string | null; all_paid: boolean }>()
+  const packagePriceMap = new Map<string, number>()
   for (const t of txns ?? []) {
     const vid = t.visit_id as string
     const existing = payMap.get(vid)
@@ -99,6 +101,9 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
         payment_status: t.payment_status ?? existing.payment_status,
         all_paid: existing.all_paid && t.outstanding === 0,
       })
+    }
+    if ((t.category === 'PAKET VISIT' || t.category === 'PAKET KLINIK') && t.harga != null) {
+      packagePriceMap.set(vid, t.harga)
     }
   }
 
@@ -123,6 +128,7 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
       notes:                v.notes,
       has_payment:          !!pay,
       visit_payment_status: pay ? (pay.all_paid ? 'LUNAS' : pay.payment_status) : null,
+      visit_package_price:  packagePriceMap.get(v.id) ?? null,
     }
   })
 }

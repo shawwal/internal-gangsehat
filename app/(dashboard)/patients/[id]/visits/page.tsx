@@ -131,7 +131,7 @@ export default function PatientVisitsPage() {
 
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
   const [paymentVisit, setPaymentVisit]       = useState<PaymentVisitInfo | null>(null)
-  const [packagePrompt, setPackagePrompt]     = useState<MedicalRecordSavedContext | null>(null)
+  const [packagePrompt, setPackagePrompt]     = useState<(MedicalRecordSavedContext & { visitId: string }) | null>(null)
 
   const canRecordPayment = !!userRole && ['finance', 'manager', 'director'].includes(userRole)
 
@@ -568,9 +568,10 @@ export default function PatientVisitsPage() {
           if (
             ctx &&
             ctx.status === 'completed' &&
-            ctx.service_type === 'TA VISIT'
+            ctx.service_type === 'TA VISIT' &&
+            visitId
           ) {
-            setPackagePrompt(ctx)
+            setPackagePrompt({ ...ctx, visitId })
           }
         }}
       />
@@ -590,6 +591,7 @@ export default function PatientVisitsPage() {
           patientId={packagePrompt.patient_id}
           patientName={patientName}
           branchId={branchId}
+          visitId={packagePrompt.visitId}
           sourceServiceType={packagePrompt.service_type}
           onClose={() => setPackagePrompt(null)}
           onSuccess={() => { setPackagePrompt(null); load() }}

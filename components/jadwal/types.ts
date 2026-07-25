@@ -71,6 +71,16 @@ export const STATUS_BADGE: Record<VisitStatus, string> = {
   no_show:   'bg-muted/40 text-muted-foreground',
 }
 
+export const SERVICE_TYPE_LABEL: Record<string, string> = {
+  'TERAPI AWAL':  'TA',
+  'TA VISIT':     'TA',
+  'PAKET TERAPI': 'Paket',
+  'PAKET VISIT':  'Paket',
+  'SESI TERAPI':  'Sesi',
+  'SESI VISIT':   'Sesi',
+  'LAINNYA':      'Lainnya',
+}
+
 export const GRID_START  = 8
 export const GRID_END    = 21   // exclusive — slots 08:00 to 20:00
 export const SLOT_H      = 80   // px per 1-hour slot

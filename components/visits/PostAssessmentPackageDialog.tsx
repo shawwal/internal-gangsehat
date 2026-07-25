@@ -10,6 +10,7 @@ export interface PostAssessmentPackageDialogProps {
   patientId: string
   patientName: string
   branchId: string | null
+  visitId: string
   /** 'TERAPI AWAL' → PAKET KLINIK, 'TA VISIT' → PAKET VISIT */
   sourceServiceType: string
   onClose: () => void
@@ -23,6 +24,7 @@ export function PostAssessmentPackageDialog({
   patientId,
   patientName,
   branchId,
+  visitId,
   sourceServiceType,
   onClose,
   onSuccess,
@@ -94,6 +96,8 @@ export function PostAssessmentPackageDialog({
       penjamin:         null,
       description:      `${nama} — ${sessions} sesi`,
       transaction_date: new Date().toISOString().slice(0, 10),
+      visit_id:         visitId,
+      patient_id:       patientId,
     }
 
     const { error: txErr } = await createTransactionManual(txInput)

@@ -237,6 +237,8 @@ export interface CreateTransactionManualInput {
   penjamin: string | null
   description: string | null
   transaction_date: string
+  visit_id?: string | null
+  patient_id?: string | null
 }
 
 export async function createTransactionManual(
@@ -273,6 +275,8 @@ export async function createTransactionManual(
     penjamin:         input.type === 'income' ? (input.penjamin || null) : null,
     description:      input.description || null,
     transaction_date: input.transaction_date,
+    visit_id:         input.visit_id ?? null,
+    patient_id:       input.patient_id ?? null,
     updated_at:       new Date().toISOString(),
   })
 

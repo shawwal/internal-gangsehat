@@ -216,6 +216,7 @@ export default function TerapiAwalAssessmentPage() {
           patientId={visit.patient_id}
           patientName={visit.patient_name}
           branchId={visit.branch_id}
+          visitId={visit.id}
           sourceServiceType={visit.service_type ?? 'TERAPI AWAL'}
           onClose={() => { setShowPackagePrompt(false); router.push(backTo) }}
           onSuccess={() => { setShowPackagePrompt(false); router.push(backTo) }}

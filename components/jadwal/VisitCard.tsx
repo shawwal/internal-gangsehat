@@ -5,8 +5,9 @@ import { createPortal } from 'react-dom'
 import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
-import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL } from './types'
+import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
 import type { VisitStatus } from '@/types'
+import { formatCurrency } from '@/lib/utils'
 
 const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
 const REMIND_ROLES  = ['admin', 'director', 'manager']
@@ -119,6 +120,11 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
         {visit.visit_time && (
           <span className="text-[9px] font-mono opacity-70">{visit.visit_time}</span>
         )}
+        {visit.service_type && SERVICE_TYPE_LABEL[visit.service_type] && (
+          <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-white/10 text-foreground/70 border border-white/10">
+            {SERVICE_TYPE_LABEL[visit.service_type]}
+          </span>
+        )}
         <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${STATUS_BADGE[visit.status]}`}>
           {STATUS_LABEL[visit.status]}
         </span>
@@ -141,6 +147,13 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
             }`}
           >
             {visit.visit_payment_status ?? 'Bayar'}
+          </span>
+        )}
+
+        {/* Package price — shown after a new package is sold from this visit */}
+        {visit.visit_package_price != null && (
+          <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-primary/15 text-primary border border-primary/30">
+            {formatCurrency(visit.visit_package_price)}
           </span>
         )}
 

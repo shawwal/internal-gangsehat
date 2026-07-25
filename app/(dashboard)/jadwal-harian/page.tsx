@@ -55,7 +55,7 @@ export default function JadwalHarianPage() {
   const [noShowVisit, setNoShowVisit]               = useState<DailyVisit | null>(null)
   const [paymentVisit, setPaymentVisit]             = useState<DailyVisit | null>(null)
   const [packagePrompt, setPackagePrompt]           = useState<
-    (MedicalRecordSavedContext & { patientName: string; branchId: string | null }) | null
+    (MedicalRecordSavedContext & { patientName: string; branchId: string | null; visitId: string }) | null
   >(null)
   const [refreshingCell, setRefreshingCell]         = useState<RefreshingCell | null>(null)
 
@@ -209,6 +209,7 @@ export default function JadwalHarianPage() {
       status:       'completed',
       patientName:  visit.patient_name,
       branchId:     visit.branch_id,
+      visitId:      visit.id,
     })
   }
 
@@ -406,8 +407,8 @@ export default function JadwalHarianPage() {
             return
           }
           if (visitId) silentReload({ type: 'visit', visitId })
-          if (ctx?.status === 'completed' && ctx.service_type === 'TA VISIT') {
-            setPackagePrompt({ ...ctx, patientName: visit?.patient_name ?? '', branchId: visit?.branch_id ?? null })
+          if (ctx?.status === 'completed' && ctx.service_type === 'TA VISIT' && visitId) {
+            setPackagePrompt({ ...ctx, patientName: visit?.patient_name ?? '', branchId: visit?.branch_id ?? null, visitId })
           }
         }}
       />
@@ -460,6 +461,7 @@ export default function JadwalHarianPage() {
           patientId={packagePrompt.patient_id}
           patientName={packagePrompt.patientName}
           branchId={packagePrompt.branchId}
+          visitId={packagePrompt.visitId}
           sourceServiceType={packagePrompt.service_type}
           onClose={() => setPackagePrompt(null)}
           onSuccess={() => { setPackagePrompt(null); silentReload(null) }}
