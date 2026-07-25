@@ -340,6 +340,10 @@ export default function JadwalHarianPage() {
                 onDelete={handleDelete}
                 onOpen={(id, shift) => {
                   const v = visits.find((x) => x.id === id)
+                  if (userRole === 'admin') {
+                    if (v) window.open(`/patients/${v.patient_id}/packages`, '_blank', 'noopener,noreferrer')
+                    return
+                  }
                   const route = getVisitFormRoute(v?.service_type)
                   if (route) {
                     router.push(`/visits/${id}/${route}?from=/jadwal-harian`)
