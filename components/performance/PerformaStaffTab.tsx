@@ -9,8 +9,8 @@ import { MonthlyTrendChart } from './MonthlyTrendChart'
 import { ServiceMiniChart } from './ServiceMiniChart'
 import { ChartSkeleton } from './Skeletons'
 import {
-  MONTHS, VISIT_STATUS_FILTER, TA_TYPES, PAKET_TYPES, SESI_TYPES,
-  classifyServiceType,
+  MONTHS, VISIT_STATUS_FILTER, TODAY_ISO, TA_TYPES, PAKET_TYPES, SESI_TYPES,
+  classifyServiceType, isAttended,
 } from './utils'
 import type { VisitForPerforma, MonthlyData, FisioInfo, ViewMode } from './types'
 
@@ -34,11 +34,10 @@ export function PerformaStaffTab({ year, branchFilter }: PerformaStaffTabProps) 
     const buildQ = (y: number) => {
       let q = supabase
         .from('patient_visits')
-        .select('visit_date, service_type, attending_staff_id')
+        .select('visit_date, service_type, attending_staff_id, kehadiran')
         .gte('visit_date', `${y}-01-01`)
         .lte('visit_date', `${y}-12-31`)
         .in('status', [...VISIT_STATUS_FILTER])
-        .eq('kehadiran', 'HADIR')
       if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
       if (viewMode === 'individual' && selectedFisioId)
         q = q.eq('attending_staff_id', selectedFisioId)
@@ -50,8 +49,8 @@ export function PerformaStaffTab({ year, branchFilter }: PerformaStaffTabProps) 
       buildQ(year - 1),
     ])
 
-    const curData  = (curRes.data  ?? []) as VisitForPerforma[]
-    const prevData = (prevRes.data ?? []) as VisitForPerforma[]
+    const curData  = ((curRes.data  ?? []) as VisitForPerforma[]).filter(v => isAttended(v, TODAY_ISO))
+    const prevData = ((prevRes.data ?? []) as VisitForPerforma[]).filter(v => isAttended(v, TODAY_ISO))
     setVisits(curData)
     setPrevVisits(prevData)
 
@@ -62,15 +61,14 @@ export function PerformaStaffTab({ year, branchFilter }: PerformaStaffTabProps) 
     if (fisioList.length === 0) {
       let allQ = supabase
         .from('patient_visits')
-        .select('attending_staff_id, internal_profiles!attending_staff_id(full_name)')
+        .select('attending_staff_id, visit_date, kehadiran, internal_profiles!attending_staff_id(full_name)')
         .gte('visit_date', `${year}-01-01`)
         .lte('visit_date', `${year}-12-31`)
         .not('attending_staff_id', 'is', null)
         .in('status', [...VISIT_STATUS_FILTER])
-        .eq('kehadiran', 'HADIR')
       if (branchFilter !== 'all') allQ = allQ.eq('branch_id', branchFilter)
       const { data: allVisits } = await allQ
-      for (const v of allVisits ?? []) {
+      for (const v of (allVisits ?? []).filter(v => isAttended(v, TODAY_ISO))) {
         const id = v.attending_staff_id as string
         if (!idSet.has(id)) {
           idSet.add(id)

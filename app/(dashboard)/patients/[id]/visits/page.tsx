@@ -78,7 +78,9 @@ function formatDate(d: string) {
   })
 }
 
-interface LinkedTx { id: string; payment_status: string | null; outstanding: number; status: string; amount: number }
+interface LinkedTx { id: string; category: string | null; harga: number | null; payment_status: string | null; outstanding: number; status: string; amount: number }
+
+const PACKAGE_CATEGORIES = new Set(['PAKET VISIT', 'PAKET KLINIK'])
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat('id-ID', {
@@ -86,10 +88,17 @@ function formatCurrency(n: number) {
   }).format(n)
 }
 
+// Package-sale transactions are linked to their source visit (e.g. the TA
+// assessment) for traceability, but must not count toward THAT visit's own
+// payment status — a package's DP/outstanding is a separate balance.
+function ownVisitTxs(visit: PatientVisit): LinkedTx[] {
+  return ((visit as unknown as { transactions: LinkedTx[] | null }).transactions ?? [])
+    .filter((t) => t.status !== 'rejected' && !PACKAGE_CATEGORIES.has(t.category ?? ''))
+}
+
 function getAmountPaid(visit: PatientVisit): number | null {
   if ((visit as unknown as { package_id: string | null }).package_id) return null
-  const txs = ((visit as unknown as { transactions: LinkedTx[] | null }).transactions ?? [])
-    .filter((t) => t.status !== 'rejected')
+  const txs = ownVisitTxs(visit)
   if (txs.length === 0) return null
   return txs.reduce((sum, t) => sum + (t.amount ?? 0), 0)
 }
@@ -98,12 +107,20 @@ function getPaymentBadge(visit: PatientVisit): { label: string; cls: string; unp
   if (visit.status !== 'completed') return null
   // Package sessions are pre-paid via the package transaction — no per-visit payment needed
   if ((visit as unknown as { package_id: string | null }).package_id) return null
-  const txs = ((visit as unknown as { transactions: LinkedTx[] | null }).transactions ?? [])
-    .filter((t) => t.status !== 'rejected')
+  const txs = ownVisitTxs(visit)
   if (txs.length === 0) return { label: 'Belum Bayar', cls: 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/25', unpaid: true }
   const allPaid = txs.every((t) => t.outstanding === 0)
   if (allPaid) return { label: 'Lunas', cls: 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/25', unpaid: false }
   return { label: 'DP / Ada Sisa', cls: 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/25', unpaid: false }
+}
+
+// A package sold from this visit (via "Jual Paket") — shown regardless of
+// the visit's own payment status, since it's a separate transaction/balance.
+function getPackageSale(visit: PatientVisit): { harga: number; outstanding: number } | null {
+  const txs = ((visit as unknown as { transactions: LinkedTx[] | null }).transactions ?? [])
+    .filter((t) => t.status !== 'rejected' && PACKAGE_CATEGORIES.has(t.category ?? '') && t.harga != null)
+  if (txs.length === 0) return null
+  return { harga: txs[0].harga as number, outstanding: txs[0].outstanding }
 }
 
 // ── Stat card ──────────────────────────────────────────────────────────────────
@@ -178,7 +195,7 @@ export default function PatientVisitsPage() {
       fetchPatient(id),
       supabase
         .from('patient_visits')
-        .select('*, internal_profiles!attending_staff_id(id, full_name, nickname), transactions!visit_id(id, payment_status, outstanding, status, amount)')
+        .select('*, internal_profiles!attending_staff_id(id, full_name, nickname), transactions!visit_id(id, category, harga, payment_status, outstanding, status, amount)')
         .eq('patient_id', id)
         .order('visit_date', { ascending: false }),
     ])
@@ -410,18 +427,30 @@ export default function PatientVisitsPage() {
 
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       {(() => {
-                        const badge = getPaymentBadge(v)
-                        if (!badge) return <span className="text-muted-foreground/40 text-xs">—</span>
+                        const badge   = getPaymentBadge(v)
+                        const pkgSale = getPackageSale(v)
+                        if (!badge && !pkgSale) return <span className="text-muted-foreground/40 text-xs">—</span>
                         const therapist = (() => {
                           const raw = (v as unknown as { internal_profiles: { id: string; full_name: string; nickname: string | null } | null }).internal_profiles
                           return raw ? (raw.nickname || raw.full_name) : undefined
                         })()
                         return (
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${badge.cls}`}>
-                              {badge.label}
-                            </span>
-                            {canRecordPayment && (
+                            {badge && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${badge.cls}`}>
+                                {badge.label}
+                              </span>
+                            )}
+                            {pkgSale && (
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full border font-medium bg-primary/10 text-primary border-primary/20"
+                                title="Harga paket yang dijual dari kunjungan ini"
+                              >
+                                Paket {formatCurrency(pkgSale.harga)}
+                                {pkgSale.outstanding > 0 && ` · Sisa ${formatCurrency(pkgSale.outstanding)}`}
+                              </span>
+                            )}
+                            {badge && canRecordPayment && (
                               <button
                                 onClick={() => setPaymentVisit({
                                   id:                   v.id,

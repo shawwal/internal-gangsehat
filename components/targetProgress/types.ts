@@ -23,6 +23,8 @@ export interface VisitForProgress {
   id: string
   visit_date: string
   service_type: string | null
+  kehadiran: 'HADIR' | 'TIDAK HADIR' | null
+  package_id: string | null
 }
 
 export interface BranchTargetForProgress {

@@ -11,7 +11,7 @@ export interface PostAssessmentPackageDialogProps {
   patientName: string
   branchId: string | null
   visitId: string
-  /** 'TERAPI AWAL' → PAKET KLINIK, 'TA VISIT' → PAKET VISIT */
+  /** Any '... VISIT' service type → PAKET VISIT, any '... TERAPI'/'... KLINIK' → PAKET KLINIK */
   sourceServiceType: string
   onClose: () => void
   onSuccess: () => void
@@ -29,7 +29,10 @@ export function PostAssessmentPackageDialog({
   onClose,
   onSuccess,
 }: PostAssessmentPackageDialogProps) {
-  const isVisit = sourceServiceType === 'TA VISIT'
+  // Home-visit service types are 'TA VISIT' / 'SESI VISIT' / 'PAKET VISIT';
+  // in-clinic ones are 'TERAPI AWAL' / 'SESI TERAPI' / 'PAKET TERAPI'. Selling
+  // a package from ANY completed visit (not just a fresh TA) must classify correctly.
+  const isVisit = sourceServiceType.includes('VISIT')
 
   const [jenis, setJenis]   = useState<'P1' | 'P2'>('P1')
   const [mulai, setMulai]   = useState<'NEW' | 'EXT.'>('NEW')

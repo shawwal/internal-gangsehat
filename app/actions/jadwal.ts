@@ -27,7 +27,10 @@ export interface DailyVisit {
   has_payment: boolean
   visit_payment_status: string | null
   visit_package_price: number | null
+  visit_package_outstanding: number | null
 }
+
+const PACKAGE_CATEGORIES = new Set(['PAKET VISIT', 'PAKET KLINIK'])
 
 export interface CreateVisitInput {
   patient_id: string
@@ -88,11 +91,19 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
     .in('visit_id', visitIds)
     .neq('status', 'rejected')
 
-  // Per-visit: last non-rejected transaction wins for display
+  // Per-visit: last non-rejected transaction wins for display.
+  // Package-sale transactions (from PostAssessmentPackageDialog) are linked
+  // via visit_id for traceability, but they must NOT feed into the visit's
+  // own payment badge — a package's DP/outstanding balance is unrelated to
+  // whether the source visit itself (e.g. the TA assessment) was paid.
   const payMap = new Map<string, { payment_status: string | null; all_paid: boolean }>()
-  const packagePriceMap = new Map<string, number>()
+  const packageMap = new Map<string, { harga: number; outstanding: number }>()
   for (const t of txns ?? []) {
     const vid = t.visit_id as string
+    if (PACKAGE_CATEGORIES.has(t.category ?? '')) {
+      if (t.harga != null) packageMap.set(vid, { harga: t.harga, outstanding: t.outstanding ?? 0 })
+      continue
+    }
     const existing = payMap.get(vid)
     if (!existing) {
       payMap.set(vid, { payment_status: t.payment_status, all_paid: t.outstanding === 0 })
@@ -102,13 +113,11 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
         all_paid: existing.all_paid && t.outstanding === 0,
       })
     }
-    if ((t.category === 'PAKET VISIT' || t.category === 'PAKET KLINIK') && t.harga != null) {
-      packagePriceMap.set(vid, t.harga)
-    }
   }
 
   return visits.map((v) => {
     const pay = payMap.get(v.id)
+    const pkg = packageMap.get(v.id)
     return {
       id:                   v.id,
       patient_id:           v.patient_id,
@@ -128,7 +137,8 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
       notes:                v.notes,
       has_payment:          !!pay,
       visit_payment_status: pay ? (pay.all_paid ? 'LUNAS' : pay.payment_status) : null,
-      visit_package_price:  packagePriceMap.get(v.id) ?? null,
+      visit_package_price:       pkg?.harga ?? null,
+      visit_package_outstanding: pkg?.outstanding ?? null,
     }
   })
 }

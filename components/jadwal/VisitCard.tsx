@@ -61,8 +61,11 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
     : (visit.service_type ? SERVICE_TYPE_LABEL[visit.service_type] : undefined)
 
   const isAssessmentVisit   = visit.service_type === 'TERAPI AWAL' || visit.service_type === 'TA VISIT'
-  const showSellPackageItem = canRecordPayment && isAssessmentVisit && visit.status === 'completed'
-    && !visit.package_id && visit.has_payment && visit.visit_payment_status === 'LUNAS'
+  // Selling a package is always offered on a completed visit — including one that's
+  // already part of an existing package (patients can buy ahead/renew). A fresh TA
+  // assessment is the one case that must be paid for first, before upselling a package.
+  const showSellPackageItem = canRecordPayment && visit.status === 'completed'
+    && (isAssessmentVisit ? (visit.has_payment && visit.visit_payment_status === 'LUNAS') : true)
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
@@ -171,10 +174,15 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
           </span>
         )}
 
-        {/* Package price — shown after a new package is sold from this visit */}
+        {/* Package price — shown after a new package is sold from this visit.
+            Shows remaining balance too when the sale was a DP, not a full payment. */}
         {visit.visit_package_price != null && (
-          <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-primary/15 text-primary border border-primary/30">
-            {formatCurrency(visit.visit_package_price)}
+          <span
+            className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-primary/15 text-primary border border-primary/30"
+            title="Harga paket"
+          >
+            Paket {formatCurrency(visit.visit_package_price)}
+            {!!visit.visit_package_outstanding && ` · Sisa ${formatCurrency(visit.visit_package_outstanding)}`}
           </span>
         )}
 

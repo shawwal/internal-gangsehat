@@ -4,7 +4,7 @@ import './target-progress-styles.css'
 import { useCallback, useEffect, useState } from 'react'
 import { Table2, TrendingUp, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { VISIT_STATUS_FILTER } from '@/components/performance/utils'
+import { VISIT_STATUS_FILTER, TODAY_ISO } from '@/components/performance/utils'
 import { MonthPicker } from '@/components/targetProgress/MonthPicker'
 import { BranchPicker } from '@/components/targetProgress/BranchPicker'
 import { ClassicTable } from '@/components/targetProgress/ClassicTable'
@@ -94,16 +94,15 @@ export default function TargetProgressPage() {
         .maybeSingle(),
       supabase
         .from('patient_visits')
-        .select('id, visit_date, service_type')
+        .select('id, visit_date, service_type, kehadiran, package_id')
         .eq('branch_id', selectedBranchId)
         .gte('visit_date', range.start)
         .lte('visit_date', range.end)
-        .in('status', [...VISIT_STATUS_FILTER])
-        .eq('kehadiran', 'HADIR'),
+        .in('status', [...VISIT_STATUS_FILTER]),
     ])
 
     const days = daysInMonth(year, month)
-    const daily = buildDailyCounts((visits ?? []) as VisitForProgress[], days)
+    const daily = buildDailyCounts((visits ?? []) as VisitForProgress[], days, TODAY_ISO)
     const t = targetRow as BranchTargetForProgress | null
     const targetFields: Record<CategoryKey, number> = {
       ta: t?.target_ta ?? 0,

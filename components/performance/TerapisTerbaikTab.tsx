@@ -7,8 +7,8 @@ import { LeaderboardTable } from './LeaderboardTable'
 import { PodiumSkeleton, TableSkeleton } from './Skeletons'
 import {
   MONTHS, CURRENT_MONTH, CURRENT_YEAR, YEARS,
-  VISIT_STATUS_FILTER, TA_TYPES, PAKET_TYPES, SESI_TYPES,
-  getMonthRange,
+  VISIT_STATUS_FILTER, TODAY_ISO, TA_TYPES, PAKET_TYPES, SESI_TYPES,
+  getMonthRange, isAttended,
 } from './utils'
 import type { VisitForLeaderboard, StaffTargetRow, FisioStats } from './types'
 
@@ -37,13 +37,12 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
         let q = supabase
           .from('patient_visits')
           .select(
-            'attending_staff_id, service_type, ' +
+            'attending_staff_id, service_type, visit_date, kehadiran, ' +
             'internal_profiles!attending_staff_id(full_name, avatar_url)',
           )
           .gte('visit_date', start)
           .lte('visit_date', end)
           .in('status', [...VISIT_STATUS_FILTER])
-          .eq('kehadiran', 'HADIR')
           .not('attending_staff_id', 'is', null)
         if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
         return q
@@ -63,7 +62,7 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
       })(),
     ])
 
-    const vData = (visitsRes.data  ?? []) as unknown as VisitForLeaderboard[]
+    const vData = ((visitsRes.data ?? []) as unknown as VisitForLeaderboard[]).filter(v => isAttended(v, TODAY_ISO))
     const tData = (targetsRes.data ?? []) as unknown as StaffTargetRow[]
     setTargets(tData)
 

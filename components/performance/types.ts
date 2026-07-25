@@ -23,6 +23,8 @@ export interface VisitRow {
   service_type: string | null
   attending_staff_id: string | null
   visit_date: string
+  kehadiran: 'HADIR' | 'TIDAK HADIR' | null
+  package_id: string | null
   patients: { no_rm: string | null } | null
   internal_profiles: { full_name: string } | null
 }
@@ -31,11 +33,14 @@ export interface VisitForPerforma {
   visit_date: string
   service_type: string | null
   attending_staff_id: string | null
+  kehadiran: 'HADIR' | 'TIDAK HADIR' | null
 }
 
 export interface VisitForLeaderboard {
   attending_staff_id: string | null
   service_type: string | null
+  visit_date: string
+  kehadiran: 'HADIR' | 'TIDAK HADIR' | null
   internal_profiles: { full_name: string; avatar_url: string | null } | null
 }
 

@@ -7,8 +7,8 @@ import { FisioBarChart } from './FisioBarChart'
 import { RecentVisitsTable } from './RecentVisitsTable'
 import { KpiSkeleton, ChartSkeleton, TableSkeleton } from './Skeletons'
 import {
-  MONTHS, CURRENT_MONTH, YEARS, VISIT_STATUS_FILTER,
-  TA_TYPES, PAKET_TYPES, classifyServiceType,
+  MONTHS, CURRENT_MONTH, YEARS, VISIT_STATUS_FILTER, TODAY_ISO,
+  TA_TYPES, PAKET_TYPES, classifyServiceType, isAttended, firstPackageVisits,
   getMonthRange, getWeekRangeInMonth,
 } from './utils'
 import type {
@@ -48,14 +48,12 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
         let q = supabase
           .from('patient_visits')
           .select(
-            'id, service_type, attending_staff_id, visit_date, ' +
-            'patients!patient_id(no_rm), ' +
+            'id, patient_id, service_type, attending_staff_id, visit_date, kehadiran, package_id, ' +
             'internal_profiles!attending_staff_id(full_name)',
           )
           .gte('visit_date', range.start)
           .lte('visit_date', range.end)
           .in('status', [...VISIT_STATUS_FILTER])
-          .eq('kehadiran', 'HADIR')
           .order('visit_date', { ascending: false })
         if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
         return q
@@ -75,7 +73,17 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
       })(),
     ])
 
-    setVisits((visitsRes.data ?? []) as unknown as VisitRow[])
+    // patient_visits has no FK relationship registered for `patient_id` in the
+    // PostgREST schema cache, so `patients!patient_id(...)` embedding silently
+    // errors out the whole query — fetch patients separately instead (two-step).
+    const rawVisits = (visitsRes.data ?? []) as unknown as (VisitRow & { patient_id: string })[]
+    const patientIds = [...new Set(rawVisits.map(v => v.patient_id))]
+    const { data: patientsData } = patientIds.length
+      ? await supabase.from('patients').select('id, no_rm').in('id', patientIds)
+      : { data: [] as { id: string; no_rm: string | null }[] }
+    const noRmById = new Map((patientsData ?? []).map(p => [p.id, p.no_rm]))
+
+    setVisits(rawVisits.map(v => ({ ...v, patients: { no_rm: noRmById.get(v.patient_id) ?? null } })))
     setTargets((targetsRes.data ?? []) as unknown as StaffTargetRow[])
     setLoading(false)
   }, [year, branchFilter, periodMode, month, week])
@@ -83,10 +91,13 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
   useEffect(() => { load() }, [load])
 
   // ── Derived KPI data ───────────────────────────────────────────────────────
-  const actualTA     = visits.filter(v => (TA_TYPES as readonly string[]).includes(v.service_type ?? '')).length
-  const actualPaket  = visits.filter(v => (PAKET_TYPES as readonly string[]).includes(v.service_type ?? '')).length
-  const actualKunjungan = visits.length
-  const actualVisit  = visits.filter(v => v.service_type === 'PAKET VISIT').length
+  const attended = visits.filter(v => isAttended(v, TODAY_ISO))
+  const paketAttended = attended.filter(v => (PAKET_TYPES as readonly string[]).includes(v.service_type ?? ''))
+
+  const actualTA     = attended.filter(v => (TA_TYPES as readonly string[]).includes(v.service_type ?? '')).length
+  const actualPaket  = firstPackageVisits(paketAttended).length
+  const actualKunjungan = attended.length
+  const actualVisit  = firstPackageVisits(paketAttended.filter(v => v.service_type === 'PAKET VISIT')).length
 
   const targetTA         = targets.reduce((s, t) => s + (t.target_ta ?? 0), 0)
   const targetPaket      = targets.reduce((s, t) => s + (t.target_paket_klinik ?? 0), 0)
@@ -95,7 +106,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
 
   // ── Fisio bar data ─────────────────────────────────────────────────────────
   const fisioMap = new Map<string, { fullName: string; ta: number }>()
-  for (const v of visits) {
+  for (const v of attended) {
     if (!v.attending_staff_id) continue
     const name = (v.internal_profiles as any)?.full_name ?? 'Unknown'
     const cur = fisioMap.get(v.attending_staff_id) ?? { fullName: name, ta: 0 }

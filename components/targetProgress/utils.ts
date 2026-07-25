@@ -1,9 +1,10 @@
-import { TA_TYPES } from '@/components/performance/utils'
+import { TA_TYPES, isAttended, firstPackageVisits } from '@/components/performance/utils'
 import type { CategoryKey, DailyCounts, VisitForProgress } from './types'
 
 export {
   pctValue, formatPct, progressColor,
   getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR, YEARS,
+  isAttended,
 } from '@/components/performance/utils'
 
 export function daysInMonth(year: number, month: number): number {
@@ -18,20 +19,31 @@ function classify(serviceType: string | null): CategoryKey | null {
   return null
 }
 
-export function buildDailyCounts(visits: VisitForProgress[], days: number): DailyCounts {
+export function buildDailyCounts(visits: VisitForProgress[], days: number, todayISO: string): DailyCounts {
   const daily: DailyCounts = {
     ta: Array(days).fill(0),
     paket_klinik: Array(days).fill(0),
     kunjungan: Array(days).fill(0),
     paket_visit: Array(days).fill(0),
   }
-  for (const v of visits) {
+
+  const attended = visits.filter((v) => isAttended(v, todayISO))
+  const paket = attended.filter((v) => v.service_type === 'PAKET TERAPI' || v.service_type === 'PAKET VISIT')
+
+  for (const v of attended) {
     const day = Number(v.visit_date.slice(8, 10))
     if (!day || day < 1 || day > days) continue
     daily.kunjungan[day - 1] += 1
-    const cat = classify(v.service_type)
-    if (cat) daily[cat][day - 1] += 1
+    if (classify(v.service_type) === 'ta') daily.ta[day - 1] += 1
   }
+
+  for (const v of firstPackageVisits(paket)) {
+    const day = Number(v.visit_date.slice(8, 10))
+    if (!day || day < 1 || day > days) continue
+    const cat = classify(v.service_type)
+    if (cat === 'paket_klinik' || cat === 'paket_visit') daily[cat][day - 1] += 1
+  }
+
   return daily
 }
 

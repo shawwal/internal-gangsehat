@@ -3,6 +3,12 @@ export const CURRENT_YEAR = new Date().getFullYear()
 export const CURRENT_MONTH = new Date().getMonth() + 1
 export const YEARS = Array.from({ length: Math.max(CURRENT_YEAR - 2022, 1) }, (_, i) => CURRENT_YEAR - i)
 
+function todayISO(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+export const TODAY_ISO = todayISO()
+
 export const PIE_COLORS = ['#FF0090', '#FFB35C', '#34C759']
 
 // Service type groupers
@@ -84,4 +90,37 @@ export function formatDateShort(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('id-ID', {
     day: '2-digit', month: 'short', year: '2-digit',
   })
+}
+
+// Matches the legacy dashboard's attendance convention: past visits with no
+// kehadiran recorded are assumed attended (staff often forgets to mark it
+// after the fact), but a visit dated today or later must be explicitly
+// confirmed HADIR — otherwise a freshly scheduled jadwal harian entry would
+// count before it's actually happened.
+export function isAttended(
+  v: { kehadiran?: 'HADIR' | 'TIDAK HADIR' | null; visit_date: string },
+  todayISO: string = TODAY_ISO,
+): boolean {
+  if (v.kehadiran === 'HADIR') return true
+  if (v.kehadiran == null && v.visit_date < todayISO) return true
+  return false
+}
+
+// Paket Klinik / Paket Visit are counted once per package — on the date of
+// its earliest attended session — not once per session delivered, matching
+// how the legacy dashboard tracks new package sales rather than session volume.
+export function firstPackageVisits<T extends { package_id?: string | null; visit_date: string }>(
+  paketVisits: T[],
+): T[] {
+  const firstByPackage = new Map<string, T>()
+  const standalone: T[] = []
+  for (const v of paketVisits) {
+    if (v.package_id) {
+      const existing = firstByPackage.get(v.package_id)
+      if (!existing || v.visit_date < existing.visit_date) firstByPackage.set(v.package_id, v)
+    } else {
+      standalone.push(v)
+    }
+  }
+  return [...firstByPackage.values(), ...standalone]
 }
