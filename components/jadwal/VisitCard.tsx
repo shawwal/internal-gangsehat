@@ -30,7 +30,6 @@ interface Props {
   onOpen: (id: string) => void
   /** Opens the visit's session note / medical record */
   onOpenRecord: (id: string) => void
-  onNoShow?: (id: string) => void
   onPayment?: (id: string) => void
   onRemind?: (id: string) => void
   onWhatsApp?: (id: string) => void
@@ -38,7 +37,7 @@ interface Props {
   onSellPackage?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onNoShow, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -222,11 +221,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
               <button
                 key={s}
                 onClick={() => {
-                  if (s === 'no_show' && onNoShow) {
-                    onNoShow(visit.id)
-                  } else {
-                    onStatusChange(visit.id, s)
-                  }
+                  onStatusChange(visit.id, s)
                   setMenuOpen(false)
                 }}
                 className={[

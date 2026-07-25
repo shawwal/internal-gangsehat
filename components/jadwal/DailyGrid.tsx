@@ -81,7 +81,6 @@ interface Props {
   onOpenRecord: (visitId: string, shift?: string) => void
   onPendingLeaveClick: (staffName: string, leave: PendingLeaveInfo) => void
   onStaffClick: (staffId: string) => void
-  onNoShow?: (visitId: string) => void
   onPayment?: (visitId: string) => void
   onRemind?: (visitId: string) => void
   onWhatsApp?: (visitId: string) => void
@@ -90,7 +89,7 @@ interface Props {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onNoShow, onPayment, onRemind, onWhatsApp, refreshingCell, onSellPackage }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, refreshingCell, onSellPackage }: Props) {
   // Current time (used later for time line after range is known)
   const now   = new Date()
   const today = now.toISOString().split('T')[0]
@@ -101,6 +100,9 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
   const untimedVisits = new Map<string, DailyVisit[]>()
 
   for (const v of visits) {
+    // No-show visits stay recorded in patient_visits (kehadiran = 'TIDAK HADIR')
+    // but are hidden from the grid so the freed slot can be reassigned.
+    if (v.status === 'no_show') continue
     const sid = v.attending_staff_id ?? '__unassigned__'
     if (!v.visit_time) {
       const list = untimedVisits.get(sid) ?? []
@@ -267,7 +269,6 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                       onDelete={onDelete}
                       onOpen={onOpen}
                       onOpenRecord={(id) => onOpenRecord(id, s.shift || undefined)}
-                      onNoShow={onNoShow}
                       onPayment={onPayment}
                       onRemind={onRemind}
                       onWhatsApp={onWhatsApp}
@@ -456,7 +457,6 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                           onDelete={onDelete}
                           onOpen={onOpen}
                           onOpenRecord={(id) => onOpenRecord(id, s.shift || undefined)}
-                          onNoShow={onNoShow}
                           onPayment={onPayment}
                           onRemind={onRemind}
                           onWhatsApp={onWhatsApp}

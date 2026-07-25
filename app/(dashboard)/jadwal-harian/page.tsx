@@ -16,7 +16,6 @@ import { DailyGrid } from '@/components/jadwal/DailyGrid'
 import { AssignDialog } from '@/components/jadwal/AssignDialog'
 import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
 import { StaffDetailModal } from '@/components/jadwal/StaffDetailModal'
-import { NoShowDialog } from '@/components/jadwal/NoShowDialog'
 import { ControlsBar } from '@/components/jadwal/ControlsBar'
 import { FocusModeBar } from '@/components/jadwal/FocusModeBar'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
@@ -52,7 +51,6 @@ export default function JadwalHarianPage() {
   const [selectedVisitId, setSelectedVisitId]       = useState<string | null>(null)
   const [selectedVisitShift, setSelectedVisitShift] = useState<string | null>(null)
   const [selectedStaffId, setSelectedStaffId]       = useState<string | null>(null)
-  const [noShowVisit, setNoShowVisit]               = useState<DailyVisit | null>(null)
   const [paymentVisit, setPaymentVisit]             = useState<DailyVisit | null>(null)
   const [packagePrompt, setPackagePrompt]           = useState<
     (MedicalRecordSavedContext & { patientName: string; branchId: string | null; visitId: string }) | null
@@ -123,10 +121,6 @@ export default function JadwalHarianPage() {
     const next = !showInactive
     setShowInactive(next)
     localStorage.setItem(LS_KEY, String(next))
-  }
-
-  function handleNoShow(visitId: string) {
-    setNoShowVisit(visits.find((v) => v.id === visitId) ?? null)
   }
 
   function handleOpenPayment(visitId: string) {
@@ -353,7 +347,6 @@ export default function JadwalHarianPage() {
                 }}
                 onPendingLeaveClick={(staffName, leave) => setLeavePopover({ staffName, leave })}
                 onStaffClick={setSelectedStaffId}
-                onNoShow={handleNoShow}
                 onPayment={handleOpenPayment}
                 onRemind={canSendReminders ? handleRemind : undefined}
                 onWhatsApp={handleWhatsAppReminder}
@@ -416,18 +409,6 @@ export default function JadwalHarianPage() {
           }
         }}
       />
-
-      {noShowVisit && (
-        <NoShowDialog
-          visit={noShowVisit}
-          onClose={() => setNoShowVisit(null)}
-          onSaved={() => {
-            const visitId = noShowVisit.id
-            setNoShowVisit(null)
-            silentReload({ type: 'visit', visitId })
-          }}
-        />
-      )}
 
       {selectedStaffId && (
         <StaffDetailModal

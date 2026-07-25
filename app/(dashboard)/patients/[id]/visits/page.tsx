@@ -14,6 +14,8 @@ import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel } from '@/lib/excel-export'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { getVisitFormRoute } from '@/lib/visitRouting'
+import { fetchBranchStaff, type BranchStaffMember } from '@/app/actions/jadwal'
+import { resolveShiftForStaffDate } from '@/app/actions/rollingShift'
 import type { PaymentVisitInfo } from '@/components/visits/PaymentDialog'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 import type { PatientVisit, VisitStatus, ServiceType, BodyRegion, UserRole } from '@/types'
@@ -57,10 +59,13 @@ const SERVICE_BADGE: Record<ServiceType, string> = {
   'LAINNYA':      'bg-muted/40 text-muted-foreground border-border',
 }
 
+const STAFF_PICKER_ROLES: UserRole[] = ['admin', 'manager', 'director', 'hr']
+
 const DEFAULT_FORM = {
-  visit_date:      new Date().toISOString().split('T')[0],
-  service_type:    '' as ServiceType | '',
-  shift:           '' as 'PAGI' | 'SORE' | '',
+  visit_date:         new Date().toISOString().split('T')[0],
+  attending_staff_id: '',
+  service_type:       '' as ServiceType | '',
+  shift:              '' as 'PAGI' | 'SORE' | '',
   kehadiran:       '' as 'HADIR' | 'TIDAK HADIR' | '',
   regio:           '' as BodyRegion | '',
   sumber_pasien:   '',
@@ -159,6 +164,8 @@ export default function PatientVisitsPage() {
   const [userId, setUserId]     = useState<string | null>(null)
   const [branchId, setBranchId] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [branchStaff, setBranchStaff]   = useState<BranchStaffMember[]>([])
+  const [shiftSource, setShiftSource]   = useState<'rolling' | 'override' | null>(null)
 
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
   const [paymentVisit, setPaymentVisit]       = useState<PaymentVisitInfo | null>(null)
@@ -187,6 +194,9 @@ export default function PatientVisitsPage() {
     setUserId(user.id)
     setBranchId(profile?.branch_id ?? null)
     setUserRole((profile?.role as UserRole) ?? null)
+    if (profile?.branch_id && STAFF_PICKER_ROLES.includes((profile.role as UserRole) ?? '' as UserRole)) {
+      fetchBranchStaff(profile.branch_id).then(setBranchStaff)
+    }
   }
 
   async function load() {
@@ -207,6 +217,22 @@ export default function PatientVisitsPage() {
 
   useEffect(() => { loadProfile().then(() => load()) }, [id])
 
+  // Auto-resolve the shift once we know who's attending and on what date —
+  // covers both rolling-team staff and the flat weekly `schedules`. Doesn't
+  // overwrite a value the user picked manually.
+  useEffect(() => {
+    if (!showForm) return
+    const staffId = form.attending_staff_id || userId
+    if (!staffId || !form.visit_date) return
+    let cancelled = false
+    resolveShiftForStaffDate(staffId, form.visit_date).then((res) => {
+      if (cancelled || !res.shift || res.shift === 'OFF') return
+      setForm((f) => ({ ...f, shift: res.shift as 'PAGI' | 'SORE' }))
+      setShiftSource(res.source)
+    })
+    return () => { cancelled = true }
+  }, [showForm, form.attending_staff_id, form.visit_date, userId])
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (!branchId) { alert('Akun Anda belum terhubung ke cabang.'); return }
@@ -214,7 +240,7 @@ export default function PatientVisitsPage() {
     await createClient().from('patient_visits').insert({
       patient_id:         id,
       branch_id:          branchId,
-      attending_staff_id: userId,
+      attending_staff_id: form.attending_staff_id || userId,
       visit_date:         form.visit_date,
       service_type:       form.service_type    || null,
       shift:              form.shift           || null,
@@ -515,16 +541,41 @@ export default function PatientVisitsPage() {
             </div>
 
             <form id="add-visit-form" onSubmit={handleAdd} className="flex-1 overflow-y-auto p-5 space-y-3">
+              {branchStaff.length > 0 && (
+                <div>
+                  <label className={labelCls}>Terapis / Staff</label>
+                  <select
+                    value={form.attending_staff_id}
+                    onChange={(e) => { setShiftSource(null); setForm((f) => ({ ...f, attending_staff_id: e.target.value })) }}
+                    className={inputCls}
+                  >
+                    <option value="">Saya sendiri</option>
+                    {branchStaff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                  </select>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>Tanggal</label>
                   <input required type="date" value={form.visit_date}
-                    onChange={(e) => setForm((f) => ({ ...f, visit_date: e.target.value }))}
+                    onChange={(e) => { setShiftSource(null); setForm((f) => ({ ...f, visit_date: e.target.value })) }}
                     className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Shift</label>
-                  <select value={form.shift} onChange={(e) => setForm((f) => ({ ...f, shift: e.target.value as typeof form.shift }))} className={inputCls}>
+                  <label className={labelCls}>
+                    Shift
+                    {shiftSource && (
+                      <span className="ml-1.5 text-[10px] font-normal text-primary">
+                        ({shiftSource === 'rolling' ? 'otomatis' : 'override'})
+                      </span>
+                    )}
+                  </label>
+                  <select
+                    value={form.shift}
+                    onChange={(e) => { setShiftSource(null); setForm((f) => ({ ...f, shift: e.target.value as typeof form.shift })) }}
+                    className={inputCls}
+                  >
                     <option value="">— Pilih —</option>
                     <option value="PAGI">PAGI</option>
                     <option value="SORE">SORE</option>
