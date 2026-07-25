@@ -225,6 +225,16 @@ export const navigation: NavItem[] = [
     group: 'schedule',
   },
 
+  // Rolling Shift — director + HR only (Tim A / Tim B 2-week rotation config)
+  {
+    key: 'rolling-shift',
+    label: 'Rolling Shift',
+    href: '/hr/rolling-shift',
+    icon: 'RefreshCw',
+    roles: ['director', 'hr'],
+    group: 'schedule',
+  },
+
   // Daily schedule + patient assignment — HR, manager, therapist, staff, director
   {
     key: 'jadwal-harian',

@@ -22,7 +22,7 @@ interface Props {
 type FollowUp = 'none' | 'reschedule' | 'replace'
 
 export function NoShowDialog({ visit, onClose, onSaved }: Props) {
-  const [followUp, setFollowUp] = useState<FollowUp>('reschedule')
+  const [followUp, setFollowUp] = useState<FollowUp>('none')
 
   const [newDate,     setNewDate]     = useState(visit.visit_date)
   const [newTime,     setNewTime]     = useState(visit.visit_time ?? '')
@@ -94,6 +94,12 @@ export function NoShowDialog({ visit, onClose, onSaved }: Props) {
         setSaving(false)
         return
       }
+      const sameSlot = newDate === visit.visit_date && (newTime || null) === (visit.visit_time || null)
+      if (sameSlot) {
+        setError('Tanggal/jam baru harus berbeda dari slot asal — ubah tanggal atau jam, atau gunakan "Ganti Pasien" untuk mengisi slot ini dengan pasien lain.')
+        setSaving(false)
+        return
+      }
       reschedule = {
         visit_date:         newDate,
         visit_time:         newTime || null,
@@ -158,6 +164,9 @@ export function NoShowDialog({ visit, onClose, onSaved }: Props) {
             </p>
             {visit.visit_time && (
               <p>Waktu terjadwal: <span className="font-mono">{visit.visit_time}</span></p>
+            )}
+            {followUp === 'none' && (
+              <p>Slot ini akan kosong dan bisa diisi pasien lain lewat &quot;Ganti Pasien&quot; atau grid.</p>
             )}
           </div>
 
