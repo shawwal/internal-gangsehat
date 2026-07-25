@@ -1,14 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { X, UserX, CalendarClock, Loader2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { X, UserX, Loader2, UserCog } from 'lucide-react'
 import {
   markNoShowAndReschedule,
+  markNoShowAndReplace,
   fetchBranchStaff,
   type BranchStaffMember,
   type RescheduleInput,
 } from '@/app/actions/jadwal'
 import type { DailyVisit } from '@/app/actions/jadwal'
+import { searchPatients, type PatientPlain } from '@/app/actions/patients'
+import { PatientSearch } from '@/components/jadwal/assign/PatientSearch'
 
 interface Props {
   visit: DailyVisit
@@ -16,8 +19,10 @@ interface Props {
   onSaved: () => void
 }
 
+type FollowUp = 'none' | 'reschedule' | 'replace'
+
 export function NoShowDialog({ visit, onClose, onSaved }: Props) {
-  const [willReschedule, setWillReschedule] = useState(true)
+  const [followUp, setFollowUp] = useState<FollowUp>('reschedule')
 
   const [newDate,     setNewDate]     = useState(visit.visit_date)
   const [newTime,     setNewTime]     = useState(visit.visit_time ?? '')
@@ -28,17 +33,36 @@ export function NoShowDialog({ visit, onClose, onSaved }: Props) {
   const [staffList,    setStaffList]    = useState<BranchStaffMember[]>([])
   const [staffLoading, setStaffLoading] = useState(false)
 
+  // Replace mode — pick a different patient for the same slot
+  const [replaceSearch,  setReplaceSearch]  = useState('')
+  const [replaceResults, setReplaceResults] = useState<PatientPlain[]>([])
+  const [replaceSearching, setReplaceSearching] = useState(false)
+  const [replacePatient, setReplacePatient] = useState<PatientPlain | null>(null)
+  const [replaceNotes,   setReplaceNotes]   = useState('')
+  const replaceSearchRef = useRef<HTMLInputElement>(null)
+
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState<string | null>(null)
 
   useEffect(() => {
-    if (!willReschedule || !visit.branch_id) return
+    if (followUp !== 'reschedule' || !visit.branch_id) return
     setStaffLoading(true)
     fetchBranchStaff(visit.branch_id).then((list) => {
       setStaffList(list)
       setStaffLoading(false)
     })
-  }, [willReschedule, visit.branch_id])
+  }, [followUp, visit.branch_id])
+
+  useEffect(() => {
+    if (followUp !== 'replace') return
+    const q = replaceSearch.trim()
+    const t = setTimeout(() => {
+      if (q.length < 2) { setReplaceResults([]); setReplaceSearching(false); return }
+      setReplaceSearching(true)
+      searchPatients(q).then((r) => { setReplaceResults(r); setReplaceSearching(false) })
+    }, q.length < 2 ? 0 : 300)
+    return () => clearTimeout(t)
+  }, [followUp, replaceSearch])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
@@ -50,8 +74,21 @@ export function NoShowDialog({ visit, onClose, onSaved }: Props) {
     setSaving(true)
     setError(null)
 
+    if (followUp === 'replace') {
+      if (!replacePatient) {
+        setError('Pilih pasien pengganti.')
+        setSaving(false)
+        return
+      }
+      const { error: err } = await markNoShowAndReplace(visit.id, replacePatient.id, replaceNotes.trim() || null)
+      setSaving(false)
+      if (err) { setError(err); return }
+      onSaved()
+      return
+    }
+
     let reschedule: RescheduleInput | undefined
-    if (willReschedule) {
+    if (followUp === 'reschedule') {
       if (!newDate) {
         setError('Tanggal baru wajib diisi.')
         setSaving(false)
@@ -124,36 +161,31 @@ export function NoShowDialog({ visit, onClose, onSaved }: Props) {
             )}
           </div>
 
-          {/* Reschedule toggle */}
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                <CalendarClock size={14} className="text-primary" />
-                Jadwal Ulang
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">Buat kunjungan baru untuk pasien ini</p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={willReschedule}
-              onClick={() => setWillReschedule((v) => !v)}
-              className={[
-                'relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer',
-                willReschedule ? 'bg-primary' : 'bg-muted',
-              ].join(' ')}
-            >
-              <span
+          {/* Follow-up mode */}
+          <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-muted/30 border border-border/50">
+            {([
+              { key: 'none',       label: 'Tanpa Tindak Lanjut' },
+              { key: 'reschedule', label: 'Jadwal Ulang' },
+              { key: 'replace',    label: 'Ganti Pasien' },
+            ] as const).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setFollowUp(opt.key)}
                 className={[
-                  'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
-                  willReschedule ? 'translate-x-4' : 'translate-x-0',
+                  'py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                  followUp === opt.key
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted',
                 ].join(' ')}
-              />
-            </button>
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
 
           {/* Reschedule form */}
-          {willReschedule && (
+          {followUp === 'reschedule' && (
             <div className="space-y-3 pt-1 border-t border-border/50">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -228,6 +260,64 @@ export function NoShowDialog({ visit, onClose, onSaved }: Props) {
             </div>
           )}
 
+          {/* Replace-patient form */}
+          {followUp === 'replace' && (
+            <div className="space-y-3 pt-1 border-t border-border/50">
+              <div className="px-3 py-2 rounded-xl bg-white/5 border border-border/50 text-xs text-muted-foreground flex items-center gap-1.5">
+                <UserCog size={12} className="shrink-0" />
+                Slot yang sama akan diisi pasien baru:{' '}
+                <span className="font-mono">
+                  {fmtDate(visit.visit_date)}{visit.visit_time ? ` · ${visit.visit_time}` : ''}
+                </span>
+              </div>
+
+              {replacePatient ? (
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary/10 border border-primary/30">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                    {replacePatient.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{replacePatient.name}</p>
+                    {replacePatient.phone && (
+                      <p className="text-xs text-muted-foreground">{replacePatient.phone}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setReplacePatient(null)}
+                    className="p-1 rounded-lg hover:bg-white/10 cursor-pointer text-muted-foreground transition-colors"
+                    aria-label="Ganti pilihan pasien"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <PatientSearch
+                  search={replaceSearch}
+                  setSearch={setReplaceSearch}
+                  results={replaceResults}
+                  searching={replaceSearching}
+                  searchRef={replaceSearchRef}
+                  onSelect={setReplacePatient}
+                />
+              )}
+
+              {replacePatient && (
+                <div>
+                  <label className={labelCls}>
+                    Catatan <span className="text-muted-foreground font-normal">(opsional)</span>
+                  </label>
+                  <textarea
+                    value={replaceNotes}
+                    onChange={(e) => setReplaceNotes(e.target.value)}
+                    rows={2}
+                    placeholder="mis. Mengisi slot kosong karena pasien sebelumnya tidak hadir"
+                    className={`${inputCls} resize-none`}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {error && (
             <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-xl">{error}</p>
           )}
@@ -251,8 +341,10 @@ export function NoShowDialog({ visit, onClose, onSaved }: Props) {
             {saving && <Loader2 size={13} className="animate-spin" />}
             {saving
               ? 'Menyimpan...'
-              : willReschedule
+              : followUp === 'reschedule'
               ? 'Tandai & Jadwal Ulang'
+              : followUp === 'replace'
+              ? 'Tandai & Ganti Pasien'
               : 'Tandai Tidak Hadir'}
           </button>
         </div>

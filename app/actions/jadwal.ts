@@ -340,6 +340,47 @@ export async function markNoShowAndReschedule(
   return { error: createErr?.message ?? null }
 }
 
+// ── Mark visit as no-show and give the vacated slot to a different patient ────
+export async function markNoShowAndReplace(
+  visitId: string,
+  newPatientId: string,
+  notes?: string | null,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+
+  const { data: original, error: fetchErr } = await supabase
+    .from('patient_visits')
+    .select('patient_id, branch_id, visit_date, visit_time, shift, attending_staff_id, service_type')
+    .eq('id', visitId)
+    .single()
+  if (fetchErr || !original) return { error: fetchErr?.message ?? 'Kunjungan asal tidak ditemukan' }
+
+  if (original.patient_id === newPatientId) {
+    return { error: 'Pasien baru harus berbeda dari pasien asal. Gunakan Jadwal Ulang untuk pasien yang sama.' }
+  }
+
+  const { error: noShowErr } = await supabase
+    .from('patient_visits')
+    .update({ status: 'no_show', kehadiran: 'TIDAK HADIR', updated_at: new Date().toISOString() })
+    .eq('id', visitId)
+  if (noShowErr) return { error: noShowErr.message }
+
+  const { error: createErr } = await supabase.from('patient_visits').insert({
+    patient_id:         newPatientId,
+    branch_id:          original.branch_id,
+    attending_staff_id: original.attending_staff_id,
+    visit_date:         original.visit_date,
+    visit_time:         original.visit_time,
+    shift:              original.shift,
+    service_type:       original.service_type,
+    chief_complaint:    null,
+    status:             'scheduled',
+    notes:              notes ?? null,
+    updated_at:         new Date().toISOString(),
+  })
+  return { error: createErr?.message ?? null }
+}
+
 // ── Bulk-create visits (recurring assignment) ──────────────────────────────────
 export async function createBulkVisits(
   inputs: CreateVisitInput[],
