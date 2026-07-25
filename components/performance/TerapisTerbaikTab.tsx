@@ -43,6 +43,7 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
           .gte('visit_date', start)
           .lte('visit_date', end)
           .in('status', [...VISIT_STATUS_FILTER])
+          .eq('kehadiran', 'HADIR')
           .not('attending_staff_id', 'is', null)
         if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
         return q

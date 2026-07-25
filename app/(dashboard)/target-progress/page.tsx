@@ -98,7 +98,8 @@ export default function TargetProgressPage() {
         .eq('branch_id', selectedBranchId)
         .gte('visit_date', range.start)
         .lte('visit_date', range.end)
-        .in('status', [...VISIT_STATUS_FILTER]),
+        .in('status', [...VISIT_STATUS_FILTER])
+        .eq('kehadiran', 'HADIR'),
     ])
 
     const days = daysInMonth(year, month)

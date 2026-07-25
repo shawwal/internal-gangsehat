@@ -55,6 +55,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
           .gte('visit_date', range.start)
           .lte('visit_date', range.end)
           .in('status', [...VISIT_STATUS_FILTER])
+          .eq('kehadiran', 'HADIR')
           .order('visit_date', { ascending: false })
         if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
         return q
