@@ -51,6 +51,12 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const canRemind        = !!userRole && REMIND_ROLES.includes(userRole) && isIncomplete && !!onRemind
   const canSendWhatsApp  = visit.status === 'scheduled' && !!visit.patient_phone && !!onWhatsApp
 
+  // A visit scheduled against an existing package keeps its literal service_type
+  // (e.g. 'SESI TERAPI') but is still a package session — package_id wins.
+  const serviceTypeLabel   = visit.package_id
+    ? 'Paket'
+    : (visit.service_type ? SERVICE_TYPE_LABEL[visit.service_type] : undefined)
+
   const isAssessmentVisit   = visit.service_type === 'TERAPI AWAL' || visit.service_type === 'TA VISIT'
   const showSellPackageItem = canRecordPayment && isAssessmentVisit && visit.status === 'completed'
     && !visit.package_id && visit.has_payment && visit.visit_payment_status === 'LUNAS'
@@ -120,9 +126,9 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
         {visit.visit_time && (
           <span className="text-[9px] font-mono opacity-70">{visit.visit_time}</span>
         )}
-        {visit.service_type && SERVICE_TYPE_LABEL[visit.service_type] && (
+        {serviceTypeLabel && (
           <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-white/10 text-foreground/70 border border-white/10">
-            {SERVICE_TYPE_LABEL[visit.service_type]}
+            {serviceTypeLabel}
           </span>
         )}
         <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${STATUS_BADGE[visit.status]}`}>
