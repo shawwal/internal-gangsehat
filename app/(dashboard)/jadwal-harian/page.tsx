@@ -338,12 +338,12 @@ export default function JadwalHarianPage() {
                 onAssign={setAssignTarget}
                 onStatusChange={handleStatusChange}
                 onDelete={handleDelete}
-                onOpen={(id, shift) => {
+                onOpen={(id) => {
                   const v = visits.find((x) => x.id === id)
-                  if (userRole === 'admin') {
-                    if (v) window.open(`/patients/${v.patient_id}/visits`, '_blank', 'noopener,noreferrer')
-                    return
-                  }
+                  if (v) window.open(`/patients/${v.patient_id}/visits`, '_blank', 'noopener,noreferrer')
+                }}
+                onOpenRecord={(id, shift) => {
+                  const v = visits.find((x) => x.id === id)
                   const route = getVisitFormRoute(v?.service_type)
                   if (route) {
                     router.push(`/visits/${id}/${route}?from=/jadwal-harian`)

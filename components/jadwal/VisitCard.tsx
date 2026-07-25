@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package } from 'lucide-react'
+import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
@@ -26,7 +26,10 @@ interface Props {
   userRole?: string | null
   onStatusChange: (id: string, status: VisitStatus) => void
   onDelete: (id: string) => void
+  /** Patient name click — opens the patient's profile/payment history in a new tab */
   onOpen: (id: string) => void
+  /** Opens the visit's session note / medical record */
+  onOpenRecord: (id: string) => void
   onNoShow?: (id: string) => void
   onPayment?: (id: string) => void
   onRemind?: (id: string) => void
@@ -35,7 +38,7 @@ interface Props {
   onSellPackage?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onNoShow, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onNoShow, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -63,7 +66,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
-    if (!canManageVisit) { onOpen(visit.id); return }
+    if (!canManageVisit) { onOpenRecord(visit.id); return }
     if (!cardRef.current) return
     const rect      = cardRef.current.getBoundingClientRect()
     const menuWidth = 208
@@ -111,14 +114,26 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
         </div>
       )}
 
-      {/* Patient name — click drills to medical record, does NOT open menu */}
+      {/* Patient name — opens patient profile/payment history, does NOT open menu */}
       <div className="flex items-start gap-1">
         <button
           onClick={(e) => { e.stopPropagation(); onOpen(visit.id) }}
           className="text-[11px] font-semibold leading-tight flex-1 truncate text-left hover:underline cursor-pointer"
+          title="Buka riwayat kunjungan & pembayaran"
         >
           {visit.patient_name}
         </button>
+        {/* Roles without the quick-action menu (therapist/staff) get an explicit
+            shortcut straight to the session note. */}
+        {!canManageVisit && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onOpenRecord(visit.id) }}
+            className="shrink-0 p-0.5 rounded-md hover:bg-white/10 text-foreground/60 hover:text-foreground transition-colors cursor-pointer"
+            title="Buka rekam medis"
+          >
+            <FileText size={11} />
+          </button>
+        )}
       </div>
 
       {/* Time + status row */}
@@ -221,6 +236,16 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
                 )}
               </button>
             ))}
+
+            <hr className="border-white/10 my-1.5" />
+            <button
+              onClick={() => { onOpenRecord(visit.id); setMenuOpen(false) }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-foreground/80 hover:bg-white/8 hover:text-foreground transition-colors cursor-pointer"
+              role="menuitem"
+            >
+              <FileText size={13} />
+              Buka Rekam Medis
+            </button>
 
             {showPaymentItem && (
               <>

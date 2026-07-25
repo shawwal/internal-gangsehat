@@ -77,7 +77,8 @@ interface Props {
   onAssign: (target: AssignTarget) => void
   onStatusChange: (visitId: string, status: VisitStatus) => void
   onDelete: (visitId: string) => void
-  onOpen: (visitId: string, shift?: string) => void
+  onOpen: (visitId: string) => void
+  onOpenRecord: (visitId: string, shift?: string) => void
   onPendingLeaveClick: (staffName: string, leave: PendingLeaveInfo) => void
   onStaffClick: (staffId: string) => void
   onNoShow?: (visitId: string) => void
@@ -89,7 +90,7 @@ interface Props {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onPendingLeaveClick, onStaffClick, onNoShow, onPayment, onRemind, onWhatsApp, refreshingCell, onSellPackage }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onNoShow, onPayment, onRemind, onWhatsApp, refreshingCell, onSellPackage }: Props) {
   // Current time (used later for time line after range is known)
   const now   = new Date()
   const today = now.toISOString().split('T')[0]
@@ -264,7 +265,8 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                       userRole={userRole}
                       onStatusChange={onStatusChange}
                       onDelete={onDelete}
-                      onOpen={(id) => onOpen(id, s.shift || undefined)}
+                      onOpen={onOpen}
+                      onOpenRecord={(id) => onOpenRecord(id, s.shift || undefined)}
                       onNoShow={onNoShow}
                       onPayment={onPayment}
                       onRemind={onRemind}
@@ -452,7 +454,8 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                           userRole={userRole}
                           onStatusChange={onStatusChange}
                           onDelete={onDelete}
-                          onOpen={(id) => onOpen(id, s.shift || undefined)}
+                          onOpen={onOpen}
+                          onOpenRecord={(id) => onOpenRecord(id, s.shift || undefined)}
                           onNoShow={onNoShow}
                           onPayment={onPayment}
                           onRemind={onRemind}
