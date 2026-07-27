@@ -4,8 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchDailyVisits, updateVisitStatus, deleteVisit } from '@/app/actions/jadwal'
 import { toIso, toHariIndonesia, getMondayOf } from '@/components/jadwal/utils'
-import { SHIFT_HOURS } from '@/components/schedule/constants'
-import { getPeriodeKe, getPolaAktif, getShiftForDay, jsDayToHariKey, type ShiftPatternRow, type TeamName } from '@/lib/shift/rollingShift'
 import type { DayStaffEntry, PendingLeaveInfo } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { VisitStatus } from '@/types'
@@ -77,7 +75,7 @@ export function useJadwalHarian() {
       return selectedBranchId ? q.eq('branch_id', selectedBranchId) : q
     }
 
-    const [schedulesRes, leavesRes, visitsData, overridesRes, allTherapistsRes, rollingRes] = await Promise.all([
+    const [schedulesRes, leavesRes, visitsData, overridesRes, allTherapistsRes] = await Promise.all([
       applyBranch(
         supabase
           .from('schedules')
@@ -108,19 +106,6 @@ export function useJadwalHarian() {
           .eq('is_active', true)
           .order('full_name'),
       ),
-      supabase
-        .from('shift_team_members')
-        .select(`
-          staff_id, effective_start_date, effective_end_date,
-          shift_teams!team_id(
-            name, anchor_date, branch_id,
-            polaX:shift_patterns!pola_x_id(senin, selasa, rabu, kamis, jumat, sabtu),
-            polaY:shift_patterns!pola_y_id(senin, selasa, rabu, kamis, jumat, sabtu)
-          ),
-          internal_profiles!staff_id(full_name, avatar_url, nickname, gender)
-        `)
-        .lte('effective_start_date', isoDate)
-        .or(`effective_end_date.is.null,effective_end_date.gte.${isoDate}`),
     ])
 
     // Separate approved vs pending leaves
@@ -179,48 +164,6 @@ export function useJadwalHarian() {
         pendingLeave: pendingLeaveMap.get(sid) ?? null,
         isOverride:  !!ov,
         overrideId:  ov?.id ?? null,
-      })
-    }
-
-    // Build staff entries from rolling-team assignments (Tim A/B) — staff on a
-    // rolling team never have a `schedules` row, so this is additive, not a
-    // conflict with the loop above.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const row of (rollingRes.data ?? []) as any[]) {
-      const team = row.shift_teams
-      if (!team) continue
-      if (selectedBranchId && team.branch_id !== selectedBranchId) continue
-      const sid = row.staff_id as string
-      if (entries.has(sid)) continue
-      if (suppressedToday.has(sid)) continue
-      const polaX = team.polaX as ShiftPatternRow | undefined
-      const polaY = team.polaY as ShiftPatternRow | undefined
-      if (!polaX || !polaY) continue
-
-      const anchorMonday = new Date(`${team.anchor_date}T00:00:00`)
-      const periodeKe = getPeriodeKe(date, anchorMonday)
-      const pola = getPolaAktif(team.name as TeamName, periodeKe, polaX, polaY)
-      const derivedShift = getShiftForDay(pola, jsDayToHariKey(date))
-      const hours = SHIFT_HOURS[derivedShift] ?? SHIFT_HOURS.PAGI
-
-      const ov = overrideForToday.get(sid)
-      entries.set(sid, {
-        staff_id:    sid,
-        full_name:   row.internal_profiles?.full_name ?? 'Unknown',
-        nickname:    row.internal_profiles?.nickname ?? null,
-        avatar_url:  row.internal_profiles?.avatar_url ?? null,
-        branch_id:   ov?.branch_id ?? team.branch_id ?? null,
-        gender:      (row.internal_profiles?.gender ?? null) as 'male' | 'female' | null,
-        shift:       ov?.shift ?? derivedShift,
-        jam_mulai:   (ov?.jam_mulai ?? hours.jam_mulai)?.slice(0, 5) ?? hours.jam_mulai,
-        jam_selesai: (ov?.jam_selesai ?? hours.jam_selesai)?.slice(0, 5) ?? hours.jam_selesai,
-        isOnLeave:   approvedLeaveMap.has(sid),
-        leaveReason: approvedLeaveMap.get(sid) ?? null,
-        hasSchedule: true,
-        pendingLeave: pendingLeaveMap.get(sid) ?? null,
-        isOverride:  !!ov,
-        overrideId:  ov?.id ?? null,
-        isRolling:   true,
       })
     }
 

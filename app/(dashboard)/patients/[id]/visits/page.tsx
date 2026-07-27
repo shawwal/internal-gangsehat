@@ -15,7 +15,6 @@ import { exportToExcel } from '@/lib/excel-export'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { getVisitFormRoute } from '@/lib/visitRouting'
 import { fetchBranchStaff, type BranchStaffMember } from '@/app/actions/jadwal'
-import { resolveShiftForStaffDate } from '@/app/actions/rollingShift'
 import type { PaymentVisitInfo } from '@/components/visits/PaymentDialog'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 import type { PatientVisit, VisitStatus, ServiceType, BodyRegion, UserRole } from '@/types'
@@ -165,7 +164,6 @@ export default function PatientVisitsPage() {
   const [branchId, setBranchId] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [branchStaff, setBranchStaff]   = useState<BranchStaffMember[]>([])
-  const [shiftSource, setShiftSource]   = useState<'rolling' | 'override' | null>(null)
 
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
   const [paymentVisit, setPaymentVisit]       = useState<PaymentVisitInfo | null>(null)
@@ -216,22 +214,6 @@ export default function PatientVisitsPage() {
   }
 
   useEffect(() => { loadProfile().then(() => load()) }, [id])
-
-  // Auto-resolve the shift once we know who's attending and on what date —
-  // covers both rolling-team staff and the flat weekly `schedules`. Doesn't
-  // overwrite a value the user picked manually.
-  useEffect(() => {
-    if (!showForm) return
-    const staffId = form.attending_staff_id || userId
-    if (!staffId || !form.visit_date) return
-    let cancelled = false
-    resolveShiftForStaffDate(staffId, form.visit_date).then((res) => {
-      if (cancelled || !res.shift || res.shift === 'OFF') return
-      setForm((f) => ({ ...f, shift: res.shift as 'PAGI' | 'SORE' }))
-      setShiftSource(res.source)
-    })
-    return () => { cancelled = true }
-  }, [showForm, form.attending_staff_id, form.visit_date, userId])
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -546,7 +528,7 @@ export default function PatientVisitsPage() {
                   <label className={labelCls}>Terapis / Staff</label>
                   <select
                     value={form.attending_staff_id}
-                    onChange={(e) => { setShiftSource(null); setForm((f) => ({ ...f, attending_staff_id: e.target.value })) }}
+                    onChange={(e) => setForm((f) => ({ ...f, attending_staff_id: e.target.value }))}
                     className={inputCls}
                   >
                     <option value="">Saya sendiri</option>
@@ -559,21 +541,14 @@ export default function PatientVisitsPage() {
                 <div>
                   <label className={labelCls}>Tanggal</label>
                   <input required type="date" value={form.visit_date}
-                    onChange={(e) => { setShiftSource(null); setForm((f) => ({ ...f, visit_date: e.target.value })) }}
+                    onChange={(e) => setForm((f) => ({ ...f, visit_date: e.target.value }))}
                     className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>
-                    Shift
-                    {shiftSource && (
-                      <span className="ml-1.5 text-[10px] font-normal text-primary">
-                        ({shiftSource === 'rolling' ? 'otomatis' : 'override'})
-                      </span>
-                    )}
-                  </label>
+                  <label className={labelCls}>Shift</label>
                   <select
                     value={form.shift}
-                    onChange={(e) => { setShiftSource(null); setForm((f) => ({ ...f, shift: e.target.value as typeof form.shift })) }}
+                    onChange={(e) => setForm((f) => ({ ...f, shift: e.target.value as typeof form.shift }))}
                     className={inputCls}
                   >
                     <option value="">— Pilih —</option>

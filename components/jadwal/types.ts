@@ -26,7 +26,6 @@ export interface DayStaffEntry {
   pendingLeave: PendingLeaveInfo | null  // pending (unapproved) leave for this date
   isOverride: boolean     // shift/day comes from a schedule_overrides row
   overrideId: string | null
-  isRolling?: boolean     // shift comes from a rolling Tim A/B rotation, not the flat schedule
 }
 
 export interface AssignTarget {
