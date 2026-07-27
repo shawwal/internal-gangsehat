@@ -17,6 +17,7 @@ import { ModeTabs, type VisitMode } from './assign/ModeTabs'
 import { RecurringConfig } from './assign/RecurringConfig'
 import { VisitFields } from './assign/VisitFields'
 import { PaketTab } from './assign/paket/PaketTab'
+import { PaketPaymentStep } from './assign/paket/PaketPaymentStep'
 import { ExistingPackagePicker } from './assign/paket/ExistingPackagePicker'
 
 interface Props {
@@ -67,6 +68,11 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
   const [selectedPkgId, setSelectedPkg]  = useState<string | null>(null)
   const [selectedLayanan, setSelectedLayanan] = useState<LayananRow | null>(null)
   const [pkgSaving, setPkgSaving]        = useState(false)
+  const [pendingPayment, setPendingPayment] = useState<{
+    packageName: string
+    jumlahSesi: number
+    harga: number
+  } | null>(null)
 
   // ── Save state ────────────────────────────────────────────────────────────────
   const [saving, setSaving]              = useState(false)
@@ -149,8 +155,17 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
     const pkgs = await fetchPatientPackages(selectedPatient.id)
     setPackages(pkgs)
     setSelectedPkg(id)
-    setSelectedLayanan(null)
     setPkgSaving(false)
+    setPendingPayment({
+      packageName: selectedLayanan.nama,
+      jumlahSesi:  selectedLayanan.jumlah_sesi || 1,
+      harga:       selectedLayanan.harga,
+    })
+  }
+
+  function handlePaymentDone() {
+    setPendingPayment(null)
+    setSelectedLayanan(null)
     setMode('single')
   }
 
@@ -432,6 +447,17 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
           </div>
         </div>
       </div>
+
+      {pendingPayment && selectedPatient && (
+        <PaketPaymentStep
+          patientId={selectedPatient.id}
+          patientName={selectedPatient.name}
+          packageName={pendingPayment.packageName}
+          jumlahSesi={pendingPayment.jumlahSesi}
+          hargaDefault={pendingPayment.harga}
+          onDone={handlePaymentDone}
+        />
+      )}
     </>
   )
 }
