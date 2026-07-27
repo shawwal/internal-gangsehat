@@ -666,10 +666,12 @@ CREATE TABLE public.schedules (
   status character varying NOT NULL DEFAULT 'AKTIF'::character varying CHECK (status::text = ANY (ARRAY['AKTIF'::character varying, 'OFF'::character varying]::text[])),
   notes text,
   created_at timestamp with time zone DEFAULT now(),
+  week_group character varying NOT NULL DEFAULT 'SEMUA'::character varying CHECK (week_group::text = ANY (ARRAY['SEMUA'::character varying, 'MINGGU_1'::character varying, 'MINGGU_2'::character varying]::text[])),
   CONSTRAINT schedules_pkey PRIMARY KEY (id),
   CONSTRAINT schedules_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.internal_profiles(id),
   CONSTRAINT schedules_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id)
 );
+CREATE UNIQUE INDEX schedules_staff_hari_week_key ON public.schedules USING btree (staff_id, hari, week_group);
 CREATE TABLE public.booking_sessions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   booking_id uuid NOT NULL,

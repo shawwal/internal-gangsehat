@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 import { Loader2, Pencil, X } from 'lucide-react'
+import { WEEK_GROUP_LIST, WEEK_GROUP_LABEL, type WeekGroup } from '@/lib/schedule/weekGroup'
 
 interface BulkEditPatch {
   shift: 'PAGI' | 'SORE'
   jam_mulai: string
   jam_selesai: string
   status: 'AKTIF' | 'OFF'
+  week_group?: WeekGroup
 }
 
 interface Props {
@@ -25,13 +27,19 @@ const DEFAULT: BulkEditPatch = {
   status: 'AKTIF',
 }
 
+/** Empty string = "jangan ubah" (leave week_group as-is for each row). */
 export function BulkEditDialog({ open, count, saving, onSave, onClose }: Props) {
   const [form, setForm] = useState<BulkEditPatch>({ ...DEFAULT })
+  const [weekGroup, setWeekGroup] = useState<'' | WeekGroup>('')
 
   if (!open) return null
 
   function patch<K extends keyof BulkEditPatch>(key: K, value: BulkEditPatch[K]) {
     setForm((f) => ({ ...f, [key]: value }))
+  }
+
+  function handleSave() {
+    onSave(weekGroup ? { ...form, week_group: weekGroup } : form)
   }
 
   return (
@@ -124,6 +132,38 @@ export function BulkEditDialog({ open, count, saving, onSave, onClose }: Props) 
               ))}
             </div>
           </div>
+
+          {/* Minggu */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Minggu</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setWeekGroup('')}
+                className={[
+                  'py-2 px-3 rounded-xl text-sm font-medium transition-colors cursor-pointer border',
+                  weekGroup === ''
+                    ? 'bg-primary text-white border-primary'
+                    : 'border-border text-muted-foreground hover:bg-muted',
+                ].join(' ')}
+              >
+                Jangan Ubah
+              </button>
+              {WEEK_GROUP_LIST.map((w) => (
+                <button
+                  key={w}
+                  onClick={() => setWeekGroup(w)}
+                  className={[
+                    'py-2 px-3 rounded-xl text-sm font-medium transition-colors cursor-pointer border',
+                    weekGroup === w
+                      ? 'bg-primary text-white border-primary'
+                      : 'border-border text-muted-foreground hover:bg-muted',
+                  ].join(' ')}
+                >
+                  {WEEK_GROUP_LABEL[w]}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Actions */}
@@ -136,7 +176,7 @@ export function BulkEditDialog({ open, count, saving, onSave, onClose }: Props) 
             Batal
           </button>
           <button
-            onClick={() => onSave(form)}
+            onClick={handleSave}
             disabled={saving}
             className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
           >

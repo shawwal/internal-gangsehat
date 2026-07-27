@@ -2,6 +2,7 @@
 
 import { CalendarDays, Pencil, Trash2 } from 'lucide-react'
 import type { ScheduleRow } from './types'
+import { WEEK_GROUP_LABEL } from '@/lib/schedule/weekGroup'
 
 // ── Badges ───────────────────────────────────────────────────────────────────
 
@@ -31,12 +32,26 @@ export function ShiftBadge({ shift }: { shift: string }) {
   )
 }
 
+export function WeekGroupBadge({ weekGroup }: { weekGroup: string }) {
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+        weekGroup === 'SEMUA'
+          ? 'bg-muted text-muted-foreground'
+          : 'bg-[#FF0090]/10 text-primary'
+      }`}
+    >
+      {WEEK_GROUP_LABEL[weekGroup as keyof typeof WEEK_GROUP_LABEL] ?? weekGroup}
+    </span>
+  )
+}
+
 // ── Skeleton ─────────────────────────────────────────────────────────────────
 
 function SkeletonRow() {
   return (
     <tr className="border-b border-border last:border-0">
-      {[24, 12, 120, 64, 48, 52, 52, 60, 40].map((w, i) => (
+      {[24, 12, 120, 64, 64, 48, 52, 52, 60, 40].map((w, i) => (
         <td key={i} className="px-4 py-3.5">
           <div className="h-3.5 bg-muted animate-pulse rounded-md" style={{ width: `${w}px` }} />
         </td>
@@ -167,6 +182,7 @@ export function ScheduleTable({
               <th className="w-12 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">NO</th>
               <th className="px-4 py-3 text-xs font-semibold text-muted-foreground text-left">NAMA STAFF</th>
               <th className="w-24 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">HARI</th>
+              <th className="w-24 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">MINGGU</th>
               <th className="w-20 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">SHIFT</th>
               <th className="w-28 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">JAM MULAI</th>
               <th className="w-28 px-4 py-3 text-xs font-semibold text-muted-foreground text-left">JAM SELESAI</th>
@@ -179,7 +195,7 @@ export function ScheduleTable({
               Array.from({ length: Math.min(pageSize, 6) }).map((_, i) => <SkeletonRow key={i} />)
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-16 text-center">
+                <td colSpan={10} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                       <CalendarDays size={22} className="text-primary" />
@@ -225,6 +241,7 @@ export function ScheduleTable({
                       )}
                     </td>
                     <td className="px-4 py-3.5 text-foreground">{row.hari}</td>
+                    <td className="px-4 py-3.5"><WeekGroupBadge weekGroup={row.week_group} /></td>
                     <td className="px-4 py-3.5"><ShiftBadge shift={row.shift} /></td>
                     <td className="px-4 py-3.5 font-mono text-foreground">{row.jam_mulai?.slice(0, 5) ?? '—'}</td>
                     <td className="px-4 py-3.5 font-mono text-foreground">{row.jam_selesai?.slice(0, 5) ?? '—'}</td>

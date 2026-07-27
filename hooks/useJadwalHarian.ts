@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchDailyVisits, updateVisitStatus, deleteVisit } from '@/app/actions/jadwal'
 import { toIso, toHariIndonesia, getMondayOf } from '@/components/jadwal/utils'
+import { getWeekGroupForDate } from '@/lib/schedule/weekGroup'
 import type { DayStaffEntry, PendingLeaveInfo } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { VisitStatus } from '@/types'
@@ -69,6 +70,7 @@ export function useJadwalHarian() {
     const supabase = createClient()
     const isoDate  = toIso(date)
     const hari     = toHariIndonesia(date)
+    const weekGroup = getWeekGroupForDate(date)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function applyBranch(q: any) {
@@ -81,7 +83,8 @@ export function useJadwalHarian() {
           .from('schedules')
           .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(full_name, avatar_url, nickname, gender)')
           .eq('hari', hari)
-          .eq('status', 'AKTIF'),
+          .eq('status', 'AKTIF')
+          .in('week_group', [weekGroup, 'SEMUA']),
       ),
       supabase
         .from('leave_requests')
@@ -301,6 +304,7 @@ export function useJadwalHarian() {
   return {
     today,
     selectedDate,
+    weekGroup: getWeekGroupForDate(selectedDate),
     setSelectedDate,
     staff,
     visits,

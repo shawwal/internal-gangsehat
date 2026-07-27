@@ -2,21 +2,24 @@
 
 import { Search } from 'lucide-react'
 import { HARI_LIST, SHIFT_LIST, PAGE_SIZES } from './constants'
+import { WEEK_GROUP_LIST, WEEK_GROUP_LABEL } from '@/lib/schedule/weekGroup'
 
 interface Props {
   search: string
   hariFilter: string
   shiftFilter: string
+  weekGroupFilter: string
   pageSize: number
   onSearch: (v: string) => void
   onHari: (v: string) => void
   onShift: (v: string) => void
+  onWeekGroup: (v: string) => void
   onPageSize: (v: number) => void
 }
 
 export function ScheduleFilters({
-  search, hariFilter, shiftFilter, pageSize,
-  onSearch, onHari, onShift, onPageSize,
+  search, hariFilter, shiftFilter, weekGroupFilter, pageSize,
+  onSearch, onHari, onShift, onWeekGroup, onPageSize,
 }: Props) {
   const selectCls =
     'px-3 py-2 border border-border rounded-xl text-sm bg-input cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary'
@@ -44,6 +47,11 @@ export function ScheduleFilters({
       <select value={shiftFilter} onChange={(e) => onShift(e.target.value)} className={selectCls}>
         <option value="">Semua Shift</option>
         {SHIFT_LIST.map((s) => <option key={s} value={s}>{s}</option>)}
+      </select>
+
+      <select value={weekGroupFilter} onChange={(e) => onWeekGroup(e.target.value)} className={selectCls}>
+        <option value="">Semua Minggu</option>
+        {WEEK_GROUP_LIST.map((w) => <option key={w} value={w}>{WEEK_GROUP_LABEL[w]}</option>)}
       </select>
 
       <div className="flex items-center gap-2 ml-auto">

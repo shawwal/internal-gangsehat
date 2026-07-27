@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, CalendarRange, Sun, Moon, RotateCcw, Loader2, Check } from 'lucide-react'
+import { X, CalendarRange, Sun, Moon, RotateCcw, Loader2, Check, Repeat, CalendarClock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { StaffOption, BranchOption, WeeklyPattern } from './types'
 import { HARI_LIST, SHIFT_HOURS, buildEmptyWeekly } from './constants'
+import type { WeekGroup } from '@/lib/schedule/weekGroup'
 
 interface Props {
   open: boolean
@@ -13,6 +14,9 @@ interface Props {
   onClose: () => void
   onSaved: () => void
 }
+
+type Mode = 'SAMA' | 'BEDA'
+type WeekTab = 'MINGGU_1' | 'MINGGU_2'
 
 const HARI_LABEL: Record<string, string> = {
   SENIN:  'Senin',
@@ -30,7 +34,11 @@ const inputCls =
 export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSaved }: Props) {
   const [staffId, setStaffId]     = useState('')
   const [branchId, setBranchId]   = useState('')
-  const [pattern, setPattern]     = useState<WeeklyPattern>(buildEmptyWeekly())
+  const [mode, setMode]           = useState<Mode>('SAMA')
+  const [activeTab, setActiveTab] = useState<WeekTab>('MINGGU_1')
+  const [patternSama, setPatternSama]   = useState<WeeklyPattern>(buildEmptyWeekly())
+  const [patternWeek1, setPatternWeek1] = useState<WeeklyPattern>(buildEmptyWeekly())
+  const [patternWeek2, setPatternWeek2] = useState<WeeklyPattern>(buildEmptyWeekly())
   const [loading, setLoading]     = useState(false)
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState('')
@@ -44,25 +52,42 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
       const supabase = createClient()
       const { data } = await supabase
         .from('schedules')
-        .select('hari, shift, jam_mulai, jam_selesai, status, branch_id')
+        .select('hari, shift, jam_mulai, jam_selesai, status, branch_id, week_group')
         .eq('staff_id', staffId)
-      const next = buildEmptyWeekly()
+
+      const nextSama  = buildEmptyWeekly()
+      const nextWeek1 = buildEmptyWeekly()
+      const nextWeek2 = buildEmptyWeekly()
+      let hasBiweekly = false
+
       if (data) {
         for (const row of data) {
-          if (next[row.hari]) {
-            next[row.hari] = {
-              enabled:     row.status !== 'OFF',
-              shift:       row.shift,
-              jam_mulai:   row.jam_mulai?.slice(0, 5) ?? '08:00',
-              jam_selesai: row.jam_selesai?.slice(0, 5) ?? '15:00',
-              status:      row.status,
-            }
-            // Use branch from first row if not set yet
-            if (!branchId && row.branch_id) setBranchId(row.branch_id)
+          const entry = {
+            enabled:     row.status !== 'OFF',
+            shift:       row.shift,
+            jam_mulai:   row.jam_mulai?.slice(0, 5) ?? '08:00',
+            jam_selesai: row.jam_selesai?.slice(0, 5) ?? '15:00',
+            status:      row.status,
           }
+          const weekGroup = (row.week_group ?? 'SEMUA') as WeekGroup
+          if (weekGroup === 'MINGGU_1' && nextWeek1[row.hari]) {
+            nextWeek1[row.hari] = entry
+            hasBiweekly = true
+          } else if (weekGroup === 'MINGGU_2' && nextWeek2[row.hari]) {
+            nextWeek2[row.hari] = entry
+            hasBiweekly = true
+          } else if (nextSama[row.hari]) {
+            nextSama[row.hari] = entry
+          }
+          if (!branchId && row.branch_id) setBranchId(row.branch_id)
         }
       }
-      setPattern(next)
+
+      setPatternSama(nextSama)
+      setPatternWeek1(nextWeek1)
+      setPatternWeek2(nextWeek2)
+      setMode(hasBiweekly ? 'BEDA' : 'SAMA')
+      setActiveTab('MINGGU_1')
       setLoading(false)
     }
     fetchExisting()
@@ -73,7 +98,11 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
     setStaffId('')
     setBranchId('')
     setStaffSearch('')
-    setPattern(buildEmptyWeekly())
+    setMode('SAMA')
+    setActiveTab('MINGGU_1')
+    setPatternSama(buildEmptyWeekly())
+    setPatternWeek1(buildEmptyWeekly())
+    setPatternWeek2(buildEmptyWeekly())
     setError('')
   }
 
@@ -81,6 +110,14 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
     reset()
     onClose()
   }
+
+  // ── Active pattern (depends on mode / active tab) ──────────────────────────
+  const [pattern, setPattern] =
+    mode === 'SAMA'
+      ? [patternSama, setPatternSama] as const
+      : activeTab === 'MINGGU_1'
+      ? [patternWeek1, setPatternWeek1] as const
+      : [patternWeek2, setPatternWeek2] as const
 
   function patchDay(hari: string, patch: Partial<WeeklyPattern[string]>) {
     setPattern((prev) => ({
@@ -94,17 +131,6 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
     patchDay(hari, {
       enabled: !cur.enabled,
       status:  !cur.enabled ? 'AKTIF' : 'OFF',
-    })
-  }
-
-  function applyShiftToAll(shift: 'PAGI' | 'SORE') {
-    const hours = SHIFT_HOURS[shift]
-    setPattern((prev) => {
-      const next = { ...prev }
-      for (const h of HARI_LIST) {
-        next[h] = { ...next[h], shift, ...hours }
-      }
-      return next
     })
   }
 
@@ -135,26 +161,60 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
     })
   }
 
+  function copyWeek1ToWeek2() {
+    setPatternWeek2({ ...patternWeek1 })
+  }
+
   async function handleSave() {
     if (!staffId) { setError('Pilih staff terlebih dahulu.'); return }
     setError('')
     setSaving(true)
     const supabase = createClient()
 
-    const rows = HARI_LIST.map((hari) => ({
-      staff_id:    staffId,
-      branch_id:   branchId || null,
-      hari,
-      shift:       pattern[hari].shift,
-      jam_mulai:   pattern[hari].jam_mulai,
-      jam_selesai: pattern[hari].jam_selesai,
-      status:      pattern[hari].enabled ? 'AKTIF' : 'OFF',
-      notes:       null,
-    }))
+    function buildRows(p: WeeklyPattern, weekGroup: WeekGroup) {
+      return HARI_LIST.map((hari) => ({
+        staff_id:    staffId,
+        branch_id:   branchId || null,
+        hari,
+        shift:       p[hari].shift,
+        jam_mulai:   p[hari].jam_mulai,
+        jam_selesai: p[hari].jam_selesai,
+        status:      p[hari].enabled ? 'AKTIF' : 'OFF',
+        notes:       null,
+        week_group:  weekGroup,
+      }))
+    }
 
-    const { error: err } = await supabase
-      .from('schedules')
-      .upsert(rows, { onConflict: 'staff_id,hari' })
+    let err = null
+
+    if (mode === 'SAMA') {
+      const { error: delErr } = await supabase
+        .from('schedules')
+        .delete()
+        .eq('staff_id', staffId)
+        .in('week_group', ['MINGGU_1', 'MINGGU_2'])
+      if (delErr) err = delErr
+      if (!err) {
+        const { error: upErr } = await supabase
+          .from('schedules')
+          .upsert(buildRows(patternSama, 'SEMUA'), { onConflict: 'staff_id,hari,week_group' })
+        err = upErr
+      }
+    } else {
+      const { error: delErr } = await supabase
+        .from('schedules')
+        .delete()
+        .eq('staff_id', staffId)
+        .eq('week_group', 'SEMUA')
+      if (delErr) err = delErr
+      if (!err) {
+        const rows = [...buildRows(patternWeek1, 'MINGGU_1'), ...buildRows(patternWeek2, 'MINGGU_2')]
+        const { error: upErr } = await supabase
+          .from('schedules')
+          .upsert(rows, { onConflict: 'staff_id,hari,week_group' })
+        err = upErr
+      }
+    }
 
     if (err) {
       setError('Gagal menyimpan: ' + err.message)
@@ -278,11 +338,66 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
             </div>
           </div>
 
+          {/* ── Mode toggle: sama tiap minggu vs beda tiap 2 minggu ─────────── */}
+          <div className="flex items-center gap-2 p-1 rounded-xl border border-border bg-muted/30 w-fit">
+            <button
+              type="button"
+              onClick={() => setMode('SAMA')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                mode === 'SAMA' ? 'bg-primary text-white' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Repeat size={12} /> Sama setiap minggu
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('BEDA')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                mode === 'BEDA' ? 'bg-primary text-white' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <CalendarClock size={12} /> Beda tiap 2 minggu
+            </button>
+          </div>
+
+          {/* ── Week tabs (only in BEDA mode) ────────────────────────────── */}
+          {mode === 'BEDA' && (
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex gap-1.5">
+                {(['MINGGU_1', 'MINGGU_2'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                      activeTab === tab
+                        ? 'bg-primary text-white border-primary shadow-sm'
+                        : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    {tab === 'MINGGU_1' ? 'Minggu 1' : 'Minggu 2'}
+                  </button>
+                ))}
+              </div>
+              {activeTab === 'MINGGU_2' && (
+                <button
+                  type="button"
+                  onClick={copyWeek1ToWeek2}
+                  className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 cursor-pointer"
+                >
+                  <Repeat size={11} /> Salin dari Minggu 1
+                </button>
+              )}
+            </div>
+          )}
+
           {/* ── Day checklist grid ──────────────────────────────────────── */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                Pola Jadwal Mingguan
+                {mode === 'SAMA'
+                  ? 'Pola Jadwal Mingguan'
+                  : `Pola Jadwal — ${activeTab === 'MINGGU_1' ? 'Minggu 1' : 'Minggu 2'}`}
               </p>
               <span className="text-xs text-muted-foreground">
                 {checkedCount} / {HARI_LIST.length} hari aktif
@@ -410,7 +525,7 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
           >
             {saving
               ? <><Loader2 size={14} className="animate-spin" /> Menyimpan...</>
-              : <><Check size={14} /> Simpan {checkedCount} Jadwal</>
+              : <><Check size={14} /> Simpan Jadwal{mode === 'BEDA' ? ' (2 Minggu)' : ''}</>
             }
           </button>
         </div>

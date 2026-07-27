@@ -12,6 +12,7 @@ import type {
   StaffOption,
   BranchOption,
 } from './types'
+import { getWeekGroupForDate } from '@/lib/schedule/weekGroup'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const JS_DAY_TO_HARI = ['AHAD', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'] as const
@@ -184,14 +185,16 @@ export function ScheduleCalendarView({ staffList }: Props) {
       const supabase = createClient()
       const isoDate  = toIsoDate(date)
       const hari     = toHariIndonesia(date)
+      const weekGroup = getWeekGroupForDate(date)
 
       const [schedulesRes, leavesRes, attendanceRes] = await Promise.all([
         supabase
           .from('schedules')
           .select(
-            'id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, status, notes, internal_profiles!staff_id(full_name)',
+            'id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, status, notes, week_group, internal_profiles!staff_id(full_name)',
           )
-          .eq('hari', hari),
+          .eq('hari', hari)
+          .in('week_group', [weekGroup, 'SEMUA']),
         supabase
           .from('leave_requests')
           .select('id, staff_id, start_date, end_date, reason')

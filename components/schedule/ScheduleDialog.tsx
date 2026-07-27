@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X, RotateCcw, CheckSquare, ChevronDown, Clock, Search, Users } from 'lucide-react'
 import type { ScheduleForm, StaffOption, BranchOption } from './types'
 import { HARI_LIST } from './constants'
+import { WEEK_GROUP_LIST, WEEK_GROUP_LABEL, type WeekGroup } from '@/lib/schedule/weekGroup'
 
 interface Props {
   open: boolean
@@ -526,6 +527,36 @@ export function ScheduleDialog({
                   ? <>Akan memperbarui <span className="text-primary font-semibold">{dayCount}</span> hari dengan pengaturan yang sama</>
                   : <>Akan membuat <span className="text-primary font-semibold">{dayCount}</span> jadwal per staff</>
                 }
+              </p>
+            )}
+          </div>
+
+          {/* Minggu — biweekly chip select */}
+          <div>
+            <label className={labelCls}>Minggu</label>
+            <div className="flex gap-1.5 flex-wrap">
+              {WEEK_GROUP_LIST.map((w) => {
+                const sel = form.week_group === w
+                return (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => onChange({ week_group: w as WeekGroup })}
+                    className={[
+                      'px-2.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border',
+                      sel
+                        ? 'bg-primary text-white border-primary shadow-sm'
+                        : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+                    ].join(' ')}
+                  >
+                    {WEEK_GROUP_LABEL[w]}
+                  </button>
+                )
+              })}
+            </div>
+            {form.week_group !== 'SEMUA' && (
+              <p className="text-[11px] text-muted-foreground mt-1.5 pl-0.5">
+                Jadwal ini hanya berlaku pada <span className="text-primary font-semibold">{WEEK_GROUP_LABEL[form.week_group]}</span>
               </p>
             )}
           </div>

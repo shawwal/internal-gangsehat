@@ -14,6 +14,7 @@ import { DeleteDialog } from '@/components/schedule/DeleteDialog'
 import { ScheduleCalendarView } from '@/components/schedule/ScheduleCalendarView'
 import { BulkEditDialog } from '@/components/schedule/BulkEditDialog'
 import { StatusListModal } from '@/components/schedule/StatusListModal'
+import type { WeekGroup } from '@/lib/schedule/weekGroup'
 
 type ViewMode = 'table' | 'calendar'
 
@@ -34,6 +35,7 @@ export default function SchedulesPage() {
   const [search, setSearch]           = useState('')
   const [hariFilter, setHariFilter]   = useState('')
   const [shiftFilter, setShiftFilter] = useState('')
+  const [weekGroupFilter, setWeekGroupFilter] = useState('')
   const [pageSize, setPageSize]       = useState(10)
   const [page, setPage]               = useState(0)
 
@@ -85,7 +87,7 @@ export default function SchedulesPage() {
   useEffect(() => {
     if (userBranchId === undefined) return
     load()
-  }, [page, pageSize, hariFilter, shiftFilter, search, userBranchId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page, pageSize, hariFilter, shiftFilter, weekGroupFilter, search, userBranchId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load() {
     setLoading(true)
@@ -112,6 +114,7 @@ export default function SchedulesPage() {
       if (userBranchId) q = q.eq('branch_id', userBranchId)
       if (hariFilter)   q = q.eq('hari', hariFilter)
       if (shiftFilter)  q = q.eq('shift', shiftFilter)
+      if (weekGroupFilter) q = q.eq('week_group', weekGroupFilter)
       if (staffIds)     q = q.in('staff_id', staffIds)
       return q
     }
@@ -121,7 +124,7 @@ export default function SchedulesPage() {
         supabase
           .from('schedules')
           .select(
-            'id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, status, notes, internal_profiles!staff_id(full_name), branches!branch_id(name)',
+            'id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, status, notes, week_group, internal_profiles!staff_id(full_name), branches!branch_id(name)',
             { count: 'exact' },
           )
           .order('hari').order('shift').range(from, to),
@@ -158,6 +161,7 @@ export default function SchedulesPage() {
       jam_selesai: row.jam_selesai?.slice(0, 5) ?? '15:00',
       status:      row.status,
       notes:       row.notes ?? '',
+      week_group:  row.week_group ?? 'SEMUA',
     })
     setEditId(row.id)
     setShowSingle(true)
@@ -177,6 +181,7 @@ export default function SchedulesPage() {
       jam_selesai: form.jam_selesai,
       status:      form.status,
       notes:       form.notes.trim() || null,
+      week_group:  form.week_group,
     }
 
     const rows = form.staff_ids.flatMap((sid) =>
@@ -194,7 +199,7 @@ export default function SchedulesPage() {
     } else {
       const { error: e } = await supabase
         .from('schedules')
-        .upsert(rows, { onConflict: 'staff_id,hari' })
+        .upsert(rows, { onConflict: 'staff_id,hari,week_group' })
       error = e
     }
 
@@ -225,7 +230,7 @@ export default function SchedulesPage() {
   }
 
   // ── Bulk edit ────────────────────────────────────────────────────────────────
-  async function handleBulkEdit(patch: { shift: 'PAGI' | 'SORE'; jam_mulai: string; jam_selesai: string; status: 'AKTIF' | 'OFF' }) {
+  async function handleBulkEdit(patch: { shift: 'PAGI' | 'SORE'; jam_mulai: string; jam_selesai: string; status: 'AKTIF' | 'OFF'; week_group?: WeekGroup }) {
     setSaving(true)
     await createClient().from('schedules').update(patch).in('id', selectedIds)
     setSaving(false)
@@ -322,10 +327,12 @@ export default function SchedulesPage() {
             search={search}
             hariFilter={hariFilter}
             shiftFilter={shiftFilter}
+            weekGroupFilter={weekGroupFilter}
             pageSize={pageSize}
             onSearch={(v) => { setSearch(v); setPage(0); setSelectedIds([]) }}
             onHari={(v) => { setHariFilter(v); setPage(0); setSelectedIds([]) }}
             onShift={(v) => { setShiftFilter(v); setPage(0); setSelectedIds([]) }}
+            onWeekGroup={(v) => { setWeekGroupFilter(v); setPage(0); setSelectedIds([]) }}
             onPageSize={(v) => { setPageSize(v); setPage(0); setSelectedIds([]) }}
           />
 

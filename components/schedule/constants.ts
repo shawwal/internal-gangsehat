@@ -18,6 +18,7 @@ export const EMPTY_FORM: ScheduleForm = {
   jam_selesai: '15:00',
   status:      'AKTIF',
   notes:       '',
+  week_group:  'SEMUA',
 }
 
 export function buildEmptyWeekly(): WeeklyPattern {

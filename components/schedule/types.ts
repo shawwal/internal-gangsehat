@@ -1,3 +1,5 @@
+import type { WeekGroup } from '@/lib/schedule/weekGroup'
+
 export interface ScheduleRow {
   id: string
   staff_id: string
@@ -8,6 +10,7 @@ export interface ScheduleRow {
   jam_selesai: string
   status: 'AKTIF' | 'OFF'
   notes: string | null
+  week_group: WeekGroup
   internal_profiles: { full_name: string } | null
   branches: { name: string } | null
 }
@@ -40,6 +43,7 @@ export interface ScheduleForm {
   jam_selesai: string
   status: 'AKTIF' | 'OFF'
   notes: string
+  week_group: WeekGroup
 }
 
 export interface DayEntry {
