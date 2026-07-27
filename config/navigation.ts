@@ -156,7 +156,7 @@ export const navigation: NavItem[] = [
   },
   {
     key: 'director-session-note-settings',
-    label: 'Form Catatan Perawatan',
+    label: 'Form Klinis',
     href: '/director/session-note-settings',
     icon: 'FileText',
     roles: ['director'],

@@ -102,6 +102,15 @@ export async function fetchPublicResume(token: string): Promise<PublicResumeData
     .eq('visit_id', link.visit_id)
     .maybeSingle()
 
+  // Follow-up (SESI/PAKET TERAPI|VISIT) visits have no terapi_awal_assessments
+  // row — fall back to session_notes so shared links from those visits carry
+  // the richer SOAP content instead of just the plain patient_visits columns.
+  const { data: sessionNote } = assessment ? { data: null } : await admin
+    .from('session_notes')
+    .select('subjective_notes, clinical_impression, next_plan, hep_given')
+    .eq('visit_id', link.visit_id)
+    .maybeSingle()
+
   const { data: patient } = await admin
     .from('patients')
     .select('encrypted_name, encrypted_phone')
@@ -116,15 +125,15 @@ export async function fetchPublicResume(token: string): Promise<PublicResumeData
     } catch { /* keep default */ }
   }
 
-  const plan = [assessment?.treatment_plan_today, assessment?.short_term_goals, assessment?.long_term_goals]
-    .filter(Boolean)
-    .join('') || visit.treatment
+  const plan = assessment
+    ? [assessment.treatment_plan_today, assessment.short_term_goals, assessment.long_term_goals].filter(Boolean).join('') || visit.treatment
+    : [sessionNote?.next_plan, sessionNote?.hep_given].filter(Boolean).join('') || visit.treatment
 
   return {
     patientName,
     visitDate: visit.visit_date,
-    chiefComplaint: assessment?.npips || visit.chief_complaint,
-    diagnosis: assessment?.diagnosis_hypothesis || visit.diagnosis,
+    chiefComplaint: assessment?.npips || sessionNote?.subjective_notes || visit.chief_complaint,
+    diagnosis: assessment?.diagnosis_hypothesis || sessionNote?.clinical_impression || visit.diagnosis,
     plan,
   }
 }

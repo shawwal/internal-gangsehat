@@ -3,20 +3,23 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Loader2, Printer, Copy, History } from 'lucide-react'
+import { ChevronLeft, Loader2, Printer, Copy, History, FileHeart, Share2 } from 'lucide-react'
 import { fetchVisitWithPatient } from '@/app/actions/jadwal'
 import {
   fetchSessionNote, fetchLatestCompletedAssessment, fetchPreviousSessionNote, completeSessionNote,
 } from '@/app/actions/sessionNotes'
+import { getOrCreateResumeLink } from '@/app/actions/resumeLinks'
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { SessionNote, TerapiAwalAssessment } from '@/types'
 import { SingleStepSessionNoteForm } from '@/components/sessionNote/SingleStepSessionNoteForm'
 import { MultiStepSessionNoteForm } from '@/components/sessionNote/MultiStepSessionNoteForm'
 import { generateSessionNotePdf } from '@/components/sessionNote/generateSessionNotePdf'
+import { generateSessionNoteResumePdf } from '@/components/sessionNote/generateSessionNoteResumePdf'
 import { fromSessionNote, toFieldsInput } from '@/components/sessionNote/types'
 import type { SessionNoteFormState } from '@/components/sessionNote/types'
 import { stripHtml } from '@/lib/richtext'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/context/ToastContext'
 
 type FormMode = 'single_step' | 'multi_step'
 
@@ -25,6 +28,7 @@ export default function SessionNotePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const backTo = searchParams.get('from') || '/jadwal-harian'
+  const { showToast } = useToast()
 
   const [loading, setLoading] = useState(true)
   const [visit, setVisit]     = useState<VisitWithPatient | null>(null)
@@ -35,6 +39,7 @@ export default function SessionNotePage() {
   const [priorAssessment, setPriorAssessment] = useState<TerapiAwalAssessment | null>(null)
   const [previousNote, setPreviousNote]       = useState<SessionNote | null>(null)
 
+  const [sharing, setSharing] = useState(false)
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState<string | null>(null)
   const [formMode, setFormMode] = useState<FormMode | null>(null)
@@ -101,6 +106,25 @@ export default function SessionNotePage() {
     generateSessionNotePdf(visit, completedNote, priorAssessment)
   }
 
+  function handlePrintResume() {
+    if (!visit || !completedNote) return
+    generateSessionNoteResumePdf(visit, completedNote)
+  }
+
+  async function handleShareResume() {
+    if (!visit) return
+    setSharing(true)
+    const { url, error: err } = await getOrCreateResumeLink(visit.id)
+    setSharing(false)
+    if (err || !url) { showToast(err || 'Gagal membuat link resume', 'error'); return }
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast('Link resume disalin ke clipboard', 'success')
+    } catch {
+      showToast(url, 'info')
+    }
+  }
+
   if (loading || !visit || !form || !formMode) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -145,14 +169,34 @@ export default function SessionNotePage() {
             <Copy size={13} /> <span className="hidden sm:inline">Salin dari Sesi Sebelumnya</span>
           </button>
           {alreadyCompleted && (
-            <button
-              type="button"
-              onClick={handlePrint}
-              title="Cetak PDF"
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors"
-            >
-              <Printer size={13} /> <span className="hidden sm:inline">Cetak PDF</span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handlePrint}
+                title="Cetak PDF klinis"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors"
+              >
+                <Printer size={13} /> <span className="hidden sm:inline">Cetak PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={handlePrintResume}
+                title="Cetak resume untuk pasien"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors"
+              >
+                <FileHeart size={13} /> <span className="hidden sm:inline">Cetak Resume</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleShareResume}
+                disabled={sharing}
+                title="Salin link resume untuk dibagikan ke pasien"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-60"
+              >
+                {sharing ? <Loader2 size={13} className="animate-spin" /> : <Share2 size={13} />}
+                <span className="hidden sm:inline">Bagikan ke Pasien</span>
+              </button>
+            </>
           )}
         </div>
       </div>

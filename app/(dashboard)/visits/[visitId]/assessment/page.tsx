@@ -25,6 +25,10 @@ import { StepClinicalReasoning } from '@/components/assessment/StepClinicalReaso
 import { StepPlanOfCare } from '@/components/assessment/StepPlanOfCare'
 import { STEP_LABELS, fromAssessment, toFieldsInput } from '@/components/assessment/types'
 import type { AssessmentFormState } from '@/components/assessment/types'
+import { SingleStepAssessmentForm } from '@/components/assessment/SingleStepAssessmentForm'
+import { createClient } from '@/lib/supabase/client'
+
+type FormMode = 'single_step' | 'multi_step'
 
 export default function TerapiAwalAssessmentPage() {
   const { visitId } = useParams<{ visitId: string }>()
@@ -47,6 +51,7 @@ export default function TerapiAwalAssessmentPage() {
   const [error, setError]           = useState<string | null>(null)
   const [showPackagePrompt, setShowPackagePrompt] = useState(false)
   const [sharing, setSharing]       = useState(false)
+  const [formMode, setFormMode]     = useState<FormMode | null>(null)
 
   const topRef = useRef<HTMLDivElement>(null)
   const isFirstStepRender = useRef(true)
@@ -63,8 +68,13 @@ export default function TerapiAwalAssessmentPage() {
     if (!visitId) return
     let cancelled = false
     setLoading(true)
-    Promise.all([fetchVisitWithPatient(visitId), fetchAssessment(visitId)]).then(([v, a]) => {
+    Promise.all([
+      fetchVisitWithPatient(visitId),
+      fetchAssessment(visitId),
+      createClient().from('session_note_settings').select('assessment_form_mode').eq('id', 1).single(),
+    ]).then(([v, a, settings]) => {
       if (cancelled) return
+      setFormMode((settings.data?.assessment_form_mode as FormMode) ?? 'single_step')
       if (!v || v.service_type !== 'TERAPI AWAL') {
         router.replace(backTo)
         return
@@ -163,7 +173,7 @@ export default function TerapiAwalAssessmentPage() {
     }
   }
 
-  if (loading || !visit || !form) {
+  if (loading || !visit || !form || !formMode) {
     return (
       <div className="flex items-center justify-center py-24">
         <Loader2 size={24} className="animate-spin text-muted-foreground" />
@@ -232,28 +242,40 @@ export default function TerapiAwalAssessmentPage() {
 
       <VisitInfoBar visitId={visit.id} value={visitInfo} onChange={setVisitInfo} />
 
-      <div className="glass-card p-4 sm:p-6 space-y-5">
-        <div ref={topRef} className="scroll-mt-4" />
-        <StepProgress currentStep={currentStep} furthestStep={furthestStep} onJump={handleJumpStep} />
+      {formMode === 'multi_step' ? (
+        <div className="glass-card p-4 sm:p-6 space-y-5">
+          <div ref={topRef} className="scroll-mt-4" />
+          <StepProgress currentStep={currentStep} furthestStep={furthestStep} onJump={handleJumpStep} />
 
-        <StepComponent value={form} onChange={patchForm} />
+          <StepComponent value={form} onChange={patchForm} />
 
-        {error && (
-          <p className="text-xs text-destructive flex items-center gap-1.5">
-            <AlertTriangle size={12} /> {error}
-          </p>
-        )}
+          {error && (
+            <p className="text-xs text-destructive flex items-center gap-1.5">
+              <AlertTriangle size={12} /> {error}
+            </p>
+          )}
 
-        <AssessmentFooter
-          currentStep={currentStep}
+          <AssessmentFooter
+            currentStep={currentStep}
+            saving={saving}
+            completing={completing}
+            onBack={handleBack}
+            onNext={handleNext}
+            onSaveDraft={persistDraft}
+            onComplete={handleComplete}
+          />
+        </div>
+      ) : (
+        <SingleStepAssessmentForm
+          form={form}
+          patchForm={patchForm}
+          error={error}
           saving={saving}
           completing={completing}
-          onBack={handleBack}
-          onNext={handleNext}
           onSaveDraft={persistDraft}
           onComplete={handleComplete}
         />
-      </div>
+      )}
 
       {showPackagePrompt && (
         <PostAssessmentPackageDialog
