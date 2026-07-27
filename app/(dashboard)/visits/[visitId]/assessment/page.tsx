@@ -3,13 +3,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Loader2, AlertTriangle, Printer } from 'lucide-react'
+import { useToast } from '@/context/ToastContext'
+import { ChevronLeft, Loader2, AlertTriangle, Printer, FileHeart, Share2 } from 'lucide-react'
 import { fetchVisitWithPatient } from '@/app/actions/jadwal'
 import { fetchAssessment, saveAssessmentDraft, completeAssessment } from '@/app/actions/assessments'
+import { getOrCreateResumeLink } from '@/app/actions/resumeLinks'
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { TerapiAwalAssessment } from '@/types'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { generateAssessmentPdf } from '@/components/assessment/generateAssessmentPdf'
+import { generatePatientResumePdf } from '@/components/assessment/generatePatientResumePdf'
 import { StepProgress } from '@/components/assessment/StepProgress'
 import { AssessmentFooter } from '@/components/assessment/AssessmentFooter'
 import { VisitInfoBar } from '@/components/assessment/VisitInfoBar'
@@ -28,6 +31,7 @@ export default function TerapiAwalAssessmentPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const backTo = searchParams.get('from') || '/jadwal-harian'
+  const { showToast } = useToast()
 
   const [loading, setLoading]       = useState(true)
   const [visit, setVisit]           = useState<VisitWithPatient | null>(null)
@@ -42,6 +46,7 @@ export default function TerapiAwalAssessmentPage() {
   const [completing, setCompleting] = useState(false)
   const [error, setError]           = useState<string | null>(null)
   const [showPackagePrompt, setShowPackagePrompt] = useState(false)
+  const [sharing, setSharing]       = useState(false)
 
   const topRef = useRef<HTMLDivElement>(null)
   const isFirstStepRender = useRef(true)
@@ -117,6 +122,25 @@ export default function TerapiAwalAssessmentPage() {
     generateAssessmentPdf(visit, completedAssessment)
   }
 
+  function handlePrintResume() {
+    if (!visit || !completedAssessment) return
+    generatePatientResumePdf(visit, completedAssessment)
+  }
+
+  async function handleShareResume() {
+    if (!visit) return
+    setSharing(true)
+    const { url, error: err } = await getOrCreateResumeLink(visit.id)
+    setSharing(false)
+    if (err || !url) { showToast(err || 'Gagal membuat link resume', 'error'); return }
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast('Link resume disalin ke clipboard', 'success')
+    } catch {
+      showToast(url, 'info')
+    }
+  }
+
   async function handleComplete() {
     if (!visit || !form) return
     if (!visitInfo.regio) { setError('Regio wajib dipilih pada Info Kunjungan sebelum menyelesaikan asesmen.'); return }
@@ -175,14 +199,34 @@ export default function TerapiAwalAssessmentPage() {
           </div>
         </div>
         {alreadyCompleted && (
-          <button
-            type="button"
-            onClick={handlePrint}
-            title="Cetak PDF"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors shrink-0"
-          >
-            <Printer size={13} /> <span className="hidden sm:inline">Cetak PDF</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <button
+              type="button"
+              onClick={handlePrint}
+              title="Cetak PDF klinis"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors"
+            >
+              <Printer size={13} /> <span className="hidden sm:inline">Cetak PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={handlePrintResume}
+              title="Cetak resume untuk pasien"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors"
+            >
+              <FileHeart size={13} /> <span className="hidden sm:inline">Cetak Resume</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleShareResume}
+              disabled={sharing}
+              title="Salin link resume untuk dibagikan ke pasien"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-60"
+            >
+              {sharing ? <Loader2 size={13} className="animate-spin" /> : <Share2 size={13} />}
+              <span className="hidden sm:inline">Bagikan ke Pasien</span>
+            </button>
+          </div>
         )}
       </div>
 

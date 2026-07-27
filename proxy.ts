@@ -35,7 +35,8 @@ export async function proxy(request: NextRequest) {
   const isPublic = pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
     pathname.startsWith('/unauthorized') ||
-    pathname.startsWith('/auth/callback')
+    pathname.startsWith('/auth/callback') ||
+    pathname.startsWith('/resume/')
 
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))

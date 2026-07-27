@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import { Bell, Building2, Calendar, CheckCircle2, ChevronRight, Loader2, User, AlertTriangle } from 'lucide-react'
+import { Bell, Building2, Calendar, CheckCircle2, ChevronRight, Loader2, User, AlertTriangle, Share2 } from 'lucide-react'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 import type { MedicalRecordRow } from '@/app/actions/medicalRecords'
+import { getOrCreateResumeLink } from '@/app/actions/resumeLinks'
+import { useToast } from '@/context/ToastContext'
 import { formatRecordDate } from './types'
 
 interface Props {
@@ -24,8 +27,23 @@ function missingFieldsLabel(record: MedicalRecordRow): string {
 }
 
 export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemind, reminding, reminded }: Props) {
+  const { showToast } = useToast()
+  const [sharing, setSharing] = useState(false)
   const formRoute = getVisitFormRoute(record.service_type)
   const fillHref = formRoute ? `/visits/${record.id}/${formRoute}?from=/medical-records` : null
+
+  async function handleShare() {
+    setSharing(true)
+    const { url, error: err } = await getOrCreateResumeLink(record.id)
+    setSharing(false)
+    if (err || !url) { showToast(err || 'Gagal membuat link resume', 'error'); return }
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast('Link resume disalin ke clipboard', 'success')
+    } catch {
+      showToast(url, 'info')
+    }
+  }
 
   return (
     <div className={`glass-card border-l-4 p-4 space-y-3 transition-all ${
@@ -96,6 +114,19 @@ export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemin
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
           >
             {record.is_complete ? 'Lihat / Edit' : 'Lengkapi Sekarang'} <ChevronRight size={14} />
+          </button>
+        )}
+
+        {record.is_complete && (
+          <button
+            type="button"
+            onClick={handleShare}
+            disabled={sharing}
+            title="Salin link resume untuk dibagikan ke pasien"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors disabled:opacity-60"
+          >
+            {sharing ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
+            Bagikan ke Pasien
           </button>
         )}
 
