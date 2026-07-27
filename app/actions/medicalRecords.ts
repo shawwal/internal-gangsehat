@@ -2,7 +2,11 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
+import { isRegioRequired } from '@/lib/visitRouting'
 import type { UserRole } from '@/types'
+
+// service_types where regio is compulsory, formatted for PostgREST in.() lists
+const REGIO_REQUIRED_IN = '("TERAPI AWAL","TA VISIT")'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export type RecordCompleteness = 'all' | 'incomplete' | 'complete'
@@ -120,8 +124,9 @@ async function searchPatientIds(supabase: SupabaseServerClient, term: string): P
   return (data ?? []).map((p: { id: string }) => p.id)
 }
 
-// A visit is "lengkap" (complete) once diagnosis, treatment, and regio are all
-// filled — the exact same signal sendMedicalRecordReminder() and the
+// A visit is "lengkap" (complete) once diagnosis and treatment are filled, and
+// regio too — but only for assessment-type visits (TERAPI AWAL, TA VISIT), where
+// it's compulsory. Same signal sendMedicalRecordReminder() and the
 // jadwal-harian incomplete-records banner already use.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyScopedFilters(query: any, viewer: ViewerContext, params: MedicalRecordsParams) {
@@ -138,9 +143,12 @@ function applyScopedFilters(query: any, viewer: ViewerContext, params: MedicalRe
   if (startDate) query = query.gte('visit_date', startDate)
 
   if (params.completeness === 'incomplete') {
-    query = query.or('diagnosis.is.null,treatment.is.null,regio.is.null')
+    query = query.or(`diagnosis.is.null,treatment.is.null,and(service_type.in.${REGIO_REQUIRED_IN},regio.is.null)`)
   } else if (params.completeness === 'complete') {
-    query = query.not('diagnosis', 'is', null).not('treatment', 'is', null).not('regio', 'is', null)
+    query = query
+      .not('diagnosis', 'is', null)
+      .not('treatment', 'is', null)
+      .or(`regio.not.is.null,service_type.not.in.${REGIO_REQUIRED_IN}`)
   }
 
   return query
@@ -217,7 +225,7 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     diagnosis:             v.diagnosis,
     treatment:             v.treatment,
     regio:                 v.regio,
-    is_complete:           !!(v.diagnosis && v.treatment && v.regio),
+    is_complete:           !!(v.diagnosis && v.treatment && (!isRegioRequired(v.service_type) || v.regio)),
   }))
 
   return { rows, total: count ?? 0, scope: viewer.scope }

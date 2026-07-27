@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, X, Loader2, Sunrise, Sunset } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { ScheduleSlot } from '@/components/schedule/types'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
@@ -11,26 +12,6 @@ const SHIFT_META = {
   PAGI: { label: 'Pagi', icon: Sunrise, accent: 'text-secondary' },
   SORE: { label: 'Sore', icon: Sunset,  accent: 'text-primary' },
 } as const
-
-function ToggleSwitch({ checked, onClick, disabled }: { checked: boolean; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={checked ? 'Nonaktifkan slot' : 'Aktifkan slot'}
-      className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-        checked ? 'bg-primary' : 'bg-muted-foreground/30'
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
-          checked ? 'translate-x-4' : 'translate-x-0'
-        }`}
-      />
-    </button>
-  )
-}
 
 export default function ScheduleSlotsPage() {
   const [slots, setSlots]       = useState<ScheduleSlot[]>([])
@@ -240,7 +221,11 @@ export default function ScheduleSlotsPage() {
                               <Loader2 size={13} className="animate-spin text-muted-foreground" />
                             </span>
                           ) : (
-                            <ToggleSwitch checked={s.is_active} onClick={() => toggleActive(s)} />
+                            <ToggleSwitch
+                              checked={s.is_active}
+                              onClick={() => toggleActive(s)}
+                              label={s.is_active ? 'Nonaktifkan slot' : 'Aktifkan slot'}
+                            />
                           )}
                         </div>
                       </div>

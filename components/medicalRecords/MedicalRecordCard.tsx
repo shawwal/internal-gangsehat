@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Bell, Building2, Calendar, CheckCircle2, ChevronRight, Loader2, User, AlertTriangle } from 'lucide-react'
-import { getVisitFormRoute } from '@/lib/visitRouting'
+import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 import type { MedicalRecordRow } from '@/app/actions/medicalRecords'
 import { formatRecordDate } from './types'
 
@@ -19,7 +19,7 @@ function missingFieldsLabel(record: MedicalRecordRow): string {
   const missing: string[] = []
   if (!record.diagnosis) missing.push('diagnosis')
   if (!record.treatment) missing.push('tindakan')
-  if (!record.regio)     missing.push('regio')
+  if (isRegioRequired(record.service_type) && !record.regio) missing.push('regio')
   return missing.join(', ')
 }
 

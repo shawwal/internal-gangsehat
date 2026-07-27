@@ -22,7 +22,7 @@ import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders } from '@/app/actions/jadwal'
 import { fetchReminderTemplate } from '@/app/actions/reminder-template'
-import { getVisitFormRoute } from '@/lib/visitRouting'
+import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 import { fillTemplate, formatDate, formatWaNumber } from '@/lib/utils'
 import type { AssignTarget, RefreshingCell } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
@@ -127,10 +127,10 @@ export default function JadwalHarianPage() {
     setPaymentVisit(visits.find((v) => v.id === visitId) ?? null)
   }
 
-  // Incomplete visits: completed but missing diagnosis/treatment/regio and has a therapist
+  // Incomplete visits: completed but missing diagnosis/treatment/(regio, when required) and has a therapist
   const incompleteVisits = visits.filter((v) =>
     v.status === 'completed' &&
-    (!v.diagnosis || !v.treatment || !v.regio) &&
+    (!v.diagnosis || !v.treatment || (isRegioRequired(v.service_type) && !v.regio)) &&
     !!v.attending_staff_id,
   )
   const canSendReminders = !!userRole && REMIND_ROLES.includes(userRole)

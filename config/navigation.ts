@@ -154,6 +154,14 @@ export const navigation: NavItem[] = [
     roles: ['director'],
     group: 'management',
   },
+  {
+    key: 'director-session-note-settings',
+    label: 'Form Catatan Perawatan',
+    href: '/director/session-note-settings',
+    icon: 'FileText',
+    roles: ['director'],
+    group: 'management',
+  },
 
   // Finance
   {

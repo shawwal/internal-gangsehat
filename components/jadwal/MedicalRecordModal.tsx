@@ -6,7 +6,7 @@ import { X, ExternalLink, FileText, Loader2 } from 'lucide-react'
 import { fetchVisitWithPatient, updateVisit } from '@/app/actions/jadwal'
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { VisitStatus, ServiceType, BodyRegion } from '@/types'
-import { getVisitFormRoute } from '@/lib/visitRouting'
+import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 import { STATUS_LABEL } from './types'
 
 const STATUS_OPTIONS: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
@@ -103,7 +103,7 @@ export function MedicalRecordModal({ visitId, contextShift, contextServiceType, 
     if (form.status === 'completed') {
       if (!form.diagnosis.trim())  { setError('Diagnosis wajib diisi sebelum menandai kunjungan sebagai Selesai.'); return }
       if (!form.treatment.trim())  { setError('Tindakan wajib diisi sebelum menandai kunjungan sebagai Selesai.'); return }
-      if (!form.regio)             { setError('Regio wajib dipilih sebelum menandai kunjungan sebagai Selesai.'); return }
+      if (isRegioRequired(form.service_type) && !form.regio) { setError('Regio wajib dipilih sebelum menandai kunjungan sebagai Selesai.'); return }
     }
     setSaving(true)
     setError(null)

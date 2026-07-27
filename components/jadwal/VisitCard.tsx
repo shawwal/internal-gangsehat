@@ -8,6 +8,7 @@ import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
 import type { VisitStatus } from '@/types'
 import { formatCurrency } from '@/lib/utils'
+import { isRegioRequired } from '@/lib/visitRouting'
 
 const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
 const REMIND_ROLES  = ['admin', 'director', 'manager']
@@ -49,7 +50,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const canRecordPayment = !!userRole && PAYMENT_ROLES.includes(userRole)
   const showPaymentItem  = canRecordPayment && visit.status === 'completed' && !visit.package_id
   const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && !visit.package_id
-  const isIncomplete     = visit.status === 'completed' && (!visit.diagnosis || !visit.treatment || !visit.regio)
+  const isIncomplete     = visit.status === 'completed' && (!visit.diagnosis || !visit.treatment || (isRegioRequired(visit.service_type) && !visit.regio))
   const canRemind        = !!userRole && REMIND_ROLES.includes(userRole) && isIncomplete && !!onRemind
   const canSendWhatsApp  = visit.status === 'scheduled' && !!visit.patient_phone && !!onWhatsApp
 

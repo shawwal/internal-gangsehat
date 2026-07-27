@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import type { VisitStatus } from '@/types'
+import { isRegioRequired } from '@/lib/visitRouting'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface DailyVisit {
@@ -352,12 +353,13 @@ export async function sendMedicalRecordReminder(
   // Fetch the visit
   const { data: visit, error: visitErr } = await supabase
     .from('patient_visits')
-    .select('id, status, diagnosis, treatment, regio, attending_staff_id, visit_date')
+    .select('id, status, diagnosis, treatment, regio, service_type, attending_staff_id, visit_date')
     .eq('id', visitId)
     .single()
   if (visitErr || !visit) return { error: 'Kunjungan tidak ditemukan' }
   if (visit.status !== 'completed') return { error: 'Kunjungan belum selesai' }
-  if (visit.diagnosis && visit.treatment && visit.regio) return { error: 'Rekam medis sudah lengkap' }
+  const regioRequired = isRegioRequired(visit.service_type)
+  if (visit.diagnosis && visit.treatment && (!regioRequired || visit.regio)) return { error: 'Rekam medis sudah lengkap' }
   if (!visit.attending_staff_id) return { error: 'Tidak ada terapis yang ditugaskan' }
 
   // Cooldown: skip if a reminder was already sent today for this visit
@@ -380,7 +382,7 @@ export async function sendMedicalRecordReminder(
   const missing: string[] = []
   if (!visit.diagnosis) missing.push('diagnosis')
   if (!visit.treatment) missing.push('tindakan')
-  if (!visit.regio)     missing.push('regio')
+  if (regioRequired && !visit.regio) missing.push('regio')
 
   await admin.from('user_notifications').insert({
     user_id: visit.attending_staff_id,

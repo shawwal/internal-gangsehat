@@ -3,21 +3,22 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Loader2, AlertTriangle, Printer, Copy, History } from 'lucide-react'
+import { ChevronLeft, Loader2, Printer, Copy, History } from 'lucide-react'
 import { fetchVisitWithPatient } from '@/app/actions/jadwal'
 import {
   fetchSessionNote, fetchLatestCompletedAssessment, fetchPreviousSessionNote, completeSessionNote,
 } from '@/app/actions/sessionNotes'
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { SessionNote, TerapiAwalAssessment } from '@/types'
-import { SectionSubjective } from '@/components/sessionNote/SectionSubjective'
-import { SectionObjective } from '@/components/sessionNote/SectionObjective'
-import { SectionAssessment } from '@/components/sessionNote/SectionAssessment'
-import { SectionPlan } from '@/components/sessionNote/SectionPlan'
+import { SingleStepSessionNoteForm } from '@/components/sessionNote/SingleStepSessionNoteForm'
+import { MultiStepSessionNoteForm } from '@/components/sessionNote/MultiStepSessionNoteForm'
 import { generateSessionNotePdf } from '@/components/sessionNote/generateSessionNotePdf'
 import { fromSessionNote, toFieldsInput } from '@/components/sessionNote/types'
 import type { SessionNoteFormState } from '@/components/sessionNote/types'
 import { stripHtml } from '@/lib/richtext'
+import { createClient } from '@/lib/supabase/client'
+
+type FormMode = 'single_step' | 'multi_step'
 
 export default function SessionNotePage() {
   const { visitId } = useParams<{ visitId: string }>()
@@ -36,13 +37,19 @@ export default function SessionNotePage() {
 
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState<string | null>(null)
+  const [formMode, setFormMode] = useState<FormMode | null>(null)
 
   useEffect(() => {
     if (!visitId) return
     let cancelled = false
     setLoading(true)
-    Promise.all([fetchVisitWithPatient(visitId), fetchSessionNote(visitId)]).then(([v, n]) => {
+    Promise.all([
+      fetchVisitWithPatient(visitId),
+      fetchSessionNote(visitId),
+      createClient().from('session_note_settings').select('form_mode').eq('id', 1).single(),
+    ]).then(([v, n, settings]) => {
       if (cancelled) return
+      setFormMode((settings.data?.form_mode as FormMode) ?? 'single_step')
       if (!v || (v.service_type !== 'SESI TERAPI' && v.service_type !== 'PAKET TERAPI'
         && v.service_type !== 'SESI VISIT' && v.service_type !== 'PAKET VISIT')) {
         router.replace(backTo)
@@ -94,7 +101,7 @@ export default function SessionNotePage() {
     generateSessionNotePdf(visit, completedNote, priorAssessment)
   }
 
-  if (loading || !visit || !form) {
+  if (loading || !visit || !form || !formMode) {
     return (
       <div className="flex items-center justify-center py-24">
         <Loader2 size={24} className="animate-spin text-muted-foreground" />
@@ -160,30 +167,11 @@ export default function SessionNotePage() {
         </div>
       )}
 
-      <div className="glass-card p-4 sm:p-6 space-y-6">
-        <SectionSubjective value={form} onChange={patchForm} />
-        <SectionObjective value={form} onChange={patchForm} />
-        <SectionAssessment value={form} onChange={patchForm} />
-        <SectionPlan value={form} onChange={patchForm} />
-
-        {error && (
-          <p className="text-xs text-destructive flex items-center gap-1.5">
-            <AlertTriangle size={12} /> {error}
-          </p>
-        )}
-
-        <div className="flex sm:justify-end">
-          <button
-            type="button"
-            onClick={handleComplete}
-            disabled={saving}
-            className="w-full sm:w-auto min-h-11 px-5 py-2.5 sm:py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
-          >
-            {saving && <Loader2 size={13} className="animate-spin" />}
-            Simpan Catatan Perawatan
-          </button>
-        </div>
-      </div>
+      {formMode === 'multi_step' ? (
+        <MultiStepSessionNoteForm form={form} patchForm={patchForm} error={error} saving={saving} onSubmit={handleComplete} />
+      ) : (
+        <SingleStepSessionNoteForm form={form} patchForm={patchForm} error={error} saving={saving} onSubmit={handleComplete} />
+      )}
     </div>
   )
 }
