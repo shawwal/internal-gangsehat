@@ -154,7 +154,7 @@ export default function TerapiAwalAssessmentPage() {
   async function handleComplete() {
     if (!visit || !form) return
     if (!visitInfo.regio) { setError('Regio wajib dipilih pada Info Kunjungan sebelum menyelesaikan asesmen.'); return }
-    if (!form.diagnosis_hypothesis.trim()) { setError('Physiotherapy Diagnosis / Hypothesis wajib diisi (Langkah 5).'); return }
+    if (!form.diagnosis_primer.trim()) { setError('Diagnosa Primer wajib diisi (Langkah 5).'); return }
     if (!form.treatment_plan_today.trim()) { setError('Treatment Plan for Today wajib diisi (Langkah 6).'); return }
 
     setCompleting(true)
