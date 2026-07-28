@@ -88,12 +88,40 @@ export interface PatientVisit {
 export type RedFlag =
   | 'UNEXPLAINED_WEIGHT_LOSS'
   | 'NIGHT_SWEATS_FEVER'
+  | 'HISTORY_OF_CANCER'
   | 'BILATERAL_TINGLING_NUMBNESS'
   | 'SADDLE_ANESTHESIA_BOWEL'
+  | 'TRAUMA_INABILITY_BEAR_WEIGHT'
   | 'NONE'
 
 export type PromType = 'LEFS' | 'SPADI' | 'ODI' | 'Other'
 export type AssessmentStatus = 'draft' | 'completed'
+
+// SOCRATES-style pain history (migration 045)
+export type PainOnset = 'Sudden' | 'Gradual' | 'Insidious' | 'TidakDiperiksa'
+export type PainCharacter = 'Sharp' | 'Dull' | 'Burning' | 'Shooting' | 'Throbbing' | 'Other' | 'TidakDiperiksa'
+export type PainRadiation = 'None' | 'DownArm' | 'DownLeg' | 'Other' | 'TidakDiperiksa'
+export type PainAssociatedSymptom =
+  | 'Numbness' | 'Tingling' | 'Clicking' | 'Locking' | 'GivingWay' | 'Swelling'
+  | 'Hipertensi' | 'Kolesterol' | 'GulaDarah' | 'AsamUrat' | 'None' | 'TidakDiperiksa'
+export type PainTimeCourse = 'Constant' | 'Intermittent' | 'WorseAM' | 'WorsePM' | 'NightPain' | 'TidakDiperiksa'
+
+// Structured joint/movement exam row (migration 045)
+export type AromResult = 'WNL' | 'Restricted' | 'Painful' | 'Restricted_Painful' | 'TidakDiperiksa'
+export type PromEndFeel = 'Normal' | 'Bone' | 'Soft' | 'Tissue' | 'Empty' | 'TidakDiperiksa'
+export type IsometricResistance = 'Strong_Painless' | 'Strong_Painful' | 'Weak_Painful' | 'Weak_Painless' | 'TidakDiperiksa'
+export interface JointExamRow {
+  id: string
+  joint: string
+  arom: AromResult | ''
+  prom: PromEndFeel | ''
+  isometric: IsometricResistance | ''
+}
+
+// Structured neurological screening (migration 045)
+export type DermatomeStatus = 'Intact' | 'Impaired' | 'Absent' | 'NotTested'
+export type MyotomeStatus = 'Intact' | 'Impaired' | 'NotTested'
+export type ReflexStatus = 'Normal' | 'Hyporeflexive' | 'Hyperreflexive' | 'Absent' | 'NotTested'
 
 // Guided MSK & Sports Assessment — one row per TERAPI AWAL patient_visits row (migration 031)
 export interface TerapiAwalAssessment {
@@ -110,16 +138,31 @@ export interface TerapiAwalAssessment {
   aggravating_factors: string | null
   easing_factors: string | null
   red_flags: RedFlag[]
+  // Step 1: SOCRATES-style pain history (migration 045)
+  pain_site: string | null
+  pain_onset: PainOnset | null
+  pain_character: PainCharacter | null
+  pain_radiation: PainRadiation | null
+  pain_associated_symptoms: PainAssociatedSymptom[]
+  pain_time_course: PainTimeCourse | null
+  pain_severity_vas: number | null
   // Step 2: Physical Examination (Objective)
   observation_gait_posture: string | null
-  rom_active_passive: string | null
+  rom_active_passive: string | null  // legacy pre-045 free text — read-only fallback only, see components/assessment/types.ts
+  joint_exam_rows: JointExamRow[]
   muscle_strength_mmt: string | null
   special_ortho_tests: string | null
   palpation: string | null
   // Step 3: Neurological Screening
-  dermatomes_sensory: string | null
-  myotomes_motor: string | null
-  reflexes_neural_tension: string | null
+  dermatomes_sensory: string | null  // legacy pre-045 free text — read-only fallback only
+  myotomes_motor: string | null      // legacy pre-045 free text — read-only fallback only
+  reflexes_neural_tension: string | null  // legacy pre-045 free text — read-only fallback only
+  dermatomes_status: DermatomeStatus | null
+  dermatomes_notes: string | null
+  myotomes_status: MyotomeStatus | null
+  myotomes_notes: string | null
+  reflexes_status: ReflexStatus | null
+  reflexes_notes: string | null
   // Step 4: Objective Outcome Measures
   prom_used: PromType | null
   prom_baseline_score: number | null

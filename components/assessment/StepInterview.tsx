@@ -1,9 +1,17 @@
 'use client'
 
 import { RichTextEditor } from './RichTextEditor'
-import { RED_FLAG_LABEL, RED_FLAG_OPTIONS } from './types'
+import { RangeSlider } from '@/components/ui/RangeSlider'
+import {
+  RED_FLAG_LABEL, RED_FLAG_OPTIONS,
+  PAIN_ONSET_LABEL, PAIN_ONSET_OPTIONS,
+  PAIN_CHARACTER_LABEL, PAIN_CHARACTER_OPTIONS,
+  PAIN_RADIATION_LABEL, PAIN_RADIATION_OPTIONS,
+  PAIN_ASSOCIATED_SYMPTOM_LABEL, PAIN_ASSOCIATED_SYMPTOM_OPTIONS,
+  PAIN_TIME_COURSE_LABEL, PAIN_TIME_COURSE_OPTIONS,
+} from './types'
 import type { AssessmentFormState } from './types'
-import type { RedFlag } from '@/types'
+import type { RedFlag, PainOnset, PainCharacter, PainRadiation, PainAssociatedSymptom, PainTimeCourse } from '@/types'
 
 interface Props {
   value: AssessmentFormState
@@ -11,6 +19,7 @@ interface Props {
 }
 
 const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
+const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
 export function StepInterview({ value, onChange }: Props) {
   function toggleRedFlag(flag: RedFlag) {
@@ -23,6 +32,18 @@ export function StepInterview({ value, onChange }: Props) {
       ? withoutNone.filter((f) => f !== flag)
       : [...withoutNone, flag]
     onChange({ red_flags: next })
+  }
+
+  function toggleAssociatedSymptom(symptom: PainAssociatedSymptom) {
+    if (symptom === 'None' || symptom === 'TidakDiperiksa') {
+      onChange({ pain_associated_symptoms: value.pain_associated_symptoms.includes(symptom) ? [] : [symptom] })
+      return
+    }
+    const withoutExclusive = value.pain_associated_symptoms.filter((s) => s !== 'None' && s !== 'TidakDiperiksa')
+    const next = withoutExclusive.includes(symptom)
+      ? withoutExclusive.filter((s) => s !== symptom)
+      : [...withoutExclusive, symptom]
+    onChange({ pain_associated_symptoms: next })
   }
 
   return (
@@ -53,6 +74,94 @@ export function StepInterview({ value, onChange }: Props) {
           <RichTextEditor
             value={value.easing_factors}
             onChange={(html) => onChange({ easing_factors: html })}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border p-3 sm:p-4 space-y-4">
+        <p className="text-xs font-semibold text-foreground">Riwayat Nyeri (SOCRATES)</p>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Lokasi (Site)</label>
+            <input
+              value={value.pain_site}
+              onChange={(e) => onChange({ pain_site: e.target.value })}
+              placeholder="Di mana tepatnya rasa nyeri itu?"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Awal Mula (Onset)</label>
+            <select
+              value={value.pain_onset}
+              onChange={(e) => onChange({ pain_onset: e.target.value as PainOnset | '' })}
+              className={inputCls}
+            >
+              <option value="">— Pilih —</option>
+              {PAIN_ONSET_OPTIONS.map((o) => <option key={o} value={o}>{PAIN_ONSET_LABEL[o]}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Karakteristik (Character)</label>
+            <select
+              value={value.pain_character}
+              onChange={(e) => onChange({ pain_character: e.target.value as PainCharacter | '' })}
+              className={inputCls}
+            >
+              <option value="">— Pilih —</option>
+              {PAIN_CHARACTER_OPTIONS.map((o) => <option key={o} value={o}>{PAIN_CHARACTER_LABEL[o]}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Penjalaran (Radiation)</label>
+            <select
+              value={value.pain_radiation}
+              onChange={(e) => onChange({ pain_radiation: e.target.value as PainRadiation | '' })}
+              className={inputCls}
+            >
+              <option value="">— Pilih —</option>
+              {PAIN_RADIATION_OPTIONS.map((o) => <option key={o} value={o}>{PAIN_RADIATION_LABEL[o]}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Pola Keluhan (Time Course)</label>
+            <select
+              value={value.pain_time_course}
+              onChange={(e) => onChange({ pain_time_course: e.target.value as PainTimeCourse | '' })}
+              className={inputCls}
+            >
+              <option value="">— Pilih —</option>
+              {PAIN_TIME_COURSE_OPTIONS.map((o) => <option key={o} value={o}>{PAIN_TIME_COURSE_LABEL[o]}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>Gejala Penyerta (Associations)</label>
+          <div className="flex flex-wrap gap-3">
+            {PAIN_ASSOCIATED_SYMPTOM_OPTIONS.map((symptom) => (
+              <label key={symptom} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={value.pain_associated_symptoms.includes(symptom)}
+                  onChange={() => toggleAssociatedSymptom(symptom)}
+                  className="rounded border-border accent-primary"
+                />
+                {PAIN_ASSOCIATED_SYMPTOM_LABEL[symptom]}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>Tingkat Keparahan (VAS / NPRS)</label>
+          <RangeSlider
+            value={value.pain_severity_vas}
+            onChange={(v) => onChange({ pain_severity_vas: v })}
+            gradient
+            minLabel="Tidak nyeri (0)"
+            maxLabel="Nyeri terburuk (10)"
           />
         </div>
       </div>

@@ -77,6 +77,10 @@ export const PDF_SHEET_STYLES = `
     .field-value ul, .field-value ol { padding-left: 20px; margin-bottom: 6px; }
     .field-value.is-empty::before { content: '—'; color: #bbb; }
 
+    .exam-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .exam-table th, .exam-table td { border: 1px solid #e5e5e5; padding: 6px 8px; text-align: left; }
+    .exam-table th { background: #fafafa; font-size: 10px; text-transform: uppercase; color: #888; }
+
     .context-box {
       background: #fff8fc;
       border: 1px solid #ffd1e8;
