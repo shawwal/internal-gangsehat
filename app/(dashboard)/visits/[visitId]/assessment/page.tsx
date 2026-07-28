@@ -9,7 +9,7 @@ import { fetchVisitWithPatient } from '@/app/actions/jadwal'
 import { fetchAssessment, saveAssessmentDraft, completeAssessment } from '@/app/actions/assessments'
 import { getOrCreateResumeLink } from '@/app/actions/resumeLinks'
 import type { VisitWithPatient } from '@/app/actions/jadwal'
-import type { TerapiAwalAssessment } from '@/types'
+import type { TerapiAwalAssessment, UserRole } from '@/types'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { generateAssessmentPdf } from '@/components/assessment/generateAssessmentPdf'
 import { generatePatientResumePdf } from '@/components/assessment/generatePatientResumePdf'
@@ -52,6 +52,9 @@ export default function TerapiAwalAssessmentPage() {
   const [showPackagePrompt, setShowPackagePrompt] = useState(false)
   const [sharing, setSharing]       = useState(false)
   const [formMode, setFormMode]     = useState<FormMode | null>(null)
+  const [userRole, setUserRole]     = useState<UserRole | null>(null)
+
+  const canRecordPayment = !!userRole && ['finance', 'manager', 'director', 'admin'].includes(userRole)
 
   const topRef = useRef<HTMLDivElement>(null)
   const isFirstStepRender = useRef(true)
@@ -94,6 +97,21 @@ export default function TerapiAwalAssessmentPage() {
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visitId])
+
+  useEffect(() => {
+    let cancelled = false
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data: profile } = await supabase
+        .from('internal_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      if (!cancelled) setUserRole((profile?.role as UserRole) ?? null)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   function patchForm(patch: Partial<AssessmentFormState>) {
     setForm((f) => f ? { ...f, ...patch } : f)
@@ -166,7 +184,7 @@ export default function TerapiAwalAssessmentPage() {
     if (err) { setError(err); return }
 
     setAlreadyCompleted(true)
-    if (visit.service_type === 'TERAPI AWAL') {
+    if (visit.service_type === 'TERAPI AWAL' && canRecordPayment) {
       setShowPackagePrompt(true)
     } else {
       router.push(backTo)

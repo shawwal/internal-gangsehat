@@ -135,6 +135,7 @@ export default function JadwalHarianPage() {
   )
   const canSendReminders = !!userRole && REMIND_ROLES.includes(userRole)
   const canCreateOrder = !!userRole && userRole !== 'therapist' && userRole !== 'staff'
+  const canRecordPayment = !!userRole && ['finance', 'manager', 'director', 'admin'].includes(userRole)
   const orderNewHref = userRole === 'director' ? '/director/orders/new' : '/order/new'
 
   async function handleRemind(visitId: string) {
@@ -405,7 +406,7 @@ export default function JadwalHarianPage() {
             return
           }
           if (visitId) silentReload({ type: 'visit', visitId })
-          if (ctx?.status === 'completed' && ctx.service_type === 'TA VISIT' && visitId) {
+          if (ctx?.status === 'completed' && ctx.service_type === 'TA VISIT' && visitId && canRecordPayment) {
             setPackagePrompt({ ...ctx, patientName: visit?.patient_name ?? '', branchId: visit?.branch_id ?? null, visitId })
           }
         }}

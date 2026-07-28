@@ -651,7 +651,8 @@ export default function PatientVisitsPage() {
             ctx &&
             ctx.status === 'completed' &&
             ctx.service_type === 'TA VISIT' &&
-            visitId
+            visitId &&
+            canRecordPayment
           ) {
             setPackagePrompt({ ...ctx, visitId })
           }
