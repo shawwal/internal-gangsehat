@@ -96,9 +96,9 @@ export async function completeAssessment(
 
   if (assessmentErr) return { error: assessmentErr.message }
 
-  const diagnosis = stripHtml(fields.diagnosis_hypothesis)
+  const diagnosis = stripHtml(fields.diagnosis_primer)
   const treatment = stripHtml(fields.treatment_plan_today)
-  const chiefComplaint = stripHtml(fields.npips) ?? stripHtml(fields.history_moi)
+  const chiefComplaint = stripHtml(fields.history_moi)
 
   const { error: visitErr } = await supabase
     .from('patient_visits')

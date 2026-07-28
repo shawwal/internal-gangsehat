@@ -16,7 +16,7 @@ export function generateSessionNotePdf(
 
   const contextBox = priorAssessment ? `
     <div class="context-box">
-      <strong>Konteks Asesmen Awal:</strong> ${priorAssessment.diagnosis_hypothesis ?? '—'}
+      <strong>Konteks Asesmen Awal:</strong> ${priorAssessment.diagnosis_primer ?? '—'}
     </div>` : ''
 
   const body = `

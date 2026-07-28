@@ -98,7 +98,7 @@ export async function fetchPublicResume(token: string): Promise<PublicResumeData
 
   const { data: assessment } = await admin
     .from('terapi_awal_assessments')
-    .select('npips, diagnosis_hypothesis, treatment_plan_today, short_term_goals, long_term_goals')
+    .select('history_moi, diagnosis_primer, treatment_plan_today, short_term_goals, long_term_goals')
     .eq('visit_id', link.visit_id)
     .maybeSingle()
 
@@ -132,8 +132,8 @@ export async function fetchPublicResume(token: string): Promise<PublicResumeData
   return {
     patientName,
     visitDate: visit.visit_date,
-    chiefComplaint: assessment?.npips || sessionNote?.subjective_notes || visit.chief_complaint,
-    diagnosis: assessment?.diagnosis_hypothesis || sessionNote?.clinical_impression || visit.diagnosis,
+    chiefComplaint: assessment?.history_moi || sessionNote?.subjective_notes || visit.chief_complaint,
+    diagnosis: assessment?.diagnosis_primer || sessionNote?.clinical_impression || visit.diagnosis,
     plan,
   }
 }

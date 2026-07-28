@@ -204,10 +204,9 @@ export default function SessionNotePage() {
       {priorAssessment && (
         <div className="glass-card p-4 bg-primary/5 border-primary/20">
           <p className="text-xs font-semibold text-primary mb-1">Konteks Asesmen Awal</p>
-          <div
-            className="text-xs text-muted-foreground [&_p]:mb-1 [&_ul]:list-disc [&_ul]:pl-4"
-            dangerouslySetInnerHTML={{ __html: priorAssessment.diagnosis_hypothesis ?? '—' }}
-          />
+          <p className="text-xs text-muted-foreground">
+            {priorAssessment.diagnosis_primer || '—'}
+          </p>
         </div>
       )}
 

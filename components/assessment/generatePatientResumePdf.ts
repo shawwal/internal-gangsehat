@@ -15,8 +15,8 @@ export function generatePatientResumePdf(visit: VisitWithPatient, assessment: Te
   const data: PublicResumeData = {
     patientName: visit.patient_name,
     visitDate: visit.visit_date,
-    chiefComplaint: assessment.npips || visit.chief_complaint,
-    diagnosis: assessment.diagnosis_hypothesis || visit.diagnosis,
+    chiefComplaint: assessment.history_moi || visit.chief_complaint,
+    diagnosis: assessment.diagnosis_primer || visit.diagnosis,
     plan,
   }
 
