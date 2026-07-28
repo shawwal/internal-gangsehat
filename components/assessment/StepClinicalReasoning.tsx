@@ -1,8 +1,11 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { ICF_SEVERITY_LABEL, ICF_SEVERITY_OPTIONS } from './types'
 import type { AssessmentFormState } from './types'
 import type { IcfSeverity } from '@/types'
+import { createClient } from '@/lib/supabase/client'
+import { DiagnosisCombobox } from './DiagnosisCombobox'
 
 interface Props {
   value: AssessmentFormState
@@ -51,6 +54,25 @@ function IcfDomain({ title, severityLabel, notes, severity, onNotesChange, onSev
 }
 
 export function StepClinicalReasoning({ value, onChange }: Props) {
+  const [diagnosisOptions, setDiagnosisOptions] = useState<string[]>([])
+
+  useEffect(() => {
+    let active = true
+    createClient()
+      .from('diagnoses')
+      .select('name')
+      .eq('is_active', true)
+      .order('name')
+      .then(({ data }) => {
+        if (active && data) setDiagnosisOptions(data.map((d) => d.name))
+      })
+    return () => { active = false }
+  }, [])
+
+  function handleOptionAdded(name: string) {
+    setDiagnosisOptions((prev) => (prev.some((o) => o.toLowerCase() === name.toLowerCase()) ? prev : [...prev, name].sort()))
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3 text-xs text-blue-300">
@@ -61,20 +83,22 @@ export function StepClinicalReasoning({ value, onChange }: Props) {
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>Diagnosa Primer</label>
-          <input
+          <DiagnosisCombobox
             value={value.diagnosis_primer}
-            onChange={(e) => onChange({ diagnosis_primer: e.target.value })}
+            onChange={(v) => onChange({ diagnosis_primer: v })}
+            options={diagnosisOptions}
+            onOptionAdded={handleOptionAdded}
             placeholder="Cari atau ketik diagnosa primer..."
-            className={inputCls}
           />
         </div>
         <div>
           <label className={labelCls}>Diagnosa Sekunder</label>
-          <input
+          <DiagnosisCombobox
             value={value.diagnosis_sekunder}
-            onChange={(e) => onChange({ diagnosis_sekunder: e.target.value })}
+            onChange={(v) => onChange({ diagnosis_sekunder: v })}
+            options={diagnosisOptions}
+            onOptionAdded={handleOptionAdded}
             placeholder="Cari atau ketik diagnosa sekunder (opsional)..."
-            className={inputCls}
           />
         </div>
       </div>
