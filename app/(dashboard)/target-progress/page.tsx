@@ -16,8 +16,9 @@ import {
   type BranchOption,
   type BranchTargetForProgress,
   type VisitForProgress,
+  type PackageForProgress,
 } from '@/components/targetProgress/types'
-import { daysInMonth, buildDailyCounts, sum, getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR } from '@/components/targetProgress/utils'
+import { daysInMonth, buildDailyCounts, buildPackageDailyCounts, mergeDailyCounts, sum, getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR } from '@/components/targetProgress/utils'
 
 type Tab = 'klasik' | 'visual'
 type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'admin' | null
@@ -83,7 +84,7 @@ export default function TargetProgressPage() {
     const supabase = createClient()
     const range = getMonthRange(month, year)
 
-    const [{ data: targetRow }, { data: visits }] = await Promise.all([
+    const [{ data: targetRow }, { data: visits }, { data: packages }] = await Promise.all([
       supabase
         .from('branch_targets')
         .select('target_ta, target_paket_klinik, target_kunjungan, target_visit')
@@ -94,15 +95,24 @@ export default function TargetProgressPage() {
         .maybeSingle(),
       supabase
         .from('patient_visits')
-        .select('id, visit_date, service_type, kehadiran, package_id')
+        .select('id, visit_date, service_type, kehadiran')
         .eq('branch_id', selectedBranchId)
         .gte('visit_date', range.start)
         .lte('visit_date', range.end)
         .in('status', [...VISIT_STATUS_FILTER]),
+      supabase
+        .from('patient_packages')
+        .select('id, purchased_at, category')
+        .eq('branch_id', selectedBranchId)
+        .gte('purchased_at', range.start)
+        .lte('purchased_at', range.end)
+        .neq('status', 'cancelled'),
     ])
 
     const days = daysInMonth(year, month)
-    const daily = buildDailyCounts((visits ?? []) as VisitForProgress[], days)
+    const visitDaily = buildDailyCounts((visits ?? []) as VisitForProgress[], days)
+    const packageDaily = buildPackageDailyCounts((packages ?? []) as PackageForProgress[], days)
+    const daily = mergeDailyCounts(visitDaily, packageDaily)
     const t = targetRow as BranchTargetForProgress | null
     const targetFields: Record<CategoryKey, number> = {
       ta: t?.target_ta ?? 0,

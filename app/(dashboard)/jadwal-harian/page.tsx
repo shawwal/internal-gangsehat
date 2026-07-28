@@ -162,12 +162,13 @@ export default function JadwalHarianPage() {
     const therapistName = attendingStaff?.nickname || attendingStaff?.full_name || ''
 
     const msg = fillTemplate(reminderTemplate ?? '', {
-      nama:     visit.patient_name,
-      tanggal:  formatDate(visit.visit_date),
-      jam:      visit.visit_time ?? '',
-      layanan:  visit.service_type ?? '',
-      cabang:   branchName,
-      terapis:  therapistName,
+      nama:      visit.patient_name,
+      tanggal:   formatDate(visit.visit_date),
+      jam:       visit.visit_time ?? '',
+      layanan:   visit.service_type ?? '',
+      cabang:    branchName,
+      terapis:   therapistName,
+      order_id:  visit.order_id ?? '',
     })
 
     const num = formatWaNumber(visit.patient_phone)

@@ -34,4 +34,4 @@ export function fillTemplate(template: string, vars: Record<string, string>): st
 }
 
 export const DEFAULT_REMINDER_TEMPLATE =
-  'Halo {{nama}}, kami dari Fisioterapi Gang Sehat ingin mengingatkan jadwal terapi Anda pada {{tanggal}} pukul {{jam}} di {{cabang}}. Sampai jumpa!'
+  'KONFIRMASI PENDAFTARAN JADWAL FISIOTERAPI\n\nNama: {{nama}}\nTanggal: {{tanggal}}\nJam: {{jam}}\nOrder ID: {{order_id}}\n\nKami dari Fisioterapi Gang Sehat ingin mengingatkan jadwal terapi Anda pada {{tanggal}} pukul {{jam}} di {{cabang}}. Sampai jumpa!'

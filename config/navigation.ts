@@ -188,6 +188,14 @@ export const navigation: NavItem[] = [
     roles: ['finance'],
     group: 'finance',
   },
+  {
+    key: 'closing-admin',
+    label: 'Closing Admin',
+    href: '/closing',
+    icon: 'CheckCircle2',
+    roles: ['admin', 'finance', 'manager', 'director'],
+    group: 'finance',
+  },
 
   // HR
   {

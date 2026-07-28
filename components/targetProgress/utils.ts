@@ -1,5 +1,5 @@
-import { TA_TYPES, isHadir, firstPackageVisits } from '@/components/performance/utils'
-import type { CategoryKey, DailyCounts, VisitForProgress } from './types'
+import { TA_TYPES, isHadir } from '@/components/performance/utils'
+import type { DailyCounts, VisitForProgress, PackageForProgress } from './types'
 
 export {
   pctValue, formatPct, progressColor,
@@ -10,14 +10,9 @@ export function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate()
 }
 
-function classify(serviceType: string | null): CategoryKey | null {
-  if (!serviceType) return null
-  if ((TA_TYPES as readonly string[]).includes(serviceType)) return 'ta'
-  if (serviceType === 'PAKET TERAPI') return 'paket_klinik'
-  if (serviceType === 'PAKET VISIT') return 'paket_visit'
-  return null
-}
-
+// TA and Kunjungan come from patient_visits (registered jadwal / attendance).
+// TA counts every registered TA visit — booked, not just attended — so it
+// reflects purchases/orders, not attendance. Kunjungan stays attendance-only.
 export function buildDailyCounts(visits: VisitForProgress[], days: number): DailyCounts {
   const daily: DailyCounts = {
     ta: Array(days).fill(0),
@@ -26,24 +21,52 @@ export function buildDailyCounts(visits: VisitForProgress[], days: number): Dail
     paket_visit: Array(days).fill(0),
   }
 
-  const attended = visits.filter(isHadir)
-  const paket = attended.filter((v) => v.service_type === 'PAKET TERAPI' || v.service_type === 'PAKET VISIT')
-
-  for (const v of attended) {
+  for (const v of visits) {
     const day = Number(v.visit_date.slice(8, 10))
     if (!day || day < 1 || day > days) continue
-    daily.kunjungan[day - 1] += 1
-    if (classify(v.service_type) === 'ta') daily.ta[day - 1] += 1
-  }
-
-  for (const v of firstPackageVisits(paket)) {
-    const day = Number(v.visit_date.slice(8, 10))
-    if (!day || day < 1 || day > days) continue
-    const cat = classify(v.service_type)
-    if (cat === 'paket_klinik' || cat === 'paket_visit') daily[cat][day - 1] += 1
+    if ((TA_TYPES as readonly string[]).includes(v.service_type ?? '')) {
+      daily.ta[day - 1] += 1
+    }
+    if (isHadir(v)) {
+      daily.kunjungan[day - 1] += 1
+    }
   }
 
   return daily
+}
+
+// Paket Klinik / Paket Visit come from patient_packages (the purchase/order
+// event itself) — one package purchase = one order, regardless of how many
+// sessions it contains or whether they've been attended yet.
+export function buildPackageDailyCounts(packages: PackageForProgress[], days: number): DailyCounts {
+  const daily: DailyCounts = {
+    ta: Array(days).fill(0),
+    paket_klinik: Array(days).fill(0),
+    kunjungan: Array(days).fill(0),
+    paket_visit: Array(days).fill(0),
+  }
+
+  for (const p of packages) {
+    const day = Number(p.purchased_at.slice(8, 10))
+    if (!day || day < 1 || day > days) continue
+    if (p.category === 'PAKET KLINIK') daily.paket_klinik[day - 1] += 1
+    else if (p.category === 'PAKET VISIT') daily.paket_visit[day - 1] += 1
+  }
+
+  return daily
+}
+
+export function mergeDailyCounts(a: DailyCounts, b: DailyCounts): DailyCounts {
+  const merged: DailyCounts = {
+    ta: [...a.ta],
+    paket_klinik: [...a.paket_klinik],
+    kunjungan: [...a.kunjungan],
+    paket_visit: [...a.paket_visit],
+  }
+  for (const key of ['ta', 'paket_klinik', 'kunjungan', 'paket_visit'] as const) {
+    for (let i = 0; i < merged[key].length; i++) merged[key][i] += b[key][i] ?? 0
+  }
+  return merged
 }
 
 export function cumulative(counts: number[]): number[] {

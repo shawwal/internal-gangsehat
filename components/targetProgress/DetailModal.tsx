@@ -77,7 +77,9 @@ export function DetailModal({ open, onClose, branchId, date, category, label }: 
                   <tr key={r.id} className="border-b border-border/25 hover:bg-muted/20 transition-colors">
                     <td className="px-4 py-2.5 text-xs text-muted-foreground w-10">{i + 1}</td>
                     <td className="px-4 py-2.5 text-xs font-medium text-foreground">{r.patientName}</td>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.serviceType ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                      {r.packageName ? `${r.packageName}${r.jenisPaket ? ` (${r.jenisPaket})` : ''}` : (r.serviceType ?? '—')}
+                    </td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.visitTime ?? '—'}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.fisioName}</td>
                   </tr>

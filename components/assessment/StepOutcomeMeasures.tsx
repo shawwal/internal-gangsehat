@@ -23,47 +23,37 @@ export function StepOutcomeMeasures({ value, onChange }: Props) {
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className={labelCls}>Patient-Reported Outcome Measure (PROM) Used</label>
+          <label className={labelCls}>Pilih Alat Ukur</label>
           <select
             value={value.prom_used}
             onChange={(e) => onChange({ prom_used: e.target.value as PromType | '' })}
             className={inputCls}
           >
-            <option value="">— Pilih —</option>
+            <option value="">— Pilih alat... —</option>
             {PROM_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         <div>
-          <label className={labelCls}>Baseline Score (Numeric)</label>
+          <label className={labelCls}>Skor</label>
           <input
             type="number"
             value={value.prom_baseline_score}
             onChange={(e) => onChange({ prom_baseline_score: e.target.value })}
-            placeholder="e.g. 45"
+            placeholder="e.g. 24/50 (48%)"
             className={inputCls}
           />
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className={labelCls}>Performance / Functional Metric Test</label>
-          <input
-            value={value.functional_metric_test}
-            onChange={(e) => onChange({ functional_metric_test: e.target.value })}
-            placeholder="Single Leg Hop Test, Grip Strength, Y-Balance..."
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Baseline Result / Value</label>
-          <input
-            value={value.functional_metric_baseline_value}
-            onChange={(e) => onChange({ functional_metric_baseline_value: e.target.value })}
-            placeholder="e.g. L: 120cm, R: 85cm"
-            className={inputCls}
-          />
-        </div>
+      <div>
+        <label className={labelCls}>Catatan</label>
+        <textarea
+          value={value.outcome_measure_notes}
+          onChange={(e) => onChange({ outcome_measure_notes: e.target.value })}
+          placeholder="Interpretasi, catatan MCID, atau defisit fungsional di sini..."
+          rows={3}
+          className={inputCls}
+        />
       </div>
     </div>
   )

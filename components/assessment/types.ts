@@ -3,6 +3,7 @@ import type {
   PainOnset, PainCharacter, PainRadiation, PainAssociatedSymptom, PainTimeCourse,
   JointExamRow, AromResult, PromEndFeel, IsometricResistance,
   DermatomeStatus, MyotomeStatus, ReflexStatus,
+  ObservationFinding, IcfSeverity,
 } from '@/types'
 import type { AssessmentFieldsInput } from '@/app/actions/assessments'
 export type { AssessmentFieldsInput }
@@ -146,6 +147,30 @@ export const REFLEX_STATUS_LABEL: Record<ReflexStatus, string> = {
 }
 export const REFLEX_STATUS_OPTIONS: ReflexStatus[] = ['Normal', 'Hyporeflexive', 'Hyperreflexive', 'Absent', 'NotTested']
 
+// Observation & Gait/Posture checkboxes (form v2, migration 047)
+export const OBSERVATION_FINDING_LABEL: Record<ObservationFinding, string> = {
+  'Normal/Simetris': 'Normal / Simetris',
+  Asimetris: 'Asimetris',
+  AtrofiOtot: 'Atrofi Otot',
+  Bengkak: 'Bengkak (Edema)',
+  Kemerahan: 'Kemerahan (Eritema)',
+  PosturAntalgik: 'Postur / Gaya Berjalan Antalgik (Menahan Nyeri)',
+  TidakDiperiksa: 'Tidak Diperiksa',
+}
+export const OBSERVATION_FINDING_OPTIONS: ObservationFinding[] = [
+  'Normal/Simetris', 'Asimetris', 'AtrofiOtot', 'Bengkak', 'Kemerahan', 'PosturAntalgik', 'TidakDiperiksa',
+]
+
+// ICF Functional Framework severity options (form v2, migration 047)
+export const ICF_SEVERITY_LABEL: Record<IcfSeverity, string> = {
+  Ringan: 'Ringan',
+  Sedang: 'Sedang',
+  Berat: 'Berat',
+  Total: 'Total',
+  TidakDiperiksa: 'Tidak Diperiksa',
+}
+export const ICF_SEVERITY_OPTIONS: IcfSeverity[] = ['Ringan', 'Sedang', 'Berat', 'Total', 'TidakDiperiksa']
+
 export const STEP_LABELS = [
   'Interview',
   'Physical Examination',
@@ -174,7 +199,9 @@ export interface AssessmentFormState {
   pain_associated_symptoms: PainAssociatedSymptom[]
   pain_time_course: PainTimeCourse | ''
   pain_severity_vas: number
+  riwayat_cedera_pengobatan: string
   observation_gait_posture: string
+  observation_findings: ObservationFinding[]
   rom_active_passive: string
   joint_exam_rows: JointExamRow[]
   muscle_strength_mmt: string
@@ -191,10 +218,21 @@ export interface AssessmentFormState {
   reflexes_notes: string
   prom_used: PromType | ''
   prom_baseline_score: string
+  outcome_measure_notes: string
   functional_metric_test: string
   functional_metric_baseline_value: string
   npips: string
   diagnosis_hypothesis: string
+  diagnosis_primer: string
+  diagnosis_sekunder: string
+  icf_body_functions_notes: string
+  icf_body_functions_severity: IcfSeverity | ''
+  icf_activity_notes: string
+  icf_activity_severity: IcfSeverity | ''
+  icf_participation_notes: string
+  icf_participation_severity: IcfSeverity | ''
+  icf_contextual_notes: string
+  icf_contextual_severity: IcfSeverity | ''
   short_term_goals: string
   long_term_goals: string
   treatment_plan_today: string
@@ -212,7 +250,9 @@ export const EMPTY_ASSESSMENT_FORM: AssessmentFormState = {
   pain_associated_symptoms: [],
   pain_time_course: '',
   pain_severity_vas: 0,
+  riwayat_cedera_pengobatan: '',
   observation_gait_posture: '',
+  observation_findings: [],
   rom_active_passive: '',
   joint_exam_rows: [],
   muscle_strength_mmt: '',
@@ -229,10 +269,21 @@ export const EMPTY_ASSESSMENT_FORM: AssessmentFormState = {
   reflexes_notes: '',
   prom_used: '',
   prom_baseline_score: '',
+  outcome_measure_notes: '',
   functional_metric_test: '',
   functional_metric_baseline_value: '',
   npips: '',
   diagnosis_hypothesis: '',
+  diagnosis_primer: '',
+  diagnosis_sekunder: '',
+  icf_body_functions_notes: '',
+  icf_body_functions_severity: '',
+  icf_activity_notes: '',
+  icf_activity_severity: '',
+  icf_participation_notes: '',
+  icf_participation_severity: '',
+  icf_contextual_notes: '',
+  icf_contextual_severity: '',
   short_term_goals: '',
   long_term_goals: '',
   treatment_plan_today: '',
@@ -255,7 +306,9 @@ export function toFieldsInput(f: AssessmentFormState): AssessmentFieldsInput {
     pain_associated_symptoms: f.pain_associated_symptoms,
     pain_time_course: f.pain_time_course || null,
     pain_severity_vas: f.pain_severity_vas,
+    riwayat_cedera_pengobatan: f.riwayat_cedera_pengobatan || null,
     observation_gait_posture: f.observation_gait_posture || null,
+    observation_findings: f.observation_findings,
     rom_active_passive: f.rom_active_passive || null,
     joint_exam_rows: f.joint_exam_rows,
     muscle_strength_mmt: f.muscle_strength_mmt || null,
@@ -272,10 +325,21 @@ export function toFieldsInput(f: AssessmentFormState): AssessmentFieldsInput {
     reflexes_notes: f.reflexes_notes || null,
     prom_used: f.prom_used || null,
     prom_baseline_score: f.prom_baseline_score ? Number(f.prom_baseline_score) : null,
+    outcome_measure_notes: f.outcome_measure_notes || null,
     functional_metric_test: f.functional_metric_test || null,
     functional_metric_baseline_value: f.functional_metric_baseline_value || null,
     npips: f.npips || null,
     diagnosis_hypothesis: f.diagnosis_hypothesis || null,
+    diagnosis_primer: f.diagnosis_primer || null,
+    diagnosis_sekunder: f.diagnosis_sekunder || null,
+    icf_body_functions_notes: f.icf_body_functions_notes || null,
+    icf_body_functions_severity: f.icf_body_functions_severity || null,
+    icf_activity_notes: f.icf_activity_notes || null,
+    icf_activity_severity: f.icf_activity_severity || null,
+    icf_participation_notes: f.icf_participation_notes || null,
+    icf_participation_severity: f.icf_participation_severity || null,
+    icf_contextual_notes: f.icf_contextual_notes || null,
+    icf_contextual_severity: f.icf_contextual_severity || null,
     short_term_goals: f.short_term_goals || null,
     long_term_goals: f.long_term_goals || null,
     treatment_plan_today: f.treatment_plan_today || null,
@@ -294,7 +358,9 @@ export function fromAssessment(a: {
   pain_associated_symptoms: PainAssociatedSymptom[]
   pain_time_course: PainTimeCourse | null
   pain_severity_vas: number | null
+  riwayat_cedera_pengobatan: string | null
   observation_gait_posture: string | null
+  observation_findings: ObservationFinding[]
   rom_active_passive: string | null
   joint_exam_rows: JointExamRow[]
   muscle_strength_mmt: string | null
@@ -311,10 +377,21 @@ export function fromAssessment(a: {
   reflexes_notes: string | null
   prom_used: PromType | null
   prom_baseline_score: number | null
+  outcome_measure_notes: string | null
   functional_metric_test: string | null
   functional_metric_baseline_value: string | null
   npips: string | null
   diagnosis_hypothesis: string | null
+  diagnosis_primer: string | null
+  diagnosis_sekunder: string | null
+  icf_body_functions_notes: string | null
+  icf_body_functions_severity: IcfSeverity | null
+  icf_activity_notes: string | null
+  icf_activity_severity: IcfSeverity | null
+  icf_participation_notes: string | null
+  icf_participation_severity: IcfSeverity | null
+  icf_contextual_notes: string | null
+  icf_contextual_severity: IcfSeverity | null
   short_term_goals: string | null
   long_term_goals: string | null
   treatment_plan_today: string | null
@@ -332,7 +409,9 @@ export function fromAssessment(a: {
     pain_associated_symptoms: a.pain_associated_symptoms ?? [],
     pain_time_course: a.pain_time_course ?? '',
     pain_severity_vas: a.pain_severity_vas ?? 0,
+    riwayat_cedera_pengobatan: a.riwayat_cedera_pengobatan ?? '',
     observation_gait_posture: a.observation_gait_posture ?? '',
+    observation_findings: a.observation_findings ?? [],
     rom_active_passive: a.rom_active_passive ?? '',
     joint_exam_rows: a.joint_exam_rows?.length ? a.joint_exam_rows : [emptyJointExamRow()],
     muscle_strength_mmt: a.muscle_strength_mmt ?? '',
@@ -349,10 +428,21 @@ export function fromAssessment(a: {
     reflexes_notes: a.reflexes_notes ?? '',
     prom_used: a.prom_used ?? '',
     prom_baseline_score: a.prom_baseline_score != null ? String(a.prom_baseline_score) : '',
+    outcome_measure_notes: a.outcome_measure_notes ?? '',
     functional_metric_test: a.functional_metric_test ?? '',
     functional_metric_baseline_value: a.functional_metric_baseline_value ?? '',
     npips: a.npips ?? '',
     diagnosis_hypothesis: a.diagnosis_hypothesis ?? '',
+    diagnosis_primer: a.diagnosis_primer ?? '',
+    diagnosis_sekunder: a.diagnosis_sekunder ?? '',
+    icf_body_functions_notes: a.icf_body_functions_notes ?? '',
+    icf_body_functions_severity: a.icf_body_functions_severity ?? '',
+    icf_activity_notes: a.icf_activity_notes ?? '',
+    icf_activity_severity: a.icf_activity_severity ?? '',
+    icf_participation_notes: a.icf_participation_notes ?? '',
+    icf_participation_severity: a.icf_participation_severity ?? '',
+    icf_contextual_notes: a.icf_contextual_notes ?? '',
+    icf_contextual_severity: a.icf_contextual_severity ?? '',
     short_term_goals: a.short_term_goals ?? '',
     long_term_goals: a.long_term_goals ?? '',
     treatment_plan_today: a.treatment_plan_today ?? '',

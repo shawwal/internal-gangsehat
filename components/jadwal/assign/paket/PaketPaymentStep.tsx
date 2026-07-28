@@ -7,9 +7,11 @@ import { createTransactionManual } from '@/app/actions/transactions'
 export interface PaketPaymentStepProps {
   patientId: string
   patientName: string
+  packageId: string | null
   packageName: string
   jumlahSesi: number
   hargaDefault: number
+  category: 'PAKET KLINIK' | 'PAKET VISIT'
   onDone: () => void
 }
 
@@ -19,9 +21,11 @@ const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
 export function PaketPaymentStep({
   patientId,
   patientName,
+  packageId,
   packageName,
   jumlahSesi,
   hargaDefault,
+  category,
   onDone,
 }: PaketPaymentStepProps) {
   const [harga, setHarga]   = useState(hargaDefault > 0 ? String(hargaDefault) : '')
@@ -43,7 +47,7 @@ export function PaketPaymentStep({
 
     const { error: txErr } = await createTransactionManual({
       type:             'income',
-      category:         'PAKET KLINIK',
+      category,
       harga:            hargaNum,
       amount:           amountNum,
       discount:         0,
@@ -54,6 +58,7 @@ export function PaketPaymentStep({
       transaction_date: new Date().toISOString().slice(0, 10),
       visit_id:         null,
       patient_id:       patientId,
+      package_id:       packageId,
     })
 
     setSaving(false)

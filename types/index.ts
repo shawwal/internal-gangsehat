@@ -83,6 +83,7 @@ export interface PatientVisit {
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null  // attendance — distinct from `status` workflow
   regio: BodyRegion | null
   sumber_pasien: string | null
+  order_id: string | null
 }
 
 export type RedFlag =
@@ -123,6 +124,14 @@ export type DermatomeStatus = 'Intact' | 'Impaired' | 'Absent' | 'NotTested'
 export type MyotomeStatus = 'Intact' | 'Impaired' | 'NotTested'
 export type ReflexStatus = 'Normal' | 'Hyporeflexive' | 'Hyperreflexive' | 'Absent' | 'NotTested'
 
+// Observation & Gait/Posture checkboxes (form v2, migration 047)
+export type ObservationFinding =
+  | 'Normal/Simetris' | 'Asimetris' | 'AtrofiOtot' | 'Bengkak' | 'Kemerahan'
+  | 'PosturAntalgik' | 'TidakDiperiksa'
+
+// ICF Functional Framework severity (form v2, migration 047)
+export type IcfSeverity = 'Ringan' | 'Sedang' | 'Berat' | 'Total' | 'TidakDiperiksa'
+
 // Guided MSK & Sports Assessment — one row per TERAPI AWAL patient_visits row (migration 031)
 export interface TerapiAwalAssessment {
   id: string
@@ -146,11 +155,14 @@ export interface TerapiAwalAssessment {
   pain_associated_symptoms: PainAssociatedSymptom[]
   pain_time_course: PainTimeCourse | null
   pain_severity_vas: number | null
+  // Step 1: Injury/treatment history (form v2)
+  riwayat_cedera_pengobatan: string | null
   // Step 2: Physical Examination (Objective)
   observation_gait_posture: string | null
+  observation_findings: ObservationFinding[]
   rom_active_passive: string | null  // legacy pre-045 free text — read-only fallback only, see components/assessment/types.ts
   joint_exam_rows: JointExamRow[]
-  muscle_strength_mmt: string | null
+  muscle_strength_mmt: string | null  // legacy — no longer edited in the UI (form v2)
   special_ortho_tests: string | null
   palpation: string | null
   // Step 3: Neurological Screening
@@ -166,11 +178,22 @@ export interface TerapiAwalAssessment {
   // Step 4: Objective Outcome Measures
   prom_used: PromType | null
   prom_baseline_score: number | null
-  functional_metric_test: string | null
-  functional_metric_baseline_value: string | null
-  // Step 5: Clinical Reasoning (HOAC II)
-  npips: string | null
-  diagnosis_hypothesis: string | null
+  outcome_measure_notes: string | null
+  functional_metric_test: string | null            // legacy — no longer edited in the UI (form v2)
+  functional_metric_baseline_value: string | null   // legacy — no longer edited in the UI (form v2)
+  // Step 5: Clinical Reasoning — ICF Functional Framework (form v2)
+  npips: string | null                       // legacy — no longer edited in the UI (form v2)
+  diagnosis_hypothesis: string | null        // legacy — no longer edited in the UI (form v2)
+  diagnosis_primer: string | null
+  diagnosis_sekunder: string | null
+  icf_body_functions_notes: string | null
+  icf_body_functions_severity: IcfSeverity | null
+  icf_activity_notes: string | null
+  icf_activity_severity: IcfSeverity | null
+  icf_participation_notes: string | null
+  icf_participation_severity: IcfSeverity | null
+  icf_contextual_notes: string | null
+  icf_contextual_severity: IcfSeverity | null
   // Step 6: Plan of Care & Goals
   short_term_goals: string | null
   long_term_goals: string | null
@@ -298,6 +321,9 @@ export interface PatientPackage {
   mulai_paket: 'NEW' | 'EXT.' | null
   operational_status: PackageOperationalStatus
   completion_status: PackageCompletionStatus | null
+  category: 'PAKET KLINIK' | 'PAKET VISIT' | null
+  order_id: string | null
+  purchased_at: string
   created_at: string
   updated_at: string
 }

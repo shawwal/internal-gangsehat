@@ -10,6 +10,7 @@ export const DEFAULT_FORM = {
   package_name:       '',
   jenis_paket:        'P1' as JenisPaket,
   mulai_paket:        'NEW' as 'NEW' | 'EXT.',
+  category:           'PAKET KLINIK' as 'PAKET KLINIK' | 'PAKET VISIT',
   operational_status: 'ON' as PackageOperationalStatus,
   completion_status:  '' as PackageCompletionStatus | '',
   status:             'active' as PackageStatus,

@@ -6,6 +6,7 @@ import {
   PAIN_ASSOCIATED_SYMPTOM_LABEL, PAIN_TIME_COURSE_LABEL,
   AROM_LABEL, PROM_ENDFEEL_LABEL, ISOMETRIC_LABEL,
   DERMATOME_STATUS_LABEL, MYOTOME_STATUS_LABEL, REFLEX_STATUS_LABEL,
+  OBSERVATION_FINDING_LABEL, ICF_SEVERITY_LABEL,
 } from './types'
 
 export function generateAssessmentPdf(visit: VisitWithPatient, assessment: TerapiAwalAssessment) {
@@ -53,6 +54,15 @@ export function generateAssessmentPdf(visit: VisitWithPatient, assessment: Terap
     ? `<p>${REFLEX_STATUS_LABEL[assessment.reflexes_status]}${assessment.reflexes_notes ? ` — ${assessment.reflexes_notes}` : ''}</p>`
     : null
 
+  const observationFindingsHtml = assessment.observation_findings?.length
+    ? `<p>${assessment.observation_findings.map((f) => OBSERVATION_FINDING_LABEL[f]).join(', ')}</p>`
+    : null
+
+  function icfDomainHtml(notes: string | null, severity: string | null) {
+    if (!notes && !severity) return null
+    return `<p>${severity ? `[${ICF_SEVERITY_LABEL[severity as keyof typeof ICF_SEVERITY_LABEL]}] ` : ''}${notes ?? ''}</p>`
+  }
+
   const body = `
 <div class="sheet">
   <div class="top-bar">
@@ -77,17 +87,17 @@ export function generateAssessmentPdf(visit: VisitWithPatient, assessment: Terap
     <div class="section">
       <div class="section-title">1. Interview (Subjective &amp; PIPs)</div>
       ${pdfField('History &amp; Mechanism of Injury', assessment.history_moi)}
+      ${pdfField('Riwayat Nyeri (SOCRATES)', socratesHtml)}
       ${pdfField('Aggravating Factors', assessment.aggravating_factors)}
       ${pdfField('Easing Factors', assessment.easing_factors)}
-      ${pdfField('Riwayat Nyeri (SOCRATES)', socratesHtml)}
+      ${pdfField('Riwayat Cedera/Pengobatan', assessment.riwayat_cedera_pengobatan)}
       ${pdfField('Red Flags', `<p>${redFlags}</p>`)}
     </div>
 
     <div class="section">
       <div class="section-title">2. Physical Examination (Objective)</div>
-      ${pdfField('Observation &amp; Gait / Posture', assessment.observation_gait_posture)}
+      ${pdfField('Observation &amp; Gait / Posture', [observationFindingsHtml, assessment.observation_gait_posture].filter(Boolean).join(''))}
       ${pdfField('Active &amp; Passive ROM', jointTableHtml ?? assessment.rom_active_passive)}
-      ${pdfField('Muscle Strength (MMT)', assessment.muscle_strength_mmt)}
       ${pdfField('Special Orthopedic Tests', assessment.special_ortho_tests)}
       ${pdfField('Palpation', assessment.palpation)}
     </div>
@@ -101,15 +111,18 @@ export function generateAssessmentPdf(visit: VisitWithPatient, assessment: Terap
 
     <div class="section">
       <div class="section-title">4. Objective Outcome Measures</div>
-      ${pdfField('PROM Used / Baseline Score', `<p>${assessment.prom_used ?? '—'} ${assessment.prom_baseline_score != null ? `(${assessment.prom_baseline_score})` : ''}</p>`)}
-      ${pdfField('Performance / Functional Metric Test', `<p>${assessment.functional_metric_test ?? '—'}</p>`)}
-      ${pdfField('Baseline Result / Value', `<p>${assessment.functional_metric_baseline_value ?? '—'}</p>`)}
+      ${pdfField('Alat Ukur / Skor', `<p>${assessment.prom_used ?? '—'} ${assessment.prom_baseline_score != null ? `(${assessment.prom_baseline_score})` : ''}</p>`)}
+      ${pdfField('Catatan', assessment.outcome_measure_notes)}
     </div>
 
     <div class="section">
-      <div class="section-title">5. Clinical Reasoning (HOAC II)</div>
-      ${pdfField('Physiotherapist-Identified Problems (NPIPs)', assessment.npips)}
-      ${pdfField('Physiotherapy Diagnosis / Hypothesis', assessment.diagnosis_hypothesis)}
+      <div class="section-title">5. Clinical Reasoning — ICF Functional Framework</div>
+      ${pdfField('Diagnosa Primer', assessment.diagnosis_primer ? `<p>${assessment.diagnosis_primer}</p>` : null)}
+      ${pdfField('Diagnosa Sekunder', assessment.diagnosis_sekunder ? `<p>${assessment.diagnosis_sekunder}</p>` : null)}
+      ${pdfField('Body Functions &amp; Structures', icfDomainHtml(assessment.icf_body_functions_notes, assessment.icf_body_functions_severity))}
+      ${pdfField('Activity Limitations', icfDomainHtml(assessment.icf_activity_notes, assessment.icf_activity_severity))}
+      ${pdfField('Participation Restrictions', icfDomainHtml(assessment.icf_participation_notes, assessment.icf_participation_severity))}
+      ${pdfField('Contextual Factors', icfDomainHtml(assessment.icf_contextual_notes, assessment.icf_contextual_severity))}
     </div>
 
     <div class="section">

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { PatientPackage, PackageSession } from '@/types'
+import { generateOrderId } from '@/lib/internal/orderId'
 
 // ── Fetch all packages for a patient with computed session counts ───────────────
 // Reads from the patient_packages_with_stats view which joins patient_visits.
@@ -33,6 +34,9 @@ export async function fetchPatientPackages(
     mulai_paket:        (p.mulai_paket ?? null) as PatientPackage['mulai_paket'],
     operational_status: (p.operational_status ?? 'ON') as PatientPackage['operational_status'],
     completion_status:  (p.completion_status ?? null) as PatientPackage['completion_status'],
+    category:           (p.category ?? null) as PatientPackage['category'],
+    order_id:           p.order_id ?? null,
+    purchased_at:       p.purchased_at,
     created_at:         p.created_at,
     updated_at:         p.updated_at,
   }))
@@ -72,12 +76,14 @@ export async function createPatientPackage(input: {
   package_name: string
   jenis_paket: 'P1' | 'P2'
   mulai_paket: 'NEW' | 'EXT.'
+  category: 'PAKET KLINIK' | 'PAKET VISIT'
   notes?: string | null
-}): Promise<{ id: string | null; error: string | null }> {
+}): Promise<{ id: string | null; order_id: string | null; error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const total_sessions = input.jenis_paket === 'P1' ? 5 : 10
+  const orderId = await generateOrderId(supabase)
 
   const { data, error } = await supabase
     .from('patient_packages')
@@ -89,6 +95,9 @@ export async function createPatientPackage(input: {
       total_sessions,
       jenis_paket:    input.jenis_paket,
       mulai_paket:    input.mulai_paket,
+      category:       input.category,
+      order_id:       orderId,
+      purchased_at:   new Date().toISOString().slice(0, 10),
       notes:          input.notes ?? null,
       created_by:     user?.id ?? null,
       updated_at:     new Date().toISOString(),
@@ -96,7 +105,7 @@ export async function createPatientPackage(input: {
     .select('id')
     .single()
 
-  return { id: data?.id ?? null, error: error?.message ?? null }
+  return { id: data?.id ?? null, order_id: error ? null : orderId, error: error?.message ?? null }
 }
 
 // ── Create a new patient package from the branch's service catalog ─────────────
@@ -107,7 +116,8 @@ export async function createPackageFromLayanan(input: {
   patient_id: string
   branch_id: string | null
   layanan_id: string
-}): Promise<{ id: string | null; error: string | null }> {
+  category: 'PAKET KLINIK' | 'PAKET VISIT'
+}): Promise<{ id: string | null; order_id: string | null; error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -118,11 +128,12 @@ export async function createPackageFromLayanan(input: {
     .single()
 
   if (layananErr || !layanan) {
-    return { id: null, error: layananErr?.message ?? 'Layanan tidak ditemukan.' }
+    return { id: null, order_id: null, error: layananErr?.message ?? 'Layanan tidak ditemukan.' }
   }
 
   const total_sessions = layanan.jumlah_sesi || 1
   const jenis_paket = total_sessions === 5 ? 'P1' : total_sessions === 10 ? 'P2' : null
+  const orderId = await generateOrderId(supabase)
 
   const { data, error } = await supabase
     .from('patient_packages')
@@ -134,13 +145,16 @@ export async function createPackageFromLayanan(input: {
       total_sessions,
       jenis_paket,
       mulai_paket:    'NEW',
+      category:       input.category,
+      order_id:       orderId,
+      purchased_at:   new Date().toISOString().slice(0, 10),
       created_by:     user?.id ?? null,
       updated_at:     new Date().toISOString(),
     })
     .select('id')
     .single()
 
-  return { id: data?.id ?? null, error: error?.message ?? null }
+  return { id: data?.id ?? null, order_id: error ? null : orderId, error: error?.message ?? null }
 }
 
 // ── Update an existing package ─────────────────────────────────────────────────

@@ -79,6 +79,7 @@ export function PostAssessmentPackageDialog({
       package_name: nama.trim() || (isVisit ? `Paket Visit ${jenis}` : `Paket Fisio ${jenis}`),
       jenis_paket:  jenis,
       mulai_paket:  mulai,
+      category,
       notes:        notes.trim() || null,
     })
 
@@ -101,6 +102,7 @@ export function PostAssessmentPackageDialog({
       transaction_date: new Date().toISOString().slice(0, 10),
       visit_id:         visitId,
       patient_id:       patientId,
+      package_id:       pkgId,
     }
 
     const { error: txErr } = await createTransactionManual(txInput)

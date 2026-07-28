@@ -61,23 +61,6 @@ export function StepInterview({ value, onChange }: Props) {
         />
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className={labelCls}>Aggravating Factors (Makes it worse)</label>
-          <RichTextEditor
-            value={value.aggravating_factors}
-            onChange={(html) => onChange({ aggravating_factors: html })}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Easing Factors (Makes it better)</label>
-          <RichTextEditor
-            value={value.easing_factors}
-            onChange={(html) => onChange({ easing_factors: html })}
-          />
-        </div>
-      </div>
-
       <div className="rounded-2xl border border-border p-3 sm:p-4 space-y-4">
         <p className="text-xs font-semibold text-foreground">Riwayat Nyeri (SOCRATES)</p>
 
@@ -164,6 +147,32 @@ export function StepInterview({ value, onChange }: Props) {
             maxLabel="Nyeri terburuk (10)"
           />
         </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className={labelCls}>Aggravating Factors (Makes it worse)</label>
+          <RichTextEditor
+            value={value.aggravating_factors}
+            onChange={(html) => onChange({ aggravating_factors: html })}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>Easing Factors (Makes it better)</label>
+          <RichTextEditor
+            value={value.easing_factors}
+            onChange={(html) => onChange({ easing_factors: html })}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className={labelCls}>Riwayat Cedera/Pengobatan</label>
+        <RichTextEditor
+          value={value.riwayat_cedera_pengobatan}
+          onChange={(html) => onChange({ riwayat_cedera_pengobatan: html })}
+          placeholder="Riwayat cedera sebelumnya, pengobatan/terapi yang pernah dijalani..."
+        />
       </div>
 
       <div>

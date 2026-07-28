@@ -6,21 +6,23 @@ import { fetchReminderTemplate, saveReminderTemplate } from '@/app/actions/remin
 import { fillTemplate, DEFAULT_REMINDER_TEMPLATE } from '@/lib/utils'
 
 const PLACEHOLDERS: { key: string; label: string }[] = [
-  { key: 'nama',    label: 'Nama pasien' },
-  { key: 'tanggal', label: 'Tanggal kunjungan' },
-  { key: 'jam',     label: 'Jam kunjungan' },
-  { key: 'layanan', label: 'Jenis layanan' },
-  { key: 'cabang',  label: 'Nama cabang' },
-  { key: 'terapis', label: 'Nama terapis' },
+  { key: 'nama',     label: 'Nama pasien' },
+  { key: 'tanggal',  label: 'Tanggal kunjungan' },
+  { key: 'jam',      label: 'Jam kunjungan' },
+  { key: 'layanan',  label: 'Jenis layanan' },
+  { key: 'cabang',   label: 'Nama cabang' },
+  { key: 'terapis',  label: 'Nama terapis' },
+  { key: 'order_id', label: 'Order ID' },
 ]
 
 const SAMPLE_VARS = {
-  nama:    'Budi Santoso',
-  tanggal: '15 Jul 2026',
-  jam:     '09:00',
-  layanan: 'SESI TERAPI',
-  cabang:  'Fisioterapi Gang Sehat Pontianak',
-  terapis: 'Suci',
+  nama:     'Budi Santoso',
+  tanggal:  '15 Jul 2026',
+  jam:      '09:00',
+  layanan:  'SESI TERAPI',
+  cabang:   'Fisioterapi Gang Sehat Pontianak',
+  terapis:  'Suci',
+  order_id: 'TRX/2026/07/0348',
 }
 
 export default function ReminderTemplatePage() {

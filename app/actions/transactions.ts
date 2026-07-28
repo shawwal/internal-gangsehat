@@ -113,7 +113,7 @@ export async function createTransactionForVisit(
 
   const { data: visit, error: visitErr } = await supabase
     .from('patient_visits')
-    .select('patient_id, branch_id, attending_staff_id, service_type')
+    .select('patient_id, branch_id, attending_staff_id, service_type, order_id')
     .eq('id', visitId)
     .single()
 
@@ -128,6 +128,7 @@ export async function createTransactionForVisit(
     fisio_id:         visit.attending_staff_id,
     type:             'income',
     category,
+    order_id:         visit.order_id ?? null,
     harga:            input.harga,
     discount:         input.discount,
     amount:           input.amount,
@@ -239,6 +240,7 @@ export interface CreateTransactionManualInput {
   transaction_date: string
   visit_id?: string | null
   patient_id?: string | null
+  package_id?: string | null
 }
 
 export async function createTransactionManual(
@@ -262,11 +264,31 @@ export async function createTransactionManual(
     return { error: 'Akun Anda belum terhubung ke cabang. Hubungi direktur.' }
   }
 
+  // The order_id for a package purchase belongs to the package (so DP/Pelunasan
+  // installments share one order), not the visit that may have prompted the sale.
+  let orderId: string | null = null
+  if (input.package_id) {
+    const { data: pkg } = await supabase
+      .from('patient_packages')
+      .select('order_id')
+      .eq('id', input.package_id)
+      .single()
+    orderId = pkg?.order_id ?? null
+  } else if (input.visit_id) {
+    const { data: visit } = await supabase
+      .from('patient_visits')
+      .select('order_id')
+      .eq('id', input.visit_id)
+      .single()
+    orderId = visit?.order_id ?? null
+  }
+
   const { error } = await supabase.from('transactions').insert({
     branch_id:        profile.branch_id,
     recorded_by:      user.id,
     type:             input.type,
     category:         input.category,
+    order_id:         orderId,
     harga:            input.harga,
     amount:           input.amount,
     discount:         input.discount,

@@ -145,6 +145,7 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
       patient_id: selectedPatient.id,
       branch_id:  target.branchId,
       layanan_id: selectedLayanan.id,
+      category:   selectedLayanan.kategori.includes('VISIT') ? 'PAKET VISIT' : 'PAKET KLINIK',
     })
     if (err || !id) {
       setPkgSaving(false)
@@ -452,9 +453,11 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
         <PaketPaymentStep
           patientId={selectedPatient.id}
           patientName={selectedPatient.name}
+          packageId={selectedPkgId}
           packageName={pendingPayment.packageName}
           jumlahSesi={pendingPayment.jumlahSesi}
           hargaDefault={pendingPayment.harga}
+          category={selectedLayanan?.kategori.includes('VISIT') ? 'PAKET VISIT' : 'PAKET KLINIK'}
           onDone={handlePaymentDone}
         />
       )}

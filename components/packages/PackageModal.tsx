@@ -22,6 +22,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
           package_name:       editTarget.package_name,
           jenis_paket:        editTarget.jenis_paket ?? 'P1',
           mulai_paket:        editTarget.mulai_paket ?? 'NEW',
+          category:           DEFAULT_FORM.category,
           operational_status: editTarget.operational_status,
           completion_status:  editTarget.completion_status ?? '',
           status:             editTarget.status,
@@ -62,6 +63,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
         package_name: form.package_name.trim(),
         jenis_paket:  form.jenis_paket,
         mulai_paket:  form.mulai_paket,
+        category:     form.category,
         notes:        form.notes.trim() || null,
       })
       if (err) { setError(err); setSaving(false); return }
@@ -143,6 +145,28 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
               ))}
             </div>
           </div>
+
+          {!isEdit && (
+            <div>
+              <label className={LABEL_CLS}>Kategori Paket</label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['PAKET KLINIK', 'PAKET VISIT'] as const).map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => set('category', c)}
+                    className={`py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+                      form.category === c
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    {c === 'PAKET KLINIK' ? 'Klinik' : 'Visit'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className={LABEL_CLS}>Status Operasional</label>

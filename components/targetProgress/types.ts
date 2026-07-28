@@ -24,7 +24,12 @@ export interface VisitForProgress {
   visit_date: string
   service_type: string | null
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
-  package_id: string | null
+}
+
+export interface PackageForProgress {
+  id: string
+  purchased_at: string
+  category: 'PAKET KLINIK' | 'PAKET VISIT' | null
 }
 
 export interface BranchTargetForProgress {

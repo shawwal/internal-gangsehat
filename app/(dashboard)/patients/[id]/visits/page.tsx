@@ -373,6 +373,9 @@ export default function PatientVisitsPage() {
                           {v.shift}
                         </span>
                       )}
+                      {v.order_id && (
+                        <p className="text-[10px] text-muted-foreground/70 font-mono mt-0.5">{v.order_id}</p>
+                      )}
                     </td>
 
                     <td className="px-4 py-3">
