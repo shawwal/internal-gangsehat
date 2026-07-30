@@ -284,6 +284,8 @@ export async function POST(request: NextRequest) {
             total_sessions:     c.total_sessions,
             jenis_paket:        c.jenis_paket,
             mulai_paket:        'NEW',
+            category:           'PAKET KLINIK', // this Excel import format only covers in-clinic packages (see PACKAGE_MAP)
+            purchased_at:       createdAt.slice(0, 10),
             operational_status: 'ON',
             status:             'active',
             created_at:         createdAt,

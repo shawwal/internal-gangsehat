@@ -164,6 +164,7 @@ export async function updatePatientPackage(
     package_name?: string
     jenis_paket?: 'P1' | 'P2'
     mulai_paket?: 'NEW' | 'EXT.'
+    category?: 'PAKET KLINIK' | 'PAKET VISIT'
     operational_status?: 'ON' | 'OFF' | 'PENDING'
     completion_status?: 'LANJUT' | 'SEMBUH' | 'TIDAK LANJUT' | 'STOP' | null
     status?: 'active' | 'completed' | 'cancelled'

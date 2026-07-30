@@ -1,27 +1,309 @@
 [
   {
     "NO": "1",
-    "KODE": "TRX/2026/07/0325",
-    "PASIEN": "DHIO ASRIL DWIYONO",
+    "KODE": "TRX/2026/07/0379",
+    "PASIEN": "BOBBY AUDITHA VANDRI",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "30-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYRQ63K5JE4VWHFY6DEP3WRM",
+    "_ulid": "01KYRQ63K5JE4VWHFY6DEP3WRM",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "30-07-2026",
+        "JAM": "13:00",
+        "FISIO": "ORY",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "2",
+    "KODE": "TRX/2026/07/0378",
+    "PASIEN": "JIMMY",
     "LAYANAN": "PAKET SILVER",
     "TIPE": "Reguler",
     "STATUS": "Booking",
-    "ADMIN": "Suci Salsabilah",
-    "UPDATED BY": "Suci Salsabilah",
-    "DIBUAT TGL": "25-07-2026",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "30-07-2026",
     "HARGA": "Rp750.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
     "TOTAL BAYAR": "Rp0",
     "STATUS BAYAR": "Belum Lunas",
-    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYC1HB9X4SP53RDR3P8VXKCQ",
-    "_ulid": "01KYC1HB9X4SP53RDR3P8VXKCQ",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYRNEAGM7H4R4XKNXP3NDWTA",
+    "_ulid": "01KYRNEAGM7H4R4XKNXP3NDWTA",
     "sessions": [
       {
         "PERTEMUAN": "Ke-1",
-        "TANGGAL": "26-07-2026",
+        "TANGGAL": "03-08-2026",
+        "JAM": "09:00",
+        "FISIO": "ORY",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "10-08-2026",
+        "JAM": "09:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "17-08-2026",
+        "JAM": "09:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "24-08-2026",
+        "JAM": "09:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "31-08-2026",
+        "JAM": "09:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "3",
+    "KODE": "TRX/2026/07/0377",
+    "PASIEN": "JIMMY",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "30-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYRG6K30AFMG60HJX6P7G060",
+    "_ulid": "01KYRG6K30AFMG60HJX6P7G060",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "30-07-2026",
+        "JAM": "11:00",
+        "FISIO": "ORY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "4",
+    "KODE": "TRX/2026/07/0376",
+    "PASIEN": "ARINI",
+    "LAYANAN": "PAKET SILVER",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "30-07-2026",
+    "HARGA": "Rp750.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYRDNESREXN8FTHDX9Q9T7DS",
+    "_ulid": "01KYRDNESREXN8FTHDX9Q9T7DS",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "30-07-2026",
+        "JAM": "16:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "06-08-2026",
+        "JAM": "16:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "13-08-2026",
+        "JAM": "16:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "20-08-2026",
+        "JAM": "16:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "27-08-2026",
+        "JAM": "16:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "5",
+    "KODE": "TRX/2026/07/0375",
+    "PASIEN": "RIA VERGINA",
+    "LAYANAN": "PAKET SILVER",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp750.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp750.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYQ2PEYXP7NYWN8N4CXK87JF",
+    "_ulid": "01KYQ2PEYXP7NYWN8N4CXK87JF",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "31-07-2028",
         "JAM": "10:00",
-        "FISIO": "HENA",
+        "FISIO": "AUL",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "07-08-2028",
+        "JAM": "10:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "14-08-2028",
+        "JAM": "10:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "21-08-2028",
+        "JAM": "10:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "28-08-2028",
+        "JAM": "10:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "6",
+    "KODE": "TRX/2026/07/0374",
+    "PASIEN": "AMINA",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYPYCFW6XH7Y3MKHCCBCQGYP",
+    "_ulid": "01KYPYCFW6XH7Y3MKHCCBCQGYP",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "30-07-2026",
+        "JAM": "19:00",
+        "FISIO": "HESTI",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "7",
+    "KODE": "TRX/2026/07/0373",
+    "PASIEN": "HERMANSYAH",
+    "LAYANAN": "PAKET SILVER",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp750.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp750.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYPY6YY29GR780WDJDPGYAB2",
+    "_ulid": "01KYPY6YY29GR780WDJDPGYAB2",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "31-07-2026",
+        "JAM": "15:00",
+        "FISIO": "DESTY",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -30,8 +312,1309 @@
         "PERTEMUAN": "Ke-2",
         "TANGGAL": "02-08-2026",
         "JAM": "10:00",
+        "FISIO": "ORY",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "14-08-2026",
+        "JAM": "15:00",
         "FISIO": "-",
         "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "21-08-2026",
+        "JAM": "15:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "28-08-2026",
+        "JAM": "15:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "8",
+    "KODE": "TRX/2026/07/0372",
+    "PASIEN": "WENI MARGI LESTARI",
+    "LAYANAN": "PAKET SILVER",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp750.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYPRSX7NN4TX0RDGQ5CR7HQM",
+    "_ulid": "01KYPRSX7NN4TX0RDGQ5CR7HQM",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "01-08-2026",
+        "JAM": "16:00",
+        "FISIO": "AUL",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "08-08-2026",
+        "JAM": "16:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "15-08-2026",
+        "JAM": "16:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "22-08-2026",
+        "JAM": "16:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "29-08-2026",
+        "JAM": "16:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "9",
+    "KODE": "TRX/2026/07/0371",
+    "PASIEN": "THE CE WENG",
+    "LAYANAN": "SESI NEW",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp180.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp180.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYPGNK0RVQPGT21K23MSJRWF",
+    "_ulid": "01KYPGNK0RVQPGT21K23MSJRWF",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "29-07-2026",
+        "JAM": "20:00",
+        "FISIO": "ORY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "10",
+    "KODE": "TRX/2026/07/0370",
+    "PASIEN": "DIAN APRILIA",
+    "LAYANAN": "PAKET SILVER",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp750.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp300.000",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYPCZSG4WSVVH4H7BXAGCG0C",
+    "_ulid": "01KYPCZSG4WSVVH4H7BXAGCG0C",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "01-08-2026",
+        "JAM": "13:00",
+        "FISIO": "HENA",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "08-08-2026",
+        "JAM": "13:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "15-08-2026",
+        "JAM": "13:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "22-08-2026",
+        "JAM": "13:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "29-08-2026",
+        "JAM": "13:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "11",
+    "KODE": "TRX/2026/07/0369",
+    "PASIEN": "HANA DESTIFRANISA SIMANJORANG",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYPBZC7QFKGMJD324SA5AN4G",
+    "_ulid": "01KYPBZC7QFKGMJD324SA5AN4G",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "29-07-2026",
+        "JAM": "16:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "12",
+    "KODE": "TRX/2026/07/0368",
+    "PASIEN": "DESA AYU NATALIA",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYP98R8C8F4HYGGXWX34RAGM",
+    "_ulid": "01KYP98R8C8F4HYGGXWX34RAGM",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "29-07-2026",
+        "JAM": "17:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "13",
+    "KODE": "TRX/2026/07/0367",
+    "PASIEN": "HERMANSYAH",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYP6AF2QYMYANBFQ0SGGN9EG",
+    "_ulid": "01KYP6AF2QYMYANBFQ0SGGN9EG",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "29-07-2026",
+        "JAM": "15:00",
+        "FISIO": "ORY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "14",
+    "KODE": "TRX/2026/07/0366",
+    "PASIEN": "ASEP SUMIRAT DANAATMAJA",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYP66P8440YZHAPNP0XEGGQ7",
+    "_ulid": "01KYP66P8440YZHAPNP0XEGGQ7",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "29-07-2026",
+        "JAM": "13:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "15",
+    "KODE": "TRX/2026/07/0363",
+    "PASIEN": "WENI MARGI LESTARI",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYP1T7GQN6YKAGBWMYWCZBVF",
+    "_ulid": "01KYP1T7GQN6YKAGBWMYWCZBVF",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "29-07-2026",
+        "JAM": "15:00",
+        "FISIO": "AUL",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "16",
+    "KODE": "TRX/2026/07/0362",
+    "PASIEN": "RIA VERGINA",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "29-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYNX88B6EFGW2Z0G0R78JCGG",
+    "_ulid": "01KYNX88B6EFGW2Z0G0R78JCGG",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "29-07-2026",
+        "JAM": "19:00",
+        "FISIO": "AUL",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "17",
+    "KODE": "TRX/2026/07/0358",
+    "PASIEN": "ALYA GHAISANI QONITA",
+    "LAYANAN": "SESI NEW",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "28-07-2026",
+    "HARGA": "Rp180.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYMAYBB2P03D990K36YVVZPS",
+    "_ulid": "01KYMAYBB2P03D990K36YVVZPS",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "01-08-2026",
+        "JAM": "15:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "18",
+    "KODE": "TRX/2026/07/0357",
+    "PASIEN": "SILVIA",
+    "LAYANAN": "SESI NEW",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "28-07-2026",
+    "HARGA": "Rp180.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYM3A3NMWKHAARRPWHH3DXWA",
+    "_ulid": "01KYM3A3NMWKHAARRPWHH3DXWA",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "31-07-2026",
+        "JAM": "16:00",
+        "FISIO": "DESTY",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "19",
+    "KODE": "TRX/2026/07/0356",
+    "PASIEN": "DIAN APRILIA",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "28-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYM1WQ98MCD65DZY47Z62HT8",
+    "_ulid": "01KYM1WQ98MCD65DZY47Z62HT8",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "29-07-2026",
+        "JAM": "13:00",
+        "FISIO": "HENA",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "20",
+    "KODE": "TRX/2026/07/0355",
+    "PASIEN": "MERLY YUNIAWATY",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "28-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYM17RCH38F29YW8XGTWPYWC",
+    "_ulid": "01KYM17RCH38F29YW8XGTWPYWC",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "28-07-2026",
+        "JAM": "15:00",
+        "FISIO": "DESTY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "21",
+    "KODE": "TRX/2026/07/0354",
+    "PASIEN": "HENY SOEDHARNINGSIH",
+    "LAYANAN": "SESI NEW",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "28-07-2026",
+    "HARGA": "Rp180.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYM0FAND1HDFFV4QK6N81EQT",
+    "_ulid": "01KYM0FAND1HDFFV4QK6N81EQT",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "30-07-2026",
+        "JAM": "17:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "22",
+    "KODE": "TRX/2026/07/0353",
+    "PASIEN": "NOFIATI",
+    "LAYANAN": "SESI NEW",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "28-07-2026",
+    "HARGA": "Rp180.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYM0EBJEDABE7K0N1XVQRHAP",
+    "_ulid": "01KYM0EBJEDABE7K0N1XVQRHAP",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "30-07-2026",
+        "JAM": "15:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "23",
+    "KODE": "TRX/2026/07/0352",
+    "PASIEN": "RUSMALA RATINA",
+    "LAYANAN": "PAKET SILVER",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "28-07-2026",
+    "HARGA": "Rp750.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYKZW3DVTKP3JCMZB4PMKWQ5",
+    "_ulid": "01KYKZW3DVTKP3JCMZB4PMKWQ5",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "31-07-2026",
+        "JAM": "14:00",
+        "FISIO": "PUTRI",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "07-08-2026",
+        "JAM": "14:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "14-08-2026",
+        "JAM": "14:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "21-08-2026",
+        "JAM": "14:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "28-08-2026",
+        "JAM": "14:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "24",
+    "KODE": "TRX/2026/07/0351",
+    "PASIEN": "NOFIATI",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "28-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYKGM9YXTWGRK3VQKTJZC2VN",
+    "_ulid": "01KYKGM9YXTWGRK3VQKTJZC2VN",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "28-07-2026",
+        "JAM": "13:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "25",
+    "KODE": "TRX/2026/07/0350",
+    "PASIEN": "ALYA GHAISANI QONITA",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "28-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYKGFPMCAEDAHXRARV7ZZYQD",
+    "_ulid": "01KYKGFPMCAEDAHXRARV7ZZYQD",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "28-07-2026",
+        "JAM": "15:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "26",
+    "KODE": "TRX/2026/07/0349",
+    "PASIEN": "HENY SOEDHARNINGSIH",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "28-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYKCVN8QYKDT7PHVN6VZMT5N",
+    "_ulid": "01KYKCVN8QYKDT7PHVN6VZMT5N",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "28-07-2026",
+        "JAM": "11:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "27",
+    "KODE": "TRX/2026/07/0348",
+    "PASIEN": "RINA TJENDERA",
+    "LAYANAN": "PAKET 1",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "27-07-2026",
+    "HARGA": "Rp650.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYJ06M2RS6Q5VVEQE2RAH86V",
+    "_ulid": "01KYJ06M2RS6Q5VVEQE2RAH86V",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "28-07-2026",
+        "JAM": "11:00",
+        "FISIO": "DANI",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Jadwal Ulang",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "04-08-2026",
+        "JAM": "11:00",
+        "FISIO": "DANI",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "04-08-2026",
+        "JAM": "11:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "11-08-2026",
+        "JAM": "11:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "18-08-2026",
+        "JAM": "11:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "25-08-2026",
+        "JAM": "11:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "28",
+    "KODE": "TRX/2026/07/0347",
+    "PASIEN": "KARTINI",
+    "LAYANAN": "PAKET SILVER",
+    "TIPE": "Reguler",
+    "STATUS": "Proses",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "27-07-2026",
+    "HARGA": "Rp750.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp300.000",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYGYJXS84KSM84FF998BPDZ9",
+    "_ulid": "01KYGYJXS84KSM84FF998BPDZ9",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "29-07-2026",
+        "JAM": "16:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Jadwal Ulang",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "30-07-2026",
+        "JAM": "09:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "03-08-2026",
+        "JAM": "10:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "12-08-2026",
+        "JAM": "16:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "19-08-2026",
+        "JAM": "16:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "26-08-2026",
+        "JAM": "16:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "29",
+    "KODE": "TRX/2026/07/0346",
+    "PASIEN": "DONAL HERYAWAN",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "27-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYGVYW5NFQJ2V2NZ0SXYHJ1K",
+    "_ulid": "01KYGVYW5NFQJ2V2NZ0SXYHJ1K",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "27-07-2026",
+        "JAM": "13:00",
+        "FISIO": "ORY",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "30",
+    "KODE": "TRX/2026/07/0345",
+    "PASIEN": "RAISAN FIQRI",
+    "LAYANAN": "PAKET GOLD",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "Suci Salsabilah",
+    "UPDATED BY": "Suci Salsabilah",
+    "DIBUAT TGL": "27-07-2026",
+    "HARGA": "Rp1.300.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp1.300.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYGVYJ4B673QR3V2EHJY04EB",
+    "_ulid": "01KYGVYJ4B673QR3V2EHJY04EB",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "03-07-2027",
+        "JAM": "17:00",
+        "FISIO": "PUTRI",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "10-07-2027",
+        "JAM": "17:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "17-07-2027",
+        "JAM": "17:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "24-07-2027",
+        "JAM": "17:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "31-07-2027",
+        "JAM": "17:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-6",
+        "TANGGAL": "07-08-2027",
+        "JAM": "17:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-7",
+        "TANGGAL": "14-08-2027",
+        "JAM": "17:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-8",
+        "TANGGAL": "21-08-2027",
+        "JAM": "17:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-9",
+        "TANGGAL": "28-08-2027",
+        "JAM": "17:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-10",
+        "TANGGAL": "04-09-2027",
+        "JAM": "17:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "31",
+    "KODE": "TRX/2026/07/0344",
+    "PASIEN": "KARTINI",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "27-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYGSKJGTGVZR407CJ8752CPT",
+    "_ulid": "01KYGSKJGTGVZR407CJ8752CPT",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "27-07-2026",
+        "JAM": "10:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "32",
+    "KODE": "TRX/2026/07/0343",
+    "PASIEN": "ADLY RAYHAN SAPUTRA",
+    "LAYANAN": "SESI NEW",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "27-07-2026",
+    "HARGA": "Rp180.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp360.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYGQPSWZ8S60401BW77YBY41",
+    "_ulid": "01KYGQPSWZ8S60401BW77YBY41",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "27-07-2026",
+        "JAM": "14:00",
+        "FISIO": "AUL",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "33",
+    "KODE": "TRX/2026/07/0342",
+    "PASIEN": "SILVIA",
+    "LAYANAN": "SESI NEW",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "26-07-2026",
+    "HARGA": "Rp180.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp180.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYEYNRZ8V2PBJ7WSBNMH5GAQ",
+    "_ulid": "01KYEYNRZ8V2PBJ7WSBNMH5GAQ",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "28-07-2026",
+        "JAM": "16:00",
+        "FISIO": "DESTY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "34",
+    "KODE": "TRX/2026/07/0341",
+    "PASIEN": "THE CE WENG",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "26-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYEXZR3N552A6S123D5G1H4S",
+    "_ulid": "01KYEXZR3N552A6S123D5G1H4S",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "26-07-2026",
+        "JAM": "16:00",
+        "FISIO": "DANI",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "35",
+    "KODE": "TRX/2026/07/0340",
+    "PASIEN": "MUHAMMAD GH0FUR",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "26-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYEXQXC9M6M4REGBFHRKTD0Q",
+    "_ulid": "01KYEXQXC9M6M4REGBFHRKTD0Q",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "26-07-2026",
+        "JAM": "16:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "36",
+    "KODE": "TRX/2026/07/0338",
+    "PASIEN": "DARA APRILA YUSLYANI",
+    "LAYANAN": "SESI NEW",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "26-07-2026",
+    "HARGA": "Rp180.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp180.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYEV9NTWXF0STGSC2N3F7PQ3",
+    "_ulid": "01KYEV9NTWXF0STGSC2N3F7PQ3",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "27-07-2026",
+        "JAM": "17:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "37",
+    "KODE": "TRX/2026/07/0337",
+    "PASIEN": "SILVIA",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "ICA",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "26-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYET647C4T8KBF6F7FP6H053",
+    "_ulid": "01KYET647C4T8KBF6F7FP6H053",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "26-07-2026",
+        "JAM": "16:00",
+        "FISIO": "DESTY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "38",
+    "KODE": "TRX/2026/07/0334",
+    "PASIEN": "QAEDI NAHRI",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "Suci Salsabilah",
+    "UPDATED BY": "ICA",
+    "DIBUAT TGL": "26-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYEMNB7QV7NV51JSXKBJX8VH",
+    "_ulid": "01KYEMNB7QV7NV51JSXKBJX8VH",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "26-07-2026",
+        "JAM": "15:00",
+        "FISIO": "DESTY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "39",
+    "KODE": "TRX/2026/07/0333",
+    "PASIEN": "SEPTIAN DWI PUTRA",
+    "LAYANAN": "SESI NEW",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "Suci Salsabilah",
+    "UPDATED BY": "Suci Salsabilah",
+    "DIBUAT TGL": "26-07-2026",
+    "HARGA": "Rp180.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYEM9ZRAHZQRDVTQ2YSCFFAG",
+    "_ulid": "01KYEM9ZRAHZQRDVTQ2YSCFFAG",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "28-07-2026",
+        "JAM": "10:00",
+        "FISIO": "HENA",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "40",
+    "KODE": "TRX/2026/07/0332",
+    "PASIEN": "SEPTIAN DWI PUTRA",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "Suci Salsabilah",
+    "UPDATED BY": "Suci Salsabilah",
+    "DIBUAT TGL": "26-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYEM8DJ2NGX8K9P4QK30HVJQ",
+    "_ulid": "01KYEM8DJ2NGX8K9P4QK30HVJQ",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "26-07-2026",
+        "JAM": "11:00",
+        "FISIO": "HENA",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "41",
+    "KODE": "TRX/2026/07/0331",
+    "PASIEN": "NENENG SAPARIANA",
+    "LAYANAN": "PAKET SILVER",
+    "TIPE": "Reguler",
+    "STATUS": "Proses",
+    "ADMIN": "Suci Salsabilah",
+    "UPDATED BY": "Suci Salsabilah",
+    "DIBUAT TGL": "26-07-2026",
+    "HARGA": "Rp750.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp750.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYEK33N010Z60GRT0DJWVGT3",
+    "_ulid": "01KYEK33N010Z60GRT0DJWVGT3",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "26-07-2026",
+        "JAM": "10:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp750.000"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "29-07-2026",
+        "JAM": "10:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -65,7 +1648,352 @@
     ]
   },
   {
-    "NO": "2",
+    "NO": "42",
+    "KODE": "TRX/2026/07/0330",
+    "PASIEN": "SITI WULANDARI",
+    "LAYANAN": "SESI NEW",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "25-07-2026",
+    "HARGA": "Rp180.000",
+    "POTONGAN": "diskon",
+    "DISKON": "Rp130.000",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYCRPS4V7K2ED7WNEKA4CAFN",
+    "_ulid": "01KYCRPS4V7K2ED7WNEKA4CAFN",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "30-07-2026",
+        "JAM": "16:00",
+        "FISIO": "PUTRI",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "43",
+    "KODE": "TRX/2026/07/0329",
+    "PASIEN": "SURACHMAD DARUSMAN",
+    "LAYANAN": "PAKET GOLD",
+    "TIPE": "Reguler",
+    "STATUS": "Proses",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "25-07-2026",
+    "HARGA": "Rp1.300.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp1.300.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYCM3A4VS788WC3Q0ZN4JXWA",
+    "_ulid": "01KYCM3A4VS788WC3Q0ZN4JXWA",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "30-07-2026",
+        "JAM": "19:00",
+        "FISIO": "PUTRI",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Jadwal Ulang",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "29-07-2026",
+        "JAM": "19:00",
+        "FISIO": "ORY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp1.300.000"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "01-08-2026",
+        "JAM": "19:00",
+        "FISIO": "ORY",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "13-08-2026",
+        "JAM": "19:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "20-08-2026",
+        "JAM": "19:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "27-08-2026",
+        "JAM": "19:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-6",
+        "TANGGAL": "03-09-2026",
+        "JAM": "19:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-7",
+        "TANGGAL": "10-09-2026",
+        "JAM": "19:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-8",
+        "TANGGAL": "17-09-2026",
+        "JAM": "19:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-9",
+        "TANGGAL": "24-09-2026",
+        "JAM": "19:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-10",
+        "TANGGAL": "01-10-2026",
+        "JAM": "19:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "44",
+    "KODE": "TRX/2026/07/0328",
+    "PASIEN": "TYAS MAHENDRA",
+    "LAYANAN": "SESI NEW",
+    "TIPE": "Reguler",
+    "STATUS": "Booking",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "25-07-2026",
+    "HARGA": "Rp180.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp0",
+    "STATUS BAYAR": "Belum Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYCM1QKTSBP4F35479MM62H9",
+    "_ulid": "01KYCM1QKTSBP4F35479MM62H9",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "28-07-2026",
+        "JAM": "20:00",
+        "FISIO": "DESTY",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Jadwal Ulang",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "31-07-2026",
+        "JAM": "19:00",
+        "FISIO": "DESTY",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "45",
+    "KODE": "TRX/2026/07/0327",
+    "PASIEN": "NOEVAL MUZZAKKI",
+    "LAYANAN": "PAKET SILVER",
+    "TIPE": "Reguler",
+    "STATUS": "Proses",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "25-07-2026",
+    "HARGA": "Rp750.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp750.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYC9D4QV5RX7G8GXKFQJ1A8K",
+    "_ulid": "01KYC9D4QV5RX7G8GXKFQJ1A8K",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "26-07-2026",
+        "JAM": "15:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "28-07-2026",
+        "JAM": "15:00",
+        "FISIO": "AUL",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp550.000"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "11-08-2028",
+        "JAM": "11:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "18-08-2028",
+        "JAM": "11:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "25-08-2028",
+        "JAM": "11:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "46",
+    "KODE": "TRX/2026/07/0326",
+    "PASIEN": "NOEVAL MUZZAKKI",
+    "LAYANAN": "TERAPI AWAL",
+    "TIPE": "Reguler",
+    "STATUS": "Selesai",
+    "ADMIN": "DHEA",
+    "UPDATED BY": "DHEA",
+    "DIBUAT TGL": "25-07-2026",
+    "HARGA": "Rp250.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYC6QG6FVV47VMYDYNDPKHDK",
+    "_ulid": "01KYC6QG6FVV47VMYDYNDPKHDK",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "25-07-2026",
+        "JAM": "14:00",
+        "FISIO": "AUL",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "47",
+    "KODE": "TRX/2026/07/0325",
+    "PASIEN": "DHIO ASRIL DWIYONO",
+    "LAYANAN": "PAKET SILVER",
+    "TIPE": "Reguler",
+    "STATUS": "Proses",
+    "ADMIN": "Suci Salsabilah",
+    "UPDATED BY": "Suci Salsabilah",
+    "DIBUAT TGL": "25-07-2026",
+    "HARGA": "Rp750.000",
+    "POTONGAN": "normal",
+    "DISKON": "Rp0",
+    "TOTAL BAYAR": "Rp750.000",
+    "STATUS BAYAR": "Lunas",
+    "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYC1HB9X4SP53RDR3P8VXKCQ",
+    "_ulid": "01KYC1HB9X4SP53RDR3P8VXKCQ",
+    "sessions": [
+      {
+        "PERTEMUAN": "Ke-1",
+        "TANGGAL": "26-07-2026",
+        "JAM": "10:00",
+        "FISIO": "HENA",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp750.000"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "28-07-2026",
+        "JAM": "19:00",
+        "FISIO": "AUL",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "09-08-2026",
+        "JAM": "10:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "16-08-2026",
+        "JAM": "10:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
+        "TANGGAL": "23-08-2026",
+        "JAM": "10:00",
+        "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      }
+    ]
+  },
+  {
+    "NO": "48",
     "KODE": "TRX/2026/07/0324",
     "PASIEN": "NOVI ASMARANI",
     "LAYANAN": "SESI NEW",
@@ -87,27 +2015,27 @@
         "TANGGAL": "27-07-2026",
         "JAM": "19:00",
         "FISIO": "HESTI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Tidak Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "3",
+    "NO": "49",
     "KODE": "TRX/2026/07/0323",
     "PASIEN": "RUSMALA RATINA",
     "LAYANAN": "SESI NEW",
     "TIPE": "Reguler",
-    "STATUS": "Booking",
+    "STATUS": "Selesai",
     "ADMIN": "Suci Salsabilah",
-    "UPDATED BY": "Suci Salsabilah",
+    "UPDATED BY": "ICA",
     "DIBUAT TGL": "25-07-2026",
     "HARGA": "Rp180.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
-    "TOTAL BAYAR": "Rp0",
-    "STATUS BAYAR": "Belum Lunas",
+    "TOTAL BAYAR": "Rp180.000",
+    "STATUS BAYAR": "Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYBYJEWB5M3KGY26NAA4W6Z8",
     "_ulid": "01KYBYJEWB5M3KGY26NAA4W6Z8",
     "sessions": [
@@ -116,27 +2044,27 @@
         "TANGGAL": "28-07-2026",
         "JAM": "09:00",
         "FISIO": "PUTRI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "4",
+    "NO": "50",
     "KODE": "TRX/2026/07/0322",
     "PASIEN": "TYAS MAHENDRA",
     "LAYANAN": "SESI NEW",
     "TIPE": "Reguler",
-    "STATUS": "Booking",
+    "STATUS": "Selesai",
     "ADMIN": "Suci Salsabilah",
-    "UPDATED BY": "Suci Salsabilah",
+    "UPDATED BY": "DHEA",
     "DIBUAT TGL": "25-07-2026",
     "HARGA": "Rp180.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
-    "TOTAL BAYAR": "Rp0",
-    "STATUS BAYAR": "Belum Lunas",
+    "TOTAL BAYAR": "Rp180.000",
+    "STATUS BAYAR": "Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KYBTRS7Y4S0B8TRBMBE4Z737",
     "_ulid": "01KYBTRS7Y4S0B8TRBMBE4Z737",
     "sessions": [
@@ -145,14 +2073,14 @@
         "TANGGAL": "25-07-2026",
         "JAM": "17:00",
         "FISIO": "OKTA",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "5",
+    "NO": "51",
     "KODE": "TRX/2026/07/0320",
     "PASIEN": "DHIO ASRIL DWIYONO",
     "LAYANAN": "TERAPI AWAL",
@@ -181,7 +2109,7 @@
     ]
   },
   {
-    "NO": "6",
+    "NO": "52",
     "KODE": "TRX/2026/07/0319",
     "PASIEN": "NOEVAL",
     "LAYANAN": "TERAPI AWAL",
@@ -200,7 +2128,7 @@
     "sessions": []
   },
   {
-    "NO": "7",
+    "NO": "53",
     "KODE": "TRX/2026/07/0318",
     "PASIEN": "SAYYIDAH ADZKIA",
     "LAYANAN": "SESI NEW",
@@ -222,27 +2150,27 @@
         "TANGGAL": "25-07-2026",
         "JAM": "20:00",
         "FISIO": "OKTA",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Tidak Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "8",
+    "NO": "54",
     "KODE": "TRX/2026/07/0317",
     "PASIEN": "FIRMAN",
     "LAYANAN": "PAKET GOLD",
     "TIPE": "Reguler",
-    "STATUS": "Booking",
+    "STATUS": "Proses",
     "ADMIN": "ICA",
-    "UPDATED BY": "ICA",
+    "UPDATED BY": "DHEA",
     "DIBUAT TGL": "24-07-2026",
     "HARGA": "Rp1.300.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
-    "TOTAL BAYAR": "Rp0",
-    "STATUS BAYAR": "Belum Lunas",
+    "TOTAL BAYAR": "Rp1.300.000",
+    "STATUS BAYAR": "Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KY9JJK3PV12KWWAR9VYZ0VW2",
     "_ulid": "01KY9JJK3PV12KWWAR9VYZ0VW2",
     "sessions": [
@@ -251,16 +2179,16 @@
         "TANGGAL": "25-07-2026",
         "JAM": "20:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
-        "KETERANGAN": "Rp0"
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Ditangani",
+        "KETERANGAN": "Rp1.300.000"
       },
       {
         "PERTEMUAN": "Ke-2",
         "TANGGAL": "27-07-2026",
         "JAM": "19:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -269,7 +2197,7 @@
         "TANGGAL": "27-07-2026",
         "JAM": "20:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -278,7 +2206,7 @@
         "TANGGAL": "28-07-2026",
         "JAM": "10:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -287,7 +2215,7 @@
         "TANGGAL": "28-07-2026",
         "JAM": "11:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -296,7 +2224,7 @@
         "TANGGAL": "29-07-2026",
         "JAM": "10:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -305,13 +2233,13 @@
         "TANGGAL": "29-07-2026",
         "JAM": "11:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-8",
-        "TANGGAL": "27-08-2026",
+        "TANGGAL": "30-07-2026",
         "JAM": "16:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "-",
@@ -320,9 +2248,9 @@
       },
       {
         "PERTEMUAN": "Ke-9",
-        "TANGGAL": "19-09-2026",
-        "JAM": "20:00",
-        "FISIO": "-",
+        "TANGGAL": "30-07-2026",
+        "JAM": "17:00",
+        "FISIO": "WAHYU",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -339,7 +2267,7 @@
     ]
   },
   {
-    "NO": "9",
+    "NO": "55",
     "KODE": "TRX/2026/07/0316",
     "PASIEN": "RUSMALA RATINA",
     "LAYANAN": "TERAPI AWAL",
@@ -368,7 +2296,7 @@
     ]
   },
   {
-    "NO": "10",
+    "NO": "56",
     "KODE": "TRX/2026/07/0315",
     "PASIEN": "SAYYIDAH ADZKIA",
     "LAYANAN": "TERAPI AWAL",
@@ -391,13 +2319,13 @@
         "JAM": "17:00",
         "FISIO": "ORY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "11",
+    "NO": "57",
     "KODE": "TRX/2026/07/0314",
     "PASIEN": "OKTARIANA TRI SUSANTI",
     "LAYANAN": "SESI NEW",
@@ -426,7 +2354,7 @@
     ]
   },
   {
-    "NO": "12",
+    "NO": "58",
     "KODE": "TRX/2026/07/0313",
     "PASIEN": "ADLY RAYHAN SAPUTRA",
     "LAYANAN": "TERAPI AWAL",
@@ -449,13 +2377,13 @@
         "JAM": "13:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "13",
+    "NO": "59",
     "KODE": "TRX/2026/07/0312",
     "PASIEN": "AMALIA RIZKI SURYANDARI",
     "LAYANAN": "PAKET SILVER",
@@ -485,6 +2413,15 @@
         "PERTEMUAN": "Ke-2",
         "TANGGAL": "28-07-2026",
         "JAM": "13:00",
+        "FISIO": "HENA",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Jadwal Ulang",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-2",
+        "TANGGAL": "01-08-2026",
+        "JAM": "11:00",
         "FISIO": "HENA",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
@@ -520,7 +2457,7 @@
     ]
   },
   {
-    "NO": "14",
+    "NO": "60",
     "KODE": "TRX/2026/07/0311",
     "PASIEN": "ERWIN DJONG",
     "LAYANAN": "SESI NEW",
@@ -542,27 +2479,27 @@
         "TANGGAL": "30-07-2026",
         "JAM": "14:00",
         "FISIO": "ORY",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Tidak Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "15",
+    "NO": "61",
     "KODE": "TRX/2026/07/0310",
     "PASIEN": "HARDJONO",
     "LAYANAN": "PAKET 2",
     "TIPE": "Reguler",
-    "STATUS": "Booking",
+    "STATUS": "Proses",
     "ADMIN": "ICA",
     "UPDATED BY": "ICA",
     "DIBUAT TGL": "23-07-2026",
     "HARGA": "Rp1.200.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
-    "TOTAL BAYAR": "Rp0",
-    "STATUS BAYAR": "Belum Lunas",
+    "TOTAL BAYAR": "Rp1.200.000",
+    "STATUS BAYAR": "Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KY75805VWFVNAX7244TC8K29",
     "_ulid": "01KY75805VWFVNAX7244TC8K29",
     "sessions": [
@@ -571,9 +2508,9 @@
         "TANGGAL": "27-07-2026",
         "JAM": "15:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
-        "KETERANGAN": "Rp0"
+        "KETERANGAN": "Rp1.200.000"
       },
       {
         "PERTEMUAN": "Ke-2",
@@ -659,7 +2596,7 @@
     ]
   },
   {
-    "NO": "16",
+    "NO": "62",
     "KODE": "TRX/2026/07/0309",
     "PASIEN": "SUPARDAN",
     "LAYANAN": "TERAPI AWAL",
@@ -682,13 +2619,13 @@
         "JAM": "16:00",
         "FISIO": "ORY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "17",
+    "NO": "63",
     "KODE": "TRX/2026/07/0308",
     "PASIEN": "ERIK RADJALI",
     "LAYANAN": "PAKET GOLD",
@@ -707,9 +2644,9 @@
     "sessions": [
       {
         "PERTEMUAN": "Ke-1",
-        "TANGGAL": "26-07-2029",
-        "JAM": "11:00",
-        "FISIO": "ORY",
+        "TANGGAL": "01-08-2026",
+        "JAM": "13:00",
+        "FISIO": "DANI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -798,7 +2735,7 @@
     ]
   },
   {
-    "NO": "18",
+    "NO": "64",
     "KODE": "TRX/2026/07/0307",
     "PASIEN": "AGUSTINUS ARSI",
     "LAYANAN": "TERAPI AWAL",
@@ -821,13 +2758,13 @@
         "JAM": "14:00",
         "FISIO": "DESTY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "19",
+    "NO": "65",
     "KODE": "TRX/2026/07/0306",
     "PASIEN": "ALIANI",
     "LAYANAN": "TERAPI AWAL",
@@ -856,7 +2793,7 @@
     ]
   },
   {
-    "NO": "20",
+    "NO": "66",
     "KODE": "TRX/2026/07/0305",
     "PASIEN": "RIZKY MAULANA PUTRA",
     "LAYANAN": "TERAPI AWAL",
@@ -885,7 +2822,7 @@
     ]
   },
   {
-    "NO": "21",
+    "NO": "67",
     "KODE": "TRX/2026/07/0304",
     "PASIEN": "TRI PRATIWI",
     "LAYANAN": "TERAPI AWAL",
@@ -908,13 +2845,13 @@
         "JAM": "11:00",
         "FISIO": "DESTY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "22",
+    "NO": "68",
     "KODE": "TRX/2026/07/0303",
     "PASIEN": "SUMARSIH",
     "LAYANAN": "SESI NEW",
@@ -937,26 +2874,26 @@
         "JAM": "13:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "23",
+    "NO": "69",
     "KODE": "TRX/2026/07/0302",
     "PASIEN": "SITI WULANDARI",
     "LAYANAN": "SESI NEW",
     "TIPE": "Reguler",
-    "STATUS": "Booking",
+    "STATUS": "Selesai",
     "ADMIN": "ICA",
-    "UPDATED BY": "ICA",
+    "UPDATED BY": "DHEA",
     "DIBUAT TGL": "22-07-2026",
     "HARGA": "Rp180.000",
     "POTONGAN": "diskon",
     "DISKON": "Rp130.000",
-    "TOTAL BAYAR": "Rp0",
-    "STATUS BAYAR": "Belum Lunas",
+    "TOTAL BAYAR": "Rp50.000",
+    "STATUS BAYAR": "Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KY52RMRBK8XPY29SX2T6J4FG",
     "_ulid": "01KY52RMRBK8XPY29SX2T6J4FG",
     "sessions": [
@@ -965,14 +2902,14 @@
         "TANGGAL": "25-07-2026",
         "JAM": "19:00",
         "FISIO": "PUTRI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "24",
+    "NO": "70",
     "KODE": "TRX/2026/07/0301",
     "PASIEN": "BATISTUTA YUSLYADI",
     "LAYANAN": "SESI NEW",
@@ -995,13 +2932,13 @@
         "JAM": "15:00",
         "FISIO": "ORY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "25",
+    "NO": "71",
     "KODE": "TRX/2026/07/0300",
     "PASIEN": "SUMIATI 8912",
     "LAYANAN": "TERAPI AWAL",
@@ -1024,13 +2961,13 @@
         "JAM": "20:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "26",
+    "NO": "72",
     "KODE": "TRX/2026/07/0299",
     "PASIEN": "SITI WULANDARI",
     "LAYANAN": "TERAPI AWAL",
@@ -1059,7 +2996,7 @@
     ]
   },
   {
-    "NO": "27",
+    "NO": "73",
     "KODE": "TRX/2026/07/0298",
     "PASIEN": "OKTARIANA TRI SUSANTI",
     "LAYANAN": "SESI NEW",
@@ -1088,7 +3025,7 @@
     ]
   },
   {
-    "NO": "28",
+    "NO": "74",
     "KODE": "TRX/2026/07/0297",
     "PASIEN": "IRVIN CHANGGRA",
     "LAYANAN": "SESI NEW",
@@ -1117,7 +3054,7 @@
     ]
   },
   {
-    "NO": "29",
+    "NO": "75",
     "KODE": "TRX/2026/07/0296",
     "PASIEN": "NIKE WELDAN",
     "LAYANAN": "TERAPI AWAL",
@@ -1146,7 +3083,7 @@
     ]
   },
   {
-    "NO": "30",
+    "NO": "76",
     "KODE": "TRX/2026/07/0295",
     "PASIEN": "IKLAS PUJO PANGESTU",
     "LAYANAN": "TERAPI AWAL",
@@ -1184,7 +3121,7 @@
     ]
   },
   {
-    "NO": "31",
+    "NO": "77",
     "KODE": "TRX/2026/07/0294",
     "PASIEN": "NADIA ISKAR RAMDAYANI",
     "LAYANAN": "TERAPI AWAL",
@@ -1251,7 +3188,7 @@
     ]
   },
   {
-    "NO": "33",
+    "NO": "78",
     "KODE": "TRX/2026/07/0292",
     "PASIEN": "IRVIN CHANGGRA",
     "LAYANAN": "TERAPI AWAL",
@@ -1280,7 +3217,7 @@
     ]
   },
   {
-    "NO": "34",
+    "NO": "79",
     "KODE": "TRX/2026/07/0291",
     "PASIEN": "ENDANG PURWATI",
     "LAYANAN": "PAKET SILVER",
@@ -1292,8 +3229,8 @@
     "HARGA": "Rp750.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
-    "TOTAL BAYAR": "Rp300.000",
-    "STATUS BAYAR": "Belum Lunas",
+    "TOTAL BAYAR": "Rp750.000",
+    "STATUS BAYAR": "Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KY3WKMXTBPWYA4J55M2SDH7J",
     "_ulid": "01KY3WKMXTBPWYA4J55M2SDH7J",
     "sessions": [
@@ -1311,15 +3248,24 @@
         "TANGGAL": "25-07-2026",
         "JAM": "15:00",
         "FISIO": "PUTRI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp450.000"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "29-07-2026",
+        "JAM": "19:00",
+        "FISIO": "AUL",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Jadwal Ulang",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-3",
-        "TANGGAL": "05-08-2026",
+        "TANGGAL": "01-08-2026",
         "JAM": "09:00",
-        "FISIO": "-",
+        "FISIO": "PUTRI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -1345,20 +3291,20 @@
     ]
   },
   {
-    "NO": "35",
+    "NO": "80",
     "KODE": "TRX/2026/07/0290",
     "PASIEN": "DANISH FATURRAHMAN",
     "LAYANAN": "SESI NEW",
     "TIPE": "Reguler",
-    "STATUS": "Booking",
+    "STATUS": "Selesai",
     "ADMIN": "DHEA",
     "UPDATED BY": "DHEA",
     "DIBUAT TGL": "22-07-2026",
     "HARGA": "Rp180.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
-    "TOTAL BAYAR": "Rp0",
-    "STATUS BAYAR": "Belum Lunas",
+    "TOTAL BAYAR": "Rp180.000",
+    "STATUS BAYAR": "Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KY3VNJWXZHAABVHK7X082PQK",
     "_ulid": "01KY3VNJWXZHAABVHK7X082PQK",
     "sessions": [
@@ -1367,14 +3313,14 @@
         "TANGGAL": "25-07-2026",
         "JAM": "19:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "36",
+    "NO": "81",
     "KODE": "TRX/2026/07/0289",
     "PASIEN": "OKTARIANA TRI SUSANTI",
     "LAYANAN": "SESI NEW",
@@ -1403,7 +3349,7 @@
     ]
   },
   {
-    "NO": "37",
+    "NO": "82",
     "KODE": "TRX/2026/07/0288",
     "PASIEN": "SISWADI",
     "LAYANAN": "TERAPI AWAL",
@@ -1432,7 +3378,7 @@
     ]
   },
   {
-    "NO": "38",
+    "NO": "83",
     "KODE": "TRX/2026/07/0287",
     "PASIEN": "BATISTUTA YUSLYADI",
     "LAYANAN": "TERAPI AWAL",
@@ -1461,7 +3407,7 @@
     ]
   },
   {
-    "NO": "39",
+    "NO": "84",
     "KODE": "TRX/2026/07/0286",
     "PASIEN": "FERRY PANGKE",
     "LAYANAN": "TERAPI AWAL",
@@ -1490,7 +3436,7 @@
     ]
   },
   {
-    "NO": "40",
+    "NO": "85",
     "KODE": "TRX/2026/07/0285",
     "PASIEN": "SUMARSIH",
     "LAYANAN": "TERAPI AWAL",
@@ -1513,13 +3459,13 @@
         "JAM": "19:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "41",
+    "NO": "86",
     "KODE": "TRX/2026/07/0284",
     "PASIEN": "VANIA FANG",
     "LAYANAN": "TERAPI AWAL",
@@ -1542,13 +3488,13 @@
         "JAM": "19:00",
         "FISIO": "DESTY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "42",
+    "NO": "87",
     "KODE": "TRX/2026/07/0283",
     "PASIEN": "ANDREAN SETIAWAN PUTRA",
     "LAYANAN": "TERAPI AWAL",
@@ -1577,7 +3523,7 @@
     ]
   },
   {
-    "NO": "43",
+    "NO": "88",
     "KODE": "TRX/2026/07/0282",
     "PASIEN": "NENENG SAPARIANA",
     "LAYANAN": "TERAPI AWAL",
@@ -1606,7 +3552,7 @@
     ]
   },
   {
-    "NO": "44",
+    "NO": "89",
     "KODE": "TRX/2026/07/0281",
     "PASIEN": "TYAS MAHENDRA",
     "LAYANAN": "TERAPI AWAL",
@@ -1635,7 +3581,7 @@
     ]
   },
   {
-    "NO": "45",
+    "NO": "90",
     "KODE": "TRX/2026/07/0280",
     "PASIEN": "PUJI LESTARI DWI HANDAYANI",
     "LAYANAN": "TERAPI AWAL",
@@ -1664,7 +3610,7 @@
     ]
   },
   {
-    "NO": "46",
+    "NO": "91",
     "KODE": "TRX/2026/07/0279",
     "PASIEN": "CESARIA ANGGUN KINANTY",
     "LAYANAN": "PAKET SILVER",
@@ -1729,7 +3675,7 @@
     ]
   },
   {
-    "NO": "47",
+    "NO": "92",
     "KODE": "TRX/2026/07/0277",
     "PASIEN": "MUHAMMAD HAFIZ ANANSYAH",
     "LAYANAN": "TERAPI AWAL",
@@ -1758,7 +3704,7 @@
     ]
   },
   {
-    "NO": "48",
+    "NO": "93",
     "KODE": "TRX/2026/07/0276",
     "PASIEN": "PUJI ASTUTI",
     "LAYANAN": "PAKET SILVER",
@@ -1789,33 +3735,33 @@
         "TANGGAL": "26-07-2026",
         "JAM": "11:00",
         "FISIO": "PUTRI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-3",
-        "TANGGAL": "06-08-2026",
-        "JAM": "17:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "29-07-2026",
+        "JAM": "13:00",
+        "FISIO": "PUTRI",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-4",
-        "TANGGAL": "13-08-2026",
-        "JAM": "17:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "29-07-2026",
+        "JAM": "14:00",
+        "FISIO": "PUTRI",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-5",
-        "TANGGAL": "20-08-2026",
-        "JAM": "17:00",
-        "FISIO": "-",
+        "TANGGAL": "01-08-2026",
+        "JAM": "10:00",
+        "FISIO": "PUTRI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -1823,7 +3769,7 @@
     ]
   },
   {
-    "NO": "49",
+    "NO": "94",
     "KODE": "TRX/2026/07/0275",
     "PASIEN": "FAWIL PATWA",
     "LAYANAN": "SESI NEW",
@@ -1852,7 +3798,7 @@
     ]
   },
   {
-    "NO": "50",
+    "NO": "95",
     "KODE": "TRX/2026/07/0274",
     "PASIEN": "GEORGE BUDIJANTO SALIM",
     "LAYANAN": "PAKET PLATINUM",
@@ -1875,7 +3821,7 @@
         "JAM": "09:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp2.400.000"
       },
       {
@@ -1892,25 +3838,43 @@
         "TANGGAL": "25-07-2026",
         "JAM": "15:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-3",
-        "TANGGAL": "12-08-2026",
-        "JAM": "09:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "27-07-2026",
+        "JAM": "10:00",
+        "FISIO": "Ridho Budi Rahmad",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Jadwal Ulang",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "27-07-2026",
+        "JAM": "11:00",
+        "FISIO": "Ridho Budi Rahmad",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Jadwal Ulang",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "28-07-2026",
+        "JAM": "10:00",
+        "FISIO": "Ridho Budi Rahmad",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-4",
-        "TANGGAL": "19-08-2026",
-        "JAM": "09:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "28-07-2026",
+        "JAM": "11:00",
+        "FISIO": "Ridho Budi Rahmad",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -2061,7 +4025,7 @@
     ]
   },
   {
-    "NO": "51",
+    "NO": "96",
     "KODE": "TRX/2026/07/0273",
     "PASIEN": "DARA APRILA YUSLYANI",
     "LAYANAN": "SESI NEW",
@@ -2090,7 +4054,7 @@
     ]
   },
   {
-    "NO": "52",
+    "NO": "97",
     "KODE": "TRX/2026/07/0272",
     "PASIEN": "TJATUR SUGIARTO",
     "LAYANAN": "SESI NEW",
@@ -2119,7 +4083,7 @@
     ]
   },
   {
-    "NO": "53",
+    "NO": "98",
     "KODE": "TRX/2026/07/0271",
     "PASIEN": "CESARIA ANGGUN KINANTY",
     "LAYANAN": "TERAPI AWAL",
@@ -2142,13 +4106,13 @@
         "JAM": "17:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "54",
+    "NO": "99",
     "KODE": "TRX/2026/07/0270",
     "PASIEN": "TJATUR SUGIARTO",
     "LAYANAN": "TERAPI AWAL",
@@ -2177,7 +4141,7 @@
     ]
   },
   {
-    "NO": "55",
+    "NO": "100",
     "KODE": "TRX/2026/07/0269",
     "PASIEN": "AURA DUTA SHEVA",
     "LAYANAN": "TERAPI AWAL",
@@ -2206,7 +4170,7 @@
     ]
   },
   {
-    "NO": "56",
+    "NO": "1",
     "KODE": "TRX/2026/07/0268",
     "PASIEN": "FIRMAN SAMSUDIN",
     "LAYANAN": "SESI NEW",
@@ -2229,13 +4193,13 @@
         "JAM": "19:00",
         "FISIO": "ORY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "57",
+    "NO": "2",
     "KODE": "TRX/2026/07/0267",
     "PASIEN": "MUHAMMAD NABIL KAUTSAR PRIYANTANA",
     "LAYANAN": "SESI NEW",
@@ -2264,7 +4228,7 @@
     ]
   },
   {
-    "NO": "58",
+    "NO": "3",
     "KODE": "TRX/2026/07/0266",
     "PASIEN": "NASYUA RAVA AZAHRA",
     "LAYANAN": "TERAPI AWAL",
@@ -2293,7 +4257,7 @@
     ]
   },
   {
-    "NO": "59",
+    "NO": "4",
     "KODE": "TRX/2026/07/0265",
     "PASIEN": "ANDRA SAPUTRA",
     "LAYANAN": "PAKET SILVER",
@@ -2333,24 +4297,24 @@
         "TANGGAL": "25-07-2026",
         "JAM": "11:00",
         "FISIO": "DESTY",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-4",
-        "TANGGAL": "10-08-2026",
-        "JAM": "11:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "TANGGAL": "27-07-2026",
+        "JAM": "10:00",
+        "FISIO": "DESTY",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-5",
-        "TANGGAL": "17-08-2026",
+        "TANGGAL": "30-07-2026",
         "JAM": "11:00",
-        "FISIO": "-",
+        "FISIO": "DESTY",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -2358,7 +4322,7 @@
     ]
   },
   {
-    "NO": "60",
+    "NO": "5",
     "KODE": "TRX/2026/07/0264",
     "PASIEN": "ERWIN DJONG",
     "LAYANAN": "SESI NEW",
@@ -2387,7 +4351,7 @@
     ]
   },
   {
-    "NO": "61",
+    "NO": "6",
     "KODE": "TRX/2026/07/0262",
     "PASIEN": "BINTARI INDAH SAPUTRI",
     "LAYANAN": "SESI NEW",
@@ -2410,13 +4374,13 @@
         "JAM": "10:00",
         "FISIO": "DESTY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "62",
+    "NO": "7",
     "KODE": "TRX/2026/07/0261",
     "PASIEN": "DARA APRILA YUSLYANI",
     "LAYANAN": "SESI NEW",
@@ -2445,7 +4409,7 @@
     ]
   },
   {
-    "NO": "63",
+    "NO": "8",
     "KODE": "TRX/2026/07/0260",
     "PASIEN": "WAHYUDI",
     "LAYANAN": "SESI NEW",
@@ -2483,19 +4447,19 @@
     ]
   },
   {
-    "NO": "64",
+    "NO": "9",
     "KODE": "TRX/2026/07/0258",
     "PASIEN": "AZARYA JADAYN ARYO",
     "LAYANAN": "PAKET SILVER",
     "TIPE": "Reguler",
-    "STATUS": "Booking",
+    "STATUS": "Proses",
     "ADMIN": "Suci Salsabilah",
-    "UPDATED BY": "Suci Salsabilah",
+    "UPDATED BY": "DHEA",
     "DIBUAT TGL": "19-07-2026",
     "HARGA": "Rp750.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
-    "TOTAL BAYAR": "Rp0",
+    "TOTAL BAYAR": "Rp300.000",
     "STATUS BAYAR": "Belum Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KXWPSDJFKD049P1ZH5AQW4BG",
     "_ulid": "01KXWPSDJFKD049P1ZH5AQW4BG",
@@ -2505,16 +4469,16 @@
         "TANGGAL": "25-07-2026",
         "JAM": "17:00",
         "FISIO": "HENA",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
-        "KETERANGAN": "Rp0"
+        "KETERANGAN": "Rp300.000"
       },
       {
         "PERTEMUAN": "Ke-2",
         "TANGGAL": "26-07-2026",
         "JAM": "13:00",
         "FISIO": "HENA",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -2548,7 +4512,7 @@
     ]
   },
   {
-    "NO": "65",
+    "NO": "10",
     "KODE": "TRX/2026/07/0257",
     "PASIEN": "TEGAR KRISTIAN OMPU SUNGGU ARITONANG",
     "LAYANAN": "PAKET GOLD",
@@ -2579,15 +4543,15 @@
         "TANGGAL": "26-07-2026",
         "JAM": "09:00",
         "FISIO": "HENA",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-3",
-        "TANGGAL": "04-08-2026",
-        "JAM": "14:00",
-        "FISIO": "-",
+        "TANGGAL": "30-07-2026",
+        "JAM": "16:00",
+        "FISIO": "HENA",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -2658,7 +4622,7 @@
     ]
   },
   {
-    "NO": "66",
+    "NO": "11",
     "KODE": "TRX/2026/07/0256",
     "PASIEN": "RATNA NINGSIH",
     "LAYANAN": "SESI NEW",
@@ -2687,7 +4651,7 @@
     ]
   },
   {
-    "NO": "67",
+    "NO": "12",
     "KODE": "TRX/2026/07/0253",
     "PASIEN": "NOVERIANSYAH AKBAR",
     "LAYANAN": "TERAPI AWAL",
@@ -2716,7 +4680,7 @@
     ]
   },
   {
-    "NO": "68",
+    "NO": "13",
     "KODE": "TRX/2026/07/0252",
     "PASIEN": "OKTARIANA TRI SUSANTI",
     "LAYANAN": "TERAPI AWAL",
@@ -2745,7 +4709,7 @@
     ]
   },
   {
-    "NO": "69",
+    "NO": "14",
     "KODE": "TRX/2026/07/0251",
     "PASIEN": "SALLY ISKANDAR TAN",
     "LAYANAN": "SESI",
@@ -2774,7 +4738,7 @@
     ]
   },
   {
-    "NO": "70",
+    "NO": "15",
     "KODE": "TRX/2026/07/0250",
     "PASIEN": "BRILLIAN NINDY SEPTIA",
     "LAYANAN": "TERAPI AWAL",
@@ -2803,7 +4767,7 @@
     ]
   },
   {
-    "NO": "71",
+    "NO": "16",
     "KODE": "TRX/2026/07/0249",
     "PASIEN": "HARY PRAYOGI PRATAMA PUTRA",
     "LAYANAN": "TERAPI AWAL",
@@ -2841,7 +4805,7 @@
     ]
   },
   {
-    "NO": "72",
+    "NO": "17",
     "KODE": "TRX/2026/07/0248",
     "PASIEN": "FAWIL PATWA",
     "LAYANAN": "TERAPI AWAL",
@@ -2870,7 +4834,7 @@
     ]
   },
   {
-    "NO": "73",
+    "NO": "18",
     "KODE": "TRX/2026/07/0247",
     "PASIEN": "LIE KIM FA/KESUMAJADI",
     "LAYANAN": "PAKET GOLD",
@@ -2910,7 +4874,7 @@
         "TANGGAL": "25-07-2026",
         "JAM": "16:00",
         "FISIO": "OKTA",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Tidak Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -2980,7 +4944,7 @@
     ]
   },
   {
-    "NO": "74",
+    "NO": "19",
     "KODE": "TRX/2026/07/0245",
     "PASIEN": "REFINKHA ZETYA ARNINDHA",
     "LAYANAN": "SESI",
@@ -2999,8 +4963,8 @@
     "sessions": [
       {
         "PERTEMUAN": "Ke-1",
-        "TANGGAL": "26-07-2026",
-        "JAM": "14:00",
+        "TANGGAL": "02-08-2026",
+        "JAM": "15:00",
         "FISIO": "HESTI",
         "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
@@ -3009,7 +4973,7 @@
     ]
   },
   {
-    "NO": "75",
+    "NO": "20",
     "KODE": "TRX/2026/07/0243",
     "PASIEN": "FREDIRIKA ARIANI NESA",
     "LAYANAN": "PAKET SILVER",
@@ -3048,7 +5012,7 @@
         "PERTEMUAN": "Ke-3",
         "TANGGAL": "01-08-2026",
         "JAM": "11:00",
-        "FISIO": "PRITY",
+        "FISIO": "PUTRI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -3074,7 +5038,7 @@
     ]
   },
   {
-    "NO": "76",
+    "NO": "21",
     "KODE": "TRX/2026/07/0242",
     "PASIEN": "JESICHA MARTHALENA TRISNA",
     "LAYANAN": "PAKET PLATINUM",
@@ -3094,7 +5058,7 @@
       {
         "PERTEMUAN": "Ke-1",
         "TANGGAL": "01-08-2026",
-        "JAM": "09:00",
+        "JAM": "15:00",
         "FISIO": "AUL",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
@@ -3102,15 +5066,6 @@
       },
       {
         "PERTEMUAN": "Ke-2",
-        "TANGGAL": "08-08-2026",
-        "JAM": "09:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
-        "KETERANGAN": "Rp0"
-      },
-      {
-        "PERTEMUAN": "Ke-3",
         "TANGGAL": "15-08-2026",
         "JAM": "09:00",
         "FISIO": "-",
@@ -3119,10 +5074,19 @@
         "KETERANGAN": "Rp0"
       },
       {
-        "PERTEMUAN": "Ke-4",
+        "PERTEMUAN": "Ke-3",
         "TANGGAL": "22-08-2026",
         "JAM": "09:00",
         "FISIO": "-",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-4",
+        "TANGGAL": "27-08-2026",
+        "JAM": "09:00",
+        "FISIO": "AUL",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -3274,7 +5238,7 @@
     ]
   },
   {
-    "NO": "77",
+    "NO": "22",
     "KODE": "TRX/2026/07/0241",
     "PASIEN": "ARIF SANTOSO",
     "LAYANAN": "TERAPI AWAL",
@@ -3303,7 +5267,7 @@
     ]
   },
   {
-    "NO": "78",
+    "NO": "23",
     "KODE": "TRX/2026/07/0240",
     "PASIEN": "OSCAR FAUZI",
     "LAYANAN": "TERAPI AWAL",
@@ -3332,7 +5296,7 @@
     ]
   },
   {
-    "NO": "79",
+    "NO": "24",
     "KODE": "TRX/2026/07/0239",
     "PASIEN": "TEGAR KRISTIAN OMPU SUNGGU ARITONANG",
     "LAYANAN": "TERAPI AWAL",
@@ -3361,7 +5325,7 @@
     ]
   },
   {
-    "NO": "80",
+    "NO": "25",
     "KODE": "TRX/2026/07/0238",
     "PASIEN": "WAHYUDI",
     "LAYANAN": "SESI NEW",
@@ -3390,7 +5354,7 @@
     ]
   },
   {
-    "NO": "81",
+    "NO": "26",
     "KODE": "TRX/2026/07/0236",
     "PASIEN": "DANISH FATURRAHMAN",
     "LAYANAN": "TERAPI AWAL",
@@ -3413,13 +5377,13 @@
         "JAM": "20:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "82",
+    "NO": "27",
     "KODE": "TRX/2026/07/0235",
     "PASIEN": "IFTITAH WAHYU IZZATI",
     "LAYANAN": "TERAPI AWAL",
@@ -3448,7 +5412,7 @@
     ]
   },
   {
-    "NO": "83",
+    "NO": "28",
     "KODE": "TRX/2026/07/0234",
     "PASIEN": "AURORA PRETTY BRILIANTY",
     "LAYANAN": "SESI NEW",
@@ -3477,7 +5441,7 @@
     ]
   },
   {
-    "NO": "84",
+    "NO": "29",
     "KODE": "TRX/2026/07/0233",
     "PASIEN": "LIE KIM FA/KESUMAJADI",
     "LAYANAN": "TERAPI AWAL",
@@ -3506,7 +5470,7 @@
     ]
   },
   {
-    "NO": "85",
+    "NO": "30",
     "KODE": "TRX/2026/07/0232",
     "PASIEN": "WAFA ARIF",
     "LAYANAN": "TERAPI AWAL",
@@ -3529,13 +5493,13 @@
         "JAM": "15:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "86",
+    "NO": "31",
     "KODE": "TRX/2026/07/0231",
     "PASIEN": "ENDANG PURWATI",
     "LAYANAN": "TERAPI AWAL",
@@ -3564,7 +5528,7 @@
     ]
   },
   {
-    "NO": "87",
+    "NO": "32",
     "KODE": "TRX/2026/07/0230",
     "PASIEN": "RATNA NINGSIH",
     "LAYANAN": "TERAPI AWAL",
@@ -3593,7 +5557,7 @@
     ]
   },
   {
-    "NO": "88",
+    "NO": "33",
     "KODE": "TRX/2026/07/0229",
     "PASIEN": "MUHAMMAD NABIL KAUTSAR PRIYANTANA",
     "LAYANAN": "TERAPI AWAL",
@@ -3622,7 +5586,7 @@
     ]
   },
   {
-    "NO": "89",
+    "NO": "34",
     "KODE": "TRX/2026/07/0228",
     "PASIEN": "AURORA PRETTY BRILIANTY",
     "LAYANAN": "TERAPI AWAL",
@@ -3651,7 +5615,7 @@
     ]
   },
   {
-    "NO": "90",
+    "NO": "35",
     "KODE": "TRX/2026/07/0226",
     "PASIEN": "AMALIA RIZKI SURYANDARI",
     "LAYANAN": "TERAPI AWAL",
@@ -3680,7 +5644,7 @@
     ]
   },
   {
-    "NO": "91",
+    "NO": "36",
     "KODE": "TRX/2026/07/0224",
     "PASIEN": "ANDRA SAPUTRA",
     "LAYANAN": "TERAPI AWAL",
@@ -3709,7 +5673,7 @@
     ]
   },
   {
-    "NO": "92",
+    "NO": "37",
     "KODE": "TRX/2026/07/0223",
     "PASIEN": "SUYATNO",
     "LAYANAN": "PAKET SILVER",
@@ -3721,8 +5685,8 @@
     "HARGA": "Rp750.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
-    "TOTAL BAYAR": "Rp300.000",
-    "STATUS BAYAR": "Belum Lunas",
+    "TOTAL BAYAR": "Rp750.000",
+    "STATUS BAYAR": "Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KXNKN5PJB227S1N8S71HV7M5",
     "_ulid": "01KXNKN5PJB227S1N8S71HV7M5",
     "sessions": [
@@ -3749,15 +5713,15 @@
         "TANGGAL": "27-07-2026",
         "JAM": "20:00",
         "FISIO": "HESTI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
-        "KETERANGAN": "Rp0"
+        "KETERANGAN": "Rp450.000"
       },
       {
         "PERTEMUAN": "Ke-4",
-        "TANGGAL": "10-08-2026",
+        "TANGGAL": "31-07-2026",
         "JAM": "20:00",
-        "FISIO": "-",
+        "FISIO": "HESTI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -3774,7 +5738,7 @@
     ]
   },
   {
-    "NO": "93",
+    "NO": "38",
     "KODE": "TRX/2026/07/0222",
     "PASIEN": "JESICHA MARTHALENA TRISNA",
     "LAYANAN": "TERAPI AWAL",
@@ -3797,13 +5761,13 @@
         "JAM": "09:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "94",
+    "NO": "39",
     "KODE": "TRX/2026/07/0221",
     "PASIEN": "YUNITA",
     "LAYANAN": "PAKET 2",
@@ -3843,7 +5807,7 @@
         "TANGGAL": "26-07-2026",
         "JAM": "10:00",
         "FISIO": "HESTI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -3852,24 +5816,24 @@
         "TANGGAL": "27-07-2026",
         "JAM": "17:00",
         "FISIO": "HESTI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-5",
-        "TANGGAL": "17-08-2026",
-        "JAM": "16:00",
-        "FISIO": "-",
+        "TANGGAL": "30-07-2026",
+        "JAM": "17:00",
+        "FISIO": "HESTI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-6",
-        "TANGGAL": "24-08-2026",
-        "JAM": "16:00",
-        "FISIO": "-",
+        "TANGGAL": "03-08-2026",
+        "JAM": "17:00",
+        "FISIO": "HESTI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -3913,7 +5877,7 @@
     ]
   },
   {
-    "NO": "95",
+    "NO": "40",
     "KODE": "TRX/2026/07/0220",
     "PASIEN": "HUSNUL FIKRI",
     "LAYANAN": "PAKET SILVER",
@@ -3978,7 +5942,7 @@
     ]
   },
   {
-    "NO": "96",
+    "NO": "41",
     "KODE": "TRX/2026/07/0219",
     "PASIEN": "NOVA ELVIANI",
     "LAYANAN": "SESI NEW",
@@ -4007,7 +5971,7 @@
     ]
   },
   {
-    "NO": "97",
+    "NO": "42",
     "KODE": "TRX/2026/07/0218",
     "PASIEN": "NOVA ELVIANI",
     "LAYANAN": "TERAPI AWAL",
@@ -4036,7 +6000,7 @@
     ]
   },
   {
-    "NO": "98",
+    "NO": "43",
     "KODE": "TRX/2026/07/0216",
     "PASIEN": "SUHANDA",
     "LAYANAN": "TERAPI AWAL",
@@ -4065,7 +6029,7 @@
     ]
   },
   {
-    "NO": "99",
+    "NO": "44",
     "KODE": "TRX/2026/07/0215",
     "PASIEN": "SUHANDA",
     "LAYANAN": "PAKET SILVER",
@@ -4130,7 +6094,7 @@
     ]
   },
   {
-    "NO": "100",
+    "NO": "45",
     "KODE": "TRX/2026/07/0214",
     "PASIEN": "PASIEN SCOLIOSIS",
     "LAYANAN": "TERAPI AWAL",
@@ -4149,7 +6113,7 @@
     "sessions": [
       {
         "PERTEMUAN": "Ke-1",
-        "TANGGAL": "30-07-2026",
+        "TANGGAL": "06-08-2026",
         "JAM": "19:00",
         "FISIO": "HESTI",
         "STATUS_SESI": "-",
@@ -4159,7 +6123,7 @@
     ]
   },
   {
-    "NO": "1",
+    "NO": "46",
     "KODE": "TRX/2026/07/0213",
     "PASIEN": "WAHYUDI",
     "LAYANAN": "TERAPI AWAL",
@@ -4188,7 +6152,7 @@
     ]
   },
   {
-    "NO": "2",
+    "NO": "47",
     "KODE": "TRX/2026/07/0212",
     "PASIEN": "PUTRI YASMIN MUMTAZ",
     "LAYANAN": "SESI NEW",
@@ -4217,7 +6181,7 @@
     ]
   },
   {
-    "NO": "3",
+    "NO": "48",
     "KODE": "TRX/2026/07/0211",
     "PASIEN": "FEMMY SANTIKA MAHARANI",
     "LAYANAN": "SESI NEW",
@@ -4246,7 +6210,7 @@
     ]
   },
   {
-    "NO": "4",
+    "NO": "49",
     "KODE": "TRX/2026/07/0210",
     "PASIEN": "SALLY ISKANDAR TAN",
     "LAYANAN": "PAKET 1",
@@ -4277,7 +6241,7 @@
         "TANGGAL": "29-07-2026",
         "JAM": "19:00",
         "FISIO": "PRITY",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -4285,7 +6249,7 @@
         "PERTEMUAN": "Ke-3",
         "TANGGAL": "05-08-2026",
         "JAM": "19:00",
-        "FISIO": "-",
+        "FISIO": "PRITY",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -4311,7 +6275,7 @@
     ]
   },
   {
-    "NO": "5",
+    "NO": "50",
     "KODE": "TRX/2026/07/0209",
     "PASIEN": "RICKY ISKANDAR",
     "LAYANAN": "PAKET 1",
@@ -4342,15 +6306,15 @@
         "TANGGAL": "29-07-2026",
         "JAM": "15:00",
         "FISIO": "PRITY",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-3",
         "TANGGAL": "05-08-2026",
-        "JAM": "17:00",
-        "FISIO": "-",
+        "JAM": "15:00",
+        "FISIO": "PRITY",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -4376,7 +6340,7 @@
     ]
   },
   {
-    "NO": "6",
+    "NO": "51",
     "KODE": "TRX/2026/07/0208",
     "PASIEN": "MARSYA ALEXANDRIA",
     "LAYANAN": "PAKET SILVER",
@@ -4470,7 +6434,7 @@
     ]
   },
   {
-    "NO": "7",
+    "NO": "52",
     "KODE": "TRX/2026/07/0206",
     "PASIEN": "ERWIN DJONG",
     "LAYANAN": "SESI NEW",
@@ -4499,7 +6463,7 @@
     ]
   },
   {
-    "NO": "8",
+    "NO": "53",
     "KODE": "TRX/2026/07/0205",
     "PASIEN": "LIM JAK KHENG",
     "LAYANAN": "PAKET SILVER",
@@ -4548,23 +6512,23 @@
         "TANGGAL": "25-07-2026",
         "JAM": "13:00",
         "FISIO": "DESTY",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-5",
-        "TANGGAL": "15-08-2026",
-        "JAM": "11:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "27-07-2026",
+        "JAM": "10:00",
+        "FISIO": "DESTY",
+        "STATUS_SESI": "Tidak Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "9",
+    "NO": "54",
     "KODE": "TRX/2026/07/0204",
     "PASIEN": "MARSYA ALEXANDRIA",
     "LAYANAN": "TERAPI AWAL",
@@ -4587,18 +6551,18 @@
         "JAM": "20:00",
         "FISIO": "PRITY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "10",
+    "NO": "55",
     "KODE": "TRX/2026/07/0203",
     "PASIEN": "DWI SANTOSO",
     "LAYANAN": "PAKET SILVER",
     "TIPE": "Reguler",
-    "STATUS": "Proses",
+    "STATUS": "Selesai",
     "ADMIN": "ICA",
     "UPDATED BY": "DHEA",
     "DIBUAT TGL": "15-07-2026",
@@ -4651,14 +6615,14 @@
         "TANGGAL": "27-07-2026",
         "JAM": "15:00",
         "FISIO": "HESTI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "11",
+    "NO": "56",
     "KODE": "TRX/2026/07/0202",
     "PASIEN": "BIMA ADITYA PAKSI",
     "LAYANAN": "PAKET SILVER",
@@ -4723,7 +6687,7 @@
     ]
   },
   {
-    "NO": "12",
+    "NO": "57",
     "KODE": "TRX/2026/07/0201",
     "PASIEN": "NURHAYATI (IBU BANG EDO)",
     "LAYANAN": "TERAPI AWAL",
@@ -4752,7 +6716,7 @@
     ]
   },
   {
-    "NO": "13",
+    "NO": "58",
     "KODE": "TRX/2026/07/0200",
     "PASIEN": "FEMMY SANTIKA MAHARANI",
     "LAYANAN": "TERAPI AWAL",
@@ -4781,7 +6745,7 @@
     ]
   },
   {
-    "NO": "14",
+    "NO": "59",
     "KODE": "TRX/2026/07/0199",
     "PASIEN": "F. X. KURNIAWAN",
     "LAYANAN": "PAKET SILVER",
@@ -4821,24 +6785,24 @@
         "TANGGAL": "26-07-2026",
         "JAM": "11:00",
         "FISIO": "HESTI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-3",
-        "TANGGAL": "03-08-2026",
-        "JAM": "15:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "29-07-2026",
+        "JAM": "14:00",
+        "FISIO": "HESTI",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-4",
-        "TANGGAL": "10-08-2026",
-        "JAM": "15:00",
-        "FISIO": "-",
+        "TANGGAL": "02-08-2026",
+        "JAM": "16:00",
+        "FISIO": "HESTI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -4855,7 +6819,7 @@
     ]
   },
   {
-    "NO": "15",
+    "NO": "60",
     "KODE": "TRX/2026/07/0198",
     "PASIEN": "FIRMAN",
     "LAYANAN": "PAKET GOLD",
@@ -4878,7 +6842,7 @@
         "JAM": "10:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -4887,7 +6851,7 @@
         "JAM": "17:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -4896,7 +6860,7 @@
         "JAM": "13:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -4905,7 +6869,7 @@
         "JAM": "14:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -4914,7 +6878,7 @@
         "JAM": "13:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -4923,7 +6887,7 @@
         "JAM": "14:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -4932,7 +6896,7 @@
         "JAM": "16:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -4941,7 +6905,7 @@
         "JAM": "17:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -4950,7 +6914,7 @@
         "JAM": "13:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -4959,13 +6923,13 @@
         "JAM": "14:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "16",
+    "NO": "61",
     "KODE": "TRX/2026/07/0197",
     "PASIEN": "BIMA ADITYA PAKSI",
     "LAYANAN": "TERAPI AWAL",
@@ -4994,7 +6958,7 @@
     ]
   },
   {
-    "NO": "17",
+    "NO": "62",
     "KODE": "TRX/2026/07/0196",
     "PASIEN": "DWI SANTOSO",
     "LAYANAN": "TERAPI AWAL",
@@ -5023,7 +6987,7 @@
     ]
   },
   {
-    "NO": "18",
+    "NO": "63",
     "KODE": "TRX/2026/07/0195",
     "PASIEN": "KAYLA ANNISA AZZAHRA",
     "LAYANAN": "PAKET GOLD",
@@ -5046,7 +7010,7 @@
         "JAM": "20:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -5055,7 +7019,7 @@
         "JAM": "20:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -5073,7 +7037,7 @@
         "JAM": "15:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -5142,7 +7106,7 @@
     ]
   },
   {
-    "NO": "19",
+    "NO": "64",
     "KODE": "TRX/2026/07/0194",
     "PASIEN": "F. X. KURNIAWAN",
     "LAYANAN": "TERAPI AWAL",
@@ -5171,7 +7135,7 @@
     ]
   },
   {
-    "NO": "20",
+    "NO": "65",
     "KODE": "TRX/2026/07/0193",
     "PASIEN": "PUSPA SARI",
     "LAYANAN": "PAKET SILVER",
@@ -5212,14 +7176,23 @@
         "JAM": "19:00",
         "FISIO": "PRITY",
         "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Jadwal Ulang",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "28-07-2026",
+        "JAM": "19:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-4",
-        "TANGGAL": "04-08-2026",
+        "TANGGAL": "01-08-2026",
         "JAM": "19:00",
-        "FISIO": "-",
+        "FISIO": "PRITY",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -5236,7 +7209,7 @@
     ]
   },
   {
-    "NO": "21",
+    "NO": "66",
     "KODE": "TRX/2026/07/0192",
     "PASIEN": "RATNA DEWI",
     "LAYANAN": "PAKET 2",
@@ -5264,19 +7237,19 @@
       },
       {
         "PERTEMUAN": "Ke-2",
-        "TANGGAL": "02-08-2028",
-        "JAM": "20:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "27-07-2026",
+        "JAM": "10:00",
+        "FISIO": "AUL",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-3",
-        "TANGGAL": "09-08-2028",
-        "JAM": "20:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "30-07-2026",
+        "JAM": "09:00",
+        "FISIO": "AUL",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -5346,7 +7319,7 @@
     ]
   },
   {
-    "NO": "22",
+    "NO": "67",
     "KODE": "TRX/2026/07/0191",
     "PASIEN": "ABANG ARIF MAULANA IHSAN",
     "LAYANAN": "SESI NEW",
@@ -5375,12 +7348,12 @@
     ]
   },
   {
-    "NO": "23",
+    "NO": "68",
     "KODE": "TRX/2026/07/0190",
     "PASIEN": "SURACHMAD DARUSMAN",
     "LAYANAN": "PAKET SILVER",
     "TIPE": "Reguler",
-    "STATUS": "Proses",
+    "STATUS": "Selesai",
     "ADMIN": "DHEA",
     "UPDATED BY": "DHEA",
     "DIBUAT TGL": "14-07-2026",
@@ -5442,14 +7415,14 @@
         "TANGGAL": "25-07-2026",
         "JAM": "17:00",
         "FISIO": "PUTRI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "24",
+    "NO": "69",
     "KODE": "TRX/2026/07/0189",
     "PASIEN": "LIM JAK KHENG",
     "LAYANAN": "TERAPI AWAL",
@@ -5478,7 +7451,7 @@
     ]
   },
   {
-    "NO": "25",
+    "NO": "70",
     "KODE": "TRX/2026/07/0188",
     "PASIEN": "MUHAMMAD YASIR",
     "LAYANAN": "TERAPI AWAL",
@@ -5507,7 +7480,7 @@
     ]
   },
   {
-    "NO": "26",
+    "NO": "71",
     "KODE": "TRX/2026/07/0187",
     "PASIEN": "EDI SUHADI",
     "LAYANAN": "TERAPI AWAL",
@@ -5536,7 +7509,7 @@
     ]
   },
   {
-    "NO": "27",
+    "NO": "72",
     "KODE": "TRX/2026/07/0186",
     "PASIEN": "ABANG ARIF MAULANA IHSAN",
     "LAYANAN": "TERAPI AWAL",
@@ -5565,7 +7538,7 @@
     ]
   },
   {
-    "NO": "28",
+    "NO": "73",
     "KODE": "TRX/2026/07/0185",
     "PASIEN": "MIFTAHUDIN RAMADHANI",
     "LAYANAN": "SESI NEW",
@@ -5594,7 +7567,7 @@
     ]
   },
   {
-    "NO": "29",
+    "NO": "74",
     "KODE": "TRX/2026/07/0184",
     "PASIEN": "NOVITA ADI HANDAYANI",
     "LAYANAN": "PAKET SILVER",
@@ -5634,7 +7607,16 @@
         "TANGGAL": "27-07-2026",
         "JAM": "16:00",
         "FISIO": "HESTI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Jadwal Ulang",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "28-07-2026",
+        "JAM": "09:00",
+        "FISIO": "HESTI",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -5659,7 +7641,7 @@
     ]
   },
   {
-    "NO": "30",
+    "NO": "75",
     "KODE": "TRX/2026/07/0183",
     "PASIEN": "OZZY GUARDIOLA FITTIFALDY",
     "LAYANAN": "TERAPI AWAL",
@@ -5688,7 +7670,7 @@
     ]
   },
   {
-    "NO": "31",
+    "NO": "76",
     "KODE": "TRX/2026/07/0182",
     "PASIEN": "AGUNG SUNARYO",
     "LAYANAN": "SESI NEW",
@@ -5717,7 +7699,7 @@
     ]
   },
   {
-    "NO": "32",
+    "NO": "77",
     "KODE": "TRX/2026/07/0181",
     "PASIEN": "WILLY WINARDI",
     "LAYANAN": "TERAPI AWAL",
@@ -5746,12 +7728,12 @@
     ]
   },
   {
-    "NO": "33",
+    "NO": "78",
     "KODE": "TRX/2026/07/0180",
     "PASIEN": "ALDI MAULADI RASYID",
     "LAYANAN": "PAKET SILVER",
     "TIPE": "Reguler",
-    "STATUS": "Proses",
+    "STATUS": "Selesai",
     "ADMIN": "ICA",
     "UPDATED BY": "ICA",
     "DIBUAT TGL": "14-07-2026",
@@ -5822,7 +7804,7 @@
         "TANGGAL": "28-07-2026",
         "JAM": "20:00",
         "FISIO": "AUL",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       }
@@ -5858,7 +7840,7 @@
     ]
   },
   {
-    "NO": "34",
+    "NO": "79",
     "KODE": "TRX/2026/07/0178",
     "PASIEN": "SYARIF ABDUURAHMAN ALQADRIE",
     "LAYANAN": "PAKET GOLD",
@@ -5934,24 +7916,24 @@
         "TANGGAL": "26-07-2026",
         "JAM": "10:00",
         "FISIO": "PUTRI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-8",
-        "TANGGAL": "01-09-2026",
+        "TANGGAL": "28-07-2026",
         "JAM": "10:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "FISIO": "PUTRI",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-9",
-        "TANGGAL": "08-09-2026",
-        "JAM": "10:00",
-        "FISIO": "-",
+        "TANGGAL": "01-08-2026",
+        "JAM": "11:00",
+        "FISIO": "DANI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -5968,7 +7950,7 @@
     ]
   },
   {
-    "NO": "35",
+    "NO": "80",
     "KODE": "TRX/2026/07/0177",
     "PASIEN": "ASEP SETIAWAN",
     "LAYANAN": "PAKET GOLD",
@@ -5980,7 +7962,7 @@
     "HARGA": "Rp1.300.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
-    "TOTAL BAYAR": "Rp0",
+    "TOTAL BAYAR": "Rp650.000",
     "STATUS BAYAR": "Belum Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KXFDP86BEJED3FDHYF5J8BVF",
     "_ulid": "01KXFDP86BEJED3FDHYF5J8BVF",
@@ -6017,13 +7999,22 @@
         "TANGGAL": "27-07-2026",
         "JAM": "11:00",
         "FISIO": "DANI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-5",
         "TANGGAL": "29-07-2026",
+        "JAM": "11:00",
+        "FISIO": "DANI",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp650.000"
+      },
+      {
+        "PERTEMUAN": "Ke-6",
+        "TANGGAL": "31-07-2026",
         "JAM": "10:00",
         "FISIO": "DANI",
         "STATUS_SESI": "-",
@@ -6031,16 +8022,16 @@
         "KETERANGAN": "Rp0"
       },
       {
-        "PERTEMUAN": "Ke-6",
-        "TANGGAL": "31-07-2026",
+        "PERTEMUAN": "Ke-7",
+        "TANGGAL": "05-08-2026",
         "JAM": "11:00",
-        "FISIO": "WAHYU",
+        "FISIO": "DANI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
-        "PERTEMUAN": "Ke-7",
+        "PERTEMUAN": "Ke-8",
         "TANGGAL": "07-08-2026",
         "JAM": "10:00",
         "FISIO": "DANI",
@@ -6049,7 +8040,7 @@
         "KETERANGAN": "Rp0"
       },
       {
-        "PERTEMUAN": "Ke-8",
+        "PERTEMUAN": "Ke-9",
         "TANGGAL": "10-09-2026",
         "JAM": "11:00",
         "FISIO": "-",
@@ -6058,19 +8049,10 @@
         "KETERANGAN": "Rp0"
       },
       {
-        "PERTEMUAN": "Ke-9",
+        "PERTEMUAN": "Ke-10",
         "TANGGAL": "17-09-2026",
         "JAM": "11:00",
         "FISIO": "-",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
-        "KETERANGAN": "Rp0"
-      },
-      {
-        "PERTEMUAN": "Ke-10",
-        "TANGGAL": "22-07-2028",
-        "JAM": "11:00",
-        "FISIO": "DANI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -6078,7 +8060,7 @@
     ]
   },
   {
-    "NO": "36",
+    "NO": "81",
     "KODE": "TRX/2026/07/0175",
     "PASIEN": "MITHA NOVIANTI",
     "LAYANAN": "PAKET SILVER",
@@ -6118,24 +8100,24 @@
         "TANGGAL": "26-07-2026",
         "JAM": "09:00",
         "FISIO": "HESTI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-4",
-        "TANGGAL": "04-08-2026",
+        "TANGGAL": "29-07-2026",
         "JAM": "09:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "FISIO": "HESTI",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-5",
-        "TANGGAL": "11-08-2026",
-        "JAM": "09:00",
-        "FISIO": "-",
+        "TANGGAL": "31-07-2026",
+        "JAM": "17:00",
+        "FISIO": "HESTI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -6172,7 +8154,7 @@
     ]
   },
   {
-    "NO": "37",
+    "NO": "82",
     "KODE": "TRX/2026/07/0173",
     "PASIEN": "SYARIF RAIHAN RAFISKI",
     "LAYANAN": "TERAPI AWAL",
@@ -6201,7 +8183,7 @@
     ]
   },
   {
-    "NO": "38",
+    "NO": "83",
     "KODE": "TRX/2026/07/0172",
     "PASIEN": "AFIF RIZKY AFRIZA",
     "LAYANAN": "PAKET SILVER",
@@ -6266,7 +8248,7 @@
     ]
   },
   {
-    "NO": "39",
+    "NO": "84",
     "KODE": "TRX/2026/07/0170",
     "PASIEN": "IMRON",
     "LAYANAN": "TERAPI AWAL",
@@ -6295,7 +8277,7 @@
     ]
   },
   {
-    "NO": "40",
+    "NO": "85",
     "KODE": "TRX/2026/07/0169",
     "PASIEN": "JIMMY CRYSTIAN",
     "LAYANAN": "PAKET GOLD",
@@ -6336,32 +8318,41 @@
         "JAM": "19:00",
         "FISIO": "HENA",
         "STATUS_SESI": "Tidak Hadir",
+        "NOMINAL BAYAR": "Jadwal Ulang",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-3",
+        "TANGGAL": "27-07-2026",
+        "JAM": "19:00",
+        "FISIO": "HENA",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-4",
-        "TANGGAL": "06-08-2026",
+        "TANGGAL": "30-07-2026",
         "JAM": "19:00",
-        "FISIO": "-",
+        "FISIO": "HENA",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-5",
-        "TANGGAL": "13-08-2026",
+        "TANGGAL": "03-08-2026",
         "JAM": "19:00",
-        "FISIO": "-",
+        "FISIO": "HENA",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-6",
-        "TANGGAL": "20-08-2026",
+        "TANGGAL": "06-08-2026",
         "JAM": "19:00",
-        "FISIO": "-",
+        "FISIO": "HENA",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -6405,7 +8396,7 @@
     ]
   },
   {
-    "NO": "41",
+    "NO": "86",
     "KODE": "TRX/2026/07/0168",
     "PASIEN": "ALDI MAULADI RASYID",
     "LAYANAN": "TERAPI AWAL",
@@ -6463,7 +8454,7 @@
     ]
   },
   {
-    "NO": "42",
+    "NO": "87",
     "KODE": "TRX/2026/07/0166",
     "PASIEN": "YUDA SUHERMAN",
     "LAYANAN": "PAKET SILVER",
@@ -6500,9 +8491,9 @@
       },
       {
         "PERTEMUAN": "Ke-3",
-        "TANGGAL": "30-07-2026",
+        "TANGGAL": "02-08-2026",
         "JAM": "19:00",
-        "FISIO": "-",
+        "FISIO": "OKTA",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -6528,7 +8519,7 @@
     ]
   },
   {
-    "NO": "43",
+    "NO": "88",
     "KODE": "TRX/2026/07/0165",
     "PASIEN": "MASNAH",
     "LAYANAN": "SESI NEW",
@@ -6557,7 +8548,7 @@
     ]
   },
   {
-    "NO": "44",
+    "NO": "89",
     "KODE": "TRX/2026/07/0164",
     "PASIEN": "HUSNUL FIKRI",
     "LAYANAN": "TERAPI AWAL",
@@ -6586,7 +8577,7 @@
     ]
   },
   {
-    "NO": "45",
+    "NO": "90",
     "KODE": "TRX/2026/07/0163",
     "PASIEN": "ERWIN DJONG",
     "LAYANAN": "SESI NEW",
@@ -6615,7 +8606,7 @@
     ]
   },
   {
-    "NO": "46",
+    "NO": "91",
     "KODE": "TRX/2026/07/0162",
     "PASIEN": "ERMA LESTARI",
     "LAYANAN": "TERAPI AWAL",
@@ -6644,7 +8635,7 @@
     ]
   },
   {
-    "NO": "47",
+    "NO": "92",
     "KODE": "TRX/2026/07/0161",
     "PASIEN": "HARRY FURQAN",
     "LAYANAN": "TERAPI AWAL",
@@ -6673,7 +8664,7 @@
     ]
   },
   {
-    "NO": "48",
+    "NO": "93",
     "KODE": "TRX/2026/07/0160",
     "PASIEN": "NAZUMAH",
     "LAYANAN": "SESI NEW",
@@ -6696,13 +8687,13 @@
         "JAM": "09:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "49",
+    "NO": "94",
     "KODE": "TRX/2026/07/0159",
     "PASIEN": "RIZKI RAMADHANI",
     "LAYANAN": "TERAPI AWAL",
@@ -6731,7 +8722,7 @@
     ]
   },
   {
-    "NO": "50",
+    "NO": "95",
     "KODE": "TRX/2026/07/0158",
     "PASIEN": "NAZUMAH",
     "LAYANAN": "TERAPI AWAL",
@@ -6760,7 +8751,7 @@
     ]
   },
   {
-    "NO": "51",
+    "NO": "96",
     "KODE": "TRX/2026/07/0157",
     "PASIEN": "RIRIN SEPTIANI",
     "LAYANAN": "TERAPI AWAL",
@@ -6789,7 +8780,7 @@
     ]
   },
   {
-    "NO": "52",
+    "NO": "97",
     "KODE": "TRX/2026/07/0156",
     "PASIEN": "DIVO",
     "LAYANAN": "PAKET SILVER",
@@ -6854,7 +8845,7 @@
     ]
   },
   {
-    "NO": "53",
+    "NO": "98",
     "KODE": "TRX/2026/07/0154",
     "PASIEN": "FANNY THALIA LIMAS",
     "LAYANAN": "TERAPI AWAL",
@@ -6883,7 +8874,7 @@
     ]
   },
   {
-    "NO": "54",
+    "NO": "99",
     "KODE": "TRX/2026/07/0152",
     "PASIEN": "SURACHMAD DARUSMAN",
     "LAYANAN": "TERAPI AWAL",
@@ -6912,7 +8903,7 @@
     ]
   },
   {
-    "NO": "55",
+    "NO": "100",
     "KODE": "TRX/2026/07/0151",
     "PASIEN": "JEMALI",
     "LAYANAN": "PAKET SILVER",
@@ -6977,7 +8968,7 @@
     ]
   },
   {
-    "NO": "56",
+    "NO": "1",
     "KODE": "TRX/2026/07/0150",
     "PASIEN": "JEMALI",
     "LAYANAN": "TERAPI AWAL",
@@ -7006,7 +8997,7 @@
     ]
   },
   {
-    "NO": "57",
+    "NO": "2",
     "KODE": "TRX/2026/07/0149",
     "PASIEN": "AGUNG SUNARYO",
     "LAYANAN": "TERAPI AWAL",
@@ -7035,7 +9026,7 @@
     ]
   },
   {
-    "NO": "58",
+    "NO": "3",
     "KODE": "TRX/2026/07/0148",
     "PASIEN": "ERWIN DJONG",
     "LAYANAN": "SESI NEW",
@@ -7064,7 +9055,7 @@
     ]
   },
   {
-    "NO": "59",
+    "NO": "4",
     "KODE": "TRX/2026/07/0146",
     "PASIEN": "ANDI AMIR FAHAD ABDILLAH",
     "LAYANAN": "TERAPI AWAL",
@@ -7093,7 +9084,7 @@
     ]
   },
   {
-    "NO": "60",
+    "NO": "5",
     "KODE": "TRX/2026/07/0145",
     "PASIEN": "KAYLA ANNISA AZZAHRA",
     "LAYANAN": "TERAPI AWAL",
@@ -7122,7 +9113,7 @@
     ]
   },
   {
-    "NO": "61",
+    "NO": "6",
     "KODE": "TRX/2026/07/0143",
     "PASIEN": "HANNY WULANDARI",
     "LAYANAN": "TERAPI AWAL",
@@ -7151,7 +9142,7 @@
     ]
   },
   {
-    "NO": "62",
+    "NO": "7",
     "KODE": "TRX/2026/07/0142",
     "PASIEN": "MIFTAHUDIN RAMADHANI",
     "LAYANAN": "SESI NEW",
@@ -7180,7 +9171,7 @@
     ]
   },
   {
-    "NO": "63",
+    "NO": "8",
     "KODE": "TRX/2026/07/0141",
     "PASIEN": "PUSPA SARI",
     "LAYANAN": "TERAPI AWAL",
@@ -7209,7 +9200,7 @@
     ]
   },
   {
-    "NO": "64",
+    "NO": "9",
     "KODE": "TRX/2026/07/0140",
     "PASIEN": "ANDANG FIRMANSYAH",
     "LAYANAN": "PAKET SILVER",
@@ -7232,7 +9223,7 @@
         "JAM": "13:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -7241,7 +9232,7 @@
         "JAM": "19:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -7250,7 +9241,7 @@
         "JAM": "16:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -7259,7 +9250,7 @@
         "JAM": "16:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -7268,13 +9259,13 @@
         "JAM": "20:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "65",
+    "NO": "10",
     "KODE": "TRX/2026/07/0139",
     "PASIEN": "TJANG KHENG",
     "LAYANAN": "PAKET GOLD",
@@ -7341,25 +9332,25 @@
         "TANGGAL": "25-07-2026",
         "JAM": "13:00",
         "FISIO": "PRITY",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-7",
-        "TANGGAL": "22-08-2026",
-        "JAM": "13:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "27-07-2026",
+        "JAM": "09:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-8",
-        "TANGGAL": "29-08-2026",
-        "JAM": "13:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "29-07-2026",
+        "JAM": "10:00",
+        "FISIO": "HESTI",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -7384,7 +9375,7 @@
     ]
   },
   {
-    "NO": "66",
+    "NO": "11",
     "KODE": "TRX/2026/07/0138",
     "PASIEN": "RONNI RAHMANI",
     "LAYANAN": "TERAPI AWAL",
@@ -7413,7 +9404,7 @@
     ]
   },
   {
-    "NO": "67",
+    "NO": "12",
     "KODE": "TRX/2026/07/0137",
     "PASIEN": "MIFTAHUDIN RAMADHANI",
     "LAYANAN": "TERAPI AWAL",
@@ -7442,7 +9433,7 @@
     ]
   },
   {
-    "NO": "68",
+    "NO": "13",
     "KODE": "TRX/2026/07/0136",
     "PASIEN": "NOVIANDRA",
     "LAYANAN": "TERAPI AWAL",
@@ -7471,7 +9462,7 @@
     ]
   },
   {
-    "NO": "69",
+    "NO": "14",
     "KODE": "TRX/2026/07/0135",
     "PASIEN": "IR DARLIYUS",
     "LAYANAN": "PAKET SILVER",
@@ -7494,7 +9485,7 @@
         "JAM": "09:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp750.000"
       },
       {
@@ -7503,7 +9494,7 @@
         "JAM": "10:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -7511,15 +9502,15 @@
         "TANGGAL": "28-07-2026",
         "JAM": "09:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-4",
-        "TANGGAL": "07-08-2026",
+        "TANGGAL": "04-08-2026",
         "JAM": "09:00",
-        "FISIO": "-",
+        "FISIO": "WAHYU",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -7536,7 +9527,7 @@
     ]
   },
   {
-    "NO": "70",
+    "NO": "15",
     "KODE": "TRX/2026/07/0134",
     "PASIEN": "RITA RUMIATI",
     "LAYANAN": "PAKET SILVER",
@@ -7601,7 +9592,7 @@
     ]
   },
   {
-    "NO": "71",
+    "NO": "16",
     "KODE": "TRX/2026/07/0133",
     "PASIEN": "SYARIF ABDUURAHMAN ALQADRIE",
     "LAYANAN": "TERAPI AWAL",
@@ -7630,19 +9621,19 @@
     ]
   },
   {
-    "NO": "72",
+    "NO": "17",
     "KODE": "TRX/2026/07/0132",
     "PASIEN": "ENDANG TRIANA",
     "LAYANAN": "PAKET GOLD",
     "TIPE": "Reguler",
     "STATUS": "Proses",
     "ADMIN": "DHEA",
-    "UPDATED BY": "DHEA",
+    "UPDATED BY": "ICA",
     "DIBUAT TGL": "10-07-2026",
     "HARGA": "Rp1.300.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
-    "TOTAL BAYAR": "Rp0",
+    "TOTAL BAYAR": "Rp500.000",
     "STATUS BAYAR": "Belum Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KX6101ANRENHNJD8BTHS4XCX",
     "_ulid": "01KX6101ANRENHNJD8BTHS4XCX",
@@ -7703,19 +9694,19 @@
       },
       {
         "PERTEMUAN": "Ke-5",
-        "TANGGAL": "09-08-2026",
-        "JAM": "20:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "27-07-2026",
+        "JAM": "19:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
-        "KETERANGAN": "Rp0"
+        "KETERANGAN": "Rp500.000"
       },
       {
         "PERTEMUAN": "Ke-6",
-        "TANGGAL": "16-08-2026",
-        "JAM": "20:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "30-07-2026",
+        "JAM": "19:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "Tidak Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -7758,7 +9749,7 @@
     ]
   },
   {
-    "NO": "73",
+    "NO": "18",
     "KODE": "TRX/2026/07/0131",
     "PASIEN": "BINTARI INDAH SAPUTRI",
     "LAYANAN": "SESI NEW",
@@ -7787,7 +9778,7 @@
     ]
   },
   {
-    "NO": "74",
+    "NO": "19",
     "KODE": "TRX/2026/07/0129",
     "PASIEN": "ALLUCA ZAVIAN ALI MEKKA",
     "LAYANAN": "SESI NEW",
@@ -7816,7 +9807,7 @@
     ]
   },
   {
-    "NO": "75",
+    "NO": "20",
     "KODE": "TRX/2026/07/0128",
     "PASIEN": "URAY VEGA VISA LACTI",
     "LAYANAN": "SESI NEW",
@@ -7845,7 +9836,7 @@
     ]
   },
   {
-    "NO": "76",
+    "NO": "21",
     "KODE": "TRX/2026/07/0127",
     "PASIEN": "ALLUCA ZAVIAN ALI MEKKA",
     "LAYANAN": "TERAPI AWAL",
@@ -7874,7 +9865,7 @@
     ]
   },
   {
-    "NO": "77",
+    "NO": "22",
     "KODE": "TRX/2026/07/0126",
     "PASIEN": "RAJE ISTANUDIN",
     "LAYANAN": "PAKET GOLD",
@@ -7941,15 +9932,15 @@
         "TANGGAL": "30-07-2026",
         "JAM": "11:00",
         "FISIO": "DANI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-7",
-        "TANGGAL": "29-08-2026",
-        "JAM": "19:00",
-        "FISIO": "-",
+        "TANGGAL": "03-09-2026",
+        "JAM": "10:00",
+        "FISIO": "DANI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -7984,7 +9975,7 @@
     ]
   },
   {
-    "NO": "78",
+    "NO": "23",
     "KODE": "TRX/2026/07/0125",
     "PASIEN": "SURYA ISNANDA",
     "LAYANAN": "TERAPI AWAL",
@@ -8013,7 +10004,7 @@
     ]
   },
   {
-    "NO": "79",
+    "NO": "24",
     "KODE": "TRX/2026/07/0124",
     "PASIEN": "GRACIA IVANA GOUWYN",
     "LAYANAN": "TERAPI AWAL",
@@ -8042,7 +10033,7 @@
     ]
   },
   {
-    "NO": "80",
+    "NO": "25",
     "KODE": "TRX/2026/07/0123",
     "PASIEN": "RAJE ISTANUDIN",
     "LAYANAN": "TERAPI AWAL",
@@ -8071,12 +10062,12 @@
     ]
   },
   {
-    "NO": "81",
+    "NO": "26",
     "KODE": "TRX/2026/07/0122",
     "PASIEN": "NURHASANAH S.AG",
     "LAYANAN": "PAKET SILVER",
     "TIPE": "Reguler",
-    "STATUS": "Proses",
+    "STATUS": "Selesai",
     "ADMIN": "ICA",
     "UPDATED BY": "ICA",
     "DIBUAT TGL": "10-07-2026",
@@ -8120,23 +10111,23 @@
         "TANGGAL": "26-07-2026",
         "JAM": "13:00",
         "FISIO": "HESTI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-5",
-        "TANGGAL": "07-08-2026",
-        "JAM": "10:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "29-07-2026",
+        "JAM": "11:00",
+        "FISIO": "HESTI",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "82",
+    "NO": "27",
     "KODE": "TRX/2026/07/0120",
     "PASIEN": "REVINA ADELIA PUTRI",
     "LAYANAN": "PAKET GOLD",
@@ -8194,15 +10185,15 @@
         "TANGGAL": "25-07-2026",
         "JAM": "19:00",
         "FISIO": "OKTA",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-5",
-        "TANGGAL": "07-08-2026",
-        "JAM": "11:00",
-        "FISIO": "-",
+        "TANGGAL": "02-08-2026",
+        "JAM": "17:00",
+        "FISIO": "OKTA",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -8255,7 +10246,7 @@
     ]
   },
   {
-    "NO": "83",
+    "NO": "28",
     "KODE": "TRX/2026/07/0119",
     "PASIEN": "ENDANG TRIANA",
     "LAYANAN": "TERAPI AWAL",
@@ -8284,7 +10275,7 @@
     ]
   },
   {
-    "NO": "84",
+    "NO": "29",
     "KODE": "TRX/2026/07/0116",
     "PASIEN": "URAY VEGA VISA LACTI",
     "LAYANAN": "TERAPI AWAL",
@@ -8313,7 +10304,7 @@
     ]
   },
   {
-    "NO": "85",
+    "NO": "30",
     "KODE": "TRX/2026/07/0114",
     "PASIEN": "LIE HENG",
     "LAYANAN": "PAKET GOLD",
@@ -8369,9 +10360,9 @@
       {
         "PERTEMUAN": "Ke-4",
         "TANGGAL": "26-07-2026",
-        "JAM": "13:00",
+        "JAM": "14:00",
         "FISIO": "PUTRI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -8432,7 +10423,7 @@
     ]
   },
   {
-    "NO": "86",
+    "NO": "31",
     "KODE": "TRX/2026/07/0113",
     "PASIEN": "FREDIRIKA ARIANI NESA",
     "LAYANAN": "TERAPI AWAL",
@@ -8461,7 +10452,7 @@
     ]
   },
   {
-    "NO": "87",
+    "NO": "32",
     "KODE": "TRX/2026/07/0112",
     "PASIEN": "NAIMAH",
     "LAYANAN": "PAKET SILVER",
@@ -8484,7 +10475,7 @@
         "JAM": "11:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -8526,7 +10517,7 @@
     ]
   },
   {
-    "NO": "88",
+    "NO": "33",
     "KODE": "TRX/2026/07/0111",
     "PASIEN": "J. MUJIARSO",
     "LAYANAN": "PAKET SILVER",
@@ -8591,7 +10582,7 @@
     ]
   },
   {
-    "NO": "89",
+    "NO": "34",
     "KODE": "TRX/2026/07/0110",
     "PASIEN": "ARINA",
     "LAYANAN": "PAKET GOLD",
@@ -8667,16 +10658,16 @@
         "TANGGAL": "28-07-2026",
         "JAM": "16:00",
         "FISIO": "PRITY",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-8",
-        "TANGGAL": "29-08-2026",
-        "JAM": "12:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "30-07-2026",
+        "JAM": "10:00",
+        "FISIO": "PRITY",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -8701,7 +10692,7 @@
     ]
   },
   {
-    "NO": "90",
+    "NO": "35",
     "KODE": "TRX/2026/07/0109",
     "PASIEN": "TJANG KHENG",
     "LAYANAN": "PAKET SILVER",
@@ -8766,7 +10757,7 @@
     ]
   },
   {
-    "NO": "91",
+    "NO": "36",
     "KODE": "TRX/2026/07/0106",
     "PASIEN": "LIE HENG",
     "LAYANAN": "TERAPI AWAL",
@@ -8795,7 +10786,7 @@
     ]
   },
   {
-    "NO": "92",
+    "NO": "37",
     "KODE": "TRX/2026/07/0104",
     "PASIEN": "J. MUJIARSO",
     "LAYANAN": "TERAPI AWAL",
@@ -8824,7 +10815,7 @@
     ]
   },
   {
-    "NO": "93",
+    "NO": "38",
     "KODE": "TRX/2026/07/0102",
     "PASIEN": "SILVIA VITA",
     "LAYANAN": "PAKET SILVER",
@@ -8847,7 +10838,7 @@
         "JAM": "13:00",
         "FISIO": "PRITY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp750.000"
       },
       {
@@ -8856,7 +10847,7 @@
         "JAM": "13:00",
         "FISIO": "PRITY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -8865,7 +10856,7 @@
         "JAM": "09:00",
         "FISIO": "PRITY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -8874,7 +10865,7 @@
         "JAM": "17:00",
         "FISIO": "DESTY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -8889,20 +10880,20 @@
     ]
   },
   {
-    "NO": "94",
+    "NO": "39",
     "KODE": "TRX/2026/07/0101",
     "PASIEN": "ANDANG FIRMANSYAH",
     "LAYANAN": "TERAPI AWAL",
     "TIPE": "Reguler",
     "STATUS": "Selesai",
     "ADMIN": "DHEA",
-    "UPDATED BY": "DHEA",
+    "UPDATED BY": "Suci Salsabilah",
     "DIBUAT TGL": "08-07-2026",
     "HARGA": "Rp250.000",
     "POTONGAN": "normal",
     "DISKON": "Rp0",
-    "TOTAL BAYAR": "Rp0",
-    "STATUS BAYAR": "Belum Lunas",
+    "TOTAL BAYAR": "Rp250.000",
+    "STATUS BAYAR": "Lunas",
     "_showUrl": "https://dewasa.fisioterapigangsehat.id/b/order/show/01KX06EYJ3CV7X727CX89F5XW0",
     "_ulid": "01KX06EYJ3CV7X727CX89F5XW0",
     "sessions": [
@@ -8912,13 +10903,13 @@
         "JAM": "13:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
-        "KETERANGAN": "Rp0"
+        "NOMINAL BAYAR": "Sudah Diperiksa",
+        "KETERANGAN": "Rp250.000"
       }
     ]
   },
   {
-    "NO": "95",
+    "NO": "40",
     "KODE": "TRX/2026/07/0099",
     "PASIEN": "NISAH",
     "LAYANAN": "PAKET GOLD",
@@ -9028,7 +11019,7 @@
     ]
   },
   {
-    "NO": "96",
+    "NO": "41",
     "KODE": "TRX/2026/07/0097",
     "PASIEN": "REVINA ADELIA PUTRI",
     "LAYANAN": "TERAPI AWAL",
@@ -9057,7 +11048,7 @@
     ]
   },
   {
-    "NO": "97",
+    "NO": "42",
     "KODE": "TRX/2026/07/0096",
     "PASIEN": "JONI EFENDI",
     "LAYANAN": "TERAPI AWAL",
@@ -9080,13 +11071,13 @@
         "JAM": "11:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "98",
+    "NO": "43",
     "KODE": "TRX/2026/07/0095",
     "PASIEN": "PUJI ASTUTI",
     "LAYANAN": "PAKET SILVER",
@@ -9151,7 +11142,7 @@
     ]
   },
   {
-    "NO": "99",
+    "NO": "44",
     "KODE": "TRX/2026/07/0094",
     "PASIEN": "ARINA",
     "LAYANAN": "TERAPI AWAL",
@@ -9180,7 +11171,7 @@
     ]
   },
   {
-    "NO": "100",
+    "NO": "45",
     "KODE": "TRX/2026/07/0093",
     "PASIEN": "PUJI ASTUTI",
     "LAYANAN": "TERAPI AWAL",
@@ -9209,7 +11200,7 @@
     ]
   },
   {
-    "NO": "1",
+    "NO": "46",
     "KODE": "TRX/2026/07/0092",
     "PASIEN": "PHILIP ADRIANTA HARTADI",
     "LAYANAN": "TERAPI AWAL",
@@ -9238,7 +11229,7 @@
     ]
   },
   {
-    "NO": "2",
+    "NO": "47",
     "KODE": "TRX/2026/07/0091",
     "PASIEN": "WAHONO",
     "LAYANAN": "PAKET SILVER",
@@ -9278,15 +11269,15 @@
         "TANGGAL": "26-07-2026",
         "JAM": "15:00",
         "FISIO": "ORY",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-4",
-        "TANGGAL": "02-08-2026",
+        "TANGGAL": "01-08-2026",
         "JAM": "10:00",
-        "FISIO": "-",
+        "FISIO": "WAHYU",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -9303,7 +11294,7 @@
     ]
   },
   {
-    "NO": "3",
+    "NO": "48",
     "KODE": "TRX/2026/07/0090",
     "PASIEN": "UTTAMI SUMPING",
     "LAYANAN": "TERAPI AWAL",
@@ -9332,7 +11323,7 @@
     ]
   },
   {
-    "NO": "4",
+    "NO": "49",
     "KODE": "TRX/2026/07/0089",
     "PASIEN": "IQBAAL MUHAMMAD",
     "LAYANAN": "TERAPI AWAL",
@@ -9361,7 +11352,7 @@
     ]
   },
   {
-    "NO": "5",
+    "NO": "50",
     "KODE": "TRX/2026/07/0087",
     "PASIEN": "ASNI",
     "LAYANAN": "SESI NEW",
@@ -9390,7 +11381,7 @@
     ]
   },
   {
-    "NO": "6",
+    "NO": "51",
     "KODE": "TRX/2026/07/0086",
     "PASIEN": "ANDI WIRA UTAMA",
     "LAYANAN": "PAKET GOLD",
@@ -9466,24 +11457,24 @@
         "TANGGAL": "25-07-2026",
         "JAM": "16:00",
         "FISIO": "PUTRI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-8",
-        "TANGGAL": "25-08-2026",
-        "JAM": "13:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "27-07-2026",
+        "JAM": "20:00",
+        "FISIO": "PUTRI",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-9",
-        "TANGGAL": "01-09-2026",
-        "JAM": "13:00",
-        "FISIO": "-",
+        "TANGGAL": "30-07-2026",
+        "JAM": "17:00",
+        "FISIO": "PUTRI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -9500,7 +11491,7 @@
     ]
   },
   {
-    "NO": "7",
+    "NO": "52",
     "KODE": "TRX/2026/07/0085",
     "PASIEN": "MASNAH",
     "LAYANAN": "SESI NEW",
@@ -9529,7 +11520,7 @@
     ]
   },
   {
-    "NO": "8",
+    "NO": "53",
     "KODE": "TRX/2026/07/0084",
     "PASIEN": "HENDRY",
     "LAYANAN": "TERAPI AWAL",
@@ -9558,7 +11549,7 @@
     ]
   },
   {
-    "NO": "9",
+    "NO": "54",
     "KODE": "TRX/2026/07/0083",
     "PASIEN": "AZARYA JADAYN ARYO",
     "LAYANAN": "PAKET SILVER",
@@ -9590,7 +11581,7 @@
         "JAM": "11:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -9599,7 +11590,7 @@
         "JAM": "13:00",
         "FISIO": "ORY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -9608,7 +11599,7 @@
         "JAM": "16:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -9623,7 +11614,7 @@
     ]
   },
   {
-    "NO": "10",
+    "NO": "55",
     "KODE": "TRX/2026/07/0081",
     "PASIEN": "MITHA NOVIANTI",
     "LAYANAN": "SESI NEW",
@@ -9652,7 +11643,7 @@
     ]
   },
   {
-    "NO": "11",
+    "NO": "56",
     "KODE": "TRX/2026/07/0080",
     "PASIEN": "NURHASANAH S.AG",
     "LAYANAN": "SESI NEW",
@@ -9681,7 +11672,7 @@
     ]
   },
   {
-    "NO": "12",
+    "NO": "57",
     "KODE": "TRX/2026/07/0079",
     "PASIEN": "SHAFA ANNISA",
     "LAYANAN": "PAKET GOLD",
@@ -9775,24 +11766,24 @@
         "TANGGAL": "26-07-2026",
         "JAM": "11:00",
         "FISIO": "OKTA",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-9",
-        "TANGGAL": "01-09-2026",
-        "JAM": "08:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "27-07-2026",
+        "JAM": "20:00",
+        "FISIO": "OKTA",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-10",
-        "TANGGAL": "08-09-2026",
-        "JAM": "08:00",
-        "FISIO": "-",
+        "TANGGAL": "30-07-2026",
+        "JAM": "20:00",
+        "FISIO": "OKTA",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -9800,7 +11791,7 @@
     ]
   },
   {
-    "NO": "13",
+    "NO": "58",
     "KODE": "TRX/2026/07/0078",
     "PASIEN": "MASNAH",
     "LAYANAN": "SESI NEW",
@@ -9829,7 +11820,7 @@
     ]
   },
   {
-    "NO": "14",
+    "NO": "59",
     "KODE": "TRX/2026/07/0077",
     "PASIEN": "ANTONIUS TRIAS KUNCOROJATI",
     "LAYANAN": "PAKET SILVER",
@@ -9894,7 +11885,7 @@
     ]
   },
   {
-    "NO": "15",
+    "NO": "60",
     "KODE": "TRX/2026/07/0076",
     "PASIEN": "SUWARNI",
     "LAYANAN": "SESI NEW",
@@ -9923,7 +11914,7 @@
     ]
   },
   {
-    "NO": "16",
+    "NO": "61",
     "KODE": "TRX/2026/07/0075",
     "PASIEN": "ASTISZA SYAHLA LUDMILLA PARABI",
     "LAYANAN": "SESI NEW",
@@ -9952,7 +11943,7 @@
     ]
   },
   {
-    "NO": "17",
+    "NO": "62",
     "KODE": "TRX/2026/07/0074",
     "PASIEN": "AZARYA JADAYN ARYO",
     "LAYANAN": "TERAPI AWAL",
@@ -9981,7 +11972,7 @@
     ]
   },
   {
-    "NO": "18",
+    "NO": "63",
     "KODE": "TRX/2026/07/0073",
     "PASIEN": "MASNAH",
     "LAYANAN": "SESI",
@@ -10010,7 +12001,7 @@
     ]
   },
   {
-    "NO": "19",
+    "NO": "64",
     "KODE": "TRX/2026/07/0072",
     "PASIEN": "MARDINNA MARISTA",
     "LAYANAN": "SESI",
@@ -10039,7 +12030,7 @@
     ]
   },
   {
-    "NO": "20",
+    "NO": "65",
     "KODE": "TRX/2026/07/0071",
     "PASIEN": "TAN SOK KHIM",
     "LAYANAN": "SESI NEW",
@@ -10068,7 +12059,7 @@
     ]
   },
   {
-    "NO": "21",
+    "NO": "66",
     "KODE": "TRX/2026/07/0070",
     "PASIEN": "LIU YULIANTI",
     "LAYANAN": "SESI NEW",
@@ -10097,7 +12088,7 @@
     ]
   },
   {
-    "NO": "22",
+    "NO": "67",
     "KODE": "TRX/2026/07/0068",
     "PASIEN": "ANTONIUS TRIAS KUNCOROJATI",
     "LAYANAN": "TERAPI AWAL",
@@ -10126,7 +12117,7 @@
     ]
   },
   {
-    "NO": "23",
+    "NO": "68",
     "KODE": "TRX/2026/07/0067",
     "PASIEN": "MUHAMMAD SABHAN",
     "LAYANAN": "SESI NEW",
@@ -10155,7 +12146,7 @@
     ]
   },
   {
-    "NO": "24",
+    "NO": "69",
     "KODE": "TRX/2026/07/0065",
     "PASIEN": "ASEP SETIAWAN",
     "LAYANAN": "PAKET SILVER",
@@ -10220,7 +12211,7 @@
     ]
   },
   {
-    "NO": "25",
+    "NO": "70",
     "KODE": "TRX/2026/07/0064",
     "PASIEN": "ELLEN ARIFIN",
     "LAYANAN": "PAKET SILVER",
@@ -10285,7 +12276,7 @@
     ]
   },
   {
-    "NO": "26",
+    "NO": "71",
     "KODE": "TRX/2026/07/0063",
     "PASIEN": "SHARON LIE",
     "LAYANAN": "TERAPI AWAL",
@@ -10314,7 +12305,7 @@
     ]
   },
   {
-    "NO": "27",
+    "NO": "72",
     "KODE": "TRX/2026/07/0061",
     "PASIEN": "MURZANI",
     "LAYANAN": "TERAPI AWAL",
@@ -10343,7 +12334,7 @@
     ]
   },
   {
-    "NO": "28",
+    "NO": "73",
     "KODE": "TRX/2026/07/0060",
     "PASIEN": "SILVIA VITA",
     "LAYANAN": "SESI NEW",
@@ -10372,7 +12363,7 @@
     ]
   },
   {
-    "NO": "29",
+    "NO": "74",
     "KODE": "TRX/2026/07/0059",
     "PASIEN": "RIFDA ANGELINA WULANDARI",
     "LAYANAN": "SESI NEW",
@@ -10401,7 +12392,7 @@
     ]
   },
   {
-    "NO": "30",
+    "NO": "75",
     "KODE": "TRX/2026/07/0058",
     "PASIEN": "TAN SOK KHIM",
     "LAYANAN": "TERAPI AWAL",
@@ -10430,7 +12421,7 @@
     ]
   },
   {
-    "NO": "31",
+    "NO": "76",
     "KODE": "TRX/2026/07/0057",
     "PASIEN": "MUHAMMAD SABHAN",
     "LAYANAN": "TERAPI AWAL",
@@ -10459,7 +12450,7 @@
     ]
   },
   {
-    "NO": "32",
+    "NO": "77",
     "KODE": "TRX/2026/07/0056",
     "PASIEN": "LAILA",
     "LAYANAN": "TERAPI AWAL",
@@ -10488,7 +12479,7 @@
     ]
   },
   {
-    "NO": "33",
+    "NO": "78",
     "KODE": "TRX/2026/07/0055",
     "PASIEN": "RADIAN FAUZI",
     "LAYANAN": "TERAPI AWAL",
@@ -10517,7 +12508,7 @@
     ]
   },
   {
-    "NO": "34",
+    "NO": "79",
     "KODE": "TRX/2026/07/0054",
     "PASIEN": "LIU YULIANTI",
     "LAYANAN": "TERAPI AWAL",
@@ -10546,7 +12537,7 @@
     ]
   },
   {
-    "NO": "35",
+    "NO": "80",
     "KODE": "TRX/2026/07/0053",
     "PASIEN": "AYDA RIANI JOHAR",
     "LAYANAN": "SESI NEW",
@@ -10575,7 +12566,7 @@
     ]
   },
   {
-    "NO": "36",
+    "NO": "81",
     "KODE": "TRX/2026/07/0052",
     "PASIEN": "DWI FEBRIE ANDIKA",
     "LAYANAN": "TERAPI AWAL",
@@ -10604,7 +12595,7 @@
     ]
   },
   {
-    "NO": "37",
+    "NO": "82",
     "KODE": "TRX/2026/07/0051",
     "PASIEN": "WIWI WIJAYATI",
     "LAYANAN": "TERAPI AWAL",
@@ -10633,7 +12624,7 @@
     ]
   },
   {
-    "NO": "38",
+    "NO": "83",
     "KODE": "TRX/2026/07/0050",
     "PASIEN": "RHAFA AL QAHFY",
     "LAYANAN": "PAKET SILVER",
@@ -10707,7 +12698,7 @@
     ]
   },
   {
-    "NO": "39",
+    "NO": "84",
     "KODE": "TRX/2026/07/0049",
     "PASIEN": "NURYANI",
     "LAYANAN": "SESI NEW",
@@ -10736,7 +12727,7 @@
     ]
   },
   {
-    "NO": "40",
+    "NO": "85",
     "KODE": "TRX/2026/07/0048",
     "PASIEN": "LUKKI AMANDA",
     "LAYANAN": "SESI NEW",
@@ -10765,7 +12756,7 @@
     ]
   },
   {
-    "NO": "41",
+    "NO": "86",
     "KODE": "TRX/2026/07/0047",
     "PASIEN": "SUMARNO SAPUTRA",
     "LAYANAN": "PAKET SILVER",
@@ -10830,7 +12821,7 @@
     ]
   },
   {
-    "NO": "42",
+    "NO": "87",
     "KODE": "TRX/2026/07/0046",
     "PASIEN": "STEFFANI TEDJA",
     "LAYANAN": "SESI NEW",
@@ -10859,7 +12850,7 @@
     ]
   },
   {
-    "NO": "43",
+    "NO": "88",
     "KODE": "TRX/2026/07/0045",
     "PASIEN": "IPAH SIDA , S.E.",
     "LAYANAN": "PAKET GOLD",
@@ -10935,15 +12926,15 @@
         "TANGGAL": "28-07-2026",
         "JAM": "11:00",
         "FISIO": "HESTI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-7",
-        "TANGGAL": "18-08-2026",
-        "JAM": "10:00",
-        "FISIO": "-",
+        "TANGGAL": "31-07-2026",
+        "JAM": "16:00",
+        "FISIO": "HESTI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -10978,7 +12969,7 @@
     ]
   },
   {
-    "NO": "44",
+    "NO": "89",
     "KODE": "TRX/2026/07/0044",
     "PASIEN": "RATNA KOMALA",
     "LAYANAN": "SESI NEW",
@@ -11007,7 +12998,7 @@
     ]
   },
   {
-    "NO": "45",
+    "NO": "90",
     "KODE": "TRX/2026/07/0043",
     "PASIEN": "SEKAR KINANTI HERPRADANTI",
     "LAYANAN": "PAKET 2",
@@ -11090,9 +13081,9 @@
       {
         "PERTEMUAN": "Ke-7",
         "TANGGAL": "28-07-2026",
-        "JAM": "14:00",
+        "JAM": "13:00",
         "FISIO": "HENA",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
@@ -11109,7 +13100,7 @@
         "PERTEMUAN": "Ke-9",
         "TANGGAL": "01-08-2026",
         "JAM": "09:00",
-        "FISIO": "DESTY",
+        "FISIO": "HENA",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -11126,7 +13117,7 @@
     ]
   },
   {
-    "NO": "46",
+    "NO": "91",
     "KODE": "TRX/2026/07/0042",
     "PASIEN": "SANTI",
     "LAYANAN": "PAKET SILVER",
@@ -11191,7 +13182,7 @@
     ]
   },
   {
-    "NO": "47",
+    "NO": "92",
     "KODE": "TRX/2026/07/0041",
     "PASIEN": "LUKKI AMANDA",
     "LAYANAN": "TERAPI AWAL",
@@ -11220,7 +13211,7 @@
     ]
   },
   {
-    "NO": "48",
+    "NO": "93",
     "KODE": "TRX/2026/07/0040",
     "PASIEN": "SUCI NANDA LESTARI",
     "LAYANAN": "SESI NEW",
@@ -11258,7 +13249,7 @@
     ]
   },
   {
-    "NO": "49",
+    "NO": "94",
     "KODE": "TRX/2026/07/0039",
     "PASIEN": "FADHIL MUHAMMAD AIMAR",
     "LAYANAN": "TERAPI AWAL",
@@ -11287,7 +13278,7 @@
     ]
   },
   {
-    "NO": "50",
+    "NO": "95",
     "KODE": "TRX/2026/07/0038",
     "PASIEN": "NOLLIE NOVELLA TANAJO",
     "LAYANAN": "TERAPI AWAL",
@@ -11316,7 +13307,7 @@
     ]
   },
   {
-    "NO": "51",
+    "NO": "96",
     "KODE": "TRX/2026/07/0037",
     "PASIEN": "ARIF PARABI",
     "LAYANAN": "PAKET SILVER",
@@ -11381,7 +13372,7 @@
     ]
   },
   {
-    "NO": "52",
+    "NO": "97",
     "KODE": "TRX/2026/07/0036",
     "PASIEN": "NISWANI",
     "LAYANAN": "PAKET SILVER",
@@ -11446,7 +13437,7 @@
     ]
   },
   {
-    "NO": "53",
+    "NO": "98",
     "KODE": "TRX/2026/07/0035",
     "PASIEN": "STEFFANI TEDJA",
     "LAYANAN": "TERAPI AWAL",
@@ -11475,7 +13466,7 @@
     ]
   },
   {
-    "NO": "54",
+    "NO": "99",
     "KODE": "TRX/2026/07/0034",
     "PASIEN": "SILVIA VITA",
     "LAYANAN": "TERAPI AWAL",
@@ -11504,7 +13495,7 @@
     ]
   },
   {
-    "NO": "55",
+    "NO": "100",
     "KODE": "TRX/2026/07/0033",
     "PASIEN": "JAWARIYAH",
     "LAYANAN": "SESI NEW",
@@ -11533,7 +13524,7 @@
     ]
   },
   {
-    "NO": "56",
+    "NO": "1",
     "KODE": "TRX/2026/07/0032",
     "PASIEN": "SUMARNO SAPUTRA",
     "LAYANAN": "TERAPI AWAL",
@@ -11562,7 +13553,7 @@
     ]
   },
   {
-    "NO": "57",
+    "NO": "2",
     "KODE": "TRX/2026/07/0031",
     "PASIEN": "TAN KWET KHIONG",
     "LAYANAN": "TERAPI AWAL",
@@ -11585,13 +13576,13 @@
         "JAM": "14:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Diperiksa",
+        "NOMINAL BAYAR": "Sudah Diperiksa",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "58",
+    "NO": "3",
     "KODE": "TRX/2026/07/0030",
     "PASIEN": "ANDI WIRA UTAMA",
     "LAYANAN": "SESI NEW",
@@ -11629,7 +13620,7 @@
     ]
   },
   {
-    "NO": "59",
+    "NO": "4",
     "KODE": "TRX/2026/07/0029",
     "PASIEN": "NABILA RAMADHANI",
     "LAYANAN": "PAKET PLATINUM",
@@ -11684,8 +13675,8 @@
       },
       {
         "PERTEMUAN": "Ke-5",
-        "TANGGAL": "15-07-2026",
-        "JAM": "19:00",
+        "TANGGAL": "18-07-2026",
+        "JAM": "10:00",
         "FISIO": "DESTY",
         "STATUS_SESI": "Tidak Hadir",
         "NOMINAL BAYAR": "Jadwal Ulang",
@@ -11693,8 +13684,8 @@
       },
       {
         "PERTEMUAN": "Ke-5",
-        "TANGGAL": "18-07-2026",
-        "JAM": "10:00",
+        "TANGGAL": "15-07-2026",
+        "JAM": "19:00",
         "FISIO": "DESTY",
         "STATUS_SESI": "Tidak Hadir",
         "NOMINAL BAYAR": "Jadwal Ulang",
@@ -11723,15 +13714,15 @@
         "TANGGAL": "25-07-2026",
         "JAM": "09:00",
         "FISIO": "DESTY",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-8",
-        "TANGGAL": "24-08-2026",
+        "TANGGAL": "02-08-2026",
         "JAM": "10:00",
-        "FISIO": "-",
+        "FISIO": "DESTY",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -11847,7 +13838,7 @@
     ]
   },
   {
-    "NO": "60",
+    "NO": "5",
     "KODE": "TRX/2026/07/0028",
     "PASIEN": "SYARIF SYAFIQ THAHIR",
     "LAYANAN": "TERAPI AWAL",
@@ -11876,7 +13867,7 @@
     ]
   },
   {
-    "NO": "61",
+    "NO": "6",
     "KODE": "TRX/2026/07/0027",
     "PASIEN": "MITHA NOVIANTI",
     "LAYANAN": "SESI NEW",
@@ -11905,7 +13896,7 @@
     ]
   },
   {
-    "NO": "62",
+    "NO": "7",
     "KODE": "TRX/2026/07/0026",
     "PASIEN": "RATNA KOMALA",
     "LAYANAN": "SESI NEW",
@@ -11934,7 +13925,7 @@
     ]
   },
   {
-    "NO": "63",
+    "NO": "8",
     "KODE": "TRX/2026/07/0025",
     "PASIEN": "ASTISZA SYAHLA LUDMILLA PARABI",
     "LAYANAN": "SESI NEW",
@@ -11963,7 +13954,7 @@
     ]
   },
   {
-    "NO": "64",
+    "NO": "9",
     "KODE": "TRX/2026/07/0024",
     "PASIEN": "YUDA SUHERMAN",
     "LAYANAN": "PAKET SILVER",
@@ -12028,7 +14019,7 @@
     ]
   },
   {
-    "NO": "65",
+    "NO": "10",
     "KODE": "TRX/2026/07/0023",
     "PASIEN": "SENG TJUAN",
     "LAYANAN": "PAKET GOLD",
@@ -12077,12 +14068,21 @@
         "TANGGAL": "29-07-2026",
         "JAM": "13:00",
         "FISIO": "DANI",
-        "STATUS_SESI": "-",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-4",
+        "TANGGAL": "03-08-2026",
+        "JAM": "13:00",
+        "FISIO": "DANI",
+        "STATUS_SESI": "-",
+        "NOMINAL BAYAR": "Belum Ditangani",
+        "KETERANGAN": "Rp0"
+      },
+      {
+        "PERTEMUAN": "Ke-5",
         "TANGGAL": "09-08-2026",
         "JAM": "11:00",
         "FISIO": "-",
@@ -12091,7 +14091,7 @@
         "KETERANGAN": "Rp0"
       },
       {
-        "PERTEMUAN": "Ke-5",
+        "PERTEMUAN": "Ke-6",
         "TANGGAL": "16-08-2026",
         "JAM": "11:00",
         "FISIO": "-",
@@ -12100,7 +14100,7 @@
         "KETERANGAN": "Rp0"
       },
       {
-        "PERTEMUAN": "Ke-6",
+        "PERTEMUAN": "Ke-7",
         "TANGGAL": "23-08-2026",
         "JAM": "11:00",
         "FISIO": "-",
@@ -12109,7 +14109,7 @@
         "KETERANGAN": "Rp0"
       },
       {
-        "PERTEMUAN": "Ke-7",
+        "PERTEMUAN": "Ke-8",
         "TANGGAL": "30-08-2026",
         "JAM": "11:00",
         "FISIO": "-",
@@ -12118,7 +14118,7 @@
         "KETERANGAN": "Rp0"
       },
       {
-        "PERTEMUAN": "Ke-8",
+        "PERTEMUAN": "Ke-9",
         "TANGGAL": "06-09-2026",
         "JAM": "11:00",
         "FISIO": "-",
@@ -12127,18 +14127,9 @@
         "KETERANGAN": "Rp0"
       },
       {
-        "PERTEMUAN": "Ke-9",
+        "PERTEMUAN": "Ke-10",
         "TANGGAL": "17-07-2027",
         "JAM": "11:00",
-        "FISIO": "DANI",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
-        "KETERANGAN": "Rp0"
-      },
-      {
-        "PERTEMUAN": "Ke-10",
-        "TANGGAL": "17-07-2029",
-        "JAM": "15:00",
         "FISIO": "DANI",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
@@ -12147,7 +14138,7 @@
     ]
   },
   {
-    "NO": "66",
+    "NO": "11",
     "KODE": "TRX/2026/07/0022",
     "PASIEN": "ANDI WIRA UTAMA",
     "LAYANAN": "TERAPI AWAL",
@@ -12176,7 +14167,7 @@
     ]
   },
   {
-    "NO": "67",
+    "NO": "12",
     "KODE": "TRX/2026/07/0021",
     "PASIEN": "RATNA KOMALA",
     "LAYANAN": "TERAPI AWAL",
@@ -12205,7 +14196,7 @@
     ]
   },
   {
-    "NO": "68",
+    "NO": "13",
     "KODE": "TRX/2026/07/0020",
     "PASIEN": "MUHAMMAD IQBAL NOVIANSYAH",
     "LAYANAN": "SESI NEW",
@@ -12234,7 +14225,7 @@
     ]
   },
   {
-    "NO": "69",
+    "NO": "14",
     "KODE": "TRX/2026/07/0018",
     "PASIEN": "FADLURROHMAN ASSHIDDIQI",
     "LAYANAN": "PAKET GOLD",
@@ -12266,7 +14257,7 @@
         "JAM": "11:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -12275,7 +14266,7 @@
         "JAM": "12:00",
         "FISIO": "ORY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -12284,7 +14275,7 @@
         "JAM": "14:00",
         "FISIO": "ORY",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -12293,7 +14284,7 @@
         "JAM": "11:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -12302,7 +14293,7 @@
         "JAM": "17:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -12311,7 +14302,7 @@
         "JAM": "11:00",
         "FISIO": "WAHYU",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
@@ -12319,24 +14310,24 @@
         "TANGGAL": "25-07-2026",
         "JAM": "17:00",
         "FISIO": "WAHYU",
-        "STATUS_SESI": "-",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "STATUS_SESI": "Hadir",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-9",
-        "TANGGAL": "29-08-2026",
-        "JAM": "11:00",
-        "FISIO": "-",
-        "STATUS_SESI": "-",
+        "TANGGAL": "29-07-2026",
+        "JAM": "13:00",
+        "FISIO": "WAHYU",
+        "STATUS_SESI": "Hadir",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
       },
       {
         "PERTEMUAN": "Ke-10",
-        "TANGGAL": "05-09-2026",
+        "TANGGAL": "01-08-2026",
         "JAM": "11:00",
-        "FISIO": "-",
+        "FISIO": "WAHYU",
         "STATUS_SESI": "-",
         "NOMINAL BAYAR": "Belum Ditangani",
         "KETERANGAN": "Rp0"
@@ -12344,7 +14335,7 @@
     ]
   },
   {
-    "NO": "70",
+    "NO": "15",
     "KODE": "TRX/2026/07/0017",
     "PASIEN": "UTIN AGUSTINA",
     "LAYANAN": "SESI NEW",
@@ -12373,7 +14364,7 @@
     ]
   },
   {
-    "NO": "71",
+    "NO": "16",
     "KODE": "TRX/2026/07/0016",
     "PASIEN": "ASTISZA SYAHLA LUDMILLA PARABI",
     "LAYANAN": "TERAPI AWAL",
@@ -12402,7 +14393,7 @@
     ]
   },
   {
-    "NO": "72",
+    "NO": "17",
     "KODE": "TRX/2026/07/0015",
     "PASIEN": "SUCI NANDA LESTARI",
     "LAYANAN": "TERAPI AWAL",
@@ -12431,7 +14422,7 @@
     ]
   },
   {
-    "NO": "73",
+    "NO": "18",
     "KODE": "TRX/2026/07/0014",
     "PASIEN": "ARIF PARABI",
     "LAYANAN": "TERAPI AWAL",
@@ -12460,7 +14451,7 @@
     ]
   },
   {
-    "NO": "74",
+    "NO": "19",
     "KODE": "TRX/2026/07/0013",
     "PASIEN": "SUWARNI",
     "LAYANAN": "SESI NEW",
@@ -12489,7 +14480,7 @@
     ]
   },
   {
-    "NO": "75",
+    "NO": "20",
     "KODE": "TRX/2026/07/0012",
     "PASIEN": "MODESTA WISA",
     "LAYANAN": "SESI NEW",
@@ -12521,13 +14512,13 @@
         "JAM": "15:00",
         "FISIO": "AUL",
         "STATUS_SESI": "Hadir",
-        "NOMINAL BAYAR": "Belum Ditangani",
+        "NOMINAL BAYAR": "Sudah Ditangani",
         "KETERANGAN": "Rp0"
       }
     ]
   },
   {
-    "NO": "76",
+    "NO": "21",
     "KODE": "TRX/2026/07/0011",
     "PASIEN": "LILIS SURYANI",
     "LAYANAN": "SESI NEW",
@@ -12556,7 +14547,7 @@
     ]
   },
   {
-    "NO": "77",
+    "NO": "22",
     "KODE": "TRX/2026/07/0010",
     "PASIEN": "TITO SAPUTRA",
     "LAYANAN": "SESI NEW",
@@ -12585,7 +14576,7 @@
     ]
   },
   {
-    "NO": "78",
+    "NO": "23",
     "KODE": "TRX/2026/07/0009",
     "PASIEN": "GHALY RAZQHA ALFATHANI",
     "LAYANAN": "TERAPI AWAL",
@@ -12614,7 +14605,7 @@
     ]
   },
   {
-    "NO": "79",
+    "NO": "24",
     "KODE": "TRX/2026/07/0008",
     "PASIEN": "FADIL AKBAR",
     "LAYANAN": "TERAPI AWAL",
@@ -12643,7 +14634,7 @@
     ]
   },
   {
-    "NO": "80",
+    "NO": "25",
     "KODE": "TRX/2026/07/0007",
     "PASIEN": "TITO SAPUTRA",
     "LAYANAN": "TERAPI AWAL",
@@ -12672,7 +14663,7 @@
     ]
   },
   {
-    "NO": "81",
+    "NO": "26",
     "KODE": "TRX/2026/07/0006",
     "PASIEN": "CATUR YULIYATI",
     "LAYANAN": "SESI NEW",
@@ -12701,7 +14692,7 @@
     ]
   },
   {
-    "NO": "82",
+    "NO": "27",
     "KODE": "TRX/2026/07/0005",
     "PASIEN": "LIM LIE SIAM",
     "LAYANAN": "TERAPI AWAL",
@@ -12730,7 +14721,7 @@
     ]
   },
   {
-    "NO": "83",
+    "NO": "28",
     "KODE": "TRX/2026/07/0004",
     "PASIEN": "YUDY HARTONO",
     "LAYANAN": "SESI NEW",
@@ -12759,7 +14750,7 @@
     ]
   },
   {
-    "NO": "84",
+    "NO": "29",
     "KODE": "TRX/2026/07/0003",
     "PASIEN": "LILIS SURYANI",
     "LAYANAN": "TERAPI AWAL",
@@ -12788,7 +14779,7 @@
     ]
   },
   {
-    "NO": "85",
+    "NO": "30",
     "KODE": "TRX/2026/07/0002",
     "PASIEN": "TITIN SUMARNI",
     "LAYANAN": "TERAPI AWAL",
@@ -12817,7 +14808,7 @@
     ]
   },
   {
-    "NO": "86",
+    "NO": "31",
     "KODE": "TRX/2026/07/0001",
     "PASIEN": "AFIF RIZKY AFRIZA",
     "LAYANAN": "PAKET SILVER",

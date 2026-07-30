@@ -292,9 +292,10 @@ async function main() {
           notes:        `kode:${order.KODE}`,
           jenis_paket:  jenisPaket,
           mulai_paket:  'NEW',
+          category:     order.LAYANAN.toUpperCase() === 'PAKET HOME VISIT' ? 'PAKET VISIT' : 'PAKET KLINIK',
           operational_status: newStatus === 'completed' ? 'OFF' : 'ON',
           legacy_used_sessions: 0,
-          ...(createdAt ? { created_at: createdAt } : {}),
+          ...(createdAt ? { created_at: createdAt, purchased_at: createdAt } : {}),
         })
         .select('id')
         .single()

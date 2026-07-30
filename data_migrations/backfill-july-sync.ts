@@ -1,6 +1,6 @@
 /**
- * Backfill patient_visits for July 2026 (days 1-24 only — "today" excluded
- * since it's still in progress) from the freshly re-scraped orders_with_sessions.json.
+ * Backfill patient_visits for July 2026 (days 1-30, i.e. through today) from
+ * the freshly re-scraped orders_with_sessions.csv.
  *
  * Unlike sync-all-sessions.ts / migrate-standalone-visits.ts (which DELETE + full
  * reimport), this is an UPSERT: it never deletes or overwrites data already
@@ -40,7 +40,7 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ENCRYPTION_KEY) {
 const BRANCH_ID = 'cfe27e13-ba0b-440d-99f3-03e059efb877' // Fisioterapi Gang Sehat Pontianak
 const SYNC_YEAR = 2026
 const SYNC_MONTH = 7
-const SYNC_MAX_DAY = 24 // "yesterday" — today (25) is still in progress
+const SYNC_MAX_DAY = 30 // through today — orders_with_sessions.csv was re-scraped through 2026-07-30
 
 const EXECUTE = process.argv.includes('--execute')
 
@@ -87,10 +87,74 @@ interface Order {
   sessions: Session[]
 }
 
-const orders: Order[] = JSON.parse(
-  fs.readFileSync(path.join(__dirname, 'orders_with_sessions.json'), 'utf8'),
-)
-console.log(`Loaded ${orders.length} orders from orders_with_sessions.json`)
+// ── CSV loader ───────────────────────────────────────────────────────────────
+// orders_with_sessions.csv is a flattened export: one row per session, with
+// order-level fields (KODE, PASIEN, LAYANAN, STATUS, DIBUAT TGL, ...) repeated
+// on every row for that order. No embedded newlines within quoted fields
+// (verified: raw line count == parsed row count), so a simple per-line parser
+// with RFC4180 quote/""-escaping is sufficient — no multi-line field handling needed.
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = []
+  let cur = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i]
+    if (inQuotes) {
+      if (c === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++ } else { inQuotes = false }
+      } else {
+        cur += c
+      }
+    } else if (c === '"') {
+      inQuotes = true
+    } else if (c === ',') {
+      fields.push(cur); cur = ''
+    } else {
+      cur += c
+    }
+  }
+  fields.push(cur)
+  return fields
+}
+
+function loadOrdersFromCsv(csvPath: string): Order[] {
+  const lines = fs.readFileSync(csvPath, 'utf8').split('\n').filter(l => l.trim().length > 0)
+  const header = parseCsvLine(lines[0])
+  const col = (name: string) => header.indexOf(name)
+
+  const ordersByKode = new Map<string, Order>()
+  for (let i = 1; i < lines.length; i++) {
+    const f = parseCsvLine(lines[i])
+    const kode = f[col('KODE')]
+    if (!kode) continue
+
+    let order = ordersByKode.get(kode)
+    if (!order) {
+      order = {
+        KODE: kode,
+        PASIEN: f[col('PASIEN')],
+        LAYANAN: f[col('LAYANAN')],
+        STATUS: f[col('STATUS')],
+        'DIBUAT TGL': f[col('DIBUAT TGL')],
+        sessions: [],
+      }
+      ordersByKode.set(kode, order)
+    }
+    order.sessions.push({
+      PERTEMUAN: f[col('PERTEMUAN')],
+      TANGGAL: f[col('TANGGAL')],
+      JAM: f[col('JAM')],
+      FISIO: f[col('FISIO')],
+      STATUS_SESI: f[col('STATUS_SESI')],
+      'NOMINAL BAYAR': f[col('NOMINAL BAYAR')],
+      KETERANGAN: f[col('KETERANGAN')],
+    })
+  }
+  return [...ordersByKode.values()]
+}
+
+const orders: Order[] = loadOrdersFromCsv(path.join(__dirname, 'orders_with_sessions.csv'))
+console.log(`Loaded ${orders.length} orders (${orders.reduce((n, o) => n + o.sessions.length, 0)} sessions) from orders_with_sessions.csv`)
 
 const orderByKode = new Map<string, Order>()
 for (const o of orders) orderByKode.set(o.KODE, o)
