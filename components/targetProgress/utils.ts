@@ -1,4 +1,4 @@
-import { TA_TYPES, isHadir } from '@/components/performance/utils'
+import { TA_TYPES, SESI_TYPES, isHadir } from '@/components/performance/utils'
 import type { DailyCounts, VisitForProgress, PackageForProgress } from './types'
 
 export {
@@ -19,6 +19,7 @@ export function buildDailyCounts(visits: VisitForProgress[], days: number): Dail
     paket_klinik: Array(days).fill(0),
     kunjungan: Array(days).fill(0),
     paket_visit: Array(days).fill(0),
+    sesi: Array(days).fill(0),
   }
 
   for (const v of visits) {
@@ -29,6 +30,9 @@ export function buildDailyCounts(visits: VisitForProgress[], days: number): Dail
     }
     if (isHadir(v)) {
       daily.kunjungan[day - 1] += 1
+      if ((SESI_TYPES as readonly string[]).includes(v.service_type ?? '')) {
+        daily.sesi[day - 1] += 1
+      }
     }
   }
 
@@ -44,6 +48,7 @@ export function buildPackageDailyCounts(packages: PackageForProgress[], days: nu
     paket_klinik: Array(days).fill(0),
     kunjungan: Array(days).fill(0),
     paket_visit: Array(days).fill(0),
+    sesi: Array(days).fill(0),
   }
 
   for (const p of packages) {
@@ -62,8 +67,9 @@ export function mergeDailyCounts(a: DailyCounts, b: DailyCounts): DailyCounts {
     paket_klinik: [...a.paket_klinik],
     kunjungan: [...a.kunjungan],
     paket_visit: [...a.paket_visit],
+    sesi: [...a.sesi],
   }
-  for (const key of ['ta', 'paket_klinik', 'kunjungan', 'paket_visit'] as const) {
+  for (const key of ['ta', 'paket_klinik', 'kunjungan', 'paket_visit', 'sesi'] as const) {
     for (let i = 0; i < merged[key].length; i++) merged[key][i] += b[key][i] ?? 0
   }
   return merged

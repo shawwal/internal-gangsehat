@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useToast } from '@/context/ToastContext'
-import { ChevronLeft, Loader2, AlertTriangle, Printer, FileHeart, Share2 } from 'lucide-react'
+import { ChevronLeft, Loader2, AlertTriangle, Printer, Download, Share2 } from 'lucide-react'
 import { fetchVisitWithPatient } from '@/app/actions/jadwal'
 import { fetchAssessment, saveAssessmentDraft, completeAssessment } from '@/app/actions/assessments'
 import { getOrCreateResumeLink } from '@/app/actions/resumeLinks'
@@ -51,6 +51,7 @@ export default function TerapiAwalAssessmentPage() {
   const [error, setError]           = useState<string | null>(null)
   const [showPackagePrompt, setShowPackagePrompt] = useState(false)
   const [sharing, setSharing]       = useState(false)
+  const [downloadingResume, setDownloadingResume] = useState(false)
   const [formMode, setFormMode]     = useState<FormMode | null>(null)
   const [userRole, setUserRole]     = useState<UserRole | null>(null)
 
@@ -150,9 +151,16 @@ export default function TerapiAwalAssessmentPage() {
     generateAssessmentPdf(visit, completedAssessment)
   }
 
-  function handlePrintResume() {
+  async function handleDownloadResume() {
     if (!visit || !completedAssessment) return
-    generatePatientResumePdf(visit, completedAssessment)
+    setDownloadingResume(true)
+    try {
+      await generatePatientResumePdf(visit, completedAssessment)
+    } catch {
+      showToast('Gagal membuat PDF resume', 'error')
+    } finally {
+      setDownloadingResume(false)
+    }
   }
 
   async function handleShareResume() {
@@ -238,11 +246,13 @@ export default function TerapiAwalAssessmentPage() {
             </button>
             <button
               type="button"
-              onClick={handlePrintResume}
-              title="Cetak resume untuk pasien"
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors"
+              onClick={handleDownloadResume}
+              disabled={downloadingResume}
+              title="Unduh resume PDF untuk pasien"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-60"
             >
-              <FileHeart size={13} /> <span className="hidden sm:inline">Cetak Resume</span>
+              {downloadingResume ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+              <span className="hidden sm:inline">Download Resume</span>
             </button>
             <button
               type="button"

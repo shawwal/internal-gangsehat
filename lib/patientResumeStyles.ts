@@ -151,7 +151,7 @@ export function renderPatientResumeBody(data: PublicResumeData, includePrintButt
 </div>`
 }
 
-export function renderPatientResumeHtml(data: PublicResumeData): string {
+export function renderPatientResumeHtml(data: PublicResumeData, includePrintButton = true): string {
   const html = `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -161,7 +161,7 @@ export function renderPatientResumeHtml(data: PublicResumeData): string {
   <style>${PATIENT_RESUME_STYLES}</style>
 </head>
 <body>
-${renderPatientResumeBody(data, true)}
+${renderPatientResumeBody(data, includePrintButton)}
 </body>
 </html>`
   return html

@@ -11,6 +11,7 @@ interface FormState {
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number
+  target_sesi: number
   notes: string
 }
 
@@ -101,6 +102,7 @@ export function TargetForm({ editTarget, form, saving, onChange, onSubmit, onCan
             { field: 'target_paket_klinik' as const,  label: 'Target Paket Klinik' },
             { field: 'target_kunjungan' as const,     label: 'Target Kunjungan' },
             { field: 'target_visit' as const,         label: 'Target Visit' },
+            { field: 'target_sesi' as const,          label: 'Target Sesi' },
           ].map(({ field, label }) => (
             <div key={field}>
               <label className="block text-xs font-medium text-foreground mb-1.5">{label}</label>

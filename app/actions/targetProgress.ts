@@ -6,6 +6,7 @@ import { VISIT_STATUS_FILTER, isHadir } from '@/components/performance/utils'
 import type { CategoryKey } from '@/components/targetProgress/types'
 
 const TA_TYPES = ['TERAPI AWAL', 'TA VISIT']
+const SESI_TYPES = ['SESI TERAPI', 'SESI VISIT']
 
 export interface TargetProgressDetailRow {
   id: string
@@ -93,6 +94,7 @@ export async function fetchTargetProgressDetail(
     .in('status', [...VISIT_STATUS_FILTER])
 
   if (category === 'ta') query = query.in('service_type', TA_TYPES)
+  else if (category === 'sesi') query = query.in('service_type', SESI_TYPES)
 
   const { data, error } = await query
   if (error || !data) return []

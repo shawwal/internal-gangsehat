@@ -18,6 +18,7 @@ interface FormState {
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number
+  target_sesi: number
   notes: string
 }
 
@@ -31,6 +32,7 @@ function defaultForm(): FormState {
     target_paket_klinik: 0,
     target_kunjungan: 0,
     target_visit: 0,
+    target_sesi: 0,
     notes: '',
   }
 }
@@ -52,7 +54,7 @@ export default function MyTargetsPage() {
     if (!user) return
     const { data } = await supabase
       .from('staff_targets')
-      .select('id, staff_id, branch_id, bulan, tahun, target_ta, target_paket_klinik, target_kunjungan, target_visit, notes, status, rejection_note, created_at')
+      .select('id, staff_id, branch_id, bulan, tahun, target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi, notes, status, rejection_note, created_at')
       .eq('staff_id', user.id)
       .order('tahun', { ascending: false })
       .order('bulan', { ascending: false })
@@ -77,6 +79,7 @@ export default function MyTargetsPage() {
       target_paket_klinik: t.target_paket_klinik,
       target_kunjungan: t.target_kunjungan,
       target_visit: t.target_visit,
+      target_sesi: t.target_sesi,
       notes: t.notes ?? '',
     })
     setShowForm(true)
@@ -110,6 +113,7 @@ export default function MyTargetsPage() {
       target_paket_klinik: form.target_paket_klinik,
       target_kunjungan: form.target_kunjungan,
       target_visit: form.target_visit,
+      target_sesi: form.target_sesi,
       notes: form.notes.trim() || null,
       status: 'pending',
       updated_at: new Date().toISOString(),

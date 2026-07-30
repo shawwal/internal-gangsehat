@@ -87,7 +87,7 @@ export default function TargetProgressPage() {
     const [{ data: targetRow }, { data: visits }, { data: packages }] = await Promise.all([
       supabase
         .from('branch_targets')
-        .select('target_ta, target_paket_klinik, target_kunjungan, target_visit')
+        .select('target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi')
         .eq('branch_id', selectedBranchId)
         .eq('bulan', month)
         .eq('tahun', year)
@@ -119,6 +119,7 @@ export default function TargetProgressPage() {
       paket_klinik: t?.target_paket_klinik ?? 0,
       kunjungan: t?.target_kunjungan ?? 0,
       paket_visit: t?.target_visit ?? 0,
+      sesi: t?.target_sesi ?? 0,
     }
 
     setHasApprovedTarget(!!t)

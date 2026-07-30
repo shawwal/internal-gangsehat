@@ -121,11 +121,12 @@ export function BranchTargetCard({
         </div>
 
         {/* Metrics grid */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           <MetricBox label="Target TA" value={t.target_ta} />
           <MetricBox label="Paket Klinik" value={t.target_paket_klinik} />
           <MetricBox label="Kunjungan" value={t.target_kunjungan} />
           <MetricBox label="Visit" value={t.target_visit} />
+          <MetricBox label="Sesi" value={t.target_sesi} />
         </div>
 
         {/* Notes */}

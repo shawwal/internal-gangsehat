@@ -1,12 +1,12 @@
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { SessionNote } from '@/types'
 import type { PublicResumeData } from '@/app/actions/resumeLinks'
-import { renderPatientResumeHtml } from '@/lib/patientResumeStyles'
+import { downloadPatientResumePdf } from '@/lib/downloadPatientResumePdf'
 
-// Staff-side "Cetak Resume Pasien" for follow-up SOAP session notes — mirrors
+// Staff-side "Download Resume" for follow-up SOAP session notes — mirrors
 // components/assessment/generatePatientResumePdf.ts (the TERAPI AWAL variant),
 // sharing the same patient-facing markup via lib/patientResumeStyles.ts.
-export function generateSessionNoteResumePdf(visit: VisitWithPatient, note: SessionNote) {
+export async function generateSessionNoteResumePdf(visit: VisitWithPatient, note: SessionNote) {
   const plan = [note.next_plan, note.hep_given].filter(Boolean).join('') || visit.treatment
 
   const data: PublicResumeData = {
@@ -17,10 +17,5 @@ export function generateSessionNoteResumePdf(visit: VisitWithPatient, note: Sess
     plan,
   }
 
-  const html = renderPatientResumeHtml(data)
-  const win = window.open('', '_blank', 'width=820,height=960')
-  if (win) {
-    win.document.write(html)
-    win.document.close()
-  }
+  await downloadPatientResumePdf(data, 'Resume')
 }

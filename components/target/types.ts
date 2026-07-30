@@ -8,6 +8,7 @@ export interface TargetRow {
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number
+  target_sesi: number
   notes: string | null
   status: 'pending' | 'approved' | 'rejected'
   rejection_note: string | null
@@ -82,6 +83,7 @@ export interface BranchTargetRow {
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number
+  target_sesi: number
   notes: string | null
   status: 'pending' | 'approved' | 'rejected'
   rejection_note: string | null

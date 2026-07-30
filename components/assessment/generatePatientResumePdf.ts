@@ -1,13 +1,13 @@
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { TerapiAwalAssessment } from '@/types'
 import type { PublicResumeData } from '@/app/actions/resumeLinks'
-import { renderPatientResumeHtml } from '@/lib/patientResumeStyles'
+import { downloadPatientResumePdf } from '@/lib/downloadPatientResumePdf'
 
-// Staff-side "Cetak Resume Pasien" — patient-facing plain-language version of
-// generateAssessmentPdf.ts, using the same window.open + document.write +
-// window.print() pattern (see lib/pdfPrintStyles.ts). Shares its markup with
-// the public app/resume/[token] page via lib/patientResumeStyles.ts.
-export function generatePatientResumePdf(visit: VisitWithPatient, assessment: TerapiAwalAssessment) {
+// Staff-side "Download Resume" — patient-facing plain-language version of
+// generateAssessmentPdf.ts, downloaded as a real PDF file via
+// lib/downloadPatientResumePdf.ts. Shares its markup with the public
+// app/resume/[token] page via lib/patientResumeStyles.ts.
+export async function generatePatientResumePdf(visit: VisitWithPatient, assessment: TerapiAwalAssessment) {
   const plan = [assessment.treatment_plan_today, assessment.short_term_goals, assessment.long_term_goals]
     .filter(Boolean)
     .join('') || visit.treatment
@@ -20,10 +20,5 @@ export function generatePatientResumePdf(visit: VisitWithPatient, assessment: Te
     plan,
   }
 
-  const html = renderPatientResumeHtml(data)
-  const win = window.open('', '_blank', 'width=820,height=960')
-  if (win) {
-    win.document.write(html)
-    win.document.close()
-  }
+  await downloadPatientResumePdf(data, 'Resume')
 }

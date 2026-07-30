@@ -43,6 +43,7 @@ function defaultBranchForm(): BranchTargetFormState {
     target_paket_klinik: 0,
     target_kunjungan: 0,
     target_visit: 0,
+    target_sesi: 0,
     notes: '',
   }
 }
@@ -165,7 +166,7 @@ export default function DirectorTargetsPage() {
       .from('staff_targets')
       .select(`
         id, staff_id, branch_id, bulan, tahun,
-        target_ta, target_paket_klinik, target_kunjungan, target_visit,
+        target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi,
         notes, status, rejection_note, created_at,
         internal_profiles!staff_id(full_name, email),
         branches!branch_id(name)
@@ -265,7 +266,7 @@ export default function DirectorTargetsPage() {
       .from('branch_targets')
       .select(`
         id, branch_id, bulan, tahun,
-        target_ta, target_paket_klinik, target_kunjungan, target_visit,
+        target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi,
         notes, status, rejection_note, created_at,
         branches!branch_id(name),
         internal_profiles!set_by(full_name)
@@ -347,6 +348,7 @@ export default function DirectorTargetsPage() {
       target_paket_klinik: t.target_paket_klinik,
       target_kunjungan: t.target_kunjungan,
       target_visit: t.target_visit,
+      target_sesi: t.target_sesi,
       notes: t.notes ?? '',
     })
     setBShowForm(true)
@@ -376,6 +378,7 @@ export default function DirectorTargetsPage() {
       target_paket_klinik: bForm.target_paket_klinik,
       target_kunjungan:    bForm.target_kunjungan,
       target_visit:        bForm.target_visit,
+      target_sesi:         bForm.target_sesi,
       notes:               bForm.notes.trim() || null,
       set_by:              user.id,
       status:              'pending',
@@ -419,6 +422,7 @@ export default function DirectorTargetsPage() {
       { header: 'Target Paket',  value: (r) => r.target_paket_klinik },
       { header: 'Target Kunjungan', value: (r) => r.target_kunjungan },
       { header: 'Target Visit',  value: (r) => r.target_visit },
+      { header: 'Target Sesi',  value: (r) => r.target_sesi },
       { header: 'Status',        value: (r) => r.status },
       { header: 'Catatan',       value: (r) => r.notes ?? '' },
     ], `target_staff_${today}`)
@@ -435,6 +439,7 @@ export default function DirectorTargetsPage() {
       { header: 'Target Paket',  value: (r) => r.target_paket_klinik },
       { header: 'Target Kunjungan', value: (r) => r.target_kunjungan },
       { header: 'Target Visit',  value: (r) => r.target_visit },
+      { header: 'Target Sesi',  value: (r) => r.target_sesi },
       { header: 'Status',        value: (r) => r.status },
       { header: 'Catatan',       value: (r) => r.notes ?? '' },
     ], `target_cabang_${today}`)

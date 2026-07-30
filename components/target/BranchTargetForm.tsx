@@ -12,6 +12,7 @@ export interface BranchTargetFormState {
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number
+  target_sesi: number
   notes: string
 }
 
@@ -31,6 +32,7 @@ const METRICS: { field: keyof BranchTargetFormState; label: string }[] = [
   { field: 'target_paket_klinik', label: 'Target Paket Klinik' },
   { field: 'target_kunjungan', label: 'Target Kunjungan' },
   { field: 'target_visit', label: 'Target Visit' },
+  { field: 'target_sesi', label: 'Target Sesi' },
 ]
 
 export function BranchTargetForm({
