@@ -1,0 +1,368 @@
+[
+  {
+    "tbl": "attendance",
+    "rls": true,
+    "n": 4,
+    "policies": "ALL:PERM(att: hr branch) | ALL:PERM(att: director all) | ALL:PERM(att: manager branch) | SELECT:PERM(att: own read)"
+  },
+  {
+    "tbl": "bank_accounts",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(Admin can modify bank_accounts) | SELECT:PERM(Anyone can read bank_accounts)"
+  },
+  {
+    "tbl": "blog_posts",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(Admin full access to blog posts) | SELECT:PERM(Anyone can read published blog posts)"
+  },
+  {
+    "tbl": "booking_history",
+    "rls": true,
+    "n": 3,
+    "policies": "ALL:PERM(deny_all) | INSERT:PERM(allow_admin_insert) | SELECT:PERM(allow_read_own_bookings)"
+  },
+  {
+    "tbl": "booking_payments",
+    "rls": true,
+    "n": 1,
+    "policies": "ALL:PERM(internal_staff_booking_payments)"
+  },
+  {
+    "tbl": "booking_sessions",
+    "rls": true,
+    "n": 1,
+    "policies": "ALL:PERM(internal_staff_booking_sessions)"
+  },
+  {
+    "tbl": "bookings",
+    "rls": false,
+    "n": 6,
+    "policies": "ALL:PERM(admin_all_access) | INSERT:PERM(allow_insert) | INSERT:PERM(patient_create_own) | SELECT:PERM(therapist_read_own) | SELECT:PERM(patient_read_own) | UPDATE:PERM(Patients can rate completed bookings)"
+  },
+  {
+    "tbl": "branch_financial_reports",
+    "rls": true,
+    "n": 3,
+    "policies": "ALL:PERM(bfr: manager branch) | ALL:PERM(bfr: director all) | ALL:PERM(bfr: finance branch)"
+  },
+  {
+    "tbl": "branch_targets",
+    "rls": true,
+    "n": 3,
+    "policies": "ALL:PERM(bt: director all) | ALL:PERM(bt: manager branch) | SELECT:PERM(bt: staff reads own branch approved)"
+  },
+  {
+    "tbl": "branches",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(branches: director manages) | SELECT:PERM(branches: staff reads)"
+  },
+  {
+    "tbl": "campaigns",
+    "rls": true,
+    "n": 3,
+    "policies": "ALL:PERM(camp: marketing branch) | ALL:PERM(camp: manager branch) | ALL:PERM(camp: director all)"
+  },
+  {
+    "tbl": "clinic_settings",
+    "rls": true,
+    "n": 4,
+    "policies": "ALL:PERM(Admins can manage clinic_settings) | SELECT:PERM(Therapists can read sharing fee) | SELECT:PERM(Admins can read clinic_settings) | SELECT:PERM(Public can read QRIS image)"
+  },
+  {
+    "tbl": "diagnoses",
+    "rls": true,
+    "n": 2,
+    "policies": "INSERT:PERM(diagnoses_insert_all) | SELECT:PERM(diagnoses_select_all)"
+  },
+  {
+    "tbl": "dp_settings",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(Admin can manage dp_settings) | SELECT:PERM(Public can read dp_settings)"
+  },
+  {
+    "tbl": "employee_salaries",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(es: director all) | SELECT:PERM(es: manager branch read)"
+  },
+  {
+    "tbl": "gallery_videos",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(Admin full access to gallery videos) | SELECT:PERM(Anyone can read active gallery videos)"
+  },
+  {
+    "tbl": "homepage_services",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(Admin full access to homepage services) | SELECT:PERM(Public can view active homepage services)"
+  },
+  {
+    "tbl": "internal_cuti",
+    "rls": true,
+    "n": 3,
+    "policies": "INSERT:PERM(internal_cuti: own create) | SELECT:PERM(internal_cuti: own or admin read) | UPDATE:PERM(internal_cuti: admin update)"
+  },
+  {
+    "tbl": "internal_jabatan",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(internal_jabatan: admin write) | SELECT:PERM(internal_jabatan: staff read)"
+  },
+  {
+    "tbl": "internal_jadwal",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(internal_jadwal: staff write) | SELECT:PERM(internal_jadwal: staff read)"
+  },
+  {
+    "tbl": "internal_jam_shift",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(internal_jam_shift: admin write) | SELECT:PERM(internal_jam_shift: staff read)"
+  },
+  {
+    "tbl": "internal_konfigurasi",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(internal_konfigurasi: admin write) | SELECT:PERM(internal_konfigurasi: staff read)"
+  },
+  {
+    "tbl": "internal_layanan",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(internal_layanan: admin write) | SELECT:PERM(internal_layanan: staff read)"
+  },
+  {
+    "tbl": "internal_master_jadwal",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(internal_master_jadwal: admin write) | SELECT:PERM(internal_master_jadwal: staff read)"
+  },
+  {
+    "tbl": "internal_order_meta",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(internal_order_meta: staff write) | SELECT:PERM(internal_order_meta: staff read)"
+  },
+  {
+    "tbl": "internal_profiles",
+    "rls": true,
+    "n": 7,
+    "policies": "ALL:PERM(ip: director all) | INSERT:PERM(ip: own insert) | SELECT:PERM(ip: own read) | SELECT:PERM(internal_profiles_admin_own_branch_select) | SELECT:PERM(ip: manager reads branch) | SELECT:PERM(ip: hr reads branch) | UPDATE:PERM(ip: own update)"
+  },
+  {
+    "tbl": "internal_referensi",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(internal_referensi: admin write) | SELECT:PERM(internal_referensi: staff read)"
+  },
+  {
+    "tbl": "internal_target",
+    "rls": true,
+    "n": 3,
+    "policies": "INSERT:PERM(internal_target: staff create) | SELECT:PERM(internal_target: own or admin read) | UPDATE:PERM(internal_target: admin approve)"
+  },
+  {
+    "tbl": "internal_users",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(internal_users: admin write) | SELECT:PERM(internal_users: staff read)"
+  },
+  {
+    "tbl": "internal_wilayah",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(internal_wilayah: admin write) | SELECT:PERM(internal_wilayah: staff read)"
+  },
+  {
+    "tbl": "leave_requests",
+    "rls": true,
+    "n": 4,
+    "policies": "ALL:PERM(lr: own) | ALL:PERM(lr: manager branch) | ALL:PERM(lr: hr_director_all) | SELECT:PERM(lr: admin branch view)"
+  },
+  {
+    "tbl": "member_type",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(Only admins can modify member_type) | SELECT:PERM(Anyone can read member_type)"
+  },
+  {
+    "tbl": "order_sequences",
+    "rls": true,
+    "n": 0,
+    "policies": null
+  },
+  {
+    "tbl": "patient_packages",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(branch staff manage patient_packages) | SELECT:PERM(internal staff read patient_packages)"
+  },
+  {
+    "tbl": "patient_points",
+    "rls": true,
+    "n": 3,
+    "policies": "ALL:PERM(Admin can modify points) | SELECT:PERM(Patient reads own points) | SELECT:PERM(Admin and therapist read all points)"
+  },
+  {
+    "tbl": "patient_visits",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(pv: branch staff) | ALL:PERM(pv: director all)"
+  },
+  {
+    "tbl": "patients",
+    "rls": true,
+    "n": 6,
+    "policies": "ALL:PERM(Admins have full access) | INSERT:PERM(internal_staff_can_insert_patients) | SELECT:PERM(patients: internal staff read) | SELECT:PERM(Patients can read own data) | SELECT:PERM(Therapists can read assigned patients) | UPDATE:PERM(Patients can update own preferences)"
+  },
+  {
+    "tbl": "payroll_records",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(pr: director all) | ALL:PERM(pr: manager branch)"
+  },
+  {
+    "tbl": "point_transactions",
+    "rls": true,
+    "n": 3,
+    "policies": "INSERT:PERM(Admin and therapist insert transactions) | SELECT:PERM(Admin and therapist read all transactions) | SELECT:PERM(Patient reads own transactions)"
+  },
+  {
+    "tbl": "profiles",
+    "rls": false,
+    "n": 4,
+    "policies": "ALL:PERM(Admins have full access) | ALL:PERM(Deny all by default) | SELECT:PERM(Users can read own profile) | UPDATE:PERM(Users can update own profile)"
+  },
+  {
+    "tbl": "resume_links",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(resume_links_branch_staff_all) | ALL:PERM(resume_links_director_all)"
+  },
+  {
+    "tbl": "salary_settings",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(ss: director all) | SELECT:PERM(ss: authenticated read)"
+  },
+  {
+    "tbl": "schedule_overrides",
+    "rls": true,
+    "n": 1,
+    "policies": "SELECT:PERM(schedule_overrides_admin_own_branch_select)"
+  },
+  {
+    "tbl": "schedule_slots",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(schedule_slots_director_manage) | SELECT:PERM(schedule_slots_select_all)"
+  },
+  {
+    "tbl": "schedules",
+    "rls": true,
+    "n": 5,
+    "policies": "ALL:PERM(schedules: self access) | ALL:PERM(schedules: manager all own branch) | ALL:PERM(schedules: hr all own branch) | ALL:PERM(schedules: director all) | SELECT:PERM(schedules_admin_own_branch_select)"
+  },
+  {
+    "tbl": "service_areas",
+    "rls": true,
+    "n": 4,
+    "policies": "DELETE:PERM(service_areas are deletable by admins) | INSERT:PERM(service_areas are insertable by admins) | SELECT:PERM(service_areas are viewable by everyone) | UPDATE:PERM(service_areas are updatable by admins)"
+  },
+  {
+    "tbl": "service_types",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(allow_admin_manage_service_types) | SELECT:PERM(allow_read_active_service_types)"
+  },
+  {
+    "tbl": "session_note_settings",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(session_note_settings_director_manage) | SELECT:PERM(session_note_settings_select_all)"
+  },
+  {
+    "tbl": "session_notes",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(sn_branch_staff_all) | ALL:PERM(sn_director_all)"
+  },
+  {
+    "tbl": "session_packages",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(Admin can modify session_packages) | SELECT:PERM(Anyone can read session_packages)"
+  },
+  {
+    "tbl": "shift_patterns",
+    "rls": true,
+    "n": 3,
+    "policies": "ALL:PERM(shift_patterns_hr_own_branch) | ALL:PERM(shift_patterns_director_all) | SELECT:PERM(shift_patterns_select_own_branch)"
+  },
+  {
+    "tbl": "shift_team_members",
+    "rls": true,
+    "n": 3,
+    "policies": "ALL:PERM(stm_hr_own_branch) | ALL:PERM(stm_director_all) | SELECT:PERM(stm_select_own_branch)"
+  },
+  {
+    "tbl": "shift_teams",
+    "rls": true,
+    "n": 3,
+    "policies": "ALL:PERM(shift_teams_director_all) | ALL:PERM(shift_teams_hr_own_branch) | SELECT:PERM(shift_teams_select_own_branch)"
+  },
+  {
+    "tbl": "staff_targets",
+    "rls": true,
+    "n": 4,
+    "policies": "ALL:PERM(st: manager branch) | ALL:PERM(st: director all) | ALL:PERM(st: own all) | SELECT:PERM(st: hr reads branch)"
+  },
+  {
+    "tbl": "success_stories",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(Admin full access to stories) | SELECT:PERM(Anyone can read published stories)"
+  },
+  {
+    "tbl": "terapi_awal_assessments",
+    "rls": true,
+    "n": 2,
+    "policies": "ALL:PERM(taa_branch_staff_all) | ALL:PERM(taa_director_all)"
+  },
+  {
+    "tbl": "therapist_ratings",
+    "rls": true,
+    "n": 6,
+    "policies": "INSERT:PERM(Patients can create ratings) | SELECT:PERM(Patients can read their own ratings) | SELECT:PERM(Public can read ratings) | SELECT:PERM(Therapists can read their ratings) | SELECT:PERM(Admins can read all ratings) | UPDATE:PERM(Patients can update their own ratings)"
+  },
+  {
+    "tbl": "therapists",
+    "rls": false,
+    "n": 4,
+    "policies": "ALL:PERM(Admins have full access) | SELECT:PERM(Therapists can read own data) | SELECT:PERM(Patients can view available therapists) | UPDATE:PERM(Therapists can update own data)"
+  },
+  {
+    "tbl": "transactions",
+    "rls": true,
+    "n": 7,
+    "policies": "ALL:PERM(transactions_admin_own_branch) | ALL:PERM(transactions_director_all) | ALL:PERM(transactions_finance_own_branch) | ALL:PERM(transactions_manager_own_branch) | ALL:PERM(tx: director all) | ALL:PERM(tx: finance branch) | ALL:PERM(tx: manager branch)"
+  },
+  {
+    "tbl": "treatment_logs",
+    "rls": true,
+    "n": 6,
+    "policies": "ALL:PERM(admin_full_access) | INSERT:PERM(therapist_create) | INSERT:PERM(Therapists can create treatment logs) | SELECT:PERM(therapist_read_own) | SELECT:PERM(patient_read_own) | UPDATE:PERM(therapist_update_own)"
+  },
+  {
+    "tbl": "user_notifications",
+    "rls": true,
+    "n": 2,
+    "policies": "SELECT:PERM(notif: own) | SELECT:PERM(notif: by role)"
+  }
+]

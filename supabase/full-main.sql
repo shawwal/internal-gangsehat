@@ -507,6 +507,7 @@ CREATE TABLE public.patient_visits (
   kehadiran text CHECK (kehadiran = ANY (ARRAY['HADIR'::text, 'TIDAK HADIR'::text])),
   regio text CHECK (regio = ANY (ARRAY['HEAD'::text, 'NECK'::text, 'SHOULDER'::text, 'UPPER ARM'::text, 'ELBOW'::text, 'LOWER ARM'::text, 'WRIST'::text, 'HAND'::text, 'SPINE'::text, 'CHEST'::text, 'UPPER BACK'::text, 'LOWER BACK'::text, 'ABDOMINAL'::text, 'HIP/PELVIC'::text, 'THIGH'::text, 'KNEE'::text, 'CALF'::text, 'ANKLE'::text, 'FOOT'::text, 'CNS'::text, 'PNS'::text, 'SYSTEMIC'::text, 'CARDIOVASCULAR'::text, 'PULMONAL'::text, 'PERFORMANCE'::text])),
   sumber_pasien text,
+  order_id text UNIQUE,
   CONSTRAINT patient_visits_pkey PRIMARY KEY (id),
   CONSTRAINT patient_visits_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
   CONSTRAINT patient_visits_attending_staff_id_fkey FOREIGN KEY (attending_staff_id) REFERENCES public.internal_profiles(id),
@@ -536,6 +537,7 @@ CREATE TABLE public.transactions (
   payment_status text CHECK (payment_status = ANY (ARRAY['LUNAS'::text, 'DP'::text, 'PELUNASAN'::text])),
   penjamin text,
   fisio_id uuid,
+  order_id text,
   CONSTRAINT transactions_pkey PRIMARY KEY (id),
   CONSTRAINT transactions_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
   CONSTRAINT transactions_visit_id_fkey FOREIGN KEY (visit_id) REFERENCES public.patient_visits(id),
@@ -671,7 +673,6 @@ CREATE TABLE public.schedules (
   CONSTRAINT schedules_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.internal_profiles(id),
   CONSTRAINT schedules_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id)
 );
-CREATE UNIQUE INDEX schedules_staff_hari_week_key ON public.schedules USING btree (staff_id, hari, week_group);
 CREATE TABLE public.booking_sessions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   booking_id uuid NOT NULL,
@@ -811,6 +812,9 @@ CREATE TABLE public.patient_packages (
   t9 date,
   t10 date,
   legacy_used_sessions integer NOT NULL DEFAULT 0,
+  order_id text UNIQUE,
+  category text CHECK (category = ANY (ARRAY['PAKET KLINIK'::text, 'PAKET VISIT'::text])),
+  purchased_at date NOT NULL DEFAULT CURRENT_DATE,
   CONSTRAINT patient_packages_pkey PRIMARY KEY (id),
   CONSTRAINT patient_packages_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
   CONSTRAINT patient_packages_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
@@ -873,6 +877,33 @@ CREATE TABLE public.terapi_awal_assessments (
   short_term_goals text,
   long_term_goals text,
   treatment_plan_today text,
+  pain_site text,
+  pain_onset text CHECK (pain_onset = ANY (ARRAY['Sudden'::text, 'Gradual'::text, 'Insidious'::text, 'TidakDiperiksa'::text])),
+  pain_character text CHECK (pain_character = ANY (ARRAY['Sharp'::text, 'Dull'::text, 'Burning'::text, 'Shooting'::text, 'Throbbing'::text, 'Other'::text, 'TidakDiperiksa'::text])),
+  pain_radiation text CHECK (pain_radiation = ANY (ARRAY['None'::text, 'DownArm'::text, 'DownLeg'::text, 'Other'::text, 'TidakDiperiksa'::text])),
+  pain_associated_symptoms ARRAY NOT NULL DEFAULT '{}'::text[],
+  pain_time_course text CHECK (pain_time_course = ANY (ARRAY['Constant'::text, 'Intermittent'::text, 'WorseAM'::text, 'WorsePM'::text, 'NightPain'::text, 'TidakDiperiksa'::text])),
+  pain_severity_vas smallint CHECK (pain_severity_vas >= 0 AND pain_severity_vas <= 10),
+  joint_exam_rows jsonb NOT NULL DEFAULT '[]'::jsonb,
+  dermatomes_status text CHECK (dermatomes_status = ANY (ARRAY['Intact'::text, 'Impaired'::text, 'Absent'::text, 'NotTested'::text])),
+  dermatomes_notes text,
+  myotomes_status text CHECK (myotomes_status = ANY (ARRAY['Intact'::text, 'Impaired'::text, 'NotTested'::text])),
+  myotomes_notes text,
+  reflexes_status text CHECK (reflexes_status = ANY (ARRAY['Normal'::text, 'Hyporeflexive'::text, 'Hyperreflexive'::text, 'Absent'::text, 'NotTested'::text])),
+  reflexes_notes text,
+  riwayat_cedera_pengobatan text,
+  observation_findings ARRAY NOT NULL DEFAULT '{}'::text[],
+  outcome_measure_notes text,
+  diagnosis_primer text,
+  diagnosis_sekunder text,
+  icf_body_functions_notes text,
+  icf_body_functions_severity text,
+  icf_activity_notes text,
+  icf_activity_severity text,
+  icf_participation_notes text,
+  icf_participation_severity text,
+  icf_contextual_notes text,
+  icf_contextual_severity text,
   CONSTRAINT terapi_awal_assessments_pkey PRIMARY KEY (id),
   CONSTRAINT terapi_awal_assessments_visit_id_fkey FOREIGN KEY (visit_id) REFERENCES public.patient_visits(id),
   CONSTRAINT terapi_awal_assessments_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
@@ -902,4 +933,81 @@ CREATE TABLE public.session_notes (
   CONSTRAINT session_notes_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
   CONSTRAINT session_notes_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
   CONSTRAINT session_notes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.internal_profiles(id)
+);
+CREATE TABLE public.shift_patterns (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  branch_id uuid NOT NULL,
+  code text NOT NULL CHECK (code = ANY (ARRAY['X'::text, 'Y'::text])),
+  name text,
+  senin text NOT NULL CHECK (senin = ANY (ARRAY['PAGI'::text, 'SORE'::text, 'OFF'::text])),
+  selasa text NOT NULL CHECK (selasa = ANY (ARRAY['PAGI'::text, 'SORE'::text, 'OFF'::text])),
+  rabu text NOT NULL CHECK (rabu = ANY (ARRAY['PAGI'::text, 'SORE'::text, 'OFF'::text])),
+  kamis text NOT NULL CHECK (kamis = ANY (ARRAY['PAGI'::text, 'SORE'::text, 'OFF'::text])),
+  jumat text NOT NULL CHECK (jumat = ANY (ARRAY['PAGI'::text, 'SORE'::text, 'OFF'::text])),
+  sabtu text NOT NULL CHECK (sabtu = ANY (ARRAY['PAGI'::text, 'SORE'::text, 'OFF'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT shift_patterns_pkey PRIMARY KEY (id),
+  CONSTRAINT shift_patterns_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id)
+);
+CREATE TABLE public.shift_teams (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  branch_id uuid NOT NULL,
+  name text NOT NULL CHECK (name = ANY (ARRAY['A'::text, 'B'::text])),
+  pola_x_id uuid NOT NULL,
+  pola_y_id uuid NOT NULL,
+  anchor_date date NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT shift_teams_pkey PRIMARY KEY (id),
+  CONSTRAINT shift_teams_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT shift_teams_pola_x_id_fkey FOREIGN KEY (pola_x_id) REFERENCES public.shift_patterns(id),
+  CONSTRAINT shift_teams_pola_y_id_fkey FOREIGN KEY (pola_y_id) REFERENCES public.shift_patterns(id)
+);
+CREATE TABLE public.shift_team_members (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  team_id uuid NOT NULL,
+  staff_id uuid NOT NULL,
+  effective_start_date date NOT NULL DEFAULT CURRENT_DATE,
+  effective_end_date date,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT shift_team_members_pkey PRIMARY KEY (id),
+  CONSTRAINT shift_team_members_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.shift_teams(id),
+  CONSTRAINT shift_team_members_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.internal_profiles(id)
+);
+CREATE TABLE public.session_note_settings (
+  id integer NOT NULL DEFAULT 1 CHECK (id = 1),
+  form_mode text NOT NULL DEFAULT 'single_step'::text CHECK (form_mode = ANY (ARRAY['single_step'::text, 'multi_step'::text])),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_by uuid,
+  assessment_form_mode text NOT NULL DEFAULT 'single_step'::text CHECK (assessment_form_mode = ANY (ARRAY['single_step'::text, 'multi_step'::text])),
+  CONSTRAINT session_note_settings_pkey PRIMARY KEY (id),
+  CONSTRAINT session_note_settings_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.internal_profiles(id)
+);
+CREATE TABLE public.resume_links (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  visit_id uuid NOT NULL,
+  branch_id uuid NOT NULL,
+  token text NOT NULL UNIQUE,
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  revoked_at timestamp with time zone,
+  CONSTRAINT resume_links_pkey PRIMARY KEY (id),
+  CONSTRAINT resume_links_visit_id_fkey FOREIGN KEY (visit_id) REFERENCES public.patient_visits(id),
+  CONSTRAINT resume_links_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT resume_links_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.internal_profiles(id)
+);
+CREATE TABLE public.order_sequences (
+  year integer NOT NULL,
+  month integer NOT NULL CHECK (month >= 1 AND month <= 12),
+  last_seq integer NOT NULL DEFAULT 0,
+  CONSTRAINT order_sequences_pkey PRIMARY KEY (year, month)
+);
+CREATE TABLE public.diagnoses (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT diagnoses_pkey PRIMARY KEY (id),
+  CONSTRAINT diagnoses_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.internal_profiles(id)
 );
