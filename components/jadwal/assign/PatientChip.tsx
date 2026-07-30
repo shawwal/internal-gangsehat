@@ -1,6 +1,6 @@
 'use client'
 
-import { X, Package } from 'lucide-react'
+import { X, Package, Settings2 } from 'lucide-react'
 import type { PatientPlain } from '@/app/actions/patients'
 import type { PatientPackage } from '@/types'
 
@@ -9,9 +9,11 @@ interface Props {
   packages: PatientPackage[]
   pkgLoading: boolean
   onClear: () => void
+  canManage?: boolean
+  onManage?: () => void
 }
 
-export function PatientChip({ patient, packages, pkgLoading, onClear }: Props) {
+export function PatientChip({ patient, packages, pkgLoading, onClear, canManage, onManage }: Props) {
   const activePkgs     = packages.filter((p) => p.status === 'active')
   const totalRemaining = activePkgs.reduce((s, p) => s + Math.max(0, p.total_sessions - p.used_sessions), 0)
 
@@ -41,6 +43,16 @@ export function PatientChip({ patient, packages, pkgLoading, onClear }: Props) {
           </p>
         ) : null}
       </div>
+      {canManage && packages.length > 0 && (
+        <button
+          onClick={onManage}
+          className="p-1 rounded-lg hover:bg-white/10 cursor-pointer text-muted-foreground transition-colors"
+          aria-label="Kelola paket"
+          title="Kelola paket"
+        >
+          <Settings2 size={12} />
+        </button>
+      )}
       <button
         onClick={onClear}
         className="p-1 rounded-lg hover:bg-white/10 cursor-pointer text-muted-foreground transition-colors"

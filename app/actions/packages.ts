@@ -42,6 +42,98 @@ export async function fetchPatientPackages(
   }))
 }
 
+// ── Fetch packages with their payment info ──────────────────────────────────────
+// Packages have no FK to transactions. Payment can be linked two ways:
+//  1. order_id — the newer path (createTransactionManual with package_id), where
+//     the transaction shares the package's own order_id.
+//  2. visit_id → patient_visits.package_id — how the vast majority of existing
+//     packages are actually linked: the transaction is tied to the visit that
+//     prompted the sale, and that visit's package_id points back at the package.
+// Both paths are checked and merged — relying on order_id alone misses nearly
+// every historical package sale and would wrongly show them as unpaid.
+export interface PackagePayment {
+  harga: number | null
+  amountPaid: number
+  outstanding: number
+  paymentStatus: 'LUNAS' | 'DP'
+  transactionStatus: 'pending' | 'confirmed'
+}
+
+export type PatientPackageWithPayment = PatientPackage & { payment: PackagePayment | null }
+
+interface PkgTxRow { harga: number; amount: number; discount: number; status: string }
+
+export async function fetchPatientPackagesWithPayment(
+  patientId: string,
+): Promise<PatientPackageWithPayment[]> {
+  const packages = await fetchPatientPackages(patientId)
+  if (packages.length === 0) return []
+
+  const supabase = await createClient()
+  const packageIds = packages.map((p) => p.id)
+  const orderIds   = packages.map((p) => p.order_id).filter((v): v is string => !!v)
+
+  const [orderTxRes, linkedVisitsRes] = await Promise.all([
+    orderIds.length > 0
+      ? supabase.from('transactions')
+          .select('order_id, harga, amount, discount, status')
+          .in('order_id', orderIds)
+          .in('category', ['PAKET KLINIK', 'PAKET VISIT'])
+          .neq('status', 'rejected')
+      : Promise.resolve({ data: [] }),
+    supabase.from('patient_visits').select('id, package_id').in('package_id', packageIds),
+  ])
+
+  const orderToPackage = new Map(packages.filter((p) => p.order_id).map((p) => [p.order_id as string, p.id]))
+  const visitToPackage = new Map(
+    (linkedVisitsRes.data ?? []).filter((v) => v.package_id).map((v) => [v.id, v.package_id as string]),
+  )
+  const visitIds = [...visitToPackage.keys()]
+
+  const visitTxRes = visitIds.length > 0
+    ? await supabase.from('transactions')
+        .select('visit_id, harga, amount, discount, status')
+        .in('visit_id', visitIds)
+        .in('category', ['PAKET KLINIK', 'PAKET VISIT'])
+        .neq('status', 'rejected')
+    : { data: [] }
+
+  const byPackage = new Map<string, PkgTxRow[]>()
+  function addRow(pkgId: string | undefined, row: PkgTxRow) {
+    if (!pkgId) return
+    const list = byPackage.get(pkgId) ?? []
+    list.push(row)
+    byPackage.set(pkgId, list)
+  }
+  for (const t of (orderTxRes.data ?? []) as { order_id: string; harga: number; amount: number; discount: number; status: string }[]) {
+    addRow(orderToPackage.get(t.order_id), t)
+  }
+  for (const t of (visitTxRes.data ?? []) as { visit_id: string; harga: number; amount: number; discount: number; status: string }[]) {
+    addRow(visitToPackage.get(t.visit_id), t)
+  }
+
+  return packages.map((p) => {
+    const rows = byPackage.get(p.id)
+    if (!rows || rows.length === 0) return { ...p, payment: null }
+
+    const harga         = rows[0].harga
+    const amountPaid     = rows.reduce((s, r) => s + (r.amount ?? 0), 0)
+    const discountTotal  = rows.reduce((s, r) => s + (r.discount ?? 0), 0)
+    const outstanding    = Math.max(harga - amountPaid - discountTotal, 0)
+
+    return {
+      ...p,
+      payment: {
+        harga,
+        amountPaid,
+        outstanding,
+        paymentStatus:     outstanding === 0 ? 'LUNAS' : 'DP',
+        transactionStatus: rows.some((r) => r.status === 'pending') ? 'pending' : 'confirmed',
+      },
+    }
+  })
+}
+
 // ── Fetch all visits linked to a specific package ──────────────────────────────
 export async function fetchPackageSessions(
   packageId: string,
@@ -188,16 +280,58 @@ export async function updatePatientPackage(
   return { error: error?.message ?? null }
 }
 
-// ── Soft-delete (cancel) a package ────────────────────────────────────────────
+// ── Delete a package ───────────────────────────────────────────────────────────
+// Hard-deletes when it's safe to do so (no payment recorded, no linked visit
+// sessions) — otherwise falls back to the previous soft-cancel behavior so
+// packages with real history are never destroyed.
+const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
+
 export async function deletePatientPackage(
   id: string,
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; hardDeleted: boolean }> {
   const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi', hardDeleted: false }
+
+  const { data: profile } = await supabase
+    .from('internal_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !PAYMENT_ROLES.includes(profile.role)) {
+    return { error: 'Tidak memiliki akses untuk menghapus paket', hardDeleted: false }
+  }
+
+  const { data: pkg } = await supabase
+    .from('patient_packages')
+    .select('order_id')
+    .eq('id', id)
+    .single()
+
+  let hasPayment = false
+  if (pkg?.order_id) {
+    const { count } = await supabase
+      .from('transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('order_id', pkg.order_id)
+      .neq('status', 'rejected')
+    hasPayment = (count ?? 0) > 0
+  }
+
+  if (!hasPayment) {
+    const { error: delErr } = await supabase.from('patient_packages').delete().eq('id', id)
+    if (!delErr) return { error: null, hardDeleted: true }
+    // 23503 = FK violation — patient_visits.package_id still references this
+    // package (it has recorded sessions); fall through to soft-cancel below.
+    if (delErr.code !== '23503') return { error: delErr.message, hardDeleted: false }
+  }
 
   const { error } = await supabase
     .from('patient_packages')
     .update({ status: 'cancelled', updated_at: new Date().toISOString() })
     .eq('id', id)
 
-  return { error: error?.message ?? null }
+  return { error: error?.message ?? null, hardDeleted: false }
 }

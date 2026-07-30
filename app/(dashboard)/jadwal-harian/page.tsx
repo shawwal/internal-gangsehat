@@ -366,6 +366,7 @@ export default function JadwalHarianPage() {
       {assignTarget && (
         <AssignDialog
           target={assignTarget}
+          canManagePackages={canRecordPayment}
           onClose={() => setAssignTarget(null)}
           onSaved={() => {
             const { staffId, hour } = assignTarget

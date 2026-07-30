@@ -19,16 +19,18 @@ import { VisitFields } from './assign/VisitFields'
 import { PaketTab } from './assign/paket/PaketTab'
 import { PaketPaymentStep } from './assign/paket/PaketPaymentStep'
 import { ExistingPackagePicker } from './assign/paket/ExistingPackagePicker'
+import { ManagePackagesDialog } from './assign/ManagePackagesDialog'
 
 interface Props {
   target: AssignTarget
   onClose: () => void
   onSaved: () => void
+  canManagePackages?: boolean
 }
 
 type DialogView = 'search' | 'details'
 
-export function AssignDialog({ target, onClose, onSaved }: Props) {
+export function AssignDialog({ target, onClose, onSaved, canManagePackages = false }: Props) {
   // ── View ────────────────────────────────────────────────────────────────────
   const [view, setView]                  = useState<DialogView>('search')
 
@@ -73,6 +75,7 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
     jumlahSesi: number
     harga: number
   } | null>(null)
+  const [showManagePackages, setShowManagePackages] = useState(false)
 
   // ── Save state ────────────────────────────────────────────────────────────────
   const [saving, setSaving]              = useState(false)
@@ -129,6 +132,13 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
       setPkgLoading(false)
     })
   }, [selectedPatient])
+
+  async function refreshPackages() {
+    if (!selectedPatient) return
+    const pkgs = await fetchPatientPackages(selectedPatient.id)
+    setPackages(pkgs)
+    setSelectedPkg(pkgs.find((p) => p.status === 'active')?.id ?? null)
+  }
 
   // ── Save from the Paket tab ───────────────────────────────────────────────────
   async function handleSavePaket() {
@@ -358,6 +368,8 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
                   packages={packages}
                   pkgLoading={pkgLoading}
                   onClear={handleClearPatient}
+                  canManage={canManagePackages}
+                  onManage={() => setShowManagePackages(true)}
                 />
 
                 <ModeTabs mode={mode} setMode={setMode} />
@@ -460,6 +472,15 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
           category={selectedLayanan?.kategori.includes('VISIT') ? 'PAKET VISIT' : 'PAKET KLINIK'}
           branchId={target.branchId}
           onDone={handlePaymentDone}
+        />
+      )}
+
+      {showManagePackages && selectedPatient && (
+        <ManagePackagesDialog
+          patientName={selectedPatient.name}
+          packages={packages}
+          onClose={() => setShowManagePackages(false)}
+          onChanged={refreshPackages}
         />
       )}
     </>

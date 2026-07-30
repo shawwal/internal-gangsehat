@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import {
-  ChevronLeft, Plus, Activity, CheckCircle2, Clock, UserX, FileText, User, CreditCard,
+  ChevronLeft, Plus, Activity, CheckCircle2, Clock, UserX, FileText, User, CreditCard, Trash2, Pencil,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchPatient } from '@/app/actions/patients'
@@ -13,8 +13,9 @@ import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel } from '@/lib/excel-export'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
+import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { getVisitFormRoute } from '@/lib/visitRouting'
-import { fetchBranchStaff, type BranchStaffMember } from '@/app/actions/jadwal'
+import { fetchBranchStaff, deleteVisit, updateVisit, type BranchStaffMember } from '@/app/actions/jadwal'
 import type { PaymentVisitInfo } from '@/components/visits/PaymentDialog'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 import type { PatientVisit, VisitStatus, ServiceType, BodyRegion, UserRole } from '@/types'
@@ -73,6 +74,29 @@ const DEFAULT_FORM = {
   treatment:       '',
   status:          'scheduled' as VisitStatus,
   notes:           '',
+}
+
+// Visit-detail fields only — deliberately excludes clinical/session-note
+// fields (regio, chief_complaint, diagnosis, treatment, notes, status),
+// which remain editable exclusively through the Rekam Medis / session-note flow.
+type EditVisitForm = {
+  visit_date:         string
+  attending_staff_id: string
+  service_type:       ServiceType | ''
+  shift:              'PAGI' | 'SORE' | ''
+  kehadiran:          'HADIR' | 'TIDAK HADIR' | ''
+  sumber_pasien:      string
+}
+
+function toEditForm(v: PatientVisit): EditVisitForm {
+  return {
+    visit_date:         v.visit_date,
+    attending_staff_id: v.attending_staff_id ?? '',
+    service_type:       v.service_type ?? '',
+    shift:              (v.shift as EditVisitForm['shift']) ?? '',
+    kehadiran:          (v.kehadiran as EditVisitForm['kehadiran']) ?? '',
+    sumber_pasien:      v.sumber_pasien ?? '',
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -194,7 +218,16 @@ export default function PatientVisitsPage() {
   const [paymentVisit, setPaymentVisit]       = useState<PaymentVisitInfo | null>(null)
   const [packagePrompt, setPackagePrompt]     = useState<(MedicalRecordSavedContext & { visitId: string }) | null>(null)
 
+  const [deleteTarget, setDeleteTarget] = useState<PatientVisit | null>(null)
+  const [deleting, setDeleting]         = useState(false)
+  const [deleteError, setDeleteError]   = useState<string | null>(null)
+
+  const [editTarget, setEditTarget] = useState<PatientVisit | null>(null)
+  const [editForm, setEditForm]     = useState<EditVisitForm | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
+
   const canRecordPayment = !!userRole && ['finance', 'manager', 'director', 'admin'].includes(userRole)
+  const canDeleteVisit   = !!userRole && !['therapist', 'staff'].includes(userRole)
 
   function openVisit(v: PatientVisit) {
     const route = getVisitFormRoute(v.service_type)
@@ -203,6 +236,30 @@ export default function PatientVisitsPage() {
       return
     }
     setSelectedVisitId(v.id)
+  }
+
+  function openEdit(v: PatientVisit) {
+    setEditForm(toEditForm(v))
+    setEditTarget(v)
+  }
+
+  async function handleEditSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editTarget || !editForm) return
+    setEditSaving(true)
+    const { error } = await updateVisit(editTarget.id, {
+      visit_date:         editForm.visit_date,
+      attending_staff_id: editForm.attending_staff_id || null,
+      service_type:       editForm.service_type       || null,
+      shift:              editForm.shift              || null,
+      kehadiran:          editForm.kehadiran           || null,
+      sumber_pasien:      editForm.sumber_pasien       || null,
+    })
+    setEditSaving(false)
+    if (error) { alert(error); return }
+    setEditTarget(null)
+    setEditForm(null)
+    load()
   }
 
   async function loadProfile() {
@@ -272,6 +329,24 @@ export default function PatientVisitsPage() {
     setSaving(false)
     setShowForm(false)
     setForm(DEFAULT_FORM)
+    load()
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError(null)
+    const { error } = await deleteVisit(deleteTarget.id)
+    setDeleting(false)
+    if (error) {
+      setDeleteError(
+        error.includes('foreign key')
+          ? 'Kunjungan ini memiliki data terkait (pembayaran/rekam medis) dan tidak dapat dihapus.'
+          : error
+      )
+      return
+    }
+    setDeleteTarget(null)
     load()
   }
 
@@ -371,7 +446,7 @@ export default function PatientVisitsPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pembayaran</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Nominal Dibayar</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rekam Medis</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -571,13 +646,33 @@ export default function PatientVisitsPage() {
                     </td>
 
                     <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => openVisit(v)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
-                      >
-                        <FileText size={12} />
-                        Buka
-                      </button>
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          onClick={() => openEdit(v)}
+                          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-foreground/70 hover:bg-muted transition-colors"
+                          title="Edit kunjungan (layanan, terapis, tanggal, dll)"
+                        >
+                          <Pencil size={12} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => openVisit(v)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                          title="Rekam medis / catatan sesi"
+                        >
+                          <FileText size={12} />
+                          Rekam Medis
+                        </button>
+                        {canDeleteVisit && (
+                          <button
+                            onClick={() => { setDeleteTarget(v); setDeleteError(null) }}
+                            className="inline-flex items-center px-2 py-1.5 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                            title="Hapus kunjungan"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                   )
@@ -715,6 +810,96 @@ export default function PatientVisitsPage() {
         </div>
       )}
 
+      {/* Edit visit details modal — layanan, terapis, tanggal, shift, kehadiran, sumber pasien.
+          Clinical/session-note fields (regio, keluhan, diagnosis, tindakan, catatan, status)
+          are intentionally not editable here — those live in the Rekam Medis flow below. */}
+      {editTarget && editForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setEditTarget(null); setEditForm(null) }}>
+          <div
+            className="bg-card rounded-2xl border border-border w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+              <h2 className="text-sm font-semibold text-foreground">Edit Kunjungan</h2>
+              <button onClick={() => { setEditTarget(null); setEditForm(null) }} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors text-lg leading-none">×</button>
+            </div>
+
+            <form id="edit-visit-form" onSubmit={handleEditSave} className="flex-1 overflow-y-auto p-5 space-y-3">
+              {branchStaff.length > 0 && (
+                <div>
+                  <label className={labelCls}>Terapis / Staff</label>
+                  <select
+                    value={editForm.attending_staff_id}
+                    onChange={(e) => setEditForm((f) => f && { ...f, attending_staff_id: e.target.value })}
+                    className={inputCls}
+                  >
+                    <option value="">— Belum ditentukan —</option>
+                    {branchStaff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Tanggal</label>
+                  <input required type="date" value={editForm.visit_date}
+                    onChange={(e) => setEditForm((f) => f && { ...f, visit_date: e.target.value })}
+                    className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Shift</label>
+                  <select
+                    value={editForm.shift}
+                    onChange={(e) => setEditForm((f) => f && { ...f, shift: e.target.value as EditVisitForm['shift'] })}
+                    className={inputCls}
+                  >
+                    <option value="">— Pilih —</option>
+                    <option value="PAGI">PAGI</option>
+                    <option value="SORE">SORE</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Layanan</label>
+                  <select value={editForm.service_type} onChange={(e) => setEditForm((f) => f && { ...f, service_type: e.target.value as ServiceType | '' })} className={inputCls}>
+                    <option value="">— Pilih —</option>
+                    {SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Kehadiran</label>
+                  <select value={editForm.kehadiran} onChange={(e) => setEditForm((f) => f && { ...f, kehadiran: e.target.value as EditVisitForm['kehadiran'] })} className={inputCls}>
+                    <option value="">— Pilih —</option>
+                    <option value="HADIR">HADIR</option>
+                    <option value="TIDAK HADIR">TIDAK HADIR</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>Sumber Pasien</label>
+                <input value={editForm.sumber_pasien} onChange={(e) => setEditForm((f) => f && { ...f, sumber_pasien: e.target.value })}
+                  placeholder="mis. Rekomendasi, sosial media"
+                  className={inputCls} />
+              </div>
+            </form>
+
+            <div className="flex gap-2 px-5 py-4 border-t border-border shrink-0">
+              <button type="button" onClick={() => { setEditTarget(null); setEditForm(null) }}
+                className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
+                Batal
+              </button>
+              <button type="submit" form="edit-visit-form" disabled={editSaving}
+                className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
+                {editSaving ? 'Menyimpan...' : 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Medical record modal */}
       <MedicalRecordModal
         visitId={selectedVisitId}
@@ -759,6 +944,22 @@ export default function PatientVisitsPage() {
           sourceServiceType={packagePrompt.service_type}
           onClose={() => setPackagePrompt(null)}
           onSuccess={() => { setPackagePrompt(null); load() }}
+        />
+      )}
+
+      {/* Delete visit confirmation */}
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Hapus Kunjungan"
+          description={
+            deleteError ??
+            `Hapus kunjungan tanggal ${formatDate(deleteTarget.visit_date)}${deleteTarget.service_type ? ` (${deleteTarget.service_type})` : ''}? Tindakan ini tidak dapat dibatalkan.`
+          }
+          confirmLabel="Hapus"
+          danger
+          loading={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => { setDeleteTarget(null); setDeleteError(null) }}
         />
       )}
     </div>

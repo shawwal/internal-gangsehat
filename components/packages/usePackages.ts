@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { fetchPatient } from '@/app/actions/patients'
-import { fetchPatientPackages, deletePatientPackage } from '@/app/actions/packages'
+import { fetchPatientPackagesWithPayment, deletePatientPackage } from '@/app/actions/packages'
 import { createClient } from '@/lib/supabase/client'
-import type { PatientPackage } from './types'
+import type { PatientPackageWithPayment } from '@/app/actions/packages'
 
 export function usePackages(patientId: string) {
-  const [packages, setPackages]     = useState<PatientPackage[]>([])
+  const [packages, setPackages]     = useState<PatientPackageWithPayment[]>([])
   const [patientName, setPatientName] = useState('')
   const [noRm, setNoRm]             = useState('')
   const [branchId, setBranchId]     = useState<string | null>(null)
@@ -28,7 +28,7 @@ export function usePackages(patientId: string) {
   async function load() {
     const [patient, pkgs] = await Promise.all([
       fetchPatient(patientId),
-      fetchPatientPackages(patientId),
+      fetchPatientPackagesWithPayment(patientId),
     ])
     setPatientName(patient?.name ?? '')
     setNoRm(patient?.no_rm ?? '')

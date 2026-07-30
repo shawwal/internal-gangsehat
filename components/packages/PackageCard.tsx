@@ -1,17 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil, Trash2, ChevronDown, ChevronUp, CalendarDays } from 'lucide-react'
+import { Pencil, Trash2, ChevronDown, ChevronUp, CalendarDays, Wallet } from 'lucide-react'
 import { fetchPackageSessions } from '@/app/actions/packages'
+import type { PatientPackageWithPayment } from '@/app/actions/packages'
 import { SessionList } from './SessionList'
 import {
   OP_STATUS_BADGE, STATUS_BADGE, STATUS_LABEL, COMPLETION_BADGE, COMPLETION_LABEL,
 } from './types'
-import { formatDate, sessionBarColor, sessionTextColor } from './helpers'
+import { formatDate, formatCurrency, sessionBarColor, sessionTextColor } from './helpers'
 import type { PatientPackage, PackageSession } from './types'
 
 interface PackageCardProps {
-  pkg:        PatientPackage
+  pkg:        PatientPackageWithPayment
   onEdit:     (pkg: PatientPackage) => void
   onDelete:   (id: string) => void
   onSchedule?: (pkg: PatientPackage) => void
@@ -95,6 +96,33 @@ export function PackageCard({ pkg, onEdit, onDelete, onSchedule }: PackageCardPr
           )}
         </div>
       </div>
+
+      {/* Payment info */}
+      {pkg.payment ? (
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-muted/40 text-xs">
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            <Wallet size={12} />
+            {formatCurrency(pkg.payment.harga ?? 0)}
+            {pkg.payment.transactionStatus === 'pending' && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-[#FFB35C]/15 text-[#FFB35C] border border-[#FFB35C]/25">
+                Menunggu Konfirmasi
+              </span>
+            )}
+          </span>
+          <span className={`font-semibold px-2 py-0.5 rounded-full border ${
+            pkg.payment.paymentStatus === 'LUNAS'
+              ? 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/20'
+              : 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/25'
+          }`}>
+            {pkg.payment.paymentStatus === 'LUNAS' ? 'Lunas' : `Sisa ${formatCurrency(pkg.payment.outstanding)}`}
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-destructive/10 text-xs text-destructive">
+          <Wallet size={12} />
+          Belum ada pembayaran tercatat untuk paket ini
+        </div>
+      )}
 
       {/* Session progress bar */}
       <div className="space-y-1.5">

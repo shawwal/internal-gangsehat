@@ -269,6 +269,8 @@ export async function fetchVisitWithPatient(visitId: string): Promise<VisitWithP
 export async function updateVisit(
   visitId: string,
   data: {
+    visit_date?: string
+    attending_staff_id?: string | null
     service_type?: string | null
     shift?: string | null
     kehadiran?: string | null

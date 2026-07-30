@@ -2,6 +2,12 @@ export function formatDate(d: string) {
   return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+export function formatCurrency(n: number) {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency', currency: 'IDR', minimumFractionDigits: 0,
+  }).format(n)
+}
+
 export function sessionBarColor(remaining: number, total: number): string {
   if (total === 0) return 'bg-muted'
   if (remaining === 0) return 'bg-destructive'
