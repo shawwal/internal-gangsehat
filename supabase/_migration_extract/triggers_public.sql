@@ -1,0 +1,10 @@
+bookings|update_bookings_updated_at|CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON public.bookings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+employee_salaries|employee_salaries_updated_at|CREATE TRIGGER employee_salaries_updated_at BEFORE UPDATE ON public.employee_salaries FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+internal_order_meta|trg_trx_code|CREATE TRIGGER trg_trx_code BEFORE INSERT ON public.internal_order_meta FOR EACH ROW WHEN (((new.kode_transaksi IS NULL) OR ((new.kode_transaksi)::text = ''::text))) EXECUTE FUNCTION generate_trx_code();
+patients|update_patients_updated_at|CREATE TRIGGER update_patients_updated_at BEFORE UPDATE ON public.patients FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+payroll_records|payroll_records_updated_at|CREATE TRIGGER payroll_records_updated_at BEFORE UPDATE ON public.payroll_records FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+profiles|update_profiles_updated_at|CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+salary_settings|salary_settings_updated_at|CREATE TRIGGER salary_settings_updated_at BEFORE UPDATE ON public.salary_settings FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+therapist_ratings|therapist_ratings_update_trigger|CREATE TRIGGER therapist_ratings_update_trigger AFTER INSERT OR UPDATE ON public.therapist_ratings FOR EACH ROW EXECUTE FUNCTION update_therapist_ratings();
+therapists|update_therapists_updated_at|CREATE TRIGGER update_therapists_updated_at BEFORE UPDATE ON public.therapists FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+treatment_logs|update_treatment_logs_updated_at|CREATE TRIGGER update_treatment_logs_updated_at BEFORE UPDATE ON public.treatment_logs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
