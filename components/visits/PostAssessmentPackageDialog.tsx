@@ -103,6 +103,7 @@ export function PostAssessmentPackageDialog({
       visit_id:         visitId,
       patient_id:       patientId,
       package_id:       pkgId,
+      branch_id:        branchId,
     }
 
     const { error: txErr } = await createTransactionManual(txInput)

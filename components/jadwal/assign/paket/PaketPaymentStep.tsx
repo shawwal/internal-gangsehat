@@ -12,6 +12,7 @@ export interface PaketPaymentStepProps {
   jumlahSesi: number
   hargaDefault: number
   category: 'PAKET KLINIK' | 'PAKET VISIT'
+  branchId: string | null
   onDone: () => void
 }
 
@@ -26,6 +27,7 @@ export function PaketPaymentStep({
   jumlahSesi,
   hargaDefault,
   category,
+  branchId,
   onDone,
 }: PaketPaymentStepProps) {
   const [harga, setHarga]   = useState(hargaDefault > 0 ? String(hargaDefault) : '')
@@ -59,6 +61,7 @@ export function PaketPaymentStep({
       visit_id:         null,
       patient_id:       patientId,
       package_id:       packageId,
+      branch_id:        branchId,
     })
 
     setSaving(false)

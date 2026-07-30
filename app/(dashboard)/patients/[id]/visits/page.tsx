@@ -127,6 +127,30 @@ function getPackageSale(visit: PatientVisit): { harga: number; outstanding: numb
   return { harga: txs[0].harga as number, outstanding: txs[0].outstanding }
 }
 
+// Packages sold via the jadwal-harian "Paket" tab have no source visit —
+// they never link a visit_id, so they're fetched separately and merged
+// into the timeline below rather than joined off a patient_visits row.
+interface StandalonePackageTx {
+  id: string
+  category: string | null
+  harga: number | null
+  amount: number
+  outstanding: number
+  payment_status: string | null
+  status: string
+  transaction_date: string
+  description: string | null
+}
+
+function getStandalonePackageBadge(tx: StandalonePackageTx): { label: string; cls: string } {
+  if (tx.outstanding === 0) return { label: 'Lunas', cls: 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/25' }
+  return { label: 'DP / Ada Sisa', cls: 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/25' }
+}
+
+type TimelineEntry =
+  | { kind: 'visit'; date: string; visit: PatientVisit }
+  | { kind: 'package'; date: string; tx: StandalonePackageTx }
+
 // ── Stat card ──────────────────────────────────────────────────────────────────
 function StatCard({ label, value, icon: Icon, color, loading }: {
   label: string; value: number; icon: React.ElementType; color: string; loading?: boolean
@@ -153,6 +177,7 @@ export default function PatientVisitsPage() {
   const router = useRouter()
 
   const [visits, setVisits]           = useState<PatientVisit[]>([])
+  const [standalonePackages, setStandalonePackages] = useState<StandalonePackageTx[]>([])
   const [patientName, setPatientName] = useState('')
   const [noRm, setNoRm]               = useState('')
   const [loading, setLoading]         = useState(true)
@@ -199,17 +224,26 @@ export default function PatientVisitsPage() {
 
   async function load() {
     const supabase = createClient()
-    const [patient, { data: v }] = await Promise.all([
+    const [patient, { data: v }, { data: pkgTx }] = await Promise.all([
       fetchPatient(id),
       supabase
         .from('patient_visits')
         .select('*, internal_profiles!attending_staff_id(id, full_name, nickname), transactions!visit_id(id, category, harga, payment_status, outstanding, status, amount)')
         .eq('patient_id', id)
         .order('visit_date', { ascending: false }),
+      supabase
+        .from('transactions')
+        .select('id, category, harga, amount, outstanding, payment_status, status, transaction_date, description')
+        .eq('patient_id', id)
+        .is('visit_id', null)
+        .in('category', ['PAKET KLINIK', 'PAKET VISIT'])
+        .neq('status', 'rejected')
+        .order('transaction_date', { ascending: false }),
     ])
     setPatientName(patient?.name ?? '')
     setNoRm(patient?.no_rm ?? '')
     setVisits((v ?? []) as unknown as PatientVisit[])
+    setStandalonePackages((pkgTx ?? []) as StandalonePackageTx[])
     setLoading(false)
   }
 
@@ -265,11 +299,17 @@ export default function PatientVisitsPage() {
     return Promise.resolve()
   }
 
-  // Derived stats
+  // Derived stats — visit-specific, unaffected by standalone package purchases
   const total     = visits.length
   const completed = visits.filter((v) => v.status === 'completed').length
   const scheduled = visits.filter((v) => v.status === 'scheduled').length
   const noShow    = visits.filter((v) => v.status === 'no_show' || v.kehadiran === 'TIDAK HADIR').length
+
+  // Merged, date-sorted timeline: visits + standalone package purchases (no source visit)
+  const timeline: TimelineEntry[] = [
+    ...visits.map((v) => ({ kind: 'visit' as const, date: v.visit_date, visit: v })),
+    ...standalonePackages.map((tx) => ({ kind: 'package' as const, date: tx.transaction_date, tx })),
+  ].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 
   const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
   const labelCls = 'block text-xs font-medium text-foreground mb-1'
@@ -345,7 +385,7 @@ export default function PatientVisitsPage() {
                     ))}
                   </tr>
                 ))
-              ) : visits.length === 0 ? (
+              ) : timeline.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
@@ -358,7 +398,47 @@ export default function PatientVisitsPage() {
                   </td>
                 </tr>
               ) : (
-                visits.map((v, i) => (
+                timeline.map((entry, i) => entry.kind === 'package' ? (
+                  <tr key={`pkg-${entry.tx.id}`} className="border-b border-border/50 bg-primary/3">
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{i + 1}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <p className="text-sm font-medium text-foreground">{formatDate(entry.tx.transaction_date)}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs px-2 py-0.5 rounded-full border font-medium bg-primary/10 text-primary border-primary/20">
+                        Pembelian Paket
+                      </span>
+                    </td>
+                    <td className="px-4 py-3"><span className="text-muted-foreground/40 text-xs">—</span></td>
+                    <td className="px-4 py-3"><span className="text-muted-foreground/40 text-xs">—</span></td>
+                    <td className="px-4 py-3 max-w-45">
+                      <p className="text-xs text-foreground/80 truncate">{entry.tx.description ?? '—'}</p>
+                    </td>
+                    <td className="px-4 py-3"><span className="text-muted-foreground/40 text-xs">—</span></td>
+                    <td className="px-4 py-3"><span className="text-muted-foreground/40 text-xs">—</span></td>
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const badge = getStandalonePackageBadge(entry.tx)
+                        return (
+                          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${badge.cls}`}>
+                            {badge.label}
+                          </span>
+                        )
+                      })()}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="text-xs font-medium text-foreground tabular-nums">
+                        {formatCurrency(entry.tx.harga ?? entry.tx.amount)}
+                      </span>
+                      {entry.tx.outstanding > 0 && (
+                        <p className="text-[10px] text-muted-foreground">Sisa {formatCurrency(entry.tx.outstanding)}</p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center"><span className="text-muted-foreground/40 text-xs">—</span></td>
+                  </tr>
+                ) : (() => {
+                  const v = entry.visit
+                  return (
                   <tr
                     key={v.id}
                     onClick={() => openVisit(v)}
@@ -500,7 +580,8 @@ export default function PatientVisitsPage() {
                       </button>
                     </td>
                   </tr>
-                ))
+                  )
+                })())
               )}
             </tbody>
           </table>

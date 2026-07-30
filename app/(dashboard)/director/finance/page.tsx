@@ -236,7 +236,7 @@ export default async function DirectorFinancePage({
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <AddTransactionSheet />
+          <AddTransactionSheet branches={branchList ?? []} />
           <BranchFilter
             branches={branchList ?? []}
             branchId={branchId}

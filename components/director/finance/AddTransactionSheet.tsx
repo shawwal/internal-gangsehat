@@ -29,11 +29,16 @@ const DEFAULT = {
   payment_status:   'LUNAS',
   description:      '',
   transaction_date: new Date().toISOString().split('T')[0],
+  branch_id:        '',
 }
 
 type Status = 'idle' | 'saving' | 'success' | 'error'
 
-export function AddTransactionSheet() {
+export interface AddTransactionSheetProps {
+  branches: { id: string; name: string }[]
+}
+
+export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
   const router = useRouter()
   const [open, setOpen]   = useState(false)
   const [form, setForm]   = useState(DEFAULT)
@@ -78,6 +83,12 @@ export function AddTransactionSheet() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (status === 'saving') return
+    if (!form.branch_id) {
+      setStatus('error')
+      setErrMsg('Pilih cabang terlebih dahulu.')
+      setTimeout(() => setStatus('idle'), 600)
+      return
+    }
     setStatus('saving')
     setErrMsg('')
 
@@ -92,6 +103,7 @@ export function AddTransactionSheet() {
       penjamin:         null,
       description:      form.description || null,
       transaction_date: form.transaction_date,
+      branch_id:        form.branch_id,
     })
 
     if (error) {
@@ -165,6 +177,20 @@ export function AddTransactionSheet() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Branch */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Cabang</label>
+            <select
+              value={form.branch_id}
+              onChange={e => setForm(f => ({ ...f, branch_id: e.target.value }))}
+              required
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">— Pilih cabang —</option>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
           </div>
 
           {/* Date */}

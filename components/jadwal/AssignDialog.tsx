@@ -458,6 +458,7 @@ export function AssignDialog({ target, onClose, onSaved }: Props) {
           jumlahSesi={pendingPayment.jumlahSesi}
           hargaDefault={pendingPayment.harga}
           category={selectedLayanan?.kategori.includes('VISIT') ? 'PAKET VISIT' : 'PAKET KLINIK'}
+          branchId={target.branchId}
           onDone={handlePaymentDone}
         />
       )}

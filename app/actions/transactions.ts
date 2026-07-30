@@ -14,6 +14,7 @@ const SERVICE_TO_CATEGORY: Record<string, string> = {
 }
 
 const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
+const PACKAGE_CATEGORIES = new Set(['PAKET KLINIK', 'PAKET VISIT'])
 
 function formatRp(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
@@ -241,6 +242,7 @@ export interface CreateTransactionManualInput {
   visit_id?: string | null
   patient_id?: string | null
   package_id?: string | null
+  branch_id?: string | null
 }
 
 export async function createTransactionManual(
@@ -260,7 +262,9 @@ export async function createTransactionManual(
   if (!profile || !PAYMENT_ROLES.includes(profile.role)) {
     return { error: 'Tidak memiliki akses untuk mencatat transaksi' }
   }
-  if (!profile.branch_id) {
+
+  const branchId = input.branch_id ?? profile.branch_id
+  if (!branchId) {
     return { error: 'Akun Anda belum terhubung ke cabang. Hubungi direktur.' }
   }
 
@@ -283,8 +287,10 @@ export async function createTransactionManual(
     orderId = visit?.order_id ?? null
   }
 
+  const autoConfirm = input.type === 'income' && PACKAGE_CATEGORIES.has(input.category)
+
   const { error } = await supabase.from('transactions').insert({
-    branch_id:        profile.branch_id,
+    branch_id:        branchId,
     recorded_by:      user.id,
     type:             input.type,
     category:         input.category,
@@ -299,6 +305,8 @@ export async function createTransactionManual(
     transaction_date: input.transaction_date,
     visit_id:         input.visit_id ?? null,
     patient_id:       input.patient_id ?? null,
+    status:           autoConfirm ? 'confirmed' : 'pending',
+    confirmed_by:     autoConfirm ? user.id : null,
     updated_at:       new Date().toISOString(),
   })
 

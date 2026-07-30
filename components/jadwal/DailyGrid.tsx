@@ -26,6 +26,13 @@ function displayName(entry: DayStaffEntry) {
   return entry.nickname || entry.full_name
 }
 
+// A staff member can have 2+ visits scheduled in the same hour (double-booking).
+// A single VisitCard needs ~64px; these estimate how tall a stacked cell needs to
+// be so later hour rows don't start on top of an earlier row's overflow.
+const CARD_UNIT_H  = 64  // px, estimated height of one stacked VisitCard
+const CARD_GAP     = 4   // px, matches the cell's `gap-1`
+const CELL_PADDING = 8   // px, matches the cell's `p-1` (top + bottom)
+
 // ── Staff avatar ───────────────────────────────────────────────────────────────
 function StaffAvatar({ entry }: { entry: DayStaffEntry }) {
   const [imgError, setImgError] = useState(false)
@@ -127,7 +134,25 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
   const HOURS_VISIBLE  = Array.from({ length: effectiveEnd - effectiveStart }, (_, i) => effectiveStart + i)
     .filter(h => !SKIP_HOURS.has(h))
     .filter(h => shiftFilter === 'all' ? true : shiftFilter === 'pagi' ? h < soreDividerHour : h >= soreDividerHour)
-  const totalH         = HOURS_VISIBLE.length * SLOT_H
+
+  // Row height per hour is normally SLOT_H, but grows for hours where any staff
+  // column has 2+ stacked visits, so rows never overlap the next hour's cell.
+  const maxStackByHour = new Map<number, number>()
+  for (const hourMap of visitMap.values()) {
+    for (const [h, list] of hourMap) {
+      if (list.length > (maxStackByHour.get(h) ?? 0)) maxStackByHour.set(h, list.length)
+    }
+  }
+  const rowHeights = HOURS_VISIBLE.map((h) => {
+    const stack = maxStackByHour.get(h) ?? 0
+    return stack <= 1 ? SLOT_H : Math.max(SLOT_H, stack * CARD_UNIT_H + (stack - 1) * CARD_GAP + CELL_PADDING)
+  })
+  const rowOffsets: number[] = []
+  {
+    let acc = 0
+    for (const rh of rowHeights) { rowOffsets.push(acc); acc += rh }
+  }
+  const totalH = rowOffsets.length ? rowOffsets[rowOffsets.length - 1] + rowHeights[rowHeights.length - 1] : 0
 
   // Convert an hour (possibly fractional) to a pixel offset within the visible grid
   function hourToPx(h: number): number {
@@ -135,11 +160,11 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
     const frac   = h - floorH
     if (SKIP_HOURS.has(floorH)) {
       const nextIdx = HOURS_VISIBLE.findIndex(vh => vh > floorH)
-      return (nextIdx === -1 ? HOURS_VISIBLE.length : nextIdx) * SLOT_H
+      return nextIdx === -1 ? totalH : rowOffsets[nextIdx]
     }
     const idx = HOURS_VISIBLE.indexOf(floorH)
     if (idx === -1) return floorH < (HOURS_VISIBLE[0] ?? 0) ? 0 : totalH
-    return idx * SLOT_H + frac * SLOT_H
+    return rowOffsets[idx] + frac * rowHeights[idx]
   }
 
   // Current time line
@@ -294,7 +319,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
               <div
                 key={h}
                 className="absolute w-full flex items-center justify-end pr-3"
-                style={{ top: i * SLOT_H, height: SLOT_H }}
+                style={{ top: rowOffsets[i], height: rowHeights[i] }}
               >
                 <span className="text-[17px] text-muted-foreground/60 font-mono">
                   {fmtHour(h)}
@@ -313,7 +338,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
               <div
                 className="absolute inset-x-0 bottom-0 pointer-events-none"
                 style={{
-                  top: (HOURS_VISIBLE.indexOf(soreDividerHour)) * SLOT_H,
+                  top: rowOffsets[HOURS_VISIBLE.indexOf(soreDividerHour)],
                   background: 'linear-gradient(180deg, rgba(255,179,92,0.04) 0%, rgba(255,0,144,0.03) 100%)',
                 }}
               />
@@ -323,7 +348,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                 <div
                   key={h}
                   className="absolute inset-x-0 pointer-events-none"
-                  style={{ top: i * SLOT_H }}
+                  style={{ top: rowOffsets[i] }}
                 >
                   {/* Thick gradient divider line */}
                   <div
@@ -352,7 +377,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                 <div
                   key={h}
                   className="absolute inset-x-0 border-t border-border/40"
-                  style={{ top: i * SLOT_H }}
+                  style={{ top: rowOffsets[i] }}
                 />
               )
             ))}
@@ -423,7 +448,14 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                     <div
                       key={h}
                       className="absolute inset-x-0 flex flex-col gap-1 p-1 group"
-                      style={{ top: i * SLOT_H, height: SLOT_H }}
+                      style={{
+                        top: rowOffsets[i],
+                        height: rowHeights[i],
+                        // Busy cells (2+ stacked visits) may still slightly exceed the
+                        // estimated row height — keep them above the next hour's cell
+                        // so an overflowing card's clicks aren't swallowed by it.
+                        zIndex: cellVisits.length > 1 ? 2 : 1,
+                      }}
                     >
                       {/* Hover tooltip — only on empty in-shift cells so it doesn't overlap visit cards */}
                       {isInShift && !s.isOnLeave && cellVisits.length === 0 && (
