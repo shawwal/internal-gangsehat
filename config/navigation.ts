@@ -251,6 +251,16 @@ export const navigation: NavItem[] = [
     group: 'schedule',
   },
 
+  // Daily schedule — flat table view (list) of the same day's visits
+  {
+    key: 'jadwal-harian-list',
+    label: 'List Jadwal',
+    href: '/jadwal-harian/list',
+    icon: 'Table',
+    roles: ['director', 'hr', 'manager', 'therapist', 'staff', 'admin'],
+    group: 'schedule',
+  },
+
   // My Schedule — every role can manage their own schedule
   {
     key: 'my-schedule',

@@ -13,6 +13,7 @@ import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel } from '@/lib/excel-export'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
+import { EditPackageTransactionDialog } from '@/components/visits/EditPackageTransactionDialog'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { getVisitFormRoute } from '@/lib/visitRouting'
 import { fetchBranchStaff, deleteVisit, updateVisit, type BranchStaffMember } from '@/app/actions/jadwal'
@@ -158,9 +159,12 @@ interface StandalonePackageTx {
   id: string
   category: string | null
   harga: number | null
+  discount: number | null
   amount: number
   outstanding: number
+  payment_method: string | null
   payment_status: string | null
+  penjamin: string | null
   status: string
   transaction_date: string
   description: string | null
@@ -226,6 +230,8 @@ export default function PatientVisitsPage() {
   const [editForm, setEditForm]     = useState<EditVisitForm | null>(null)
   const [editSaving, setEditSaving] = useState(false)
 
+  const [editPackageTx, setEditPackageTx] = useState<StandalonePackageTx | null>(null)
+
   const canRecordPayment = !!userRole && ['finance', 'manager', 'director', 'admin'].includes(userRole)
   const canDeleteVisit   = !!userRole && !['therapist', 'staff'].includes(userRole)
 
@@ -290,7 +296,7 @@ export default function PatientVisitsPage() {
         .order('visit_date', { ascending: false }),
       supabase
         .from('transactions')
-        .select('id, category, harga, amount, outstanding, payment_status, status, transaction_date, description')
+        .select('id, category, harga, discount, amount, outstanding, payment_method, payment_status, penjamin, status, transaction_date, description')
         .eq('patient_id', id)
         .is('visit_id', null)
         .in('category', ['PAKET KLINIK', 'PAKET VISIT'])
@@ -480,7 +486,7 @@ export default function PatientVisitsPage() {
                       <p className="text-sm font-medium text-foreground">{formatDate(entry.tx.transaction_date)}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs px-2 py-0.5 rounded-full border font-medium bg-primary/10 text-primary border-primary/20">
+                      <span className="inline-block whitespace-nowrap text-xs px-2 py-0.5 rounded-full border font-medium bg-primary/10 text-primary border-primary/20">
                         Pembelian Paket
                       </span>
                     </td>
@@ -495,21 +501,41 @@ export default function PatientVisitsPage() {
                       {(() => {
                         const badge = getStandalonePackageBadge(entry.tx)
                         return (
-                          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${badge.cls}`}>
+                          <span className={`inline-block whitespace-nowrap text-xs px-2 py-0.5 rounded-full border font-medium ${badge.cls}`}>
                             {badge.label}
                           </span>
                         )
                       })()}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs font-medium text-foreground tabular-nums">
-                        {formatCurrency(entry.tx.harga ?? entry.tx.amount)}
-                      </span>
-                      {entry.tx.outstanding > 0 && (
-                        <p className="text-[10px] text-muted-foreground">Sisa {formatCurrency(entry.tx.outstanding)}</p>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-semibold text-[#34C759] tabular-nums">
+                          Dibayar {formatCurrency(entry.tx.amount)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
+                          Total {formatCurrency(entry.tx.harga ?? entry.tx.amount)}
+                        </span>
+                        {entry.tx.outstanding > 0 && (
+                          <span className="text-[10px] font-medium text-[#FFB35C] tabular-nums">
+                            Sisa {formatCurrency(entry.tx.outstanding)}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {canRecordPayment ? (
+                        <button
+                          onClick={() => setEditPackageTx(entry.tx)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                          title="Edit pembayaran paket"
+                        >
+                          <Pencil size={12} />
+                          Edit
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground/40 text-xs">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center"><span className="text-muted-foreground/40 text-xs">—</span></td>
                   </tr>
                 ) : (() => {
                   const v = entry.visit
@@ -944,6 +970,15 @@ export default function PatientVisitsPage() {
           sourceServiceType={packagePrompt.service_type}
           onClose={() => setPackagePrompt(null)}
           onSuccess={() => { setPackagePrompt(null); load() }}
+        />
+      )}
+
+      {/* Edit standalone package transaction */}
+      {editPackageTx && (
+        <EditPackageTransactionDialog
+          transaction={editPackageTx}
+          onClose={() => setEditPackageTx(null)}
+          onSuccess={() => { setEditPackageTx(null); load() }}
         />
       )}
 
