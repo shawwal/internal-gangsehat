@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useToast } from '@/context/ToastContext'
-import { ChevronLeft, Loader2, AlertTriangle, Printer, Download, Share2 } from 'lucide-react'
+import { ChevronLeft, Loader2, AlertTriangle, FileDown, Download, Share2 } from 'lucide-react'
 import { fetchVisitWithPatient } from '@/app/actions/jadwal'
 import { fetchAssessment, saveAssessmentDraft, completeAssessment } from '@/app/actions/assessments'
 import { getOrCreateResumeLink } from '@/app/actions/resumeLinks'
@@ -52,6 +52,7 @@ export default function TerapiAwalAssessmentPage() {
   const [showPackagePrompt, setShowPackagePrompt] = useState(false)
   const [sharing, setSharing]       = useState(false)
   const [downloadingResume, setDownloadingResume] = useState(false)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [formMode, setFormMode]     = useState<FormMode | null>(null)
   const [userRole, setUserRole]     = useState<UserRole | null>(null)
 
@@ -146,9 +147,16 @@ export default function TerapiAwalAssessmentPage() {
     setCurrentStep(step)
   }
 
-  function handlePrint() {
+  async function handleDownloadPdf() {
     if (!visit || !completedAssessment) return
-    generateAssessmentPdf(visit, completedAssessment)
+    setDownloadingPdf(true)
+    try {
+      await generateAssessmentPdf(visit, completedAssessment)
+    } catch {
+      showToast('Gagal membuat PDF asesmen', 'error')
+    } finally {
+      setDownloadingPdf(false)
+    }
   }
 
   async function handleDownloadResume() {
@@ -238,11 +246,13 @@ export default function TerapiAwalAssessmentPage() {
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <button
               type="button"
-              onClick={handlePrint}
-              title="Cetak PDF klinis"
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors"
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              title="Unduh PDF asesmen klinis"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-60"
             >
-              <Printer size={13} /> <span className="hidden sm:inline">Cetak PDF</span>
+              {downloadingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+              <span className="hidden sm:inline">Download PDF</span>
             </button>
             <button
               type="button"

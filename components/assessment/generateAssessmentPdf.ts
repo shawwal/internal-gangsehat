@@ -1,6 +1,6 @@
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { TerapiAwalAssessment } from '@/types'
-import { openPdfWindow, pdfField } from '@/lib/pdfPrintStyles'
+import { downloadPdf, pdfField } from '@/lib/pdfPrintStyles'
 import {
   RED_FLAG_LABEL, PAIN_ONSET_LABEL, PAIN_CHARACTER_LABEL, PAIN_RADIATION_LABEL,
   PAIN_ASSOCIATED_SYMPTOM_LABEL, PAIN_TIME_COURSE_LABEL,
@@ -9,7 +9,7 @@ import {
   OBSERVATION_FINDING_LABEL, ICF_SEVERITY_LABEL,
 } from './types'
 
-export function generateAssessmentPdf(visit: VisitWithPatient, assessment: TerapiAwalAssessment) {
+export async function generateAssessmentPdf(visit: VisitWithPatient, assessment: TerapiAwalAssessment) {
   const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
   const visitDate = new Date(visit.visit_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
   const redFlags = assessment.red_flags?.length
@@ -141,11 +141,8 @@ export function generateAssessmentPdf(visit: VisitWithPatient, assessment: Terap
       Dokumen ini digenerate otomatis pada ${today} &middot; Sistem Internal Gang Sehat
     </div>
   </div>
-</div>
-
-<div class="btn-wrap">
-  <button class="print-btn" onclick="window.print()">Cetak / Simpan PDF</button>
 </div>`
 
-  openPdfWindow(`Asesmen Terapi Awal — ${visit.patient_name} — ${visitDate}`, body)
+  const filename = `Asesmen-${visit.patient_name}-${visit.visit_date}.pdf`.replace(/[^a-zA-Z0-9-_.]+/g, '_')
+  await downloadPdf(`Asesmen Terapi Awal — ${visit.patient_name} — ${visitDate}`, body, filename)
 }

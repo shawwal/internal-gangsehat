@@ -2,6 +2,8 @@
 // Follows the same window.open + document.write + window.print() pattern as
 // components/salary/generateInvoice.ts. Kept as a plain string (not a CSS module)
 // since window.document.write() needs a fully self-contained HTML document.
+import { downloadHtmlAsPdf } from '@/lib/downloadHtmlAsPdf'
+
 export const PDF_SHEET_STYLES = `
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -145,8 +147,8 @@ export function pdfField(label: string, html: string | null): string {
     </div>`
 }
 
-export function openPdfWindow(title: string, bodyHtml: string) {
-  const html = `<!DOCTYPE html>
+function buildPdfHtml(title: string, bodyHtml: string): string {
+  return `<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
@@ -158,10 +160,22 @@ export function openPdfWindow(title: string, bodyHtml: string) {
 ${bodyHtml}
 </body>
 </html>`
+}
 
+export function openPdfWindow(title: string, bodyHtml: string) {
+  const html = buildPdfHtml(title, bodyHtml)
   const win = window.open('', '_blank', 'width=820,height=960')
   if (win) {
     win.document.write(html)
     win.document.close()
   }
+}
+
+// Real one-click "Download PDF" — builds the same clinical-record markup as
+// openPdfWindow() but converts it straight to a downloadable .pdf file via
+// downloadHtmlAsPdf() instead of opening a popup and waiting on a manual
+// "Cetak / Simpan PDF" click + the OS print dialog.
+export async function downloadPdf(title: string, bodyHtml: string, filename: string) {
+  const html = buildPdfHtml(title, bodyHtml)
+  await downloadHtmlAsPdf(html, filename)
 }
