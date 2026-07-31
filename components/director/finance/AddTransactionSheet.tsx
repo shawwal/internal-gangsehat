@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { Plus, X, Check, AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createTransactionManual } from '@/app/actions/transactions'
+import { todayJakartaISO } from '@/lib/utils'
 
 const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA']
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
@@ -19,17 +20,19 @@ function parseRp(s: string): number {
   return Number(s.replace(/\D/g, '')) || 0
 }
 
-const DEFAULT = {
-  type:             'expense' as 'income' | 'expense',
-  category:         EXPENSE_CATEGORIES[0],
-  harga:            '',
-  amount:           '',
-  discount:         '',
-  payment_method:   'TUNAI',
-  payment_status:   'LUNAS',
-  description:      '',
-  transaction_date: new Date().toISOString().split('T')[0],
-  branch_id:        '',
+function getDefault() {
+  return {
+    type:             'expense' as 'income' | 'expense',
+    category:         EXPENSE_CATEGORIES[0],
+    harga:            '',
+    amount:           '',
+    discount:         '',
+    payment_method:   'TUNAI',
+    payment_status:   'LUNAS',
+    description:      '',
+    transaction_date: todayJakartaISO(),
+    branch_id:        '',
+  }
 }
 
 type Status = 'idle' | 'saving' | 'success' | 'error'
@@ -41,7 +44,7 @@ export interface AddTransactionSheetProps {
 export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
   const router = useRouter()
   const [open, setOpen]   = useState(false)
-  const [form, setForm]   = useState(DEFAULT)
+  const [form, setForm]   = useState(getDefault)
   const [status, setStatus] = useState<Status>('idle')
   const [errMsg, setErrMsg] = useState('')
   const [mounted, setMounted] = useState(false)
@@ -77,7 +80,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
   function close() {
     if (status === 'saving') return
     setOpen(false)
-    setTimeout(() => { setForm(DEFAULT); setStatus('idle'); setErrMsg('') }, 300)
+    setTimeout(() => { setForm(getDefault()); setStatus('idle'); setErrMsg('') }, 300)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -390,7 +393,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
     <>
       {/* Trigger button */}
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { setForm(f => ({ ...f, transaction_date: todayJakartaISO() })); setOpen(true) }}
         className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
       >
         <Plus size={16} />

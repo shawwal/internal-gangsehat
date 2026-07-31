@@ -15,6 +15,17 @@ export interface CategoryTotal {
   total: number
 }
 
+export interface ClosingTransactionItem {
+  id: string
+  type: 'income' | 'expense'
+  category: string
+  amount: number
+  payment_method: string | null
+  status: string
+  description: string | null
+  created_at: string
+}
+
 export interface ClosingFinancialRecap {
   incomeByMethod: PaymentMethodTotal[]
   incomeByCategory: CategoryTotal[]
@@ -22,6 +33,7 @@ export interface ClosingFinancialRecap {
   totalIncome: number
   totalExpense: number
   cashToday: number
+  transactions: ClosingTransactionItem[]
 }
 
 export async function fetchClosingFinancialRecap(
@@ -32,10 +44,11 @@ export async function fetchClosingFinancialRecap(
 
   const { data } = await supabase
     .from('transactions')
-    .select('type, category, payment_method, amount')
+    .select('id, type, category, payment_method, amount, status, description, created_at')
     .eq('branch_id', branchId)
     .eq('transaction_date', date)
     .neq('status', 'rejected')
+    .order('created_at', { ascending: false })
 
   const rows = data ?? []
 
@@ -83,6 +96,16 @@ export async function fetchClosingFinancialRecap(
     totalIncome,
     totalExpense,
     cashToday: cashIncome - cashExpense,
+    transactions: rows.map((r) => ({
+      id: r.id,
+      type: r.type as 'income' | 'expense',
+      category: r.category ?? 'LAINNYA',
+      amount: Number(r.amount ?? 0),
+      payment_method: r.payment_method,
+      status: r.status,
+      description: r.description,
+      created_at: r.created_at,
+    })),
   }
 }
 

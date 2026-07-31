@@ -22,6 +22,14 @@ export function formatDate(date: string | Date): string {
   }).format(d)
 }
 
+// Clinics operate in Asia/Jakarta — compute "today" in that timezone explicitly
+// (not local machine time) so entries made late night/early morning WIB don't
+// get silently saved under the wrong calendar day when toISOString() would
+// shift across the UTC day boundary.
+export function todayJakartaISO(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date())
+}
+
 export function formatWaNumber(phone: string): string {
   const clean = phone.replace(/\D/g, '')
   if (clean.startsWith('0')) return '62' + clean.slice(1)

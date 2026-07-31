@@ -7,6 +7,7 @@ import type { Transaction, TransactionType, TransactionStatus, PaymentMethod, Pa
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { createTransactionManual } from '@/app/actions/transactions'
+import { todayJakartaISO } from '@/lib/utils'
 
 const TYPE_LABELS: Record<TransactionType, string>    = { income: 'Pemasukan', expense: 'Pengeluaran' }
 const STATUS_BADGE: Record<TransactionStatus, string> = {
@@ -50,24 +51,26 @@ const EXPENSE_CATEGORIES = [
 const PAYMENT_METHODS: PaymentMethod[]         = ['TUNAI', 'TRANSFER BCA', 'EDC BCA']
 const PAYMENT_STATUSES: PaymentDetailStatus[]  = ['LUNAS', 'DP', 'PELUNASAN']
 
-const DEFAULT_FORM = {
-  type:             'income' as TransactionType,
-  category:         INCOME_CATEGORIES[0],
-  harga:            '',
-  amount:           '',
-  discount:         '',
-  payment_method:   'TUNAI' as PaymentMethod,
-  payment_status:   'LUNAS' as PaymentDetailStatus,
-  penjamin:         '',
-  description:      '',
-  transaction_date: new Date().toISOString().split('T')[0],
+function getDefaultForm() {
+  return {
+    type:             'income' as TransactionType,
+    category:         INCOME_CATEGORIES[0],
+    harga:            '',
+    amount:           '',
+    discount:         '',
+    payment_method:   'TUNAI' as PaymentMethod,
+    payment_status:   'LUNAS' as PaymentDetailStatus,
+    penjamin:         '',
+    description:      '',
+    transaction_date: todayJakartaISO(),
+  }
 }
 
 export default function TransactionsPage() {
   const [rows, setRows]         = useState<Transaction[]>([])
   const [loading, setLoading]   = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm]         = useState(DEFAULT_FORM)
+  const [form, setForm]         = useState(getDefaultForm)
   const [saving, setSaving]     = useState(false)
   const [rejectId, setRejectId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
@@ -125,7 +128,7 @@ export default function TransactionsPage() {
     setSaving(false)
     if (error) { alert(error); return }
     setShowForm(false)
-    setForm(DEFAULT_FORM)
+    setForm(getDefaultForm())
     load()
   }
 
@@ -146,7 +149,7 @@ export default function TransactionsPage() {
     load()
   }
 
-  const canConfirm = userRole === 'finance' || userRole === 'director'
+  const canConfirm = userRole === 'finance' || userRole === 'director' || userRole === 'admin' || userRole === 'manager'
 
   const TRANSACTION_COLS: ExportColumn<Transaction>[] = [
     { header: 'Tanggal',      value: (r) => r.transaction_date },
@@ -179,7 +182,7 @@ export default function TransactionsPage() {
         <div className="flex items-center gap-2">
           <ExportButton onExport={handleExportTransactions} disabled={rows.length === 0} />
           <button
-            onClick={() => { setForm(DEFAULT_FORM); setShowForm(true) }}
+            onClick={() => { setForm(getDefaultForm()); setShowForm(true) }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
           >
             <Plus size={16} /> Tambah

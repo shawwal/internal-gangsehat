@@ -23,6 +23,15 @@ const STATUS_LABEL: Record<string, string> = {
   no_show: 'Tidak Hadir',
 }
 
+const TX_STATUS_BADGE: Record<string, string> = {
+  pending: 'bg-secondary/20 text-secondary-foreground',
+  confirmed: 'bg-[#34C759]/15 text-[#34C759]',
+}
+const TX_STATUS_LABEL: Record<string, string> = {
+  pending: 'Menunggu Konfirmasi',
+  confirmed: 'Dikonfirmasi',
+}
+
 export default function ClosingAdminPage() {
   const [role, setRole] = useState<Role>(null)
   const canPickBranch = role === 'director'
@@ -183,6 +192,31 @@ export default function ClosingAdminPage() {
                     <div key={c.category} className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">{c.category} ({c.count})</span>
                       <span className="font-medium text-destructive">{formatCurrency(c.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {financial && financial.transactions.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-foreground mb-2">Detail Transaksi</p>
+                <div className="space-y-1.5">
+                  {financial.transactions.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-muted/30 text-xs">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium text-foreground">{t.category}</span>
+                          {t.payment_method && <span className="text-muted-foreground">· {t.payment_method}</span>}
+                          <span className={`px-1.5 py-0.5 rounded-full font-semibold ${TX_STATUS_BADGE[t.status] ?? 'bg-muted text-muted-foreground'}`}>
+                            {TX_STATUS_LABEL[t.status] ?? t.status}
+                          </span>
+                        </div>
+                        {t.description && <p className="text-muted-foreground/80 truncate mt-0.5">{t.description}</p>}
+                      </div>
+                      <span className={`shrink-0 font-semibold ${t.type === 'income' ? 'text-[#34C759]' : 'text-destructive'}`}>
+                        {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                      </span>
                     </div>
                   ))}
                 </div>
