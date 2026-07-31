@@ -259,6 +259,109 @@ export async function fetchMedicalRecordStats(
   return { complete, incomplete }
 }
 
+// ── Per-therapist completion rollup (team scope only) ───────────────────────────
+export interface TherapistRecordStat {
+  staff_id: string
+  name: string
+  avatar_url: string | null
+  branch_id: string | null
+  branch_name: string
+  total: number
+  complete: number
+  incomplete: number
+  completionRate: number      // 0-100, rounded
+  oldestIncompleteDate: string | null
+}
+
+export async function fetchTherapistRecordStats(params: {
+  period: RecordPeriod
+  branchId?: string  // 'all' or uuid — honored only for director
+}): Promise<{ rows: TherapistRecordStat[]; isDirector: boolean }> {
+  const supabase = await createClient()
+  const viewer = await resolveViewer(supabase)
+  if (!viewer || viewer.scope !== 'team') return { rows: [], isDirector: false }
+
+  const isDirector = viewer.role === 'director'
+
+  let query = supabase
+    .from('patient_visits')
+    .select('attending_staff_id, branch_id, diagnosis, treatment, regio, service_type, visit_date')
+    .eq('status', 'completed')
+    .not('attending_staff_id', 'is', null)
+
+  if (isDirector && params.branchId && params.branchId !== 'all') {
+    query = query.eq('branch_id', params.branchId)
+  }
+  const startDate = periodStartDate(params.period)
+  if (startDate) query = query.gte('visit_date', startDate)
+
+  const { data, error } = await query
+  if (error || !data) return { rows: [], isDirector }
+
+  interface Agg {
+    staff_id: string
+    branch_id: string | null
+    total: number
+    complete: number
+    incomplete: number
+    oldestIncompleteDate: string | null
+  }
+  const aggMap = new Map<string, Agg>()
+  for (const v of data as { attending_staff_id: string; branch_id: string | null; diagnosis: string | null; treatment: string | null; regio: string | null; service_type: string | null; visit_date: string }[]) {
+    const sid = v.attending_staff_id
+    let agg = aggMap.get(sid)
+    if (!agg) {
+      agg = { staff_id: sid, branch_id: v.branch_id, total: 0, complete: 0, incomplete: 0, oldestIncompleteDate: null }
+      aggMap.set(sid, agg)
+    }
+    agg.total++
+    const isComplete = !!(v.diagnosis && v.treatment && (!isRegioRequired(v.service_type) || v.regio))
+    if (isComplete) {
+      agg.complete++
+    } else {
+      agg.incomplete++
+      if (!agg.oldestIncompleteDate || v.visit_date < agg.oldestIncompleteDate) {
+        agg.oldestIncompleteDate = v.visit_date
+      }
+    }
+  }
+
+  const staffIds = [...aggMap.keys()]
+  if (staffIds.length === 0) return { rows: [], isDirector }
+
+  const [{ data: staffRows }, { data: branchRows }] = await Promise.all([
+    supabase
+      .from('internal_profiles')
+      .select('id, full_name, nickname, avatar_url')
+      .in('id', staffIds),
+    supabase.from('branches').select('id, name'),
+  ])
+
+  const nameMap = new Map<string, { name: string; avatar_url: string | null }>()
+  for (const s of staffRows ?? []) {
+    nameMap.set(s.id, { name: s.nickname?.trim() || s.full_name, avatar_url: s.avatar_url ?? null })
+  }
+  const branchNameMap = new Map<string, string>()
+  for (const b of branchRows ?? []) branchNameMap.set(b.id, b.name)
+
+  const rows: TherapistRecordStat[] = [...aggMap.values()].map((agg) => ({
+    staff_id:             agg.staff_id,
+    name:                 nameMap.get(agg.staff_id)?.name ?? '—',
+    avatar_url:           nameMap.get(agg.staff_id)?.avatar_url ?? null,
+    branch_id:            agg.branch_id,
+    branch_name:          agg.branch_id ? (branchNameMap.get(agg.branch_id) ?? '') : '',
+    total:                agg.total,
+    complete:             agg.complete,
+    incomplete:           agg.incomplete,
+    completionRate:       agg.total > 0 ? Math.round((agg.complete / agg.total) * 100) : 100,
+    oldestIncompleteDate: agg.oldestIncompleteDate,
+  }))
+
+  rows.sort((a, b) => a.completionRate - b.completionRate || b.incomplete - a.incomplete)
+
+  return { rows, isDirector }
+}
+
 // ── Filter dropdown options (team scope only) ───────────────────────────────────
 export async function fetchRecordFilterOptions(): Promise<RecordFilterOptions> {
   const supabase = await createClient()

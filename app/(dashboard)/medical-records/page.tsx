@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { BellRing } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import {
@@ -19,8 +20,19 @@ const EMPTY_OPTIONS: RecordFilterOptions = { scope: 'own', isDirector: false, br
 
 export default function MedicalRecordsPage() {
   const { showToast } = useToast()
+  const searchParams = useSearchParams()
 
-  const [filters, setFilters] = useState<RecordFiltersState>(DEFAULT_RECORD_FILTERS)
+  const [filters, setFilters] = useState<RecordFiltersState>(() => {
+    const staffId = searchParams.get('staffId')
+    const completeness = searchParams.get('completeness')
+    return {
+      ...DEFAULT_RECORD_FILTERS,
+      ...(staffId ? { staffId } : {}),
+      ...(completeness === 'complete' || completeness === 'incomplete' || completeness === 'all'
+        ? { completeness }
+        : {}),
+    }
+  })
   const [page, setPage]       = useState(1)
 
   const [rows, setRows]       = useState<MedicalRecordRow[]>([])

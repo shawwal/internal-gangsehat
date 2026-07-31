@@ -387,6 +387,14 @@ export const navigation: NavItem[] = [
     group: 'clinic',
   },
   {
+    key: 'record-completion',
+    label: 'Kelengkapan Rekam Medis',
+    href: '/record-completion',
+    icon: 'AlertTriangle',
+    roles: ['director', 'manager'],
+    group: 'clinic',
+  },
+  {
     key: 'patient-analytics',
     label: 'Analitik Pasien',
     href: '/director/patients',
