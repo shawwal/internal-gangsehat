@@ -13,8 +13,12 @@ import {
   type ClosingFinancialRecap,
   type ClosingVisitRecap,
 } from '@/app/actions/closing'
+import { updateTransaction } from '@/app/actions/transactions'
 
 type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'admin' | null
+
+const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA']
+const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
 
 const STATUS_LABEL: Record<string, string> = {
   scheduled: 'Terjadwal',
@@ -35,6 +39,8 @@ const TX_STATUS_LABEL: Record<string, string> = {
 export default function ClosingAdminPage() {
   const [role, setRole] = useState<Role>(null)
   const canPickBranch = role === 'director'
+  const canEditCategory = role === 'director' || role === 'admin'
+  const [savingTxId, setSavingTxId] = useState<string | null>(null)
 
   const [branchList, setBranchList] = useState<BranchOption[]>([])
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
@@ -88,6 +94,16 @@ export default function ClosingAdminPage() {
   }, [selectedBranchId, date])
 
   useEffect(() => { load() }, [load])
+
+  async function handleCategoryChange(txId: string, type: 'income' | 'expense', category: string) {
+    setSavingTxId(txId)
+    setFinancial((prev) => prev
+      ? { ...prev, transactions: prev.transactions.map((t) => (t.id === txId ? { ...t, category } : t)) }
+      : prev)
+    const { error } = await updateTransaction(txId, { category })
+    setSavingTxId(null)
+    if (error) load()
+  }
 
   function handleBranchChange(id: string) {
     setSelectedBranchId(id)
@@ -206,7 +222,20 @@ export default function ClosingAdminPage() {
                     <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-muted/30 text-xs">
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-medium text-foreground">{t.category}</span>
+                          {canEditCategory ? (
+                            <select
+                              value={t.category}
+                              disabled={savingTxId === t.id}
+                              onChange={(e) => handleCategoryChange(t.id, t.type, e.target.value)}
+                              className="font-medium text-foreground bg-transparent border border-border rounded-lg px-1.5 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                            >
+                              {(t.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((c) => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="font-medium text-foreground">{t.category}</span>
+                          )}
                           {t.payment_method && <span className="text-muted-foreground">· {t.payment_method}</span>}
                           <span className={`px-1.5 py-0.5 rounded-full font-semibold ${TX_STATUS_BADGE[t.status] ?? 'bg-muted text-muted-foreground'}`}>
                             {TX_STATUS_LABEL[t.status] ?? t.status}
