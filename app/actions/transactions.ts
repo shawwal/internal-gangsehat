@@ -317,3 +317,26 @@ export async function createTransactionManual(
   }
   return { error: null }
 }
+
+// ── Delete a transaction ──────────────────────────────────────────────────────
+
+export async function deleteTransaction(id: string): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+
+  const { data: profile } = await supabase
+    .from('internal_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !PAYMENT_ROLES.includes(profile.role)) {
+    return { error: 'Tidak memiliki akses' }
+  }
+
+  const { error } = await supabase.from('transactions').delete().eq('id', id)
+
+  return { error: error?.message ?? null }
+}
