@@ -306,6 +306,56 @@ export async function detachVisitFromPackage(
   return { error: error?.message ?? null }
 }
 
+// ── Attach a visit to an existing package ──────────────────────────────────────
+// The reverse of detachVisitFromPackage — for a visit that was booked without a
+// package (or where the wrong package was picked) but should draw from one of
+// the patient's existing packages instead of being billed on its own.
+export async function attachVisitToPackage(
+  visitId: string,
+  packageId: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+
+  const { data: profile } = await supabase
+    .from('internal_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !PACKAGE_DETACH_ROLES.includes(profile.role)) {
+    return { error: 'Tidak memiliki akses untuk mengubah paket kunjungan' }
+  }
+
+  const { data: visit, error: visitErr } = await supabase
+    .from('patient_visits')
+    .select('patient_id, service_type')
+    .eq('id', visitId)
+    .single()
+  if (visitErr || !visit) return { error: 'Kunjungan tidak ditemukan' }
+
+  if (NO_PACKAGE_SERVICE_TYPES.has(visit.service_type ?? '')) {
+    return { error: 'Kunjungan Terapi Awal tidak bisa menggunakan paket' }
+  }
+
+  const { data: pkg, error: pkgErr } = await supabase
+    .from('patient_packages')
+    .select('patient_id')
+    .eq('id', packageId)
+    .single()
+  if (pkgErr || !pkg) return { error: 'Paket tidak ditemukan' }
+  if (pkg.patient_id !== visit.patient_id) {
+    return { error: 'Paket ini bukan milik pasien pada kunjungan ini' }
+  }
+
+  const { error } = await supabase
+    .from('patient_visits')
+    .update({ package_id: packageId, updated_at: new Date().toISOString() })
+    .eq('id', visitId)
+  return { error: error?.message ?? null }
+}
+
 // ── Update visit clinical fields ───────────────────────────────────────────────
 export async function updateVisit(
   visitId: string,

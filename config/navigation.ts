@@ -189,6 +189,14 @@ export const navigation: NavItem[] = [
     group: 'finance',
   },
   {
+    key: 'finance-outstanding',
+    label: 'Piutang / DP',
+    href: '/finance/outstanding',
+    icon: 'AlertCircle',
+    roles: ['finance', 'admin', 'manager', 'director'],
+    group: 'finance',
+  },
+  {
     key: 'closing-admin',
     label: 'Closing Admin',
     href: '/closing',

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink } from 'lucide-react'
+import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink, Link2 } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
@@ -37,9 +37,10 @@ interface Props {
   isRefreshing?: boolean
   onSellPackage?: (id: string) => void
   onDetachPackage?: (id: string) => void
+  onAttachPackage?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage, onDetachPackage }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -72,6 +73,11 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   // assumed covered by the package) — this lets staff correct that when the
   // link was a mistake, or the patient wants to pay for this session on its own.
   const showDetachPackageItem = canRecordPayment && !!visit.package_id
+
+  // Mirror of the above: a visit that wasn't booked against a package can be
+  // retroactively linked to one of the patient's existing packages. TA visits
+  // are excluded — they must always be billed on their own (never via a package).
+  const showAttachPackageItem = canRecordPayment && !visit.package_id && !isAssessmentVisit
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
@@ -284,6 +290,20 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
                 >
                   <Unlink size={13} />
                   Lepas dari Paket
+                </button>
+              </>
+            )}
+
+            {showAttachPackageItem && (
+              <>
+                <hr className="border-white/10 my-1.5" />
+                <button
+                  onClick={() => { onAttachPackage?.(visit.id); setMenuOpen(false) }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                  role="menuitem"
+                >
+                  <Link2 size={13} />
+                  Gunakan Paket
                 </button>
               </>
             )}

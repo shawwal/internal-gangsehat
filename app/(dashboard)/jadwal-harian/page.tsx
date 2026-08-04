@@ -21,6 +21,7 @@ import { FocusModeBar } from '@/components/jadwal/FocusModeBar'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { DetachPackageDialog } from '@/components/jadwal/DetachPackageDialog'
+import { AttachPackageDialog } from '@/components/jadwal/AttachPackageDialog'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders } from '@/app/actions/jadwal'
 import { fetchReminderTemplate } from '@/app/actions/reminder-template'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
@@ -54,6 +55,7 @@ export default function JadwalHarianPage() {
   const [selectedStaffId, setSelectedStaffId]       = useState<string | null>(null)
   const [paymentVisit, setPaymentVisit]             = useState<DailyVisit | null>(null)
   const [detachVisit, setDetachVisit]               = useState<DailyVisit | null>(null)
+  const [attachVisit, setAttachVisit]               = useState<DailyVisit | null>(null)
   const [packagePrompt, setPackagePrompt]           = useState<
     (MedicalRecordSavedContext & { patientName: string; branchId: string | null; visitId: string }) | null
   >(null)
@@ -131,6 +133,10 @@ export default function JadwalHarianPage() {
 
   function handleDetachPackage(visitId: string) {
     setDetachVisit(visits.find((v) => v.id === visitId) ?? null)
+  }
+
+  function handleAttachPackage(visitId: string) {
+    setAttachVisit(visits.find((v) => v.id === visitId) ?? null)
   }
 
   // Incomplete visits: completed but missing diagnosis/treatment/(regio, when required) and has a therapist
@@ -361,6 +367,7 @@ export default function JadwalHarianPage() {
                 refreshingCell={refreshingCell}
                 onSellPackage={handleSellPackage}
                 onDetachPackage={handleDetachPackage}
+                onAttachPackage={handleAttachPackage}
               />
             )}
           </div>
@@ -463,6 +470,17 @@ export default function JadwalHarianPage() {
               // the right service_type immediately, without waiting on the reload below.
               setPaymentVisit({ ...visit, package_id: null, service_type: newServiceType })
             }
+            silentReload({ type: 'visit', visitId })
+          }}
+        />
+      )}
+
+      {attachVisit && (
+        <AttachPackageDialog
+          visit={attachVisit}
+          onClose={() => setAttachVisit(null)}
+          onAttached={(visitId) => {
+            setAttachVisit(null)
             silentReload({ type: 'visit', visitId })
           }}
         />

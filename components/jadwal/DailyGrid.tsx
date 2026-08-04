@@ -94,10 +94,11 @@ interface Props {
   refreshingCell?: RefreshingCell | null
   onSellPackage?: (visitId: string) => void
   onDetachPackage?: (visitId: string) => void
+  onAttachPackage?: (visitId: string) => void
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, refreshingCell, onSellPackage, onDetachPackage }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage }: Props) {
   // Current time (used later for time line after range is known)
   const now   = new Date()
   const today = now.toISOString().split('T')[0]
@@ -301,6 +302,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                       isRefreshing={refreshingCell?.type === 'visit' && refreshingCell.visitId === v.id}
                       onSellPackage={onSellPackage}
                       onDetachPackage={onDetachPackage}
+                      onAttachPackage={onAttachPackage}
                     />
                   ))}
                 </div>
@@ -497,6 +499,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                           isRefreshing={refreshingCell?.type === 'visit' && refreshingCell.visitId === v.id}
                           onSellPackage={onSellPackage}
                           onDetachPackage={onDetachPackage}
+                          onAttachPackage={onAttachPackage}
                         />
                       ))}
 
