@@ -20,6 +20,7 @@ import { ControlsBar } from '@/components/jadwal/ControlsBar'
 import { FocusModeBar } from '@/components/jadwal/FocusModeBar'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
+import { DetachPackageDialog } from '@/components/jadwal/DetachPackageDialog'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders } from '@/app/actions/jadwal'
 import { fetchReminderTemplate } from '@/app/actions/reminder-template'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
@@ -52,6 +53,7 @@ export default function JadwalHarianPage() {
   const [selectedVisitShift, setSelectedVisitShift] = useState<string | null>(null)
   const [selectedStaffId, setSelectedStaffId]       = useState<string | null>(null)
   const [paymentVisit, setPaymentVisit]             = useState<DailyVisit | null>(null)
+  const [detachVisit, setDetachVisit]               = useState<DailyVisit | null>(null)
   const [packagePrompt, setPackagePrompt]           = useState<
     (MedicalRecordSavedContext & { patientName: string; branchId: string | null; visitId: string }) | null
   >(null)
@@ -125,6 +127,10 @@ export default function JadwalHarianPage() {
 
   function handleOpenPayment(visitId: string) {
     setPaymentVisit(visits.find((v) => v.id === visitId) ?? null)
+  }
+
+  function handleDetachPackage(visitId: string) {
+    setDetachVisit(visits.find((v) => v.id === visitId) ?? null)
   }
 
   // Incomplete visits: completed but missing diagnosis/treatment/(regio, when required) and has a therapist
@@ -354,6 +360,7 @@ export default function JadwalHarianPage() {
                 onWhatsApp={handleWhatsAppReminder}
                 refreshingCell={refreshingCell}
                 onSellPackage={handleSellPackage}
+                onDetachPackage={handleDetachPackage}
               />
             )}
           </div>
@@ -439,6 +446,23 @@ export default function JadwalHarianPage() {
           onSuccess={() => {
             const visitId = paymentVisit.id
             setPaymentVisit(null)
+            silentReload({ type: 'visit', visitId })
+          }}
+        />
+      )}
+
+      {detachVisit && (
+        <DetachPackageDialog
+          visit={detachVisit}
+          onClose={() => setDetachVisit(null)}
+          onDetached={(visitId, newServiceType) => {
+            setDetachVisit(null)
+            const visit = visits.find((v) => v.id === visitId)
+            if (visit?.status === 'completed') {
+              // Chain straight into payment — optimistic copy so PaymentDialog gets
+              // the right service_type immediately, without waiting on the reload below.
+              setPaymentVisit({ ...visit, package_id: null, service_type: newServiceType })
+            }
             silentReload({ type: 'visit', visitId })
           }}
         />

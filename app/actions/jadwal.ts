@@ -265,6 +265,39 @@ export async function fetchVisitWithPatient(visitId: string): Promise<VisitWithP
   }
 }
 
+// ── Detach a visit from its package ────────────────────────────────────────────
+// Reclassifies a package-linked visit as a standalone billable session — used
+// when a visit was mistakenly scheduled against a package, or the patient
+// chooses to pay for this one session separately instead of drawing it from
+// the package. Clearing package_id also updates patient_packages_with_stats'
+// remaining_sessions count for the source package (it counts by package_id).
+const PACKAGE_DETACH_ROLES = ['finance', 'manager', 'director', 'admin']
+
+export async function detachVisitFromPackage(
+  visitId: string,
+  serviceType: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+
+  const { data: profile } = await supabase
+    .from('internal_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !PACKAGE_DETACH_ROLES.includes(profile.role)) {
+    return { error: 'Tidak memiliki akses untuk mengubah paket kunjungan' }
+  }
+
+  const { error } = await supabase
+    .from('patient_visits')
+    .update({ package_id: null, service_type: serviceType, updated_at: new Date().toISOString() })
+    .eq('id', visitId)
+  return { error: error?.message ?? null }
+}
+
 // ── Update visit clinical fields ───────────────────────────────────────────────
 export async function updateVisit(
   visitId: string,

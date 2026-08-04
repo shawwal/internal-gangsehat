@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText } from 'lucide-react'
+import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
@@ -36,9 +36,10 @@ interface Props {
   onWhatsApp?: (id: string) => void
   isRefreshing?: boolean
   onSellPackage?: (id: string) => void
+  onDetachPackage?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage, onDetachPackage }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -66,6 +67,11 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   // assessment is the one case that must be paid for first, before upselling a package.
   const showSellPackageItem = canRecordPayment && visit.status === 'completed'
     && (isAssessmentVisit ? (visit.has_payment && visit.visit_payment_status === 'LUNAS') : true)
+
+  // A visit linked to a package hides the normal payment item (its cost is
+  // assumed covered by the package) — this lets staff correct that when the
+  // link was a mistake, or the patient wants to pay for this session on its own.
+  const showDetachPackageItem = canRecordPayment && !!visit.package_id
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
@@ -264,6 +270,20 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
                     : <CreditCard size={13} />
                   }
                   {visit.has_payment ? 'Tambah Pembayaran' : 'Catat Pembayaran'}
+                </button>
+              </>
+            )}
+
+            {showDetachPackageItem && (
+              <>
+                <hr className="border-white/10 my-1.5" />
+                <button
+                  onClick={() => { onDetachPackage?.(visit.id); setMenuOpen(false) }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-[#FFB35C] hover:bg-[#FFB35C]/10 transition-colors cursor-pointer"
+                  role="menuitem"
+                >
+                  <Unlink size={13} />
+                  Lepas dari Paket
                 </button>
               </>
             )}
