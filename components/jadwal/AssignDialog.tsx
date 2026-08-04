@@ -263,7 +263,11 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
       chief_complaint:    chiefComplaint.trim() || null,
       status,
       notes:              notes.trim() || null,
-      package_id:         selectedPkgId ?? null,
+      // Only 'single' mode renders the package picker (ExistingPackagePicker) —
+      // selectedPkgId is auto-populated as soon as a patient is chosen (for that
+      // picker's default), so other modes must not inherit it silently. A TA
+      // (initial assessment) visit in particular must always bill on its own.
+      package_id:         mode === 'single' ? (selectedPkgId ?? null) : null,
     }
 
     if (mode === 'terapi_awal' || mode === 'single') {

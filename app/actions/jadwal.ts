@@ -35,6 +35,14 @@ export interface DailyVisit {
 
 const PACKAGE_CATEGORIES = new Set(['PAKET VISIT', 'PAKET KLINIK'])
 
+// TA (initial assessment) visits must always be billed on their own — never
+// drawn from an existing package — regardless of what the client sends.
+const NO_PACKAGE_SERVICE_TYPES = new Set(['TERAPI AWAL', 'TA VISIT'])
+function resolvePackageId(serviceType: string | null | undefined, packageId: string | null | undefined) {
+  if (NO_PACKAGE_SERVICE_TYPES.has(serviceType ?? '')) return null
+  return packageId ?? null
+}
+
 export interface CreateVisitInput {
   patient_id: string
   branch_id: string
@@ -164,7 +172,7 @@ export async function createVisit(input: CreateVisitInput): Promise<{ error: str
     chief_complaint:     input.chief_complaint ?? null,
     status:              input.status,
     notes:               input.notes ?? null,
-    package_id:          input.package_id ?? null,
+    package_id:          resolvePackageId(input.service_type, input.package_id),
     order_id:            orderId,
     updated_at:          new Date().toISOString(),
   })
@@ -366,7 +374,7 @@ export async function createBulkVisits(
       chief_complaint:     input.chief_complaint ?? null,
       status:              input.status,
       notes:               input.notes ?? null,
-      package_id:          input.package_id ?? null,
+      package_id:          resolvePackageId(input.service_type, input.package_id),
       order_id:            orderId,
       updated_at:          new Date().toISOString(),
     })
