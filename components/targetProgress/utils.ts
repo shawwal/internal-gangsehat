@@ -1,4 +1,4 @@
-import { TA_TYPES, SESI_TYPES, isHadir } from '@/components/performance/utils'
+import { TA_TYPES, SESI_TYPES, isAttended } from '@/components/performance/utils'
 import type { DailyCounts, VisitForProgress, PackageForProgress } from './types'
 
 export {
@@ -28,9 +28,11 @@ export function buildDailyCounts(visits: VisitForProgress[], days: number): Dail
     if ((TA_TYPES as readonly string[]).includes(v.service_type ?? '')) {
       daily.ta[day - 1] += 1
     }
-    if (isHadir(v)) {
+    if (isAttended(v)) {
       daily.kunjungan[day - 1] += 1
-      if ((SESI_TYPES as readonly string[]).includes(v.service_type ?? '')) {
+      // Sessions used from an existing package are labeled "Paket" on jadwal-harian
+      // (VisitCard.tsx) — exclude them here so they aren't double-counted as Sesi.
+      if ((SESI_TYPES as readonly string[]).includes(v.service_type ?? '') && !v.package_id) {
         daily.sesi[day - 1] += 1
       }
     }

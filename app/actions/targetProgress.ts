@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
-import { VISIT_STATUS_FILTER, isHadir } from '@/components/performance/utils'
+import { VISIT_STATUS_FILTER, isAttended } from '@/components/performance/utils'
 import type { CategoryKey } from '@/components/targetProgress/types'
 
 const TA_TYPES = ['TERAPI AWAL', 'TA VISIT']
@@ -25,6 +25,7 @@ interface VisitRow {
   visit_time: string | null
   service_type: string | null
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
+  package_id: string | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   internal_profiles: any
 }
@@ -86,7 +87,7 @@ export async function fetchTargetProgressDetail(
   let query = supabase
     .from('patient_visits')
     .select(
-      'id, patient_id, visit_date, visit_time, service_type, kehadiran, ' +
+      'id, patient_id, visit_date, visit_time, service_type, kehadiran, package_id, ' +
       'internal_profiles!attending_staff_id(full_name)',
     )
     .eq('branch_id', branchId)
@@ -100,8 +101,15 @@ export async function fetchTargetProgressDetail(
   if (error || !data) return []
 
   // TA counts every registered visit (booked, not just attended); Kunjungan
-  // stays attendance-only.
-  const rows = (data as unknown as VisitRow[]).filter((v) => category === 'ta' || isHadir(v))
+  // stays attendance-only. Sesi excludes visits that are sessions used from an
+  // existing package (package_id set) — those are "Paket" on jadwal-harian,
+  // not a standalone Sesi sale.
+  const rows = (data as unknown as VisitRow[]).filter((v) => {
+    if (category === 'ta') return true
+    if (!isAttended(v)) return false
+    if (category === 'sesi' && v.package_id) return false
+    return true
+  })
 
   rows.sort((a, b) => (a.visit_time ?? '').localeCompare(b.visit_time ?? ''))
 

@@ -96,9 +96,9 @@ export function formatDateShort(dateStr: string): string {
   })
 }
 
-// Matches the legacy dashboard's attendance convention: past visits with no
-// kehadiran recorded are assumed attended (staff often forgets to mark it
-// after the fact), but a visit dated today or later must be explicitly
+// Attendance convention used across performance/target dashboards: past visits
+// with no kehadiran recorded are assumed attended (staff often forgets to mark
+// it after the fact), but a visit dated today or later must be explicitly
 // confirmed HADIR — otherwise a freshly scheduled jadwal harian entry would
 // count before it's actually happened.
 export function isAttended(
@@ -108,14 +108,6 @@ export function isAttended(
   if (v.kehadiran === 'HADIR') return true
   if (v.kehadiran == null && v.visit_date < todayISO) return true
   return false
-}
-
-// Strict attendance: counts only visits explicitly marked HADIR on
-// jadwal-harian — no "assumed attended" fallback for past unmarked visits.
-// Used by target-progress, where every category (TA/Paket/Kunjungan) must
-// reflect actual recorded attendance, not an estimate.
-export function isHadir(v: { kehadiran?: 'HADIR' | 'TIDAK HADIR' | null }): boolean {
-  return v.kehadiran === 'HADIR'
 }
 
 // Paket Klinik / Paket Visit are counted once per package — on the date of

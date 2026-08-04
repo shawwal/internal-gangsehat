@@ -95,7 +95,7 @@ export default function TargetProgressPage() {
         .maybeSingle(),
       supabase
         .from('patient_visits')
-        .select('id, visit_date, service_type, kehadiran')
+        .select('id, visit_date, service_type, kehadiran, package_id')
         .eq('branch_id', selectedBranchId)
         .gte('visit_date', range.start)
         .lte('visit_date', range.end)
