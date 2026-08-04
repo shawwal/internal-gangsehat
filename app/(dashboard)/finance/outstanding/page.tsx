@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { OutstandingBranchFilter } from '@/components/finance/OutstandingBranchFilter'
 import { SearchInput } from '@/components/director/finance/SearchInput'
-import { EditTransactionSheet, type TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
+import { OutstandingRow } from '@/components/finance/OutstandingRow'
+import type { TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
 import { AlertCircle, Wallet, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { Suspense } from 'react'
@@ -11,16 +12,17 @@ export const dynamic = 'force-dynamic'
 
 const PAGE_SIZE = 10
 
+const STATUS_TABS = [
+  { value: '',          label: 'Belum Lunas' },
+  { value: 'DP',         label: 'DP' },
+  { value: 'PELUNASAN',  label: 'Pelunasan' },
+  { value: 'LUNAS',      label: 'Lunas' },
+] as const
+
 function formatRp(n: number) {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
   }).format(n)
-}
-
-const PAY_STATUS_BADGE: Record<string, string> = {
-  DP:        'bg-yellow-500/15 text-yellow-400',
-  PELUNASAN: 'bg-primary/15 text-primary',
-  LUNAS:     'bg-green-500/15 text-green-400',
 }
 
 function buildUrl(base: Record<string, string>, overrides: Record<string, string | undefined>) {
@@ -35,10 +37,11 @@ function buildUrl(base: Record<string, string>, overrides: Record<string, string
 export default async function OutstandingPaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branch?: string; page?: string; q?: string }>
+  searchParams: Promise<{ branch?: string; page?: string; q?: string; status?: string }>
 }) {
   const params = await searchParams
   const q      = params.q?.trim() ?? ''
+  const status = params.status === 'DP' || params.status === 'PELUNASAN' || params.status === 'LUNAS' ? params.status : ''
   const page   = Math.max(1, Number(params.page) || 1)
   const from   = (page - 1) * PAGE_SIZE
   const to     = from + PAGE_SIZE - 1
@@ -57,6 +60,7 @@ export default async function OutstandingPaymentsPage({
   const baseParams: Record<string, string> = {}
   if (branchId) baseParams.branch = branchId
   if (q)        baseParams.q      = q
+  if (status)   baseParams.status = status
 
   // ── Search: resolve patient IDs matching name_normalized ──────────────────
   let searchPatientIds: string[] = []
@@ -92,15 +96,25 @@ export default async function OutstandingPaymentsPage({
       let q2 = supabase
         .from('transactions')
         .select(
-          'id, branch_id, patient_id, category, harga, discount, amount, outstanding, payment_method, payment_status, transaction_date, description, penjamin, branches!branch_id(name)',
+          'id, branch_id, patient_id, visit_id, category, harga, discount, amount, outstanding, payment_method, payment_status, transaction_date, description, penjamin, branches!branch_id(name)',
           { count: 'exact' },
         )
         .eq('type', 'income')
         .neq('status', 'rejected')
-        .gt('outstanding', 0)
         .order('transaction_date', { ascending: true })
         .order('id', { ascending: true })
         .range(from, to)
+
+      // "Belum Lunas" (default) covers DP + Pelunasan via outstanding > 0.
+      // "Lunas" breaks out of that framing on purpose — a paid-off row has
+      // outstanding = 0, so it must drop the outstanding filter entirely.
+      if (status === 'LUNAS') {
+        q2 = q2.eq('payment_status', 'LUNAS')
+      } else if (status === 'DP' || status === 'PELUNASAN') {
+        q2 = q2.eq('payment_status', status).gt('outstanding', 0)
+      } else {
+        q2 = q2.gt('outstanding', 0)
+      }
 
       if (branchId) q2 = q2.eq('branch_id', branchId)
 
@@ -139,10 +153,25 @@ export default async function OutstandingPaymentsPage({
     }
   }
 
+  // ── Batch-fetch which visit each transaction came from ─────────────────────
+  const visitIds = [...new Set((txnRows ?? []).map((r) => r.visit_id).filter(Boolean))]
+  const visitLabelMap = new Map<string, string>()
+  if (visitIds.length > 0) {
+    const { data: visitRows } = await supabase
+      .from('patient_visits')
+      .select('id, visit_date, service_type')
+      .in('id', visitIds)
+    for (const v of visitRows ?? []) {
+      const dateLabel = new Date(v.visit_date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+      visitLabelMap.set(v.id, `${dateLabel} · ${v.service_type ?? '—'}`)
+    }
+  }
+
   const txns = (txnRows ?? []).map((r) => ({
     ...r,
     patient_name: r.patient_id ? (nameMap.get(r.patient_id) ?? 'Pasien') : null,
     branch_name:  ((r.branches as unknown as { name: string } | null))?.name ?? '—',
+    visitLabel:   r.visit_id ? (visitLabelMap.get(r.visit_id) ?? null) : null,
   }))
 
   const totalPages = Math.max(1, Math.ceil((txnTotal ?? 0) / PAGE_SIZE))
@@ -184,11 +213,25 @@ export default async function OutstandingPaymentsPage({
       {/* List */}
       <div className="glass-card overflow-hidden">
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-foreground">Belum Lunas</h2>
+          <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs text-muted-foreground">
               {txnTotal ?? 0}{q ? ` untuk "${q}"` : ''}
             </span>
+            <div className="flex items-center gap-1 p-0.5 rounded-xl bg-white/5 border border-white/10">
+              {STATUS_TABS.map((tab) => (
+                <Link
+                  key={tab.value || 'all'}
+                  href={buildUrl(baseParams, { status: tab.value || undefined, page: undefined })}
+                  className={`px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all ${
+                    status === tab.value
+                      ? 'bg-primary text-white shadow'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </div>
           </div>
           <Suspense>
             <SearchInput defaultValue={q} />
@@ -199,7 +242,7 @@ export default async function OutstandingPaymentsPage({
           <div className="flex flex-col items-center justify-center py-14 gap-2">
             <AlertCircle size={28} className="text-muted-foreground/40" />
             <p className="text-sm text-muted-foreground">
-              {q ? `Tidak ada hasil untuk "${q}"` : 'Tidak ada piutang saat ini'}
+              {q ? `Tidak ada hasil untuk "${q}"` : 'Tidak ada data untuk filter ini'}
             </p>
             {q && (
               <Link href={buildUrl(baseParams, { q: undefined, page: undefined })} className="text-xs text-primary hover:underline mt-1">
@@ -219,11 +262,12 @@ export default async function OutstandingPaymentsPage({
                     {!branchId && (
                       <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cabang</th>
                     )}
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kunjungan</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Harga</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dibayar</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sisa</th>
                     <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
-                    <th className="px-3 py-3 w-8" />
+                    <th className="px-3 py-3" />
                   </tr>
                 </thead>
                 <tbody>
@@ -244,33 +288,12 @@ export default async function OutstandingPaymentsPage({
                       patient_name:     tx.patient_name,
                     }
                     return (
-                      <tr key={tx.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
-                        <td className="px-5 py-3 text-xs font-mono text-muted-foreground whitespace-nowrap">
-                          {new Date(tx.transaction_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-foreground/90">
-                          {tx.patient_name ?? <span className="text-muted-foreground/40">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-xs font-medium text-foreground">{tx.category}</td>
-                        {!branchId && (
-                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{tx.branch_name}</td>
-                        )}
-                        <td className="px-4 py-3 text-right font-mono text-xs text-foreground">{formatRp(Number(tx.harga ?? 0))}</td>
-                        <td className="px-4 py-3 text-right font-mono text-xs text-[#34C759]">{formatRp(Number(tx.amount ?? 0))}</td>
-                        <td className="px-4 py-3 text-right font-mono text-xs font-semibold text-[#FFB35C]">{formatRp(Number(tx.outstanding ?? 0))}</td>
-                        <td className="px-4 py-3 text-center">
-                          {tx.payment_status ? (
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${PAY_STATUS_BADGE[tx.payment_status] ?? 'text-muted-foreground'}`}>
-                              {tx.payment_status}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/40 text-xs">—</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-3 text-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <EditTransactionSheet transaction={editTx} />
-                        </td>
-                      </tr>
+                      <OutstandingRow
+                        key={tx.id}
+                        tx={tx}
+                        showBranchColumn={!branchId}
+                        editTx={editTx}
+                      />
                     )
                   })}
                 </tbody>
