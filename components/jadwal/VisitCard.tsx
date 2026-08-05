@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink, Link2 } from 'lucide-react'
+import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink, Link2, UserCheck } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
@@ -38,9 +38,10 @@ interface Props {
   onSellPackage?: (id: string) => void
   onDetachPackage?: (id: string) => void
   onAttachPackage?: (id: string) => void
+  onMarkPresent?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -78,6 +79,11 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   // retroactively linked to one of the patient's existing packages. TA visits
   // are excluded — they must always be billed on their own (never via a package).
   const showAttachPackageItem = canRecordPayment && !visit.package_id && !isAssessmentVisit
+
+  // Front-desk check-in — the only place kehadiran can be set before a therapist
+  // opens the SOAP/assessment form (those forms only default it on save). This
+  // is the prerequisite for the RM Lock gate in the form pages themselves.
+  const showMarkPresentItem = canManageVisit && visit.kehadiran !== 'HADIR' && !!onMarkPresent
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
@@ -262,6 +268,20 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
               <FileText size={13} />
               Buka Rekam Medis
             </button>
+
+            {showMarkPresentItem && (
+              <>
+                <hr className="border-white/10 my-1.5" />
+                <button
+                  onClick={() => { onMarkPresent?.(visit.id); setMenuOpen(false) }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-[#34C759] hover:bg-[#34C759]/10 transition-colors cursor-pointer"
+                  role="menuitem"
+                >
+                  <UserCheck size={13} />
+                  Tandai Hadir
+                </button>
+              </>
+            )}
 
             {showPaymentItem && (
               <>

@@ -1,12 +1,13 @@
-import type { RecordCompleteness, RecordPeriod, RecordSortOrder } from '@/app/actions/medicalRecords'
+import type { RecordCompleteness, RecordPeriod, RecordSortOrder, RecordGroupBy } from '@/app/actions/medicalRecords'
 
-export type { MedicalRecordRow, RecordScope, BranchOption, StaffOption } from '@/app/actions/medicalRecords'
+export type { MedicalRecordRow, RecordScope, BranchOption, StaffOption, RecordGroupBy } from '@/app/actions/medicalRecords'
 
 export interface RecordFiltersState {
   search: string
   completeness: RecordCompleteness
   period: RecordPeriod
   sortOrder: RecordSortOrder
+  groupBy: RecordGroupBy
   staffId: string   // 'all' or uuid — team scope only
   branchId: string  // 'all' or uuid — director only
 }
@@ -16,6 +17,7 @@ export const DEFAULT_RECORD_FILTERS: RecordFiltersState = {
   completeness: 'incomplete',
   period: '30',
   sortOrder: 'desc',
+  groupBy: 'date',
   staffId: 'all',
   branchId: 'all',
 }

@@ -15,6 +15,7 @@ interface Props {
   error: string | null
   saving: boolean
   onSubmit: () => void
+  readOnly?: boolean
 }
 
 const STEPS = [
@@ -24,7 +25,7 @@ const STEPS = [
   { title: 'Plan', Section: SectionPlan },
 ] as const
 
-export function MultiStepSessionNoteForm({ form, patchForm, error, saving, onSubmit }: Props) {
+export function MultiStepSessionNoteForm({ form, patchForm, error, saving, onSubmit, readOnly }: Props) {
   const [step, setStep] = useState(0)
   const [stepError, setStepError] = useState<string | null>(null)
 
@@ -59,7 +60,7 @@ export function MultiStepSessionNoteForm({ form, patchForm, error, saving, onSub
         Langkah {step + 1} dari {STEPS.length} · {STEPS[step].title}
       </p>
 
-      <Section value={form} onChange={patchForm} />
+      <Section value={form} onChange={patchForm} readOnly={readOnly} />
 
       {(stepError || (isLast && error)) && (
         <p className="text-xs text-destructive flex items-center gap-1.5">

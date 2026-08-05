@@ -7,6 +7,7 @@ interface Props {
   rows: MedicalRecordRow[]
   isTeamView: boolean
   hasAnyRecords: boolean
+  groupByPatient?: boolean
   onOpenQuickForm: (visitId: string) => void
   onRemind?: (visitId: string) => void
   remindingIds: Set<string>
@@ -14,7 +15,7 @@ interface Props {
 }
 
 export function MedicalRecordsList({
-  loading, rows, isTeamView, hasAnyRecords,
+  loading, rows, isTeamView, hasAnyRecords, groupByPatient,
   onOpenQuickForm, onRemind, remindingIds, remindedIds,
 }: Props) {
   if (loading) {
@@ -47,17 +48,26 @@ export function MedicalRecordsList({
 
   return (
     <div className="space-y-3">
-      {rows.map((record) => (
-        <MedicalRecordCard
-          key={record.id}
-          record={record}
-          isTeamView={isTeamView}
-          onOpenQuickForm={onOpenQuickForm}
-          onRemind={onRemind}
-          reminding={remindingIds.has(record.id)}
-          reminded={remindedIds.has(record.id)}
-        />
-      ))}
+      {rows.map((record, i) => {
+        const showDivider = groupByPatient && (i === 0 || rows[i - 1].patient_id !== record.patient_id)
+        return (
+          <div key={record.id}>
+            {showDivider && (
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-2 pb-1.5 first:pt-0">
+                {record.patient_name}
+              </p>
+            )}
+            <MedicalRecordCard
+              record={record}
+              isTeamView={isTeamView}
+              onOpenQuickForm={onOpenQuickForm}
+              onRemind={onRemind}
+              reminding={remindingIds.has(record.id)}
+              reminded={remindedIds.has(record.id)}
+            />
+          </div>
+        )
+      })}
     </div>
   )
 }

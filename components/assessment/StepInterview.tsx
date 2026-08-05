@@ -16,12 +16,13 @@ import type { RedFlag, PainOnset, PainCharacter, PainRadiation, PainAssociatedSy
 interface Props {
   value: AssessmentFormState
   onChange: (patch: Partial<AssessmentFormState>) => void
+  readOnly?: boolean
 }
 
 const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
-export function StepInterview({ value, onChange }: Props) {
+export function StepInterview({ value, onChange, readOnly }: Props) {
   function toggleRedFlag(flag: RedFlag) {
     if (flag === 'NONE') {
       onChange({ red_flags: value.red_flags.includes('NONE') ? [] : ['NONE'] })
@@ -58,6 +59,7 @@ export function StepInterview({ value, onChange }: Props) {
           value={value.history_moi}
           onChange={(html) => onChange({ history_moi: html })}
           placeholder="Exactly how did it happen? Did you hear a pop/crack?"
+          readOnly={readOnly}
         />
       </div>
 
@@ -155,6 +157,7 @@ export function StepInterview({ value, onChange }: Props) {
           <RichTextEditor
             value={value.aggravating_factors}
             onChange={(html) => onChange({ aggravating_factors: html })}
+            readOnly={readOnly}
           />
         </div>
         <div>
@@ -162,6 +165,7 @@ export function StepInterview({ value, onChange }: Props) {
           <RichTextEditor
             value={value.easing_factors}
             onChange={(html) => onChange({ easing_factors: html })}
+            readOnly={readOnly}
           />
         </div>
       </div>
@@ -172,6 +176,7 @@ export function StepInterview({ value, onChange }: Props) {
           value={value.riwayat_cedera_pengobatan}
           onChange={(html) => onChange({ riwayat_cedera_pengobatan: html })}
           placeholder="Riwayat cedera sebelumnya, pengobatan/terapi yang pernah dijalani..."
+          readOnly={readOnly}
         />
       </div>
 

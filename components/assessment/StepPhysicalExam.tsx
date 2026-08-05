@@ -14,12 +14,13 @@ import type { AromResult, PromEndFeel, IsometricResistance, ObservationFinding }
 interface Props {
   value: AssessmentFormState
   onChange: (patch: Partial<AssessmentFormState>) => void
+  readOnly?: boolean
 }
 
 const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
 const selectCls = 'w-full px-2 py-1.5 border border-border rounded-lg text-xs bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
-export function StepPhysicalExam({ value, onChange }: Props) {
+export function StepPhysicalExam({ value, onChange, readOnly }: Props) {
   const rows = value.joint_exam_rows.length ? value.joint_exam_rows : [emptyJointExamRow()]
   const legacyRom = stripHtml(value.rom_active_passive)
   const showLegacyRom = !!legacyRom && rows.length === 1 && !rows[0].joint && !rows[0].arom && !rows[0].prom && !rows[0].isometric
@@ -74,6 +75,7 @@ export function StepPhysicalExam({ value, onChange }: Props) {
           value={value.observation_gait_posture}
           onChange={(html) => onChange({ observation_gait_posture: html })}
           placeholder="e.g. Antalgic gait, visible swelling on lateral ankle..."
+          readOnly={readOnly}
         />
       </div>
 
@@ -172,6 +174,7 @@ export function StepPhysicalExam({ value, onChange }: Props) {
           value={value.special_ortho_tests}
           onChange={(html) => onChange({ special_ortho_tests: html })}
           placeholder="e.g. Anterior Drawer (+), Talar Tilt (-)..."
+          readOnly={readOnly}
         />
       </div>
 
@@ -181,6 +184,7 @@ export function StepPhysicalExam({ value, onChange }: Props) {
           value={value.palpation}
           onChange={(html) => onChange({ palpation: html })}
           placeholder="e.g. Point tenderness over the ATFL..."
+          readOnly={readOnly}
         />
       </div>
     </div>

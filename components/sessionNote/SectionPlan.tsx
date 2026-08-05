@@ -8,11 +8,12 @@ import type { TreatmentPerformed } from '@/types'
 interface Props {
   value: SessionNoteFormState
   onChange: (patch: Partial<SessionNoteFormState>) => void
+  readOnly?: boolean
 }
 
 const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
 
-export function SectionPlan({ value, onChange }: Props) {
+export function SectionPlan({ value, onChange, readOnly }: Props) {
   function toggleTreatment(t: TreatmentPerformed) {
     const next = value.treatments_performed.includes(t)
       ? value.treatments_performed.filter((x) => x !== t)
@@ -49,6 +50,7 @@ export function SectionPlan({ value, onChange }: Props) {
           value={value.treatment_notes}
           onChange={(html) => onChange({ treatment_notes: html })}
           placeholder="Detail tambahan tindakan yang dilakukan hari ini"
+          readOnly={readOnly}
         />
       </div>
 
@@ -58,6 +60,7 @@ export function SectionPlan({ value, onChange }: Props) {
           value={value.hep_given}
           onChange={(html) => onChange({ hep_given: html })}
           placeholder="Contoh: 3x15 Clamshells, Peregangan Hamstring harian"
+          readOnly={readOnly}
         />
       </div>
 
@@ -66,6 +69,7 @@ export function SectionPlan({ value, onChange }: Props) {
         <RichTextEditor
           value={value.next_plan}
           onChange={(html) => onChange({ next_plan: html })}
+          readOnly={readOnly}
         />
       </div>
     </div>

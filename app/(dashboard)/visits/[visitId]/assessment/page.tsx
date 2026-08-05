@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useToast } from '@/context/ToastContext'
-import { ChevronLeft, Loader2, AlertTriangle, FileDown, Download, Share2 } from 'lucide-react'
+import { ChevronLeft, Loader2, AlertTriangle, FileDown, Download, Share2, UserX } from 'lucide-react'
 import { fetchVisitWithPatient } from '@/app/actions/jadwal'
 import { fetchAssessment, saveAssessmentDraft, completeAssessment } from '@/app/actions/assessments'
+import { fetchLatestCompletedAssessment, fetchSessionContext, type SessionContext } from '@/app/actions/sessionNotes'
 import { getOrCreateResumeLink } from '@/app/actions/resumeLinks'
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { TerapiAwalAssessment, UserRole } from '@/types'
+import { SessionContextBar } from '@/components/assessment/SessionContextBar'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { generateAssessmentPdf } from '@/components/assessment/generateAssessmentPdf'
 import { generatePatientResumePdf } from '@/components/assessment/generatePatientResumePdf'
@@ -55,6 +57,8 @@ export default function TerapiAwalAssessmentPage() {
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [formMode, setFormMode]     = useState<FormMode | null>(null)
   const [userRole, setUserRole]     = useState<UserRole | null>(null)
+  const [sessionContext, setSessionContext]   = useState<SessionContext | null>(null)
+  const [priorAssessment, setPriorAssessment] = useState<TerapiAwalAssessment | null>(null)
 
   const canRecordPayment = !!userRole && ['finance', 'manager', 'director', 'admin'].includes(userRole)
 
@@ -95,6 +99,9 @@ export default function TerapiAwalAssessmentPage() {
         sumber_pasien: v.sumber_pasien ?? '',
       })
       setLoading(false)
+
+      fetchSessionContext(v.id, v.patient_id, v.package_id).then((c) => { if (!cancelled) setSessionContext(c) })
+      fetchLatestCompletedAssessment(v.patient_id).then((a) => { if (!cancelled) setPriorAssessment(a) })
     })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -215,6 +222,10 @@ export default function TerapiAwalAssessmentPage() {
     )
   }
 
+  const isTherapistLike = userRole === 'therapist' || userRole === 'staff'
+  const notCheckedIn = isTherapistLike && visit.kehadiran !== 'HADIR'
+  const locked = isTherapistLike && alreadyCompleted
+
   const StepComponent = [
     StepInterview,
     StepPhysicalExam,
@@ -278,41 +289,70 @@ export default function TerapiAwalAssessmentPage() {
         )}
       </div>
 
-      <VisitInfoBar visitId={visit.id} value={visitInfo} onChange={setVisitInfo} />
-
-      {formMode === 'multi_step' ? (
-        <div className="glass-card p-4 sm:p-6 space-y-5">
-          <div ref={topRef} className="scroll-mt-4" />
-          <StepProgress currentStep={currentStep} furthestStep={furthestStep} onJump={handleJumpStep} />
-
-          <StepComponent value={form} onChange={patchForm} />
-
-          {error && (
-            <p className="text-xs text-destructive flex items-center gap-1.5">
-              <AlertTriangle size={12} /> {error}
-            </p>
-          )}
-
-          <AssessmentFooter
-            currentStep={currentStep}
-            saving={saving}
-            completing={completing}
-            onBack={handleBack}
-            onNext={handleNext}
-            onSaveDraft={persistDraft}
-            onComplete={handleComplete}
-          />
+      {notCheckedIn ? (
+        <div className="glass-card p-6 flex flex-col items-center text-center gap-2">
+          <UserX size={28} className="text-amber-500" />
+          <p className="text-sm font-semibold text-foreground">Pasien belum ditandai hadir</p>
+          <p className="text-xs text-muted-foreground max-w-sm">
+            Hubungi admin/resepsionis untuk menandai kehadiran pasien (Tandai Hadir) sebelum mengisi asesmen ini.
+          </p>
         </div>
       ) : (
-        <SingleStepAssessmentForm
-          form={form}
-          patchForm={patchForm}
-          error={error}
-          saving={saving}
-          completing={completing}
-          onSaveDraft={persistDraft}
-          onComplete={handleComplete}
-        />
+        <>
+          {locked && (
+            <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-600 dark:text-amber-400">
+              Asesmen ini sudah dikunci setelah disimpan. Hubungi admin/manajer untuk perubahan.
+            </div>
+          )}
+          {sessionContext && (
+            <SessionContextBar
+              sessionNumber={sessionContext.sessionNumber}
+              totalSessions={sessionContext.totalSessions}
+              isPackage={sessionContext.isPackage}
+              priorDiagnosis={priorAssessment && priorAssessment.visit_id !== visit.id ? priorAssessment.diagnosis_primer : null}
+              priorAssessmentVisitId={priorAssessment && priorAssessment.visit_id !== visit.id ? priorAssessment.visit_id : null}
+            />
+          )}
+          <fieldset disabled={locked} className="contents border-0 m-0 p-0 min-w-0">
+            <VisitInfoBar visitId={visit.id} value={visitInfo} onChange={setVisitInfo} />
+
+            {formMode === 'multi_step' ? (
+              <div className="glass-card p-4 sm:p-6 space-y-5">
+                <div ref={topRef} className="scroll-mt-4" />
+                <StepProgress currentStep={currentStep} furthestStep={furthestStep} onJump={handleJumpStep} />
+
+                <StepComponent value={form} onChange={patchForm} readOnly={locked} />
+
+                {error && (
+                  <p className="text-xs text-destructive flex items-center gap-1.5">
+                    <AlertTriangle size={12} /> {error}
+                  </p>
+                )}
+
+                <AssessmentFooter
+                  currentStep={currentStep}
+                  saving={saving}
+                  completing={completing}
+                  onBack={handleBack}
+                  onNext={handleNext}
+                  onSaveDraft={persistDraft}
+                  onComplete={handleComplete}
+                />
+              </div>
+            ) : (
+              <SingleStepAssessmentForm
+                form={form}
+                patchForm={patchForm}
+                error={error}
+                saving={saving}
+                completing={completing}
+                onSaveDraft={persistDraft}
+                onComplete={handleComplete}
+                readOnly={locked}
+              />
+            )}
+          </fieldset>
+        </>
       )}
 
       {showPackagePrompt && (

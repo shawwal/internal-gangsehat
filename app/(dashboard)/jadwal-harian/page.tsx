@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AlertTriangle, BellRing, Plus } from 'lucide-react'
 import { useJadwalHarian } from '@/hooks/useJadwalHarian'
 import { useToast } from '@/context/ToastContext'
@@ -22,7 +22,7 @@ import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { DetachPackageDialog } from '@/components/jadwal/DetachPackageDialog'
 import { AttachPackageDialog } from '@/components/jadwal/AttachPackageDialog'
-import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders } from '@/app/actions/jadwal'
+import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders, updateVisit } from '@/app/actions/jadwal'
 import { fetchReminderTemplate } from '@/app/actions/reminder-template'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 import { fillTemplate, formatDate, formatWaNumber } from '@/lib/utils'
@@ -37,6 +37,7 @@ const LS_SHIFT_KEY = 'jadwal_shiftFilter'
 
 export default function JadwalHarianPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const {
     today, selectedDate, setSelectedDate,
     staff, visits, loading,
@@ -60,6 +61,23 @@ export default function JadwalHarianPage() {
     (MedicalRecordSavedContext & { patientName: string; branchId: string | null; visitId: string }) | null
   >(null)
   const [refreshingCell, setRefreshingCell]         = useState<RefreshingCell | null>(null)
+
+  // Restore the date from a `?date=` param when returning here (e.g. from a
+  // saved SOAP/assessment form) — otherwise a non-today view always resets
+  // to today on return, since selectedDate only ever lives in React state.
+  useEffect(() => {
+    const dateParam = searchParams.get('date')
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      setSelectedDate(new Date(dateParam + 'T00:00:00'))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // The `from` value passed to the SOAP/assessment forms so they can return here
+  // on the same date, not just the same route.
+  function jadwalReturnTo() {
+    return encodeURIComponent(`/jadwal-harian?date=${toIso(selectedDate)}`)
+  }
 
   // Reload data in place (no full-grid skeleton), flashing a spinner only on `cell`.
   async function silentReload(cell: RefreshingCell | null) {
@@ -137,6 +155,11 @@ export default function JadwalHarianPage() {
 
   function handleAttachPackage(visitId: string) {
     setAttachVisit(visits.find((v) => v.id === visitId) ?? null)
+  }
+
+  async function handleMarkPresent(visitId: string) {
+    await updateVisit(visitId, { kehadiran: 'HADIR' })
+    silentReload({ type: 'visit', visitId })
   }
 
   // Incomplete visits: completed but missing diagnosis/treatment/(regio, when required) and has a therapist
@@ -354,7 +377,7 @@ export default function JadwalHarianPage() {
                   const v = visits.find((x) => x.id === id)
                   const route = getVisitFormRoute(v?.service_type)
                   if (route) {
-                    router.push(`/visits/${id}/${route}?from=/jadwal-harian`)
+                    router.push(`/visits/${id}/${route}?from=${jadwalReturnTo()}`)
                     return
                   }
                   setSelectedVisitId(id); setSelectedVisitShift(shift ?? null)
@@ -368,6 +391,7 @@ export default function JadwalHarianPage() {
                 onSellPackage={handleSellPackage}
                 onDetachPackage={handleDetachPackage}
                 onAttachPackage={handleAttachPackage}
+                onMarkPresent={handleMarkPresent}
               />
             )}
           </div>
@@ -417,7 +441,7 @@ export default function JadwalHarianPage() {
           setSelectedVisitShift(null)
           const route = getVisitFormRoute(ctx?.service_type)
           if (route) {
-            if (visitId) router.push(`/visits/${visitId}/${route}?from=/jadwal-harian`)
+            if (visitId) router.push(`/visits/${visitId}/${route}?from=${jadwalReturnTo()}`)
             return
           }
           if (visitId) silentReload({ type: 'visit', visitId })

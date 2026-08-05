@@ -45,6 +45,60 @@ export async function fetchLatestCompletedAssessment(patientId: string): Promise
   return data as TerapiAwalAssessment
 }
 
+// ── Session context: which visit number this is, package vs. standalone ────────
+export interface SessionContext {
+  sessionNumber: number
+  totalSessions: number | null   // null when not a package
+  isPackage: boolean
+}
+
+export async function fetchSessionContext(
+  visitId: string,
+  patientId: string,
+  packageId: string | null,
+): Promise<SessionContext> {
+  const supabase = await createClient()
+
+  function rank(rows: { id: string; visit_date: string; visit_time: string | null }[]): number {
+    const sorted = [...rows].sort((a, b) => {
+      const da = `${a.visit_date} ${a.visit_time ?? '00:00'}`
+      const db = `${b.visit_date} ${b.visit_time ?? '00:00'}`
+      return da.localeCompare(db)
+    })
+    const idx = sorted.findIndex((v) => v.id === visitId)
+    return idx >= 0 ? idx + 1 : 1
+  }
+
+  if (packageId) {
+    const [{ data: pkgVisits }, { data: pkg }] = await Promise.all([
+      supabase
+        .from('patient_visits')
+        .select('id, visit_date, visit_time')
+        .eq('package_id', packageId)
+        .neq('status', 'cancelled'),
+      supabase.from('patient_packages').select('total_sessions').eq('id', packageId).maybeSingle(),
+    ])
+    return {
+      sessionNumber: rank(pkgVisits ?? []),
+      totalSessions: pkg?.total_sessions ?? null,
+      isPackage: true,
+    }
+  }
+
+  const { data: visits } = await supabase
+    .from('patient_visits')
+    .select('id, visit_date, visit_time')
+    .eq('patient_id', patientId)
+    .neq('status', 'cancelled')
+    .is('package_id', null)
+
+  return {
+    sessionNumber: rank(visits ?? []),
+    totalSessions: null,
+    isPackage: false,
+  }
+}
+
 // ── Copy-from-previous: most recent completed session note for this patient ────
 export async function fetchPreviousSessionNote(
   patientId: string,
@@ -65,6 +119,11 @@ export async function fetchPreviousSessionNote(
   return data as SessionNote
 }
 
+// Therapists/staff can't resubmit a note that's already completed — keeps the
+// record from being silently rewritten after the fact. Admin/manager/director
+// retain the ability to correct a mistake.
+const LOCKED_FOR_ROLES = ['therapist', 'staff']
+
 // ── Single-shot save: upsert as completed, then sync patient_visits ────────────
 export async function completeSessionNote(
   visitId: string,
@@ -75,6 +134,15 @@ export async function completeSessionNote(
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+
+  const [{ data: profile }, { data: existing }] = await Promise.all([
+    supabase.from('internal_profiles').select('role').eq('id', user.id).single(),
+    supabase.from('session_notes').select('status').eq('visit_id', visitId).maybeSingle(),
+  ])
+  if (existing?.status === 'completed' && LOCKED_FOR_ROLES.includes(profile?.role ?? '')) {
+    return { error: 'Rekam medis sudah dikunci setelah disimpan. Hubungi admin/manajer untuk perubahan.' }
+  }
 
   const { error: noteErr } = await supabase
     .from('session_notes')

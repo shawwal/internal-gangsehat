@@ -6,11 +6,12 @@ import type { AssessmentFormState } from './types'
 interface Props {
   value: AssessmentFormState
   onChange: (patch: Partial<AssessmentFormState>) => void
+  readOnly?: boolean
 }
 
 const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
 
-export function StepPlanOfCare({ value, onChange }: Props) {
+export function StepPlanOfCare({ value, onChange, readOnly }: Props) {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3 text-xs text-blue-300">
@@ -26,6 +27,7 @@ export function StepPlanOfCare({ value, onChange }: Props) {
             value={value.short_term_goals}
             onChange={(html) => onChange({ short_term_goals: html })}
             placeholder="e.g. Increase LEFS score to 60/80 and achieve pain-free AROM in 2 weeks..."
+            readOnly={readOnly}
           />
         </div>
         <div>
@@ -34,6 +36,7 @@ export function StepPlanOfCare({ value, onChange }: Props) {
             value={value.long_term_goals}
             onChange={(html) => onChange({ long_term_goals: html })}
             placeholder="e.g. Return to 90 mins of football without pain in 6 weeks..."
+            readOnly={readOnly}
           />
         </div>
       </div>
@@ -44,6 +47,7 @@ export function StepPlanOfCare({ value, onChange }: Props) {
           value={value.treatment_plan_today}
           onChange={(html) => onChange({ treatment_plan_today: html })}
           placeholder="What specific interventions were performed today?"
+          readOnly={readOnly}
         />
       </div>
     </div>

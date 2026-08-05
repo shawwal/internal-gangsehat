@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { ArrowDownAZ, ArrowUpAZ, Search } from 'lucide-react'
+import { ArrowDownAZ, ArrowUpAZ, Search, Calendar, User } from 'lucide-react'
 import type { BranchOption, StaffOption } from '@/app/actions/medicalRecords'
 import { COMPLETENESS_TABS, PERIOD_OPTIONS, type RecordFiltersState } from './types'
 
@@ -103,6 +103,32 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
           {filters.sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownAZ size={14} />}
           {filters.sortOrder === 'asc' ? 'Terlama' : 'Terbaru'}
         </button>
+
+        {/* Group/sort by patient — clusters a patient's incomplete entries
+            together instead of interleaving them by date, so nothing gets
+            missed and their last program is easy to find. */}
+        <div className="flex items-center gap-1 p-0.5 rounded-xl bg-muted border border-border">
+          <button
+            type="button"
+            onClick={() => onChange({ ...filters, groupBy: 'date' })}
+            title="Urutkan berdasarkan tanggal kunjungan"
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
+              filters.groupBy === 'date' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Calendar size={12} /> Tanggal
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange({ ...filters, groupBy: 'patient' })}
+            title="Kelompokkan berdasarkan pasien"
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
+              filters.groupBy === 'patient' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <User size={12} /> Pasien
+          </button>
+        </div>
       </div>
     </div>
   )

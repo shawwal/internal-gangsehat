@@ -18,6 +18,7 @@ interface Props {
   completing: boolean
   onSaveDraft: () => void
   onComplete: () => void
+  readOnly?: boolean
 }
 
 const SECTIONS = [
@@ -25,7 +26,7 @@ const SECTIONS = [
   StepOutcomeMeasures, StepClinicalReasoning, StepPlanOfCare,
 ]
 
-export function SingleStepAssessmentForm({ form, patchForm, error, saving, completing, onSaveDraft, onComplete }: Props) {
+export function SingleStepAssessmentForm({ form, patchForm, error, saving, completing, onSaveDraft, onComplete, readOnly }: Props) {
   return (
     <div className="glass-card p-4 sm:p-6 space-y-6">
       {SECTIONS.map((Section, i) => (
@@ -33,7 +34,7 @@ export function SingleStepAssessmentForm({ form, patchForm, error, saving, compl
           <div className="flex items-center gap-2 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-muted/40 border-y border-border">
             <h3 className="text-sm font-semibold text-foreground">{i + 1}. {STEP_LABELS[i]}</h3>
           </div>
-          <Section value={form} onChange={patchForm} />
+          <Section value={form} onChange={patchForm} readOnly={readOnly} />
         </div>
       ))}
 

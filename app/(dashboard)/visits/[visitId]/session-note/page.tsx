@@ -3,14 +3,16 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Loader2, Printer, Copy, History, Download, Share2 } from 'lucide-react'
+import { ChevronLeft, Loader2, Printer, Copy, History, Download, Share2, UserX } from 'lucide-react'
 import { fetchVisitWithPatient } from '@/app/actions/jadwal'
 import {
   fetchSessionNote, fetchLatestCompletedAssessment, fetchPreviousSessionNote, completeSessionNote,
+  fetchSessionContext, type SessionContext,
 } from '@/app/actions/sessionNotes'
 import { getOrCreateResumeLink } from '@/app/actions/resumeLinks'
 import type { VisitWithPatient } from '@/app/actions/jadwal'
-import type { SessionNote, TerapiAwalAssessment } from '@/types'
+import type { SessionNote, TerapiAwalAssessment, UserRole } from '@/types'
+import { SessionContextBar } from '@/components/assessment/SessionContextBar'
 import { SingleStepSessionNoteForm } from '@/components/sessionNote/SingleStepSessionNoteForm'
 import { MultiStepSessionNoteForm } from '@/components/sessionNote/MultiStepSessionNoteForm'
 import { generateSessionNotePdf } from '@/components/sessionNote/generateSessionNotePdf'
@@ -38,12 +40,14 @@ export default function SessionNotePage() {
 
   const [priorAssessment, setPriorAssessment] = useState<TerapiAwalAssessment | null>(null)
   const [previousNote, setPreviousNote]       = useState<SessionNote | null>(null)
+  const [sessionContext, setSessionContext]   = useState<SessionContext | null>(null)
 
   const [sharing, setSharing] = useState(false)
   const [downloadingResume, setDownloadingResume] = useState(false)
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState<string | null>(null)
   const [formMode, setFormMode] = useState<FormMode | null>(null)
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
 
   useEffect(() => {
     if (!visitId) return
@@ -69,10 +73,26 @@ export default function SessionNotePage() {
 
       fetchLatestCompletedAssessment(v.patient_id).then((a) => { if (!cancelled) setPriorAssessment(a) })
       fetchPreviousSessionNote(v.patient_id, v.id).then((p) => { if (!cancelled) setPreviousNote(p) })
+      fetchSessionContext(v.id, v.patient_id, v.package_id).then((c) => { if (!cancelled) setSessionContext(c) })
     })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visitId])
+
+  useEffect(() => {
+    let cancelled = false
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data: profile } = await supabase
+        .from('internal_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      if (!cancelled) setUserRole((profile?.role as UserRole) ?? null)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   function patchForm(patch: Partial<SessionNoteFormState>) {
     setForm((f) => f ? { ...f, ...patch } : f)
@@ -140,6 +160,10 @@ export default function SessionNotePage() {
       </div>
     )
   }
+
+  const isTherapistLike = userRole === 'therapist' || userRole === 'staff'
+  const notCheckedIn = isTherapistLike && visit.kehadiran !== 'HADIR'
+  const locked = isTherapistLike && alreadyCompleted
 
   return (
     <div className="space-y-5 j-fade-in">
@@ -211,19 +235,39 @@ export default function SessionNotePage() {
         </div>
       </div>
 
-      {priorAssessment && (
-        <div className="glass-card p-4 bg-primary/5 border-primary/20">
-          <p className="text-xs font-semibold text-primary mb-1">Konteks Asesmen Awal</p>
-          <p className="text-xs text-muted-foreground">
-            {priorAssessment.diagnosis_primer || '—'}
-          </p>
-        </div>
+      {sessionContext && (
+        <SessionContextBar
+          sessionNumber={sessionContext.sessionNumber}
+          totalSessions={sessionContext.totalSessions}
+          isPackage={sessionContext.isPackage}
+          priorDiagnosis={priorAssessment?.diagnosis_primer}
+          priorAssessmentVisitId={priorAssessment?.visit_id}
+        />
       )}
 
-      {formMode === 'multi_step' ? (
-        <MultiStepSessionNoteForm form={form} patchForm={patchForm} error={error} saving={saving} onSubmit={handleComplete} />
+      {notCheckedIn ? (
+        <div className="glass-card p-6 flex flex-col items-center text-center gap-2">
+          <UserX size={28} className="text-amber-500" />
+          <p className="text-sm font-semibold text-foreground">Pasien belum ditandai hadir</p>
+          <p className="text-xs text-muted-foreground max-w-sm">
+            Hubungi admin/resepsionis untuk menandai kehadiran pasien (Tandai Hadir) sebelum mengisi catatan perawatan ini.
+          </p>
+        </div>
       ) : (
-        <SingleStepSessionNoteForm form={form} patchForm={patchForm} error={error} saving={saving} onSubmit={handleComplete} />
+        <>
+          {locked && (
+            <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-600 dark:text-amber-400">
+              Rekam medis ini sudah dikunci setelah disimpan. Hubungi admin/manajer untuk perubahan.
+            </div>
+          )}
+          <fieldset disabled={locked} className="contents border-0 m-0 p-0 min-w-0">
+            {formMode === 'multi_step' ? (
+              <MultiStepSessionNoteForm form={form} patchForm={patchForm} error={error} saving={saving} onSubmit={handleComplete} readOnly={locked} />
+            ) : (
+              <SingleStepSessionNoteForm form={form} patchForm={patchForm} error={error} saving={saving} onSubmit={handleComplete} readOnly={locked} />
+            )}
+          </fieldset>
+        </>
       )}
     </div>
   )

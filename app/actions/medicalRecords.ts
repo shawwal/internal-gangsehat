@@ -12,6 +12,7 @@ const REGIO_REQUIRED_IN = '("TERAPI AWAL","TA VISIT")'
 export type RecordCompleteness = 'all' | 'incomplete' | 'complete'
 export type RecordPeriod = '7' | '30' | '90' | 'all'
 export type RecordSortOrder = 'asc' | 'desc'
+export type RecordGroupBy = 'date' | 'patient'
 export type RecordScope = 'own' | 'team'
 
 export interface MedicalRecordRow {
@@ -38,6 +39,7 @@ export interface MedicalRecordsParams {
   completeness: RecordCompleteness
   period: RecordPeriod
   sortOrder: RecordSortOrder
+  groupBy?: RecordGroupBy  // 'date' (default, DB-level pagination) or 'patient' (in-memory)
   staffId?: string   // 'all' or uuid — only honored for team-scope viewers
   branchId?: string  // 'all' or uuid — only honored for director
 }
@@ -167,8 +169,8 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     if (patientIds.length === 0) return { rows: [], total: 0, scope: viewer.scope }
   }
 
-  const from = (params.page - 1) * params.pageSize
   const ascending = params.sortOrder === 'asc'
+  const groupByPatient = params.groupBy === 'patient'
 
   let query = supabase
     .from('patient_visits')
@@ -181,21 +183,30 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
 
   query = applyScopedFilters(query, viewer, params)
   if (patientIds) query = query.in('patient_id', patientIds)
-
-  const { data, count, error } = await query
+  query = query
     .order('visit_date', { ascending })
     .order('visit_time', { ascending, nullsFirst: false })
     .order('id', { ascending: true })
-    .range(from, from + params.pageSize - 1)
+
+  // Patient names are encrypted at rest, so they can't be ORDER BY'd in SQL.
+  // "Pasien" mode fetches the full scoped result set (bounded — clinic-scale
+  // incomplete-record counts are dozens, not thousands), decrypts every name
+  // once, sorts by name in application code, then paginates in memory. The
+  // default "Tanggal" mode keeps the efficient DB-level range() pagination.
+  const from = (params.page - 1) * params.pageSize
+  const { data, count, error } = groupByPatient
+    ? await query.limit(5000)
+    : await query.range(from, from + params.pageSize - 1)
 
   if (error || !data) return { rows: [], total: 0, scope: viewer.scope }
 
-  // Batch-decrypt patient names for just this page — never for the full result set.
-  const pagePatientIds = [...new Set(data.map((v) => v.patient_id as string))]
+  // Batch-decrypt patient names — for the full matched set in "Pasien" mode,
+  // for just this page otherwise.
+  const namePatientIds = [...new Set(data.map((v) => v.patient_id as string))]
   const { data: patients } = await supabase
     .from('patients')
     .select('id, encrypted_name, encrypted_phone')
-    .in('id', pagePatientIds)
+    .in('id', namePatientIds)
 
   const nameMap = new Map<string, string>()
   for (const p of patients ?? []) {
@@ -211,7 +222,7 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rows: MedicalRecordRow[] = (data as any[]).map((v) => ({
+  let rows: MedicalRecordRow[] = (data as any[]).map((v) => ({
     id:                    v.id,
     patient_id:            v.patient_id,
     patient_name:          nameMap.get(v.patient_id) ?? 'Pasien',
@@ -228,7 +239,20 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     is_complete:           !!(v.diagnosis && v.treatment && (!isRegioRequired(v.service_type) || v.regio)),
   }))
 
-  return { rows, total: count ?? 0, scope: viewer.scope }
+  let total = count ?? 0
+  if (groupByPatient) {
+    rows.sort((a, b) => {
+      const byName = a.patient_name.localeCompare(b.patient_name, 'id')
+      if (byName !== 0) return byName
+      const da = `${a.visit_date} ${a.visit_time ?? '00:00'}`
+      const db = `${b.visit_date} ${b.visit_time ?? '00:00'}`
+      return ascending ? da.localeCompare(db) : db.localeCompare(da)
+    })
+    total = rows.length
+    rows = rows.slice(from, from + params.pageSize)
+  }
+
+  return { rows, total, scope: viewer.scope }
 }
 
 // ── Stats (complete / incomplete counts, ignoring the completeness filter) ──────

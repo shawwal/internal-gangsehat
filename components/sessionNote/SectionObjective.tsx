@@ -6,11 +6,12 @@ import type { SessionNoteFormState } from './types'
 interface Props {
   value: SessionNoteFormState
   onChange: (patch: Partial<SessionNoteFormState>) => void
+  readOnly?: boolean
 }
 
 const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
 
-export function SectionObjective({ value, onChange }: Props) {
+export function SectionObjective({ value, onChange, readOnly }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-muted/40 border-y border-border">
@@ -23,6 +24,7 @@ export function SectionObjective({ value, onChange }: Props) {
           value={value.objective_findings}
           onChange={(html) => onChange({ objective_findings: html })}
           placeholder="Contoh: (+) Lachman, Knee Flexion AROM 90°, Quad MMT 4/5"
+          readOnly={readOnly}
         />
       </div>
     </div>

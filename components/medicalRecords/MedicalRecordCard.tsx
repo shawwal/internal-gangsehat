@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { Bell, Building2, Calendar, CheckCircle2, ChevronRight, Loader2, User, AlertTriangle, Share2 } from 'lucide-react'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 import type { MedicalRecordRow } from '@/app/actions/medicalRecords'
@@ -28,9 +29,15 @@ function missingFieldsLabel(record: MedicalRecordRow): string {
 
 export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemind, reminding, reminded }: Props) {
   const { showToast } = useToast()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [sharing, setSharing] = useState(false)
   const formRoute = getVisitFormRoute(record.service_type)
-  const fillHref = formRoute ? `/visits/${record.id}/${formRoute}?from=/medical-records` : null
+  // Carry the full current path + query string back through `from` (not just
+  // the bare pathname) so returning here after saving restores this exact
+  // filtered/sorted/paginated view instead of resetting to defaults.
+  const returnTo = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname
+  const fillHref = formRoute ? `/visits/${record.id}/${formRoute}?from=${encodeURIComponent(returnTo)}` : null
 
   async function handleShare() {
     setSharing(true)

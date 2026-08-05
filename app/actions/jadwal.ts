@@ -26,6 +26,7 @@ export interface DailyVisit {
   attending_staff_id: string | null
   status: VisitStatus
   notes: string | null
+  kehadiran: string | null
   // Payment info — populated by fetchDailyVisits
   has_payment: boolean
   visit_payment_status: string | null
@@ -63,7 +64,7 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
 
   let query = supabase
     .from('patient_visits')
-    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, order_id, chief_complaint, diagnosis, treatment, regio, status, notes, branch_id')
+    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, order_id, chief_complaint, diagnosis, treatment, regio, status, notes, branch_id, kehadiran')
     .eq('visit_date', date)
     .order('visit_time', { ascending: true })
   if (branchId) query = query.eq('branch_id', branchId)
@@ -147,6 +148,7 @@ export async function fetchDailyVisits(date: string, branchId?: string | null): 
       attending_staff_id:   v.attending_staff_id,
       status:               v.status as VisitStatus,
       notes:                v.notes,
+      kehadiran:            v.kehadiran ?? null,
       has_payment:          !!pay,
       visit_payment_status: pay ? (pay.all_paid ? 'LUNAS' : pay.payment_status) : null,
       visit_package_price:       pkg?.harga ?? null,
@@ -226,13 +228,14 @@ export interface VisitWithPatient {
   attending_staff_id: string | null
   status: VisitStatus
   notes: string | null
+  package_id: string | null
 }
 
 export async function fetchVisitWithPatient(visitId: string): Promise<VisitWithPatient | null> {
   const supabase = await createClient()
   const { data: v, error } = await supabase
     .from('patient_visits')
-    .select('id, patient_id, branch_id, visit_date, visit_time, service_type, shift, kehadiran, regio, sumber_pasien, chief_complaint, diagnosis, treatment, attending_staff_id, status, notes')
+    .select('id, patient_id, branch_id, visit_date, visit_time, service_type, shift, kehadiran, regio, sumber_pasien, chief_complaint, diagnosis, treatment, attending_staff_id, status, notes, package_id')
     .eq('id', visitId)
     .single()
 
@@ -270,6 +273,7 @@ export async function fetchVisitWithPatient(visitId: string): Promise<VisitWithP
     attending_staff_id: v.attending_staff_id,
     status:             v.status as VisitStatus,
     notes:              v.notes,
+    package_id:         v.package_id ?? null,
   }
 }
 

@@ -68,6 +68,11 @@ export async function saveAssessmentDraft(
   return { error: null, assessment: data as TerapiAwalAssessment }
 }
 
+// Therapists/staff can't resubmit an assessment that's already completed —
+// keeps the record from being silently rewritten after the fact.
+// Admin/manager/director retain the ability to correct a mistake.
+const LOCKED_FOR_ROLES = ['therapist', 'staff']
+
 // ── Complete the assessment and sync a plain-text synopsis onto patient_visits ─
 export async function completeAssessment(
   visitId: string,
@@ -78,6 +83,15 @@ export async function completeAssessment(
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+
+  const [{ data: profile }, { data: existing }] = await Promise.all([
+    supabase.from('internal_profiles').select('role').eq('id', user.id).single(),
+    supabase.from('terapi_awal_assessments').select('status').eq('visit_id', visitId).maybeSingle(),
+  ])
+  if (existing?.status === 'completed' && LOCKED_FOR_ROLES.includes(profile?.role ?? '')) {
+    return { error: 'Asesmen sudah dikunci setelah disimpan. Hubungi admin/manajer untuk perubahan.' }
+  }
 
   const { error: assessmentErr } = await supabase
     .from('terapi_awal_assessments')

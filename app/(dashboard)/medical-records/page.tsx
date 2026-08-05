@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { BellRing } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import {
@@ -21,19 +21,35 @@ const EMPTY_OPTIONS: RecordFilterOptions = { scope: 'own', isDirector: false, br
 export default function MedicalRecordsPage() {
   const { showToast } = useToast()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
 
   const [filters, setFilters] = useState<RecordFiltersState>(() => {
+    const search = searchParams.get('q') ?? ''
     const staffId = searchParams.get('staffId')
+    const branchId = searchParams.get('branchId')
     const completeness = searchParams.get('completeness')
+    const period = searchParams.get('period')
+    const sortOrder = searchParams.get('sortOrder')
+    const groupBy = searchParams.get('groupBy')
     return {
       ...DEFAULT_RECORD_FILTERS,
+      search,
       ...(staffId ? { staffId } : {}),
+      ...(branchId ? { branchId } : {}),
       ...(completeness === 'complete' || completeness === 'incomplete' || completeness === 'all'
         ? { completeness }
         : {}),
+      ...(period === '7' || period === '30' || period === '90' || period === 'all' ? { period } : {}),
+      ...(sortOrder === 'asc' || sortOrder === 'desc' ? { sortOrder } : {}),
+      ...(groupBy === 'date' || groupBy === 'patient' ? { groupBy } : {}),
     }
   })
-  const [page, setPage]       = useState(1)
+  const [page, setPage] = useState(() => Math.max(1, Number(searchParams.get('page')) || 1))
+  // Skips the filter-driven page reset on the very first load, so a `page`
+  // restored from the URL (e.g. returning from a saved record) isn't
+  // immediately clobbered back to 1 by the effect below.
+  const isFirstLoad = useRef(true)
 
   const [rows, setRows]       = useState<MedicalRecordRow[]>([])
   const [total, setTotal]     = useState(0)
@@ -64,6 +80,7 @@ export default function MedicalRecordsPage() {
       completeness: currentFilters.completeness,
       period: currentFilters.period,
       sortOrder: currentFilters.sortOrder,
+      groupBy: currentFilters.groupBy,
       staffId: currentFilters.staffId,
       branchId: currentFilters.branchId,
     })
@@ -86,10 +103,33 @@ export default function MedicalRecordsPage() {
   }, [])
 
   useEffect(() => {
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false
+      loadRows(page, filters)
+      loadStats(filters)
+      return
+    }
     setPage(1)
     loadRows(1, filters)
     loadStats(filters)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, loadRows, loadStats])
+
+  // Keep the URL in sync with the current filters/page so returning here
+  // (e.g. after saving a record) restores the exact same view.
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (filters.search)                        params.set('q', filters.search)
+    if (filters.completeness !== 'incomplete') params.set('completeness', filters.completeness)
+    if (filters.period !== '30')               params.set('period', filters.period)
+    if (filters.sortOrder !== 'desc')          params.set('sortOrder', filters.sortOrder)
+    if (filters.groupBy !== 'date')            params.set('groupBy', filters.groupBy)
+    if (filters.staffId !== 'all')             params.set('staffId', filters.staffId)
+    if (filters.branchId !== 'all')            params.set('branchId', filters.branchId)
+    if (page !== 1)                            params.set('page', String(page))
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [filters, page, pathname, router])
 
   function handlePage(p: number) {
     setPage(p)
@@ -191,6 +231,7 @@ export default function MedicalRecordsPage() {
         rows={rows}
         isTeamView={isTeamView}
         hasAnyRecords={hasAnyRecords}
+        groupByPatient={filters.groupBy === 'patient'}
         onOpenQuickForm={setQuickFormVisitId}
         onRemind={isTeamView ? handleRemind : undefined}
         remindingIds={remindingIds}

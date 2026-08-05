@@ -11,6 +11,7 @@ import type { DermatomeStatus, MyotomeStatus, ReflexStatus } from '@/types'
 interface Props {
   value: AssessmentFormState
   onChange: (patch: Partial<AssessmentFormState>) => void
+  readOnly?: boolean
 }
 
 const labelCls = 'block text-xs font-medium text-foreground mb-1.5'

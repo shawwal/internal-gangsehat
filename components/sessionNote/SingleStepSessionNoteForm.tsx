@@ -13,15 +13,16 @@ interface Props {
   error: string | null
   saving: boolean
   onSubmit: () => void
+  readOnly?: boolean
 }
 
-export function SingleStepSessionNoteForm({ form, patchForm, error, saving, onSubmit }: Props) {
+export function SingleStepSessionNoteForm({ form, patchForm, error, saving, onSubmit, readOnly }: Props) {
   return (
     <div className="glass-card p-4 sm:p-6 space-y-6">
-      <SectionSubjective value={form} onChange={patchForm} />
-      <SectionObjective value={form} onChange={patchForm} />
-      <SectionAssessment value={form} onChange={patchForm} />
-      <SectionPlan value={form} onChange={patchForm} />
+      <SectionSubjective value={form} onChange={patchForm} readOnly={readOnly} />
+      <SectionObjective value={form} onChange={patchForm} readOnly={readOnly} />
+      <SectionAssessment value={form} onChange={patchForm} readOnly={readOnly} />
+      <SectionPlan value={form} onChange={patchForm} readOnly={readOnly} />
 
       {error && (
         <p className="text-xs text-destructive flex items-center gap-1.5">

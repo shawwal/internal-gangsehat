@@ -7,6 +7,7 @@ import type { PromType } from '@/types'
 interface Props {
   value: AssessmentFormState
   onChange: (patch: Partial<AssessmentFormState>) => void
+  readOnly?: boolean
 }
 
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
