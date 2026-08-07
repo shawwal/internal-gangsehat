@@ -38,7 +38,7 @@ export function PackageSelector({ packages, pkgLoading, selectedPkgId, setSelect
             const rem = pkg.total_sessions - pkg.used_sessions
             const label = `${pkg.package_name} (${pkg.package_type === 'fixed' ? 'Tetap' : 'Fleksibel'}) — ${pkg.used_sessions}/${pkg.total_sessions} · ${rem > 0 ? rem + ' tersisa' : '⚠ habis'}`
             return (
-              <option key={pkg.id} value={pkg.id}>
+              <option key={pkg.id} value={pkg.id} disabled={rem <= 0}>
                 {pkg.status !== 'active' ? `[${pkg.status}] ` : ''}{label}
               </option>
             )
