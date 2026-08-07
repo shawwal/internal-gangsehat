@@ -1,6 +1,7 @@
 'use client'
 
 import { X } from 'lucide-react'
+import type { CategoryKey } from '@/components/targetProgress/types'
 import type { BranchTargetRow, BranchOption } from './types'
 import { MONTHS } from './types'
 
@@ -22,17 +23,18 @@ interface Props {
   saving: boolean
   branches: BranchOption[]
   isManager: boolean
+  disabledCategories?: Set<CategoryKey>
   onChange: (form: BranchTargetFormState) => void
   onSubmit: (e: React.SyntheticEvent<HTMLFormElement>) => void
   onCancel: () => void
 }
 
-const METRICS: { field: keyof BranchTargetFormState; label: string }[] = [
-  { field: 'target_ta', label: 'Target TA (Terapi Awal)' },
-  { field: 'target_paket_klinik', label: 'Target Paket Klinik' },
-  { field: 'target_kunjungan', label: 'Target Kunjungan' },
-  { field: 'target_visit', label: 'Target Visit' },
-  { field: 'target_sesi', label: 'Target Sesi' },
+const METRICS: { field: keyof BranchTargetFormState; label: string; category: CategoryKey }[] = [
+  { field: 'target_ta', label: 'Target TA (Terapi Awal)', category: 'ta' },
+  { field: 'target_paket_klinik', label: 'Target Paket Klinik', category: 'paket_klinik' },
+  { field: 'target_kunjungan', label: 'Target Kunjungan', category: 'kunjungan' },
+  { field: 'target_visit', label: 'Target Visit', category: 'paket_visit' },
+  { field: 'target_sesi', label: 'Target Sesi', category: 'sesi' },
 ]
 
 export function BranchTargetForm({
@@ -41,10 +43,12 @@ export function BranchTargetForm({
   saving,
   branches,
   isManager,
+  disabledCategories,
   onChange,
   onSubmit,
   onCancel,
 }: Props) {
+  const activeMetrics = METRICS.filter(m => !disabledCategories?.has(m.category))
   function numInput(field: keyof BranchTargetFormState) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
       const raw = e.target.value.replace(/^0+(?=\d)/, '')
@@ -137,7 +141,7 @@ export function BranchTargetForm({
 
         {/* Metrics */}
         <div className="grid grid-cols-2 gap-3">
-          {METRICS.map(({ field, label }) => (
+          {activeMetrics.map(({ field, label }) => (
             <div key={field}>
               <label className="block text-xs font-medium text-foreground mb-1.5">{label}</label>
               <input

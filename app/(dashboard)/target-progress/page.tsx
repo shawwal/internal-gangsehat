@@ -84,7 +84,7 @@ export default function TargetProgressPage() {
     const supabase = createClient()
     const range = getMonthRange(month, year)
 
-    const [{ data: targetRow }, { data: visits }, { data: packages }] = await Promise.all([
+    const [{ data: targetRow }, { data: visits }, { data: packages }, { data: categorySettings }] = await Promise.all([
       supabase
         .from('branch_targets')
         .select('target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi')
@@ -107,7 +107,13 @@ export default function TargetProgressPage() {
         .gte('purchased_at', range.start)
         .lte('purchased_at', range.end)
         .neq('status', 'cancelled'),
+      supabase
+        .from('branch_target_category_settings')
+        .select('category')
+        .eq('branch_id', selectedBranchId),
     ])
+
+    const disabled = new Set((categorySettings ?? []).map(r => r.category as CategoryKey))
 
     const days = daysInMonth(year, month)
     const visitDaily = buildDailyCounts((visits ?? []) as VisitForProgress[], days)
@@ -123,11 +129,13 @@ export default function TargetProgressPage() {
     }
 
     setHasApprovedTarget(!!t)
-    setSummaries(CATEGORY_DEFS.map(def => {
-      const actual = sum(daily[def.key])
-      const target = targetFields[def.key]
-      return { key: def.key, label: def.label, color: def.color, target, actual, selisih: actual - target, daily: daily[def.key] }
-    }))
+    setSummaries(CATEGORY_DEFS
+      .filter(def => !disabled.has(def.key))
+      .map(def => {
+        const actual = sum(daily[def.key])
+        const target = targetFields[def.key]
+        return { key: def.key, label: def.label, color: def.color, target, actual, selisih: actual - target, daily: daily[def.key] }
+      }))
     setLoading(false)
   }, [selectedBranchId, month, year])
 
