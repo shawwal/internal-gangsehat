@@ -81,9 +81,10 @@ export function useJadwalSportMassage() {
       applyBranch(
         supabase
           .from('schedules')
-          .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(full_name, avatar_url, nickname, gender)')
+          .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!inner!staff_id(full_name, avatar_url, nickname, gender, role)')
           .eq('hari', hari)
           .eq('status', 'AKTIF')
+          .eq('internal_profiles.role', 'sport_massage_therapist')
           .in('week_group', [weekGroup, 'SEMUA']),
       ),
       supabase
@@ -96,8 +97,9 @@ export function useJadwalSportMassage() {
       applyBranch(
         supabase
           .from('schedule_overrides')
-          .select('id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!staff_id(full_name, avatar_url, nickname, gender)')
+          .select('id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!inner!staff_id(full_name, avatar_url, nickname, gender, role)')
           .eq('status', 'active')
+          .eq('internal_profiles.role', 'sport_massage_therapist')
           .lte('start_date', isoDate)
           .gte('end_date', isoDate),
       ),
