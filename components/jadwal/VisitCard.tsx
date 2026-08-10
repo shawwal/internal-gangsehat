@@ -49,7 +49,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
 
   // Therapists/staff view the schedule but don't manage it — no status changes,
   // deletes, payments, or reminders from the quick-action menu.
-  const canManageVisit   = !!userRole && !['therapist', 'staff'].includes(userRole)
+  const canManageVisit   = !!userRole && !['therapist', 'staff', 'sport_massage_therapist'].includes(userRole)
   const canRecordPayment = !!userRole && PAYMENT_ROLES.includes(userRole)
   const showPaymentItem  = canRecordPayment && visit.status === 'completed' && !visit.package_id
   const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && !visit.package_id

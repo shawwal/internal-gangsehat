@@ -36,6 +36,7 @@ const INCOME_CATEGORIES = [
   'TA VISIT',
   'SESI VISIT',
   'PAKET VISIT',
+  'SPORT MASSAGE',
   'LAINNYA',
 ]
 // Expense categories aligned with Excel PENGELUARAN

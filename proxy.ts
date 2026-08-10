@@ -59,6 +59,7 @@ export async function proxy(request: NextRequest) {
       staff:      '/patients',
       admin:      '/jadwal-harian',
       'non-staff': '/pending',
+      sport_massage_therapist: '/jadwal-sport-massage',
     }
     const dest = roleHome[profile?.role ?? ''] ?? '/director/overview'
     return NextResponse.redirect(new URL(dest, request.url))

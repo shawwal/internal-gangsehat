@@ -56,7 +56,7 @@ export default function PatientsPage() {
         .select('role')
         .eq('id', user.id)
         .single()
-      if (profile?.role === 'therapist' || profile?.role === 'staff') {
+      if (profile?.role === 'therapist' || profile?.role === 'staff' || profile?.role === 'sport_massage_therapist') {
         setIsTherapistOrStaff(true)
       }
     })

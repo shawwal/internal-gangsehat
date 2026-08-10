@@ -24,6 +24,7 @@ const ROLE_LABELS: Record<string, string> = {
   staff:     'Staff',
   therapist: 'Terapis',
   manager:   'Manager',
+  sport_massage_therapist: 'Terapis Sport Massage',
 }
 
 function getInitials(name: string) {

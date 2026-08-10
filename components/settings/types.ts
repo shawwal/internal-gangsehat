@@ -23,4 +23,5 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   therapist:  'Terapis',
   admin:      'Admin',
   'non-staff': 'Belum Ditetapkan',
+  sport_massage_therapist: 'Terapis Sport Massage',
 }

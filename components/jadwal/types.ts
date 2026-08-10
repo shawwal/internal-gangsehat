@@ -78,6 +78,7 @@ export const SERVICE_TYPE_LABEL: Record<string, string> = {
   'PAKET VISIT':  'Paket',
   'SESI TERAPI':  'Sesi',
   'SESI VISIT':   'Sesi',
+  'SPORT MASSAGE': 'Sport Massage',
   'LAINNYA':      'Lainnya',
 }
 

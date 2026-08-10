@@ -40,7 +40,7 @@ const STATUS_BADGE: Record<VisitStatus, string> = {
 
 const SERVICE_TYPES: ServiceType[] = [
   'TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI',
-  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA',
+  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
 ]
 
 const BODY_REGIONS: BodyRegion[] = [
@@ -57,6 +57,7 @@ const SERVICE_BADGE: Record<ServiceType, string> = {
   'TA VISIT':     'bg-primary/10 text-primary border-primary/15',
   'SESI VISIT':   'bg-muted/40 text-muted-foreground border-border',
   'PAKET VISIT':  'bg-chart-4/10 text-chart-4 border-chart-4/15',
+  'SPORT MASSAGE': 'bg-amber-500/15 text-amber-600 border-amber-500/20',
   'LAINNYA':      'bg-muted/40 text-muted-foreground border-border',
 }
 
@@ -233,7 +234,7 @@ export default function PatientVisitsPage() {
   const [editPackageTx, setEditPackageTx] = useState<StandalonePackageTx | null>(null)
 
   const canRecordPayment = !!userRole && ['finance', 'manager', 'director', 'admin'].includes(userRole)
-  const canDeleteVisit   = !!userRole && !['therapist', 'staff'].includes(userRole)
+  const canDeleteVisit   = !!userRole && !['therapist', 'staff', 'sport_massage_therapist'].includes(userRole)
 
   function openVisit(v: PatientVisit) {
     const route = getVisitFormRoute(v.service_type)

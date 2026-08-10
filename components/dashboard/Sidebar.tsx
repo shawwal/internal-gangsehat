@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import * as Icons from 'lucide-react'
 import { navForRole, NAV_GROUP_LABELS } from '@/config/navigation'
 import type { NavGroup } from '@/config/navigation'
 import type { UserRole } from '@/types'
+import { createClient } from '@/lib/supabase/client'
 
 function Icon({ name, size = 18 }: { name: string; size?: number }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,12 +19,33 @@ function Icon({ name, size = 18 }: { name: string; size?: number }) {
 
 interface Props {
   role: UserRole
+  branchId: string | null
   collapsed: boolean
 }
 
-export function Sidebar({ role, collapsed }: Props) {
+export function Sidebar({ role, branchId, collapsed }: Props) {
   const pathname = usePathname()
-  const items = navForRole(role)
+
+  // Sport Massage nav item is nav-hidden (not route-guarded) for branch-scoped
+  // roles when the caller's branch hasn't enabled the feature. Director
+  // (branch_id NULL) always sees the link; the in-page empty state handles
+  // the "not enabled" case per-branch for directors.
+  const [sportMassageEnabled, setSportMassageEnabled] = useState(true)
+  useEffect(() => {
+    if (!branchId) { setSportMassageEnabled(true); return }
+    let cancelled = false
+    createClient()
+      .from('branch_sport_massage_settings')
+      .select('enabled')
+      .eq('branch_id', branchId)
+      .maybeSingle()
+      .then(({ data }) => { if (!cancelled) setSportMassageEnabled(data?.enabled ?? false) })
+    return () => { cancelled = true }
+  }, [branchId])
+
+  const items = navForRole(role).filter(
+    (i) => i.key !== 'jadwal-sport-massage' || sportMassageEnabled,
+  )
 
   // Build ordered groups, preserving nav order
   const orderedGroupKeys = [...new Set(items.map(i => i.group))] as NavGroup[]

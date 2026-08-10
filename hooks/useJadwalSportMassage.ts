@@ -14,7 +14,7 @@ export interface LeavePopoverState {
   leave: PendingLeaveInfo
 }
 
-export function useJadwalHarian() {
+export function useJadwalSportMassage() {
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [staff, setStaff]               = useState<DayStaffEntry[]>([])
   const [visits, setVisits]             = useState<DailyVisit[]>([])
@@ -92,9 +92,7 @@ export function useJadwalHarian() {
         .in('status', ['approved', 'pending'])
         .lte('start_date', isoDate)
         .gte('end_date', isoDate),
-      fetchDailyVisits(isoDate, selectedBranchId, {
-        serviceTypes: ['TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA'],
-      }),
+      fetchDailyVisits(isoDate, selectedBranchId, { serviceTypes: ['SPORT MASSAGE'] }),
       applyBranch(
         supabase
           .from('schedule_overrides')
@@ -107,7 +105,7 @@ export function useJadwalHarian() {
         supabase
           .from('internal_profiles')
           .select('id, full_name, nickname, avatar_url, branch_id, gender')
-          .eq('role', 'therapist')
+          .eq('role', 'sport_massage_therapist')
           .eq('is_active', true)
           .order('full_name'),
       ),
@@ -217,7 +215,7 @@ export function useJadwalHarian() {
       })
     }
 
-    // Add all active therapists who have no schedule or visits today (shown when toggle is on)
+    // Add all active sport massage therapists who have no schedule or visits today (shown when toggle is on)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const t of (allTherapistsRes.data ?? []) as any[]) {
       if (entries.has(t.id)) continue

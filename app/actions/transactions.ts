@@ -11,6 +11,7 @@ const SERVICE_TO_CATEGORY: Record<string, string> = {
   'TA VISIT':     'TA VISIT',
   'SESI VISIT':   'SESI VISIT',
   'PAKET VISIT':  'PAKET VISIT',
+  'SPORT MASSAGE': 'SPORT MASSAGE',
   'LAINNYA':      'LAINNYA',
 }
 

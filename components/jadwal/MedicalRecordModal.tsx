@@ -13,7 +13,7 @@ const STATUS_OPTIONS: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'n
 
 const SERVICE_TYPES: ServiceType[] = [
   'TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI',
-  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA',
+  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
 ]
 
 const BODY_REGIONS: BodyRegion[] = [

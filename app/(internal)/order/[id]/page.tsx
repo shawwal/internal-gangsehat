@@ -58,7 +58,7 @@ export default function OrderDetailPage() {
   const [stopping, setStopping] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const isAdmin = profile?.role !== 'therapist' && profile?.role !== 'staff'
+  const isAdmin = profile?.role !== 'therapist' && profile?.role !== 'staff' && profile?.role !== 'sport_massage_therapist'
   const canEdit = isAdmin
 
   const load = useCallback(async () => {

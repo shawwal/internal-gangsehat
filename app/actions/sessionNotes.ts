@@ -122,7 +122,7 @@ export async function fetchPreviousSessionNote(
 // Therapists/staff can't resubmit a note that's already completed — keeps the
 // record from being silently rewritten after the fact. Admin/manager/director
 // retain the ability to correct a mistake.
-const LOCKED_FOR_ROLES = ['therapist', 'staff']
+const LOCKED_FOR_ROLES = ['therapist', 'staff', 'sport_massage_therapist']
 
 // ── Single-shot save: upsert as completed, then sync patient_visits ────────────
 export async function completeSessionNote(

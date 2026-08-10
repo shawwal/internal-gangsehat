@@ -78,9 +78,9 @@ get_my_branch()        → uuid   -- branch_id of auth.uid(); NULL for director
 
 ## Domain Values
 
-**Service types** (`patient_visits.service_type`): `TERAPI AWAL` | `SESI TERAPI` | `PAKET TERAPI` | `TA VISIT` | `SESI VISIT` | `PAKET VISIT` | `LAINNYA`
+**Service types** (`patient_visits.service_type`): `TERAPI AWAL` | `SESI TERAPI` | `PAKET TERAPI` | `TA VISIT` | `SESI VISIT` | `PAKET VISIT` | `SPORT MASSAGE` | `LAINNYA`
 
-**Income categories**: `TA KLINIK` | `PAKET KLINIK` | `SESI KLINIK` | `TA VISIT` | `SESI VISIT` | `PAKET VISIT` | `LAINNYA`
+**Income categories**: `TA KLINIK` | `PAKET KLINIK` | `SESI KLINIK` | `TA VISIT` | `SESI VISIT` | `PAKET VISIT` | `SPORT MASSAGE` | `LAINNYA`
 
 **Expense categories**: `BEBAN PELAYANAN` | `GAJI` | `SEWA` | `LISTRIK` | `MARKETING` | `TUKAR TUNAI` | `LAINNYA`
 

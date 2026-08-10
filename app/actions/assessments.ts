@@ -71,7 +71,7 @@ export async function saveAssessmentDraft(
 // Therapists/staff can't resubmit an assessment that's already completed —
 // keeps the record from being silently rewritten after the fact.
 // Admin/manager/director retain the ability to correct a mistake.
-const LOCKED_FOR_ROLES = ['therapist', 'staff']
+const LOCKED_FOR_ROLES = ['therapist', 'staff', 'sport_massage_therapist']
 
 // ── Complete the assessment and sync a plain-text synopsis onto patient_visits ─
 export async function completeAssessment(

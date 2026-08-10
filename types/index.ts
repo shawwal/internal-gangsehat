@@ -1,4 +1,4 @@
-export type UserRole = 'director' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'manager' | 'admin' | 'non-staff'
+export type UserRole = 'director' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'manager' | 'admin' | 'non-staff' | 'sport_massage_therapist'
 
 export interface Branch {
   id: string
@@ -55,6 +55,7 @@ export type ServiceType =
   | 'TA VISIT'
   | 'SESI VISIT'
   | 'PAKET VISIT'
+  | 'SPORT MASSAGE'
   | 'LAINNYA'
 
 export type BodyRegion =

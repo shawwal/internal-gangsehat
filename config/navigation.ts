@@ -162,6 +162,14 @@ export const navigation: NavItem[] = [
     roles: ['director'],
     group: 'management',
   },
+  {
+    key: 'branch-settings',
+    label: 'Pengaturan Cabang',
+    href: '/branch-settings',
+    icon: 'Settings2',
+    roles: ['director', 'manager'],
+    group: 'management',
+  },
 
   // Finance
   {
@@ -266,6 +274,16 @@ export const navigation: NavItem[] = [
     href: '/jadwal-harian/list',
     icon: 'Table',
     roles: ['director', 'hr', 'manager', 'therapist', 'staff', 'admin'],
+    group: 'schedule',
+  },
+
+  // Sport Massage schedule — dedicated therapists + management roles
+  {
+    key: 'jadwal-sport-massage',
+    label: 'Jadwal Sport Massage',
+    href: '/jadwal-sport-massage',
+    icon: 'Dumbbell',
+    roles: ['director', 'manager', 'sport_massage_therapist', 'admin', 'hr'],
     group: 'schedule',
   },
 

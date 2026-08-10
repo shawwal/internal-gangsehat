@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { updateTransaction } from '@/app/actions/transactions'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 
-const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA']
+const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA']
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA']
 const PAYMENT_STATUSES = ['LUNAS', 'DP', 'PELUNASAN']

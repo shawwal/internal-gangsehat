@@ -68,7 +68,7 @@ export default function SchedulesPage() {
         supabase
           .from('internal_profiles')
           .select('id, full_name, branch_id, avatar_url')
-          .in('role', ['therapist', 'staff', 'manager', 'director'])
+          .in('role', ['therapist', 'staff', 'manager', 'director', 'sport_massage_therapist'])
           .order('full_name'),
         supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
         supabase.from('internal_profiles').select('branch_id').eq('id', user!.id).single(),

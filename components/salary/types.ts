@@ -101,9 +101,10 @@ export const ROLE_LABELS: Record<string, string> = {
   marketing: 'Marketing',
   therapist: 'Terapis',
   staff: 'Staff',
+  sport_massage_therapist: 'Terapis Sport Massage',
 }
 
-export const ALL_ROLES = ['director', 'manager', 'finance', 'hr', 'marketing', 'therapist', 'staff']
+export const ALL_ROLES = ['director', 'manager', 'finance', 'hr', 'marketing', 'therapist', 'staff', 'sport_massage_therapist']
 
 /** "Rp 10.000.000" — full currency label for display/invoice */
 export function formatRupiah(amount: number): string {

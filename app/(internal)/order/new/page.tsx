@@ -12,7 +12,7 @@ import { OrderFormActions } from '@/components/order/OrderFormActions'
 export default function NewOrderPage() {
   const router = useRouter()
   const profile = useProfile()
-  const isAdmin = profile?.role !== 'therapist' && profile?.role !== 'staff'
+  const isAdmin = profile?.role !== 'therapist' && profile?.role !== 'staff' && profile?.role !== 'sport_massage_therapist'
 
   const {
     form, errors, layananOptions, therapists, loadingLayanan,

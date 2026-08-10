@@ -8,12 +8,13 @@ import type { BookingSession } from './orders'
 // ── Service type mapping: booking → patient_visits enum ──────────────────────
 const VISIT_SERVICE_TYPES = [
   'TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI',
-  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA',
+  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
 ] as const
 type VisitServiceType = typeof VISIT_SERVICE_TYPES[number]
 
 function mapToVisitServiceType(bookingServiceType: string): VisitServiceType {
   const t = bookingServiceType.toUpperCase()
+  if (t.includes('SPORT') && t.includes('MASSAGE')) return 'SPORT MASSAGE'
   if (t.includes('PAKET') && t.includes('VISIT')) return 'PAKET VISIT'
   if (t.includes('SESI') && t.includes('VISIT')) return 'SESI VISIT'
   if (t.includes('TA VISIT') || (t.includes('TERAPI AWAL') && t.includes('VISIT'))) return 'TA VISIT'

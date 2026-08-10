@@ -15,6 +15,7 @@ interface StaffRow {
 
 const ROLE_LABELS: Record<string, string> = {
   director: 'Direktur', finance: 'Keuangan', hr: 'HR', marketing: 'Marketing',
+  sport_massage_therapist: 'Terapis Sport Massage',
 }
 
 export default function HRStaffPage() {
