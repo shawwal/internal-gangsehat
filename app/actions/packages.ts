@@ -37,6 +37,8 @@ export async function fetchPatientPackages(
     category:           (p.category ?? null) as PatientPackage['category'],
     order_id:           p.order_id ?? null,
     purchased_at:       p.purchased_at,
+    stopped_at:         p.stopped_at ?? null,
+    stopped_by:         p.stopped_by ?? null,
     created_at:         p.created_at,
     updated_at:         p.updated_at,
   }))
@@ -162,6 +164,24 @@ export async function fetchPackageSessions(
 
 // ── Create a new patient package ───────────────────────────────────────────────
 // total_sessions is derived from jenis_paket (P1→5, P2→10) when provided.
+// 1 patient = 1 active order: reject creation if the patient already has an
+// active package, matching the "Sistem Order · Kehadiran · Target" rule.
+const ACTIVE_ORDER_ERROR = 'Pasien masih memiliki order aktif. Silakan STOP order sebelumnya terlebih dahulu.'
+
+async function hasActivePackage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  patientId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('patient_packages')
+    .select('id')
+    .eq('patient_id', patientId)
+    .eq('status', 'active')
+    .limit(1)
+    .maybeSingle()
+  return !!data
+}
+
 export async function createPatientPackage(input: {
   patient_id: string
   branch_id: string | null
@@ -173,6 +193,10 @@ export async function createPatientPackage(input: {
 }): Promise<{ id: string | null; order_id: string | null; error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  if (await hasActivePackage(supabase, input.patient_id)) {
+    return { id: null, order_id: null, error: ACTIVE_ORDER_ERROR }
+  }
 
   const total_sessions = input.jenis_paket === 'P1' ? 5 : 10
   const orderId = await generateOrderId(supabase)
@@ -197,6 +221,10 @@ export async function createPatientPackage(input: {
     .select('id')
     .single()
 
+  if (error?.code === '23505') {
+    return { id: null, order_id: null, error: ACTIVE_ORDER_ERROR }
+  }
+
   return { id: data?.id ?? null, order_id: error ? null : orderId, error: error?.message ?? null }
 }
 
@@ -212,6 +240,10 @@ export async function createPackageFromLayanan(input: {
 }): Promise<{ id: string | null; order_id: string | null; error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  if (await hasActivePackage(supabase, input.patient_id)) {
+    return { id: null, order_id: null, error: ACTIVE_ORDER_ERROR }
+  }
 
   const { data: layanan, error: layananErr } = await supabase
     .from('internal_layanan')
@@ -246,7 +278,34 @@ export async function createPackageFromLayanan(input: {
     .select('id')
     .single()
 
+  if (error?.code === '23505') {
+    return { id: null, order_id: null, error: ACTIVE_ORDER_ERROR }
+  }
+
   return { id: data?.id ?? null, order_id: error ? null : orderId, error: error?.message ?? null }
+}
+
+// ── Stop an active package (order-lifecycle action, not a payment/clinical
+// outcome) ───────────────────────────────────────────────────────────────────
+// Never deletes — status + stop metadata only, so history stays intact and a
+// new order can be created for the same patient afterward.
+export async function stopPatientPackage(id: string): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { error } = await supabase
+    .from('patient_packages')
+    .update({
+      status:             'stopped',
+      operational_status: 'OFF',
+      stopped_at:         new Date().toISOString().slice(0, 10),
+      stopped_by:         user?.id ?? null,
+      updated_at:         new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('status', 'active')
+
+  return { error: error?.message ?? null }
 }
 
 // ── Update an existing package ─────────────────────────────────────────────────
@@ -259,7 +318,7 @@ export async function updatePatientPackage(
     category?: 'PAKET KLINIK' | 'PAKET VISIT'
     operational_status?: 'ON' | 'OFF' | 'PENDING'
     completion_status?: 'LANJUT' | 'SEMBUH' | 'TIDAK LANJUT' | 'STOP' | null
-    status?: 'active' | 'completed' | 'cancelled'
+    status?: 'active' | 'completed' | 'cancelled' | 'stopped'
     notes?: string | null
   },
 ): Promise<{ error: string | null }> {

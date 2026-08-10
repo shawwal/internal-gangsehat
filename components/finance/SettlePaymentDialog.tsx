@@ -1,15 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Wallet, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react'
-import { updateTransaction } from '@/app/actions/transactions'
+import { addPaymentToOrder, fetchOrderPaymentHistory } from '@/app/actions/transactions'
 import { formatCurrency } from '@/lib/utils'
+import { PaymentHistoryTable } from './PaymentHistoryTable'
+import type { OrderPaymentSummary } from '@/lib/internal/orderPayments'
 
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA']
 
 export interface SettleTransaction {
   id: string
+  order_id: string | null
   patient_name: string | null
   category: string
   harga: number
@@ -33,21 +36,26 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError]     = useState<string | null>(null)
+  const [history, setHistory] = useState<OrderPaymentSummary | null>(null)
+
+  useEffect(() => {
+    if (!transaction.order_id) return
+    fetchOrderPaymentHistory(transaction.order_id).then(setHistory)
+  }, [transaction.order_id])
 
   const extraNum   = Number(extra) || 0
   const newAmount  = transaction.amount + extraNum
   const sisaAfter  = Math.max(transaction.harga - newAmount - transaction.discount, 0)
   const newStatus  = sisaAfter <= 0 ? 'LUNAS' : 'PELUNASAN'
 
+  // "Pembayaran baru ditambahkan sebagai riwayat, bukan menimpa pembayaran
+  // sebelumnya" — insert a new transactions row against the same order_id,
+  // never mutate the existing one.
   async function handleConfirm() {
-    if (submitting) return
+    if (submitting || !transaction.order_id) return
     setSubmitting(true)
     setError(null)
-    const result = await updateTransaction(transaction.id, {
-      amount:         newAmount,
-      payment_status: newStatus,
-      payment_method: method,
-    })
+    const result = await addPaymentToOrder(transaction.order_id, extraNum, method)
     if (result.error) {
       setSubmitting(false)
       setError(result.error)
@@ -89,6 +97,23 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
               <p className="text-xs font-semibold text-[#FFB35C]">{formatCurrency(sisaNow)}</p>
             </div>
           </div>
+
+          {/* Riwayat pembayaran — read-only history, never edited in place */}
+          {history && history.history.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-foreground mb-1.5">Riwayat Pembayaran</p>
+              <PaymentHistoryTable history={history.history} />
+            </div>
+          )}
+
+          {!transaction.order_id && (
+            <div className="flex items-center gap-1.5 p-2.5 rounded-xl bg-destructive/8 border border-destructive/20">
+              <AlertTriangle size={13} className="text-destructive shrink-0" />
+              <p className="text-xs text-destructive">
+                Transaksi ini tidak memiliki order_id — tidak bisa menambah riwayat pembayaran.
+              </p>
+            </div>
+          )}
 
           {/* Additional payment */}
           <div>
@@ -160,7 +185,7 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={submitting || success || extraNum <= 0}
+            disabled={submitting || success || extraNum <= 0 || !transaction.order_id}
             className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-70 transition-colors cursor-pointer"
           >
             {submitting

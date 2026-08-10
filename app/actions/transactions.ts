@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { computeOrderPaymentSummary, type OrderPaymentSummary, type OrderPaymentRow } from '@/lib/internal/orderPayments'
 
 const SERVICE_TO_CATEGORY: Record<string, string> = {
   'TERAPI AWAL':  'TA KLINIK',
@@ -146,6 +147,79 @@ export async function createTransactionForVisit(
   if (error) return { error: error.message }
 
   await sendPaymentNotification(input.harga, category)
+  return { error: null }
+}
+
+// ── Payment history / SALDO (order-level) ────────────────────────────────────
+// "Pembayaran baru ditambahkan sebagai riwayat, bukan menimpa pembayaran
+// sebelumnya" — every payment against an order is its own transactions row;
+// admins never edit a past payment, they add a new one.
+
+export async function fetchOrderPaymentHistory(orderId: string): Promise<OrderPaymentSummary> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('transactions')
+    .select('id, transaction_date, amount, harga, discount, payment_method, description')
+    .eq('order_id', orderId)
+    .neq('status', 'rejected')
+
+  return computeOrderPaymentSummary((data ?? []) as OrderPaymentRow[])
+}
+
+export async function addPaymentToOrder(
+  orderId: string,
+  amount: number,
+  paymentMethod: string,
+  keterangan?: string | null,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+
+  const { data: profile } = await supabase
+    .from('internal_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !PAYMENT_ROLES.includes(profile.role)) {
+    return { error: 'Tidak memiliki akses untuk mencatat pembayaran' }
+  }
+
+  const { data: existingRows, error: fetchErr } = await supabase
+    .from('transactions')
+    .select('id, harga, discount, patient_id, branch_id, visit_id, fisio_id, category')
+    .eq('order_id', orderId)
+    .neq('status', 'rejected')
+    .order('transaction_date', { ascending: true })
+    .limit(1)
+
+  if (fetchErr || !existingRows?.length) return { error: 'Order tidak ditemukan' }
+  const template = existingRows[0]
+
+  const { error } = await supabase.from('transactions').insert({
+    order_id:         orderId,
+    visit_id:         template.visit_id,
+    patient_id:       template.patient_id,
+    branch_id:        template.branch_id,
+    fisio_id:         template.fisio_id,
+    type:             'income',
+    category:         template.category,
+    harga:            template.harga,
+    discount:         template.discount,
+    amount,
+    payment_method:   paymentMethod,
+    description:      keterangan || null,
+    transaction_date: new Date().toISOString().slice(0, 10),
+    status:           'pending',
+    recorded_by:      user.id,
+    updated_at:       new Date().toISOString(),
+  })
+
+  if (error) return { error: error.message }
+
+  await sendPaymentNotification(amount, template.category)
   return { error: null }
 }
 

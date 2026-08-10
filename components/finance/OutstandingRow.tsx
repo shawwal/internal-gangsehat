@@ -20,6 +20,7 @@ function formatRp(n: number) {
 
 export interface OutstandingTxRow {
   id: string
+  order_id: string | null
   transaction_date: string
   patient_id: string | null
   patient_name: string | null
@@ -110,6 +111,7 @@ export function OutstandingRow({ tx, showBranchColumn, editTx }: Props) {
         <SettlePaymentDialog
           transaction={{
             id:             tx.id,
+            order_id:       tx.order_id,
             patient_name:   tx.patient_name,
             category:       tx.category,
             harga:          Number(tx.harga ?? 0),

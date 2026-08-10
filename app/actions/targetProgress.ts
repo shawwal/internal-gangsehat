@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { VISIT_STATUS_FILTER, isAttended } from '@/components/performance/utils'
+import { fetchConfirmedVisitIds, fetchPaidPackageIds } from '@/lib/internal/paymentGating'
 import type { CategoryKey } from '@/components/targetProgress/types'
 
 const TA_TYPES = ['TERAPI AWAL', 'TA VISIT']
@@ -36,6 +37,7 @@ interface PackageRow {
   purchased_at: string
   package_name: string
   jenis_paket: string | null
+  order_id: string | null
 }
 
 export async function fetchTargetProgressDetail(
@@ -51,14 +53,19 @@ export async function fetchTargetProgressDetail(
     const pkgCategory = category === 'paket_klinik' ? 'PAKET KLINIK' : 'PAKET VISIT'
     const { data, error } = await supabase
       .from('patient_packages')
-      .select('id, patient_id, purchased_at, package_name, jenis_paket')
+      .select('id, patient_id, purchased_at, package_name, jenis_paket, order_id')
       .eq('branch_id', branchId)
       .eq('category', pkgCategory)
       .eq('purchased_at', visitDate)
       .neq('status', 'cancelled')
 
     if (error || !data) return []
-    const rows = data as PackageRow[]
+    const allRows = data as PackageRow[]
+
+    // Kehadiran ≠ Pembayaran: only paid packages count toward Paket progress,
+    // matching the gate applied in target-progress's summary tiles.
+    const paidPackageIds = await fetchPaidPackageIds(supabase, allRows, new Set(), new Map())
+    const rows = allRows.filter((row) => paidPackageIds.has(row.id))
 
     const patientIds = [...new Set(rows.map((row) => row.patient_id))]
     const { data: patients } = await supabase
@@ -100,11 +107,14 @@ export async function fetchTargetProgressDetail(
   const { data, error } = await query
   if (error || !data) return []
 
-  // TA counts every registered visit (booked, not just attended); Kunjungan
-  // stays attendance-only. Sesi excludes visits that are sessions used from an
-  // existing package (package_id set) — those are "Paket" on jadwal-harian,
-  // not a standalone Sesi sale.
-  const rows = (data as unknown as VisitRow[]).filter((v) => {
+  const allVisits = data as unknown as VisitRow[]
+  // Kehadiran ≠ Pembayaran: TA/Sesi only count visits with a confirmed payment.
+  const paidVisitIds = await fetchConfirmedVisitIds(supabase, allVisits.map((v) => v.id))
+
+  // Sesi excludes visits that are sessions used from an existing package
+  // (package_id set) — those are "Paket" on jadwal-harian, not a standalone Sesi sale.
+  const rows = allVisits.filter((v) => {
+    if (!paidVisitIds.has(v.id)) return false
     if (category === 'ta') return true
     if (!isAttended(v)) return false
     if (category === 'sesi' && v.package_id) return false

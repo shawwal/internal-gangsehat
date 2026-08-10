@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Table2, TrendingUp, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { VISIT_STATUS_FILTER } from '@/components/performance/utils'
+import { fetchConfirmedVisitIds, fetchPaidPackageIds } from '@/lib/internal/paymentGating'
 import { MonthPicker } from '@/components/targetProgress/MonthPicker'
 import { BranchPicker } from '@/components/targetProgress/BranchPicker'
 import { ClassicTable } from '@/components/targetProgress/ClassicTable'
@@ -102,7 +103,7 @@ export default function TargetProgressPage() {
         .in('status', [...VISIT_STATUS_FILTER]),
       supabase
         .from('patient_packages')
-        .select('id, purchased_at, category')
+        .select('id, purchased_at, category, order_id')
         .eq('branch_id', selectedBranchId)
         .gte('purchased_at', range.start)
         .lte('purchased_at', range.end)
@@ -115,9 +116,18 @@ export default function TargetProgressPage() {
 
     const disabled = new Set((categorySettings ?? []).map(r => r.category as CategoryKey))
 
+    const visitRows = (visits ?? []) as VisitForProgress[]
+    const packageRows = (packages ?? []) as PackageForProgress[]
+
+    const packageIdByVisitId = new Map(
+      visitRows.filter((v) => v.package_id).map((v) => [v.id, v.package_id as string]),
+    )
+    const paidVisitIds = await fetchConfirmedVisitIds(supabase, visitRows.map((v) => v.id))
+    const paidPackageIds = await fetchPaidPackageIds(supabase, packageRows, paidVisitIds, packageIdByVisitId)
+
     const days = daysInMonth(year, month)
-    const visitDaily = buildDailyCounts((visits ?? []) as VisitForProgress[], days)
-    const packageDaily = buildPackageDailyCounts((packages ?? []) as PackageForProgress[], days)
+    const visitDaily = buildDailyCounts(visitRows, days, paidVisitIds)
+    const packageDaily = buildPackageDailyCounts(packageRows, days, paidPackageIds)
     const daily = mergeDailyCounts(visitDaily, packageDaily)
     const t = targetRow as BranchTargetForProgress | null
     const targetFields: Record<CategoryKey, number> = {

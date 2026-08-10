@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { fetchConfirmedVisitIds } from '@/lib/internal/paymentGating'
 import { LeaderboardPodium } from './LeaderboardPodium'
 import { LeaderboardTable } from './LeaderboardTable'
 import { PodiumSkeleton, TableSkeleton } from './Skeletons'
@@ -37,7 +38,7 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
         let q = supabase
           .from('patient_visits')
           .select(
-            'attending_staff_id, service_type, visit_date, kehadiran, ' +
+            'id, attending_staff_id, service_type, visit_date, kehadiran, ' +
             'internal_profiles!attending_staff_id(full_name, avatar_url)',
           )
           .gte('visit_date', start)
@@ -66,6 +67,10 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
     const tData = (targetsRes.data ?? []) as unknown as StaffTargetRow[]
     setTargets(tData)
 
+    // Kehadiran ≠ Pembayaran: `total` (kunjungan) stays attendance-only, but the
+    // TA/Paket/Sesi breakdown only counts visits with a confirmed payment.
+    const paidVisitIds = await fetchConfirmedVisitIds(supabase, vData.map(v => v.id))
+
     // Aggregate by attending_staff_id
     const statsMap = new Map<string, FisioStats>()
     for (const v of vData) {
@@ -81,6 +86,7 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
       }
       const s = statsMap.get(sid)!
       s.total++
+      if (!paidVisitIds.has(v.id)) continue
       const svcType = v.service_type ?? ''
       if ((TA_TYPES    as readonly string[]).includes(svcType)) s.ta++
       else if ((PAKET_TYPES as readonly string[]).includes(svcType)) s.paket++

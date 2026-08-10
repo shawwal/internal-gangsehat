@@ -304,7 +304,7 @@ export type PackageOperationalStatus = 'ON' | 'OFF' | 'PENDING'
 export type PackageCompletionStatus = 'LANJUT' | 'SEMBUH' | 'TIDAK LANJUT' | 'STOP'
 
 export type PackageType = 'fixed' | 'flexible'
-export type PackageStatus = 'active' | 'completed' | 'cancelled'
+export type PackageStatus = 'active' | 'completed' | 'cancelled' | 'stopped'
 
 export interface PatientPackage {
   id: string
@@ -324,6 +324,8 @@ export interface PatientPackage {
   category: 'PAKET KLINIK' | 'PAKET VISIT' | null
   order_id: string | null
   purchased_at: string
+  stopped_at: string | null
+  stopped_by: string | null
   created_at: string
   updated_at: string
 }

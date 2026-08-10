@@ -32,6 +32,7 @@ export interface PackageForProgress {
   id: string
   purchased_at: string
   category: 'PAKET KLINIK' | 'PAKET VISIT' | null
+  order_id: string | null
 }
 
 export interface BranchTargetForProgress {

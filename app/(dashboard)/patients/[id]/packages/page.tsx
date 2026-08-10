@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ChevronLeft, Plus, Package, CheckCircle2, XCircle, Layers } from 'lucide-react'
+import { ChevronLeft, Plus, Package, CheckCircle2, XCircle, Layers, OctagonMinus } from 'lucide-react'
 import { StatCard }      from '@/components/packages/StatCard'
 import { PackageCard }   from '@/components/packages/PackageCard'
 import { PackageModal }  from '@/components/packages/PackageModal'
@@ -16,11 +16,12 @@ import type { PatientPackage }  from '@/components/packages/types'
 
 export default function PatientPackagesPage() {
   const { id } = useParams() as { id: string }
-  const { packages, patientName, noRm, branchId, loading, stats, load, handleDelete } = usePackages(id)
+  const { packages, patientName, noRm, branchId, loading, stats, load, handleDelete, handleStop } = usePackages(id)
 
   const [showModal, setShowModal]       = useState(false)
   const [editTarget, setEditTarget]     = useState<PatientPackage | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [stopTarget, setStopTarget]     = useState<string | null>(null)
   const [scheduleTarget, setScheduleTarget] = useState<PatientPackage | null>(null)
 
   function handleExportPackages() {
@@ -118,6 +119,7 @@ export default function PatientPackagesPage() {
               pkg={pkg}
               onEdit={openEdit}
               onDelete={(pkgId) => setDeleteTarget(pkgId)}
+              onStop={(pkgId) => setStopTarget(pkgId)}
               onSchedule={(p) => setScheduleTarget(p)}
             />
           ))}
@@ -139,6 +141,17 @@ export default function PatientPackagesPage() {
         <DeleteConfirm
           onConfirm={() => { handleDelete(deleteTarget); setDeleteTarget(null) }}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {stopTarget && (
+        <DeleteConfirm
+          icon={OctagonMinus}
+          title="Stop Order?"
+          description="Order akan ditandai Stop dan tanggal stop dicatat. Riwayat tetap tersimpan — order baru bisa dibuat setelah ini."
+          confirmLabel="Ya, Stop"
+          onConfirm={() => { handleStop(stopTarget); setStopTarget(null) }}
+          onCancel={() => setStopTarget(null)}
         />
       )}
 

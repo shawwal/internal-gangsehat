@@ -30,12 +30,14 @@ export const STATUS_BADGE: Record<PackageStatus, string> = {
   active:    'bg-primary/15 text-primary border-primary/20',
   completed: 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/20',
   cancelled: 'bg-destructive/15 text-destructive border-destructive/20',
+  stopped:   'bg-muted/40 text-muted-foreground border-border',
 }
 
 export const STATUS_LABEL: Record<PackageStatus, string> = {
   active:    'Aktif',
   completed: 'Selesai',
   cancelled: 'Dibatalkan',
+  stopped:   'Stop',
 }
 
 export const COMPLETION_LABEL: Record<PackageCompletionStatus, string> = {

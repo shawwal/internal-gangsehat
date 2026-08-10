@@ -37,6 +37,7 @@ export interface VisitForPerforma {
 }
 
 export interface VisitForLeaderboard {
+  id: string
   attending_staff_id: string | null
   service_type: string | null
   visit_date: string

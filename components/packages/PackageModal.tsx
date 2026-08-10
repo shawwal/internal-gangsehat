@@ -199,6 +199,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
                   <option value="active">Aktif</option>
                   <option value="completed">Selesai</option>
                   <option value="cancelled">Dibatalkan</option>
+                  <option value="stopped">Stop</option>
                 </select>
               </div>
 

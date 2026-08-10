@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { fetchConfirmedVisitIds } from '@/lib/internal/paymentGating'
 import { TargetKpiCard } from './TargetKpiCard'
 import { FisioBarChart } from './FisioBarChart'
 import { RecentVisitsTable } from './RecentVisitsTable'
@@ -32,6 +33,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
   const [loading, setLoading]   = useState(true)
   const [visits, setVisits]     = useState<VisitRow[]>([])
   const [targets, setTargets]   = useState<StaffTargetRow[]>([])
+  const [paidVisitIds, setPaidVisitIds] = useState<Set<string>>(new Set())
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -85,16 +87,21 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
 
     setVisits(rawVisits.map(v => ({ ...v, patients: { no_rm: noRmById.get(v.patient_id) ?? null } })))
     setTargets((targetsRes.data ?? []) as unknown as StaffTargetRow[])
+    setPaidVisitIds(await fetchConfirmedVisitIds(supabase, rawVisits.map(v => v.id)))
     setLoading(false)
   }, [year, branchFilter, periodMode, month, week])
 
   useEffect(() => { load() }, [load])
 
   // ── Derived KPI data ───────────────────────────────────────────────────────
+  // Kehadiran ≠ Pembayaran: Kunjungan stays attendance-only, but TA/Paket/Visit
+  // (which roll up into TA/SESI/PAKET progress) only count visits with a
+  // confirmed payment behind them.
   const attended = visits.filter(v => isAttended(v, TODAY_ISO))
-  const paketAttended = attended.filter(v => (PAKET_TYPES as readonly string[]).includes(v.service_type ?? ''))
+  const paidAttended = attended.filter(v => paidVisitIds.has(v.id))
+  const paketAttended = paidAttended.filter(v => (PAKET_TYPES as readonly string[]).includes(v.service_type ?? ''))
 
-  const actualTA     = attended.filter(v => (TA_TYPES as readonly string[]).includes(v.service_type ?? '')).length
+  const actualTA     = paidAttended.filter(v => (TA_TYPES as readonly string[]).includes(v.service_type ?? '')).length
   const actualPaket  = firstPackageVisits(paketAttended).length
   const actualKunjungan = attended.length
   const actualVisit  = firstPackageVisits(paketAttended.filter(v => v.service_type === 'PAKET VISIT')).length
@@ -110,7 +117,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
     if (!v.attending_staff_id) continue
     const name = (v.internal_profiles as any)?.full_name ?? 'Unknown'
     const cur = fisioMap.get(v.attending_staff_id) ?? { fullName: name, ta: 0 }
-    if ((TA_TYPES as readonly string[]).includes(v.service_type ?? '')) {
+    if ((TA_TYPES as readonly string[]).includes(v.service_type ?? '') && paidVisitIds.has(v.id)) {
       fisioMap.set(v.attending_staff_id, { ...cur, ta: cur.ta + 1 })
     } else if (!fisioMap.has(v.attending_staff_id)) {
       fisioMap.set(v.attending_staff_id, cur)

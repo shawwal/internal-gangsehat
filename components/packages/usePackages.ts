@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { fetchPatient } from '@/app/actions/patients'
-import { fetchPatientPackagesWithPayment, deletePatientPackage } from '@/app/actions/packages'
+import { fetchPatientPackagesWithPayment, deletePatientPackage, stopPatientPackage } from '@/app/actions/packages'
 import { createClient } from '@/lib/supabase/client'
 import type { PatientPackageWithPayment } from '@/app/actions/packages'
 
@@ -43,6 +43,11 @@ export function usePackages(patientId: string) {
     load()
   }
 
+  async function handleStop(pkgId: string) {
+    await stopPatientPackage(pkgId)
+    load()
+  }
+
   const stats = {
     total:     packages.length,
     active:    packages.filter((p) => p.status === 'active').length,
@@ -50,5 +55,5 @@ export function usePackages(patientId: string) {
     cancelled: packages.filter((p) => p.status === 'cancelled').length,
   }
 
-  return { packages, patientName, noRm, branchId, loading, stats, load, handleDelete }
+  return { packages, patientName, noRm, branchId, loading, stats, load, handleDelete, handleStop }
 }

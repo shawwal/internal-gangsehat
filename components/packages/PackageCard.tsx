@@ -1,10 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil, Trash2, ChevronDown, ChevronUp, CalendarDays, Wallet } from 'lucide-react'
+import { Pencil, Trash2, ChevronDown, ChevronUp, CalendarDays, Wallet, OctagonMinus } from 'lucide-react'
 import { fetchPackageSessions } from '@/app/actions/packages'
+import { fetchOrderPaymentHistory } from '@/app/actions/transactions'
 import type { PatientPackageWithPayment } from '@/app/actions/packages'
+import type { OrderPaymentHistoryEntry } from '@/lib/internal/orderPayments'
 import { SessionList } from './SessionList'
+import { PaymentHistoryTable } from '@/components/finance/PaymentHistoryTable'
 import {
   OP_STATUS_BADGE, STATUS_BADGE, STATUS_LABEL, COMPLETION_BADGE, COMPLETION_LABEL,
 } from './types'
@@ -15,14 +18,19 @@ interface PackageCardProps {
   pkg:        PatientPackageWithPayment
   onEdit:     (pkg: PatientPackage) => void
   onDelete:   (id: string) => void
+  onStop:     (id: string) => void
   onSchedule?: (pkg: PatientPackage) => void
 }
 
-export function PackageCard({ pkg, onEdit, onDelete, onSchedule }: PackageCardProps) {
+export function PackageCard({ pkg, onEdit, onDelete, onStop, onSchedule }: PackageCardProps) {
   const pct = pkg.total_sessions > 0 ? (pkg.used_sessions / pkg.total_sessions) * 100 : 0
   const [expanded, setExpanded]             = useState(false)
   const [sessions, setSessions]             = useState<PackageSession[] | null>(null)
   const [loadingSessions, setLoadingSessions] = useState(false)
+
+  const [paymentExpanded, setPaymentExpanded] = useState(false)
+  const [paymentHistory, setPaymentHistory]   = useState<OrderPaymentHistoryEntry[] | null>(null)
+  const [loadingPayments, setLoadingPayments] = useState(false)
 
   async function toggleSessions() {
     if (!expanded && sessions === null) {
@@ -32,6 +40,16 @@ export function PackageCard({ pkg, onEdit, onDelete, onSchedule }: PackageCardPr
       setLoadingSessions(false)
     }
     setExpanded((v) => !v)
+  }
+
+  async function togglePayments() {
+    if (!paymentExpanded && paymentHistory === null && pkg.order_id) {
+      setLoadingPayments(true)
+      const summary = await fetchOrderPaymentHistory(pkg.order_id)
+      setPaymentHistory(summary.history)
+      setLoadingPayments(false)
+    }
+    setPaymentExpanded((v) => !v)
   }
 
   return (
@@ -85,6 +103,15 @@ export function PackageCard({ pkg, onEdit, onDelete, onSchedule }: PackageCardPr
           >
             <Pencil size={14} />
           </button>
+          {pkg.status === 'active' && (
+            <button
+              onClick={() => onStop(pkg.id)}
+              className="p-1.5 rounded-lg hover:bg-secondary/10 text-muted-foreground hover:text-secondary transition-colors"
+              title="Stop order — wajib sebelum bisa buat order baru untuk pasien ini"
+            >
+              <OctagonMinus size={14} />
+            </button>
+          )}
           {pkg.status === 'active' && (
             <button
               onClick={() => onDelete(pkg.id)}
@@ -153,6 +180,28 @@ export function PackageCard({ pkg, onEdit, onDelete, onSchedule }: PackageCardPr
         <div className="rounded-xl border border-border overflow-hidden">
           <SessionList sessions={sessions} loading={loadingSessions} />
         </div>
+      )}
+
+      {pkg.order_id && (
+        <>
+          <button
+            onClick={togglePayments}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors text-xs text-muted-foreground"
+          >
+            <span>Riwayat Pembayaran</span>
+            {paymentExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
+
+          {paymentExpanded && (
+            loadingPayments
+              ? <p className="text-xs text-muted-foreground px-1">Memuat...</p>
+              : <PaymentHistoryTable history={paymentHistory ?? []} />
+          )}
+        </>
+      )}
+
+      {pkg.status === 'stopped' && pkg.stopped_at && (
+        <p className="text-[10px] text-muted-foreground">Dihentikan pada {formatDate(pkg.stopped_at)}</p>
       )}
 
       {/* Bottom row */}
