@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Package, X } from 'lucide-react'
 import type { PatientPlain } from '@/app/actions/patients'
 import { PatientPickerStep } from './PatientPickerStep'
@@ -19,7 +20,10 @@ export function BuyPackageDialog({
 }: Props) {
   const [patient, setPatient] = useState<PatientPlain | null>(initialPatient ?? null)
 
-  return (
+  // Portalled to document.body so this isn't trapped behind ancestors that
+  // establish their own stacking context (e.g. the focus-mode bar's
+  // backdrop-blur), which otherwise renders the dialog behind the page.
+  return createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4" onClick={onClose}>
       <div
         className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col"
@@ -55,6 +59,7 @@ export function BuyPackageDialog({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
