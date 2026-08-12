@@ -20,6 +20,7 @@ import { fetchBranchStaff, deleteVisit, updateVisit, type BranchStaffMember } fr
 import type { PaymentVisitInfo } from '@/components/visits/PaymentDialog'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 import type { PatientVisit, VisitStatus, ServiceType, BodyRegion, UserRole } from '@/types'
+import { logActivity } from '@/lib/activityLog'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const STATUS_OPTIONS: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
@@ -317,7 +318,8 @@ export default function PatientVisitsPage() {
     e.preventDefault()
     if (!branchId) { alert('Akun Anda belum terhubung ke cabang.'); return }
     setSaving(true)
-    await createClient().from('patient_visits').insert({
+    const supabase = createClient()
+    const { data: inserted } = await supabase.from('patient_visits').insert({
       patient_id:         id,
       branch_id:          branchId,
       attending_staff_id: form.attending_staff_id || userId,
@@ -332,7 +334,18 @@ export default function PatientVisitsPage() {
       treatment:          form.treatment       || null,
       status:             form.status,
       notes:              form.notes           || null,
-    })
+    }).select('id').single()
+    if (inserted?.id) {
+      await logActivity({
+        supabase, userId, action: 'create', resourceType: 'patient_visit',
+        resourceId: inserted.id, resourceLabel: patientName, branchId,
+        newValues: {
+          visit_date: form.visit_date, service_type: form.service_type || null,
+          shift: form.shift || null, status: form.status,
+          attending_staff_id: form.attending_staff_id || userId,
+        },
+      })
+    }
     setSaving(false)
     setShowForm(false)
     setForm(DEFAULT_FORM)

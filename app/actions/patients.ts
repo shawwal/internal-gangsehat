@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII, encryptPatientPII, hashPhone } from '@/lib/encryption'
 import { normalizeBirthDate } from '@/lib/dates'
+import { logActivity } from '@/lib/activityLog'
 
 export interface PatientPlain {
   id: string
@@ -338,10 +339,33 @@ export async function fetchPatientsPageWithStats(
 
 export async function deletePatient(id: string): Promise<{ error: string | null }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: oldRow } = await supabase
+    .from('patients')
+    .select('encrypted_name, is_active')
+    .eq('id', id)
+    .single()
+
   const { error } = await supabase
     .from('patients')
     .update({ is_active: false })
     .eq('id', id)
+
+  if (!error) {
+    let label = 'Pasien'
+    try {
+      if (oldRow?.encrypted_name) {
+        label = decryptPatientPII({ encrypted_name: oldRow.encrypted_name, encrypted_phone: '' }).name || label
+      }
+    } catch { /* keep fallback label */ }
+    await logActivity({
+      supabase, userId: user?.id, action: 'update', resourceType: 'patient',
+      resourceId: id, resourceLabel: label,
+      oldValues: { is_active: oldRow?.is_active ?? true },
+      newValues: { is_active: false },
+    })
+  }
+
   return { error: error?.message ?? null }
 }
 
@@ -397,6 +421,21 @@ export async function addPatient(input: {
     provinsi:             input.provinsi       ?? null,
     keluhan:              input.keluhan        ?? null,
   }).select('id').single()
+
+  if (!error && data?.id) {
+    const { data: { user } } = await supabase.auth.getUser()
+    await logActivity({
+      supabase, userId: user?.id, action: 'create', resourceType: 'patient',
+      resourceId: data.id, resourceLabel: input.name,
+      newValues: {
+        gender: input.gender, no_rm: input.no_rm ?? null, pekerjaan: input.pekerjaan ?? null,
+        agama: input.agama ?? null, hobi: input.hobi ?? null, kelurahan: input.kelurahan ?? null,
+        kecamatan: input.kecamatan ?? null, kabupaten_kota: input.kabupaten_kota ?? null,
+        provinsi: input.provinsi ?? null, keluhan: input.keluhan ?? null,
+      },
+    })
+  }
+
   return { error: error?.message ?? null, id: data?.id ?? null }
 }
 
@@ -426,6 +465,11 @@ export async function updatePatient(
   input: UpdatePatientInput,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
+  const { data: oldRow } = await supabase
+    .from('patients')
+    .select('gender, blood_type, allergies, medical_notes, no_rm, pekerjaan, agama, hobi, kelurahan, kecamatan, kabupaten_kota, provinsi')
+    .eq('id', id)
+    .single()
   const enc = encryptPatientPII({
     name:             input.name,
     phone:            input.phone,
@@ -457,6 +501,23 @@ export async function updatePatient(
     kabupaten_kota: input.kabupaten_kota ?? null,
     provinsi:      input.provinsi       ?? null,
   }).eq('id', id)
+
+  if (!error) {
+    const { data: { user } } = await supabase.auth.getUser()
+    await logActivity({
+      supabase, userId: user?.id, action: 'update', resourceType: 'patient',
+      resourceId: id, resourceLabel: input.name,
+      oldValues: oldRow ? { ...oldRow, allergies: Array.isArray(oldRow.allergies) ? oldRow.allergies.join(', ') || null : oldRow.allergies } : null,
+      newValues: {
+        gender: input.gender ?? null, blood_type: input.blood_type ?? null,
+        allergies: input.allergies ?? null, medical_notes: input.medical_notes ?? null,
+        no_rm: input.no_rm ?? null, pekerjaan: input.pekerjaan ?? null, agama: input.agama ?? null,
+        hobi: input.hobi ?? null, kelurahan: input.kelurahan ?? null, kecamatan: input.kecamatan ?? null,
+        kabupaten_kota: input.kabupaten_kota ?? null, provinsi: input.provinsi ?? null,
+      },
+    })
+  }
+
   return { error: error?.message ?? null }
 }
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activityLog'
 import { LeaveStats } from '@/components/leave/LeaveStats'
 import { LeaveFilters } from '@/components/leave/LeaveFilters'
 import { DirectorLeaveHeader } from '@/components/leave/DirectorLeaveHeader'
@@ -192,17 +193,26 @@ export default function DirectorLeavePage() {
 
   async function handleApprove(id: string) {
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase
+    const row = rows.find(r => r.id === id)
+    const { error } = await supabase
       .from('leave_requests')
       .update({ status: 'approved', reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
       .eq('id', id)
+    if (!error) {
+      logActivity({
+        supabase, userId: user?.id, action: 'update', resourceType: 'leave_request',
+        resourceId: id, resourceLabel: row?.internal_profiles?.full_name ?? null, branchId: row?.branch_id ?? null,
+        oldValues: { status: row?.status }, newValues: { status: 'approved' },
+      })
+    }
     loadStats()
     loadRows(page, filters)
   }
 
   async function handleReject(id: string, note: string) {
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase
+    const row = rows.find(r => r.id === id)
+    const { error } = await supabase
       .from('leave_requests')
       .update({
         status: 'rejected',
@@ -211,6 +221,14 @@ export default function DirectorLeavePage() {
         reviewed_at: new Date().toISOString(),
       })
       .eq('id', id)
+    if (!error) {
+      logActivity({
+        supabase, userId: user?.id, action: 'update', resourceType: 'leave_request',
+        resourceId: id, resourceLabel: row?.internal_profiles?.full_name ?? null, branchId: row?.branch_id ?? null,
+        oldValues: { status: row?.status, rejection_note: row?.rejection_note },
+        newValues: { status: 'rejected', rejection_note: note },
+      })
+    }
     loadStats()
     loadRows(page, filters)
   }
@@ -220,16 +238,34 @@ export default function DirectorLeavePage() {
     await deleteProofFiles(supabase, [row?.proof_url ?? null])
     const { error } = await supabase.from('leave_requests').delete().eq('id', id)
     if (error) { console.error('[director/leave] delete error:', error); return }
+    const { data: { user } } = await supabase.auth.getUser()
+    logActivity({
+      supabase, userId: user?.id, action: 'delete', resourceType: 'leave_request',
+      resourceId: id, resourceLabel: row?.internal_profiles?.full_name ?? null, branchId: row?.branch_id ?? null,
+      oldValues: (row as unknown as Record<string, unknown>) ?? null,
+    })
     afterDelete(1)
   }
 
   async function handleBulkDelete() {
     setBulkDeleting(true)
     const ids = Array.from(selected)
-    const proofUrls = ids.map(id => rows.find(r => r.id === id)?.proof_url ?? null)
+    const idRows = ids.map(id => rows.find(r => r.id === id))
+    const proofUrls = idRows.map(row => row?.proof_url ?? null)
     await deleteProofFiles(supabase, proofUrls)
     const { error } = await supabase.from('leave_requests').delete().in('id', ids)
     if (error) { console.error('[director/leave] bulk delete error:', error) }
+    else {
+      const { data: { user } } = await supabase.auth.getUser()
+      for (const row of idRows) {
+        if (!row) continue
+        await logActivity({
+          supabase, userId: user?.id, action: 'delete', resourceType: 'leave_request',
+          resourceId: row.id, resourceLabel: row.internal_profiles?.full_name ?? null, branchId: row.branch_id ?? null,
+          oldValues: row as unknown as Record<string, unknown>,
+        })
+      }
+    }
     setBulkDeleting(false)
     setBulkConfirm(false)
     exitSelectMode()

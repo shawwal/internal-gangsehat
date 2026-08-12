@@ -5,10 +5,12 @@ import { CheckCircle, XCircle, Clock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel } from '@/lib/excel-export'
+import { logActivity } from '@/lib/activityLog'
 import type { ReportStatus } from '@/types'
 
 interface Report {
   id: string
+  branch_id: string
   period_year: number
   period_month: number
   total_income: number
@@ -57,10 +59,26 @@ export default function DirectorReportsPage() {
     e.preventDefault()
     if (!reviewId || !action) return
     setSaving(true)
-    await createClient()
+    const oldRow = reports.find((r) => r.id === reviewId)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase
       .from('branch_financial_reports')
       .update({ status: action, notes: note || null, reviewed_at: new Date().toISOString() })
       .eq('id', reviewId)
+    if (!error && oldRow) {
+      await logActivity({
+        supabase,
+        userId: user?.id,
+        action: 'update',
+        resourceType: 'branch_financial_report',
+        resourceId: reviewId,
+        resourceLabel: `${oldRow.branches?.name ?? ''} — ${MONTH_NAMES[oldRow.period_month - 1]} ${oldRow.period_year}`,
+        branchId: oldRow.branch_id,
+        oldValues: { status: oldRow.status, notes: oldRow.notes },
+        newValues: { status: action, notes: note || null },
+      })
+    }
     setSaving(false)
     setReviewId(null)
     setNote('')

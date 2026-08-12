@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { PlusCircle, Target } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activityLog'
 import { useToast } from '@/context/ToastContext'
 import { TargetStats } from '@/components/target/TargetStats'
 import { TargetForm } from '@/components/target/TargetForm'
@@ -137,6 +138,20 @@ export default function MyTargetsPage() {
         showToast(`Gagal menyimpan: ${error.message}`, 'error')
       }
     } else {
+      if (editTarget) {
+        logActivity({
+          supabase, userId: user.id, action: 'update', resourceType: 'staff_target',
+          resourceId: editTarget.id, resourceLabel: `${editTarget.bulan}/${editTarget.tahun}`,
+          branchId: payload.branch_id, oldValues: editTarget as unknown as Record<string, unknown>,
+          newValues: payload,
+        })
+      } else {
+        logActivity({
+          supabase, userId: user.id, action: 'create', resourceType: 'staff_target',
+          resourceLabel: `${payload.bulan}/${payload.tahun}`, branchId: payload.branch_id,
+          newValues: payload,
+        })
+      }
       showToast(editTarget ? 'Target berhasil diperbarui.' : 'Target berhasil diajukan!', 'success')
       cancel()
       load()

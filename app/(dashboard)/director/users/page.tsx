@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState, useTransition } from 'react'
 import { UserPlus, Loader2, Archive } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activityLog'
 import { deleteInternalUser } from '@/app/actions/delete-user'
 import { UserTabs }    from '@/components/users/UserTabs'
 import { UserFilters } from '@/components/users/UserFilters'
@@ -54,7 +55,17 @@ export default function UsersPage() {
 
   async function updateField(id: string, patch: Partial<Pick<UserRow, 'role' | 'branch_id' | 'is_active' | 'full_name' | 'phone' | 'nickname' | 'gender'>>) {
     setSavingId(id)
-    await createClient().from('internal_profiles').update(patch).eq('id', id)
+    const supabase = createClient()
+    const row = users.find((u) => u.id === id)
+    const { error } = await supabase.from('internal_profiles').update(patch).eq('id', id)
+    if (!error) {
+      const oldValues = Object.fromEntries(Object.keys(patch).map((k) => [k, row?.[k as keyof UserRow] ?? null]))
+      logActivity({
+        supabase, userId: currentUserId, action: 'update', resourceType: 'internal_profile',
+        resourceId: id, resourceLabel: row?.full_name ?? null, branchId: row?.branch_id ?? null,
+        oldValues, newValues: patch,
+      })
+    }
     setSavingId(null)
     load()
   }

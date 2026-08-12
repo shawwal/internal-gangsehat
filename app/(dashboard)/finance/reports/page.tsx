@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Send } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activityLog'
 import type { BranchFinancialReport, ReportStatus } from '@/types'
 
 const MONTH_NAMES = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
@@ -121,11 +122,27 @@ export default function FinanceReportsPage() {
   }
 
   async function submit(id: string) {
-    await createClient().from('branch_financial_reports').update({
+    const oldRow = reports.find((r) => r.id === id)
+    const supabase = createClient()
+    const submittedAt = new Date().toISOString()
+    const { error } = await supabase.from('branch_financial_reports').update({
       status:       'submitted',
-      submitted_at: new Date().toISOString(),
+      submitted_at: submittedAt,
       submitted_by: userId,
     }).eq('id', id)
+    if (!error && oldRow) {
+      await logActivity({
+        supabase,
+        userId,
+        action: 'update',
+        resourceType: 'branch_financial_report',
+        resourceId: id,
+        resourceLabel: `${MONTH_NAMES[oldRow.period_month - 1]} ${oldRow.period_year}`,
+        branchId: oldRow.branch_id,
+        oldValues: { status: oldRow.status, submitted_at: oldRow.submitted_at, submitted_by: oldRow.submitted_by },
+        newValues: { status: 'submitted', submitted_at: submittedAt, submitted_by: userId },
+      })
+    }
     load(branchId)
   }
 

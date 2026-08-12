@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Building2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activityLog'
 import type { Branch } from '@/types'
 
 export default function BranchesPage() {
@@ -37,10 +38,22 @@ export default function BranchesPage() {
     e.preventDefault()
     setSaving(true)
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const newValues = { name: form.name, address: form.address || null, phone: form.phone || null }
     if (editing) {
-      await supabase.from('branches').update({ name: form.name, address: form.address || null, phone: form.phone || null }).eq('id', editing.id)
+      await supabase.from('branches').update(newValues).eq('id', editing.id)
+      logActivity({
+        supabase, userId: user?.id, action: 'update', resourceType: 'branch',
+        resourceId: editing.id, resourceLabel: form.name, branchId: editing.id,
+        oldValues: { ...editing }, newValues,
+      })
     } else {
-      await supabase.from('branches').insert({ name: form.name, address: form.address || null, phone: form.phone || null })
+      const { data: created } = await supabase.from('branches').insert(newValues).select().single()
+      logActivity({
+        supabase, userId: user?.id, action: 'create', resourceType: 'branch',
+        resourceId: created?.id, resourceLabel: form.name, branchId: created?.id,
+        newValues,
+      })
     }
     setSaving(false)
     setShowForm(false)
@@ -48,7 +61,14 @@ export default function BranchesPage() {
   }
 
   async function toggleActive(b: Branch) {
-    await createClient().from('branches').update({ is_active: !b.is_active }).eq('id', b.id)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('branches').update({ is_active: !b.is_active }).eq('id', b.id)
+    logActivity({
+      supabase, userId: user?.id, action: 'update', resourceType: 'branch',
+      resourceId: b.id, resourceLabel: b.name, branchId: b.id,
+      oldValues: { ...b }, newValues: { ...b, is_active: !b.is_active },
+    })
     load()
   }
 

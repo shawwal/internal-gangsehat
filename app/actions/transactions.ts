@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeOrderPaymentSummary, type OrderPaymentSummary, type OrderPaymentRow } from '@/lib/internal/orderPayments'
+import { logActivity } from '@/lib/activityLog'
 
 const SERVICE_TO_CATEGORY: Record<string, string> = {
   'TERAPI AWAL':  'TA KLINIK',
@@ -124,7 +125,7 @@ export async function createTransactionForVisit(
 
   const category = SERVICE_TO_CATEGORY[visit.service_type ?? ''] ?? 'LAINNYA'
 
-  const { error } = await supabase.from('transactions').insert({
+  const insertPayload = {
     visit_id:         visitId,
     patient_id:       visit.patient_id,
     branch_id:        visit.branch_id,
@@ -140,12 +141,26 @@ export async function createTransactionForVisit(
     penjamin:         input.penjamin,
     description:      input.description,
     transaction_date: input.transaction_date,
-    status:           'pending',
+    status:           input.payment_status === 'LUNAS' ? 'confirmed' : 'pending',
+    confirmed_by:     input.payment_status === 'LUNAS' ? user.id : null,
     recorded_by:      user.id,
     updated_at:       new Date().toISOString(),
-  })
+  }
+
+  const { data: inserted, error } = await supabase.from('transactions').insert(insertPayload).select('id').single()
 
   if (error) return { error: error.message }
+
+  await logActivity({
+    supabase,
+    userId: user.id,
+    action: 'create',
+    resourceType: 'transaction',
+    resourceId: inserted?.id,
+    resourceLabel: `${category} — Rp${input.amount}`,
+    branchId: visit.branch_id,
+    newValues: insertPayload,
+  })
 
   await sendPaymentNotification(input.harga, category)
   return { error: null }
@@ -199,7 +214,7 @@ export async function addPaymentToOrder(
   if (fetchErr || !existingRows?.length) return { error: 'Order tidak ditemukan' }
   const template = existingRows[0]
 
-  const { error } = await supabase.from('transactions').insert({
+  const insertPayload = {
     order_id:         orderId,
     visit_id:         template.visit_id,
     patient_id:       template.patient_id,
@@ -216,9 +231,22 @@ export async function addPaymentToOrder(
     status:           'pending',
     recorded_by:      user.id,
     updated_at:       new Date().toISOString(),
-  })
+  }
+
+  const { data: inserted, error } = await supabase.from('transactions').insert(insertPayload).select('id').single()
 
   if (error) return { error: error.message }
+
+  await logActivity({
+    supabase,
+    userId: user.id,
+    action: 'create',
+    resourceType: 'transaction',
+    resourceId: inserted?.id,
+    resourceLabel: `${template.category} — Rp${amount}`,
+    branchId: template.branch_id,
+    newValues: insertPayload,
+  })
 
   await sendPaymentNotification(amount, template.category)
   return { error: null }
@@ -259,10 +287,30 @@ export async function updateTransaction(
     return { error: 'Tidak memiliki akses' }
   }
 
+  const { data: oldRow } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('id', id)
+    .single()
+
   const { error } = await supabase
     .from('transactions')
     .update({ ...input, updated_at: new Date().toISOString() })
     .eq('id', id)
+
+  if (!error && oldRow) {
+    await logActivity({
+      supabase,
+      userId: user.id,
+      action: 'update',
+      resourceType: 'transaction',
+      resourceId: id,
+      resourceLabel: `${oldRow.category} — Rp${oldRow.amount}`,
+      branchId: oldRow.branch_id,
+      oldValues: oldRow,
+      newValues: { ...oldRow, ...input },
+    })
+  }
 
   return { error: error?.message ?? null }
 }
@@ -288,6 +336,12 @@ export async function reclassifyAsExpense(
     return { error: 'Tidak memiliki akses' }
   }
 
+  const { data: oldRow } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('id', transactionId)
+    .single()
+
   const { error } = await supabase
     .from('transactions')
     .update({
@@ -297,6 +351,20 @@ export async function reclassifyAsExpense(
       updated_at:     new Date().toISOString(),
     })
     .eq('id', transactionId)
+
+  if (!error && oldRow) {
+    await logActivity({
+      supabase,
+      userId: user.id,
+      action: 'update',
+      resourceType: 'transaction',
+      resourceId: transactionId,
+      resourceLabel: `${oldRow.category} — Rp${oldRow.amount}`,
+      branchId: oldRow.branch_id,
+      oldValues: oldRow,
+      newValues: { ...oldRow, type: 'expense', category, payment_status: null },
+    })
+  }
 
   return { error: error?.message ?? null }
 }
@@ -362,9 +430,11 @@ export async function createTransactionManual(
     orderId = visit?.order_id ?? null
   }
 
-  const autoConfirm = input.type === 'income' && PACKAGE_CATEGORIES.has(input.category)
+  const autoConfirm =
+    input.type === 'income' &&
+    (PACKAGE_CATEGORIES.has(input.category) || input.payment_status === 'LUNAS')
 
-  const { error } = await supabase.from('transactions').insert({
+  const insertPayload = {
     branch_id:        branchId,
     recorded_by:      user.id,
     type:             input.type,
@@ -383,9 +453,22 @@ export async function createTransactionManual(
     status:           autoConfirm ? 'confirmed' : 'pending',
     confirmed_by:     autoConfirm ? user.id : null,
     updated_at:       new Date().toISOString(),
-  })
+  }
+
+  const { data: inserted, error } = await supabase.from('transactions').insert(insertPayload).select('id').single()
 
   if (error) return { error: error.message }
+
+  await logActivity({
+    supabase,
+    userId: user.id,
+    action: 'create',
+    resourceType: 'transaction',
+    resourceId: inserted?.id,
+    resourceLabel: `${input.category} — Rp${input.amount}`,
+    branchId,
+    newValues: insertPayload,
+  })
 
   if (input.type === 'income') {
     await sendPaymentNotification(input.harga, input.category)
@@ -411,7 +494,26 @@ export async function deleteTransaction(id: string): Promise<{ error: string | n
     return { error: 'Tidak memiliki akses' }
   }
 
+  const { data: oldRow } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('id', id)
+    .single()
+
   const { error } = await supabase.from('transactions').delete().eq('id', id)
+
+  if (!error && oldRow) {
+    await logActivity({
+      supabase,
+      userId: user.id,
+      action: 'delete',
+      resourceType: 'transaction',
+      resourceId: id,
+      resourceLabel: `${oldRow.category} — Rp${oldRow.amount}`,
+      branchId: oldRow.branch_id,
+      oldValues: oldRow,
+    })
+  }
 
   return { error: error?.message ?? null }
 }

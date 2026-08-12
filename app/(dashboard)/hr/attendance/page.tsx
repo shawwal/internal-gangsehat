@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activityLog'
 import type { AttendanceStatus } from '@/types'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
@@ -93,18 +94,43 @@ export default function AttendancePage() {
     setSaving(`${staffId}-${day}`)
     const supabase = createClient()
     const existing = records.find((r) => r.staff_id === staffId && r.date === dateStr)
+    const staffName = staff.find((s) => s.id === staffId)?.full_name ?? null
+    const resourceLabel = staffName ? `${staffName} - ${dateStr}` : dateStr
     if (status === '') {
-      if (existing) await supabase.from('attendance').delete().eq('id', existing.id)
+      if (existing) {
+        const { error } = await supabase.from('attendance').delete().eq('id', existing.id)
+        if (!error) {
+          logActivity({
+            supabase, userId, action: 'delete', resourceType: 'attendance',
+            resourceId: existing.id, resourceLabel, branchId,
+            oldValues: existing as unknown as Record<string, unknown>,
+          })
+        }
+      }
     } else if (existing) {
-      await supabase.from('attendance').update({ status }).eq('id', existing.id)
+      const { error } = await supabase.from('attendance').update({ status }).eq('id', existing.id)
+      if (!error) {
+        logActivity({
+          supabase, userId, action: 'update', resourceType: 'attendance',
+          resourceId: existing.id, resourceLabel, branchId,
+          oldValues: { status: existing.status }, newValues: { status },
+        })
+      }
     } else {
-      await supabase.from('attendance').insert({
+      const { data: inserted, error } = await supabase.from('attendance').insert({
         staff_id:    staffId,
         branch_id:   branchId,
         date:        dateStr,
         status,
         recorded_by: userId,
-      })
+      }).select('id').single()
+      if (!error) {
+        logActivity({
+          supabase, userId, action: 'create', resourceType: 'attendance',
+          resourceId: inserted?.id, resourceLabel, branchId,
+          newValues: { staff_id: staffId, branch_id: branchId, date: dateStr, status, recorded_by: userId },
+        })
+      }
     }
     setSaving(null)
     load()

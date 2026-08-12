@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Megaphone } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activityLog'
 import type { Campaign, CampaignChannel, CampaignStatus } from '@/types'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
@@ -91,18 +92,31 @@ export default function CampaignsPage() {
       budget: Number(form.budget) || 0, target_reach: Number(form.target_reach) || null,
     }
     if (editItem) {
-      await createClient().from('campaigns').update(payload).eq('id', editItem.id)
+      const supabase = createClient()
+      await supabase.from('campaigns').update(payload).eq('id', editItem.id)
+      logActivity({
+        supabase, userId, action: 'update', resourceType: 'campaign',
+        resourceId: editItem.id, resourceLabel: payload.title, branchId: editItem.branch_id,
+        oldValues: { ...editItem }, newValues: payload,
+      })
     } else {
       if (!branchId) {
         alert('Akun Anda belum terhubung ke cabang. Hubungi direktur.')
         setSaving(false)
         return
       }
-      await createClient().from('campaigns').insert({
+      const supabase = createClient()
+      const newValues = {
         ...payload,
         status:     'draft',
         branch_id:  branchId,
         created_by: userId,
+      }
+      const { data: created } = await supabase.from('campaigns').insert(newValues).select().single()
+      logActivity({
+        supabase, userId, action: 'create', resourceType: 'campaign',
+        resourceId: created?.id, resourceLabel: payload.title, branchId,
+        newValues,
       })
     }
     setSaving(false)
@@ -113,12 +127,25 @@ export default function CampaignsPage() {
   async function advance(c: Campaign) {
     const next = STATUS_FLOW[c.status]
     if (!next) return
-    await createClient().from('campaigns').update({ status: next }).eq('id', c.id)
+    const supabase = createClient()
+    await supabase.from('campaigns').update({ status: next }).eq('id', c.id)
+    logActivity({
+      supabase, userId, action: 'update', resourceType: 'campaign',
+      resourceId: c.id, resourceLabel: c.title, branchId: c.branch_id,
+      oldValues: { ...c }, newValues: { ...c, status: next },
+    })
     load(branchId)
   }
 
   async function cancel(id: string) {
-    await createClient().from('campaigns').update({ status: 'cancelled' }).eq('id', id)
+    const supabase = createClient()
+    await supabase.from('campaigns').update({ status: 'cancelled' }).eq('id', id)
+    const c = campaigns.find((c) => c.id === id)
+    logActivity({
+      supabase, userId, action: 'update', resourceType: 'campaign',
+      resourceId: id, resourceLabel: c?.title, branchId: c?.branch_id,
+      oldValues: c ? { ...c } : null, newValues: c ? { ...c, status: 'cancelled' as CampaignStatus } : { status: 'cancelled' },
+    })
     load(branchId)
   }
 

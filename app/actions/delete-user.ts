@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logActivity } from '@/lib/activityLog'
 
 export async function deleteInternalUser(targetId: string) {
   const supabase = await createClient()
@@ -23,6 +24,12 @@ export async function deleteInternalUser(targetId: string) {
   // of destroying the account and its history.
   const admin = createAdminClient()
 
+  const { data: targetBefore } = await admin
+    .from('internal_profiles')
+    .select('is_active, full_name, branch_id')
+    .eq('id', targetId)
+    .single()
+
   const { error: banError } = await admin.auth.admin.updateUserById(targetId, {
     ban_duration: '876000h', // ~100 years — effectively permanent
   })
@@ -33,6 +40,12 @@ export async function deleteInternalUser(targetId: string) {
     .update({ is_active: false })
     .eq('id', targetId)
   if (profileError) return { error: profileError.message }
+
+  logActivity({
+    supabase, userId: user.id, action: 'update', resourceType: 'internal_profile',
+    resourceId: targetId, resourceLabel: targetBefore?.full_name ?? null, branchId: targetBefore?.branch_id ?? null,
+    oldValues: { is_active: targetBefore?.is_active ?? true }, newValues: { is_active: false },
+  })
 
   return { success: true }
 }

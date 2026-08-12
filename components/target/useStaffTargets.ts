@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activityLog'
 import type {
   TargetRow,
   TargetStats as TargetStatsType,
@@ -98,13 +99,23 @@ export function useStaffTargets() {
   async function handleApprove(id: string) {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('staff_targets').update({
+    const row = rows.find(r => r.id === id)
+    const { error } = await supabase.from('staff_targets').update({
       status: 'approved',
       reviewed_by: user?.id,
       reviewed_at: new Date().toISOString(),
       rejection_note: null,
       updated_at: new Date().toISOString(),
     }).eq('id', id)
+    if (!error) {
+      const label = row ? `${row.internal_profiles?.full_name ?? ''} - ${row.bulan}/${row.tahun}` : null
+      logActivity({
+        supabase, userId: user?.id, action: 'update', resourceType: 'staff_target',
+        resourceId: id, resourceLabel: label, branchId: row?.branch_id ?? null,
+        oldValues: { status: row?.status, rejection_note: row?.rejection_note },
+        newValues: { status: 'approved', rejection_note: null },
+      })
+    }
     loadStats(filters)
     loadRows(page, filters)
   }
@@ -112,21 +123,39 @@ export function useStaffTargets() {
   async function handleReject(id: string, note: string) {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('staff_targets').update({
+    const row = rows.find(r => r.id === id)
+    const { error } = await supabase.from('staff_targets').update({
       status: 'rejected',
       rejection_note: note,
       reviewed_by: user?.id,
       reviewed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq('id', id)
+    if (!error) {
+      const label = row ? `${row.internal_profiles?.full_name ?? ''} - ${row.bulan}/${row.tahun}` : null
+      logActivity({
+        supabase, userId: user?.id, action: 'update', resourceType: 'staff_target',
+        resourceId: id, resourceLabel: label, branchId: row?.branch_id ?? null,
+        oldValues: { status: row?.status, rejection_note: row?.rejection_note },
+        newValues: { status: 'rejected', rejection_note: note },
+      })
+    }
     loadStats(filters)
     loadRows(page, filters)
   }
 
   async function handleDelete(id: string) {
     const supabase = createClient()
+    const row = rows.find(r => r.id === id)
     const { error } = await supabase.from('staff_targets').delete().eq('id', id)
     if (error) { console.error('[useStaffTargets] delete error:', error); return }
+    const { data: { user } } = await supabase.auth.getUser()
+    const label = row ? `${row.internal_profiles?.full_name ?? ''} - ${row.bulan}/${row.tahun}` : null
+    logActivity({
+      supabase, userId: user?.id, action: 'delete', resourceType: 'staff_target',
+      resourceId: id, resourceLabel: label, branchId: row?.branch_id ?? null,
+      oldValues: (row as unknown as Record<string, unknown>) ?? null,
+    })
     const newTotal = total - 1
     const maxPage  = Math.max(1, Math.ceil(newTotal / PAGE_SIZE))
     const nextPage = Math.min(page, maxPage)

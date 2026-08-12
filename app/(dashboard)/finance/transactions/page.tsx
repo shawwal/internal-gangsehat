@@ -8,6 +8,7 @@ import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { createTransactionManual } from '@/app/actions/transactions'
 import { todayJakartaISO } from '@/lib/utils'
+import { logActivity } from '@/lib/activityLog'
 
 const TYPE_LABELS: Record<TransactionType, string>    = { income: 'Pemasukan', expense: 'Pengeluaran' }
 const STATUS_BADGE: Record<TransactionStatus, string> = {
@@ -134,17 +135,47 @@ export default function TransactionsPage() {
   }
 
   async function confirm(id: string) {
-    await createClient().from('transactions').update({
+    const oldRow = rows.find((r) => r.id === id)
+    const supabase = createClient()
+    const { error } = await supabase.from('transactions').update({
       status:       'confirmed',
       confirmed_by: userId,
     }).eq('id', id)
+    if (!error && oldRow) {
+      await logActivity({
+        supabase,
+        userId,
+        action: 'update',
+        resourceType: 'transaction',
+        resourceId: id,
+        resourceLabel: `${oldRow.category} — Rp${oldRow.amount}`,
+        branchId: oldRow.branch_id,
+        oldValues: { status: oldRow.status, confirmed_by: oldRow.confirmed_by },
+        newValues: { status: 'confirmed', confirmed_by: userId },
+      })
+    }
     load()
   }
 
   async function reject(e: React.FormEvent) {
     e.preventDefault()
     if (!rejectId) return
-    await createClient().from('transactions').update({ status: 'rejected', rejection_reason: rejectReason }).eq('id', rejectId)
+    const oldRow = rows.find((r) => r.id === rejectId)
+    const supabase = createClient()
+    const { error } = await supabase.from('transactions').update({ status: 'rejected', rejection_reason: rejectReason }).eq('id', rejectId)
+    if (!error && oldRow) {
+      await logActivity({
+        supabase,
+        userId,
+        action: 'update',
+        resourceType: 'transaction',
+        resourceId: rejectId,
+        resourceLabel: `${oldRow.category} — Rp${oldRow.amount}`,
+        branchId: oldRow.branch_id,
+        oldValues: { status: oldRow.status, rejection_reason: oldRow.rejection_reason },
+        newValues: { status: 'rejected', rejection_reason: rejectReason },
+      })
+    }
     setRejectId(null)
     setRejectReason('')
     load()

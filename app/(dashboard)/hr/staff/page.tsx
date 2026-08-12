@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Search, UserPlus, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activityLog'
 import type { UserRole } from '@/types'
 
 interface StaffRow {
@@ -11,6 +12,7 @@ interface StaffRow {
   email: string
   role: UserRole
   is_active: boolean
+  branch_id: string | null
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -52,7 +54,7 @@ export default function HRStaffPage() {
     }
     setNoBranchWarning(false)
 
-    let staffQ = supabase.from('internal_profiles').select('id, full_name, email, role, is_active')
+    let staffQ = supabase.from('internal_profiles').select('id, full_name, email, role, is_active, branch_id')
     if (myBranchId) staffQ = staffQ.eq('branch_id', myBranchId)
     const { data } = await staffQ.order('full_name')
     setStaff((data ?? []) as StaffRow[])
@@ -86,7 +88,16 @@ export default function HRStaffPage() {
   }
 
   async function toggleActive(s: StaffRow) {
-    await createClient().from('internal_profiles').update({ is_active: !s.is_active }).eq('id', s.id)
+    const supabase = createClient()
+    const { error } = await supabase.from('internal_profiles').update({ is_active: !s.is_active }).eq('id', s.id)
+    if (!error) {
+      const { data: { user } } = await supabase.auth.getUser()
+      logActivity({
+        supabase, userId: user?.id, action: 'update', resourceType: 'internal_profile',
+        resourceId: s.id, resourceLabel: s.full_name, branchId: s.branch_id,
+        oldValues: { is_active: s.is_active }, newValues: { is_active: !s.is_active },
+      })
+    }
     load()
   }
 

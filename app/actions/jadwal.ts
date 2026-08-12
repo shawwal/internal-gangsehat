@@ -6,6 +6,18 @@ import { decryptPatientPII } from '@/lib/encryption'
 import type { VisitStatus } from '@/types'
 import { isRegioRequired } from '@/lib/visitRouting'
 import { generateOrderId } from '@/lib/internal/orderId'
+import { logActivity } from '@/lib/activityLog'
+
+async function decryptedPatientName(supabase: Awaited<ReturnType<typeof createClient>>, patientId: string | null | undefined): Promise<string> {
+  if (!patientId) return 'Pasien'
+  const { data: p } = await supabase.from('patients').select('encrypted_name, encrypted_phone').eq('id', patientId).single()
+  if (!p) return 'Pasien'
+  try {
+    return decryptPatientPII({ encrypted_name: p.encrypted_name ?? '', encrypted_phone: p.encrypted_phone ?? '' }).name || 'Pasien'
+  } catch {
+    return 'Pasien'
+  }
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface DailyVisit {
@@ -168,7 +180,7 @@ export async function createVisit(input: CreateVisitInput): Promise<{ error: str
   const { data: { user } } = await supabase.auth.getUser()
   const orderId = await generateOrderId(supabase)
 
-  const { error } = await supabase.from('patient_visits').insert({
+  const { data, error } = await supabase.from('patient_visits').insert({
     patient_id:          input.patient_id,
     branch_id:           input.branch_id,
     attending_staff_id:  input.attending_staff_id ?? user?.id ?? null,
@@ -182,7 +194,20 @@ export async function createVisit(input: CreateVisitInput): Promise<{ error: str
     package_id:          resolvePackageId(input.service_type, input.package_id),
     order_id:            orderId,
     updated_at:          new Date().toISOString(),
-  })
+  }).select('id').single()
+
+  if (!error && data?.id) {
+    await logActivity({
+      supabase, userId: user?.id, action: 'create', resourceType: 'patient_visit',
+      resourceId: data.id, resourceLabel: await decryptedPatientName(supabase, input.patient_id),
+      branchId: input.branch_id,
+      newValues: {
+        visit_date: input.visit_date, visit_time: input.visit_time ?? null,
+        service_type: input.service_type ?? null, shift: input.shift ?? null,
+        status: input.status, attending_staff_id: input.attending_staff_id ?? user?.id ?? null,
+      },
+    })
+  }
 
   return { error: error?.message ?? null }
 }
@@ -193,6 +218,13 @@ export async function updateVisitStatus(
   status: VisitStatus,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: oldRow } = await supabase
+    .from('patient_visits')
+    .select('status, kehadiran, patient_id, branch_id')
+    .eq('id', visitId)
+    .single()
+
   const update: { status: VisitStatus; updated_at: string; kehadiran?: string } = {
     status,
     updated_at: new Date().toISOString(),
@@ -204,13 +236,41 @@ export async function updateVisitStatus(
     .from('patient_visits')
     .update(update)
     .eq('id', visitId)
+
+  if (!error && oldRow) {
+    await logActivity({
+      supabase, userId: user?.id, action: 'update', resourceType: 'patient_visit',
+      resourceId: visitId, resourceLabel: await decryptedPatientName(supabase, oldRow.patient_id),
+      branchId: oldRow.branch_id,
+      oldValues: { status: oldRow.status, kehadiran: oldRow.kehadiran },
+      newValues: { status, kehadiran: update.kehadiran ?? oldRow.kehadiran },
+    })
+  }
+
   return { error: error?.message ?? null }
 }
 
 // ── Delete visit ───────────────────────────────────────────────────────────────
 export async function deleteVisit(visitId: string): Promise<{ error: string | null }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: oldRow } = await supabase
+    .from('patient_visits')
+    .select('patient_id, branch_id, visit_date, service_type, status')
+    .eq('id', visitId)
+    .single()
+
   const { error } = await supabase.from('patient_visits').delete().eq('id', visitId)
+
+  if (!error && oldRow) {
+    await logActivity({
+      supabase, userId: user?.id, action: 'delete', resourceType: 'patient_visit',
+      resourceId: visitId, resourceLabel: await decryptedPatientName(supabase, oldRow.patient_id),
+      branchId: oldRow.branch_id,
+      oldValues: { visit_date: oldRow.visit_date, service_type: oldRow.service_type, status: oldRow.status },
+    })
+  }
+
   return { error: error?.message ?? null }
 }
 
@@ -384,10 +444,29 @@ export async function updateVisit(
   },
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: oldRow } = await supabase
+    .from('patient_visits')
+    .select('visit_date, attending_staff_id, service_type, shift, kehadiran, regio, sumber_pasien, chief_complaint, diagnosis, treatment, status, notes, patient_id, branch_id')
+    .eq('id', visitId)
+    .single()
+
   const { error } = await supabase
     .from('patient_visits')
     .update({ ...data, updated_at: new Date().toISOString() })
     .eq('id', visitId)
+
+  if (!error && oldRow) {
+    const { patient_id, branch_id, ...oldFields } = oldRow
+    await logActivity({
+      supabase, userId: user?.id, action: 'update', resourceType: 'patient_visit',
+      resourceId: visitId, resourceLabel: await decryptedPatientName(supabase, patient_id),
+      branchId: branch_id,
+      oldValues: oldFields,
+      newValues: { ...oldFields, ...data },
+    })
+  }
+
   return { error: error?.message ?? null }
 }
 

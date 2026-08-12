@@ -170,6 +170,14 @@ export const navigation: NavItem[] = [
     roles: ['director', 'manager'],
     group: 'management',
   },
+  {
+    key: 'activity-log',
+    label: 'Log Aktivitas',
+    href: '/activity-log',
+    icon: 'History',
+    roles: ['director', 'manager'],
+    group: 'system',
+  },
 
   // Finance
   {

@@ -6,11 +6,13 @@ import {
   Eye, FileText, Users, X, XCircle,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activityLog'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 
 interface LeaveRow {
   id: string
+  branch_id: string
   start_date: string
   end_date: string
   reason: string
@@ -139,7 +141,7 @@ export default function HRLeavePage() {
     const { data: { user } } = await supabase.auth.getUser()
     let q = supabase
       .from('leave_requests')
-      .select('id, start_date, end_date, reason, status, rejection_note, proof_url, created_at, internal_profiles!staff_id(full_name, email)')
+      .select('id, branch_id, start_date, end_date, reason, status, rejection_note, proof_url, created_at, internal_profiles!staff_id(full_name, email)')
       .order('created_at', { ascending: false })
     if (user) {
       const { data: prof } = await supabase.from('internal_profiles').select('branch_id').eq('id', user.id).single()
@@ -157,10 +159,18 @@ export default function HRLeavePage() {
     setSaving(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase
+    const row = requests.find(r => r.id === id)
+    const { error } = await supabase
       .from('leave_requests')
       .update({ status: 'approved', reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
       .eq('id', id)
+    if (!error) {
+      logActivity({
+        supabase, userId: user?.id, action: 'update', resourceType: 'leave_request',
+        resourceId: id, resourceLabel: row?.internal_profiles?.full_name ?? null, branchId: row?.branch_id ?? null,
+        oldValues: { status: row?.status }, newValues: { status: 'approved' },
+      })
+    }
     setSaving(false)
     load()
   }
@@ -170,7 +180,8 @@ export default function HRLeavePage() {
     setSaving(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase
+    const row = requests.find(r => r.id === id)
+    const { error } = await supabase
       .from('leave_requests')
       .update({
         status: 'rejected',
@@ -179,6 +190,14 @@ export default function HRLeavePage() {
         reviewed_at: new Date().toISOString(),
       })
       .eq('id', id)
+    if (!error) {
+      logActivity({
+        supabase, userId: user?.id, action: 'update', resourceType: 'leave_request',
+        resourceId: id, resourceLabel: row?.internal_profiles?.full_name ?? null, branchId: row?.branch_id ?? null,
+        oldValues: { status: row?.status, rejection_note: row?.rejection_note },
+        newValues: { status: 'rejected', rejection_note: rejectNote.trim() },
+      })
+    }
     setSaving(false)
     setRejecting(null)
     setRejectNote('')
