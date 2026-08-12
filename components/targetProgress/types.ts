@@ -23,17 +23,39 @@ export interface BranchOption {
 export interface VisitForProgress {
   id: string
   visit_date: string
-  service_type: string | null
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
-  package_id: string | null
 }
 
-export interface PackageForProgress {
-  id: string
-  purchased_at: string
-  category: 'PAKET KLINIK' | 'PAKET VISIT' | null
-  order_id: string | null
+export interface TransactionForProgress {
+  category: string
+  transaction_date: string
 }
+
+// TA/Sesi stay merged Klinik+Visit (matches current product behavior — only the
+// payment-status gate was wrong, not the Klinik/Visit grouping). Paket already
+// splits Klinik vs Visit into separate rows/categories.
+export const TRANSACTION_CATEGORY_MAP: Record<string, CategoryKey> = {
+  'TA KLINIK': 'ta',
+  'TA VISIT': 'ta',
+  'SESI KLINIK': 'sesi',
+  'SESI VISIT': 'sesi',
+  'PAKET KLINIK': 'paket_klinik',
+  'PAKET VISIT': 'paket_visit',
+}
+
+// Reverse of TRANSACTION_CATEGORY_MAP — which transactions.category strings
+// count toward a given CategoryKey, for the detail popup's per-day query.
+export const CATEGORY_TO_TRANSACTION_TYPES: Partial<Record<CategoryKey, string[]>> = Object.entries(
+  TRANSACTION_CATEGORY_MAP,
+).reduce((acc, [txCategory, key]) => {
+  (acc[key] ??= []).push(txCategory)
+  return acc
+}, {} as Partial<Record<CategoryKey, string[]>>)
+
+// Roles allowed to edit/delete a transaction from the target-progress detail
+// popup — mirrors PAYMENT_ROLES in app/actions/transactions.ts (not exported
+// since that file is 'use server' and can only export async functions).
+export const EDITABLE_ROLES = ['finance', 'manager', 'director', 'admin'] as const
 
 export interface BranchTargetForProgress {
   target_ta: number

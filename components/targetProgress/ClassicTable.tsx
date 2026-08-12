@@ -14,6 +14,8 @@ interface ClassicTableProps {
   branchId: string
   month: number
   year: number
+  canEdit: boolean
+  onDataChanged?: () => void
 }
 
 interface DetailTarget {
@@ -22,7 +24,7 @@ interface DetailTarget {
   label: string
 }
 
-export function ClassicTable({ summaries, days, monthLabel, branchId, month, year }: ClassicTableProps) {
+export function ClassicTable({ summaries, days, monthLabel, branchId, month, year, canEdit, onDataChanged }: ClassicTableProps) {
   const dayNumbers = Array.from({ length: days }, (_, i) => i + 1)
   const [detail, setDetail] = useState<DetailTarget | null>(null)
 
@@ -118,6 +120,8 @@ export function ClassicTable({ summaries, days, monthLabel, branchId, month, yea
         date={detail?.date ?? null}
         category={detail?.category ?? null}
         label={detail?.label ?? ''}
+        canEdit={canEdit}
+        onDataChanged={onDataChanged}
       />
     </div>
   )

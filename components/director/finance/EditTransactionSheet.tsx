@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Pencil, X, Check, Loader2, Search, UserMinus } from 'lucide-react'
+import { Pencil, X, Check, Loader2, Search, UserMinus, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { updateTransaction } from '@/app/actions/transactions'
+import { updateTransaction, deleteTransaction } from '@/app/actions/transactions'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
+import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 
 const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA']
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
@@ -42,12 +43,28 @@ type Status = 'idle' | 'saving' | 'success' | 'error'
 
 interface PatientResult { id: string; name: string; no_rm: string | null }
 
-export function EditTransactionSheet({ transaction }: { transaction: TransactionForEdit }) {
+interface EditTransactionSheetProps {
+  transaction: TransactionForEdit
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
+  onSaved?: () => void
+}
+
+export function EditTransactionSheet({ transaction, open: openProp, onOpenChange, hideTrigger, onSaved }: EditTransactionSheetProps) {
   const router = useRouter()
-  const [open, setOpen]         = useState(false)
+  const isControlled = openProp !== undefined
+  const [openState, setOpenState] = useState(false)
+  const open = isControlled ? openProp : openState
+  const setOpen = useCallback((next: boolean) => {
+    if (isControlled) onOpenChange?.(next)
+    else setOpenState(next)
+  }, [isControlled, onOpenChange])
   const [mounted, setMounted]   = useState(false)
   const [status, setStatus]     = useState<Status>('idle')
   const [errMsg, setErrMsg]     = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // Form state
   const [type, setType]                     = useState(transaction.type)
@@ -177,8 +194,25 @@ export function EditTransactionSheet({ transaction }: { transaction: Transaction
       setTimeout(() => setStatus('idle'), 600)
     } else {
       setStatus('success')
-      setTimeout(() => { close(); router.refresh() }, 900)
+      setTimeout(() => { close(); if (onSaved) onSaved(); else router.refresh() }, 900)
     }
+  }
+
+  async function handleDelete() {
+    setDeleting(true)
+    const { error } = await deleteTransaction(transaction.id)
+    setDeleting(false)
+    if (error) {
+      setConfirmDelete(false)
+      setStatus('error')
+      setErrMsg(error)
+      setTimeout(() => setStatus('idle'), 600)
+      return
+    }
+    setConfirmDelete(false)
+    close()
+    if (onSaved) onSaved()
+    else router.refresh()
   }
 
   const isClinicalIncome = isIncome && CLINICAL_INCOME.has(category)
@@ -454,7 +488,7 @@ export function EditTransactionSheet({ transaction }: { transaction: Transaction
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-white/10 shrink-0">
+        <div className="px-5 py-4 border-t border-white/10 shrink-0 space-y-2">
           <button
             onClick={handleSave}
             disabled={status === 'saving' || status === 'success'}
@@ -472,20 +506,43 @@ export function EditTransactionSheet({ transaction }: { transaction: Transaction
             {status === 'success' && <Check size={16} />}
             {status === 'success' ? 'Tersimpan!' : status === 'saving' ? 'Menyimpan…' : 'Simpan Perubahan'}
           </button>
+          <button
+            onClick={() => setConfirmDelete(true)}
+            disabled={status === 'saving' || status === 'success'}
+            className="w-full py-2.5 rounded-2xl text-sm font-semibold text-destructive border border-destructive/30 hover:bg-destructive/10 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            <Trash2 size={14} />
+            Hapus Transaksi
+          </button>
         </div>
       </div>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Hapus transaksi ini?"
+          description="Transaksi akan dihapus permanen dan tidak bisa dikembalikan. Capaian target terkait akan ikut berkurang."
+          confirmLabel="Hapus"
+          danger
+          loading={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(false)}
+          zIndexClass="z-[210]"
+        />
+      )}
     </>
   )
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        title="Edit transaksi"
-        className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground/50 hover:text-foreground transition-colors"
-      >
-        <Pencil size={13} />
-      </button>
+      {!hideTrigger && (
+        <button
+          onClick={() => setOpen(true)}
+          title="Edit transaksi"
+          className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground/50 hover:text-foreground transition-colors"
+        >
+          <Pencil size={13} />
+        </button>
+      )}
       {mounted && open && createPortal(sheet, document.body)}
     </>
   )

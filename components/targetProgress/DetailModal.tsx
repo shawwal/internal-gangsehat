@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import { fetchTargetProgressDetail, type TargetProgressDetailRow } from '@/app/actions/targetProgress'
+import { EditTransactionSheet } from '@/components/director/finance/EditTransactionSheet'
+import { PAY_STATUS_BADGE, formatRp } from '@/components/director/finance/types'
 import type { CategoryKey } from './types'
 
 interface DetailModalProps {
@@ -12,18 +14,27 @@ interface DetailModalProps {
   date: string | null
   category: CategoryKey | null
   label: string
+  canEdit: boolean
+  onDataChanged?: () => void
 }
 
-export function DetailModal({ open, onClose, branchId, date, category, label }: DetailModalProps) {
+export function DetailModal({ open, onClose, branchId, date, category, label, canEdit, onDataChanged }: DetailModalProps) {
   const [rows, setRows] = useState<TargetProgressDetailRow[]>([])
   const [loading, setLoading] = useState(false)
+  const [editingRow, setEditingRow] = useState<TargetProgressDetailRow | null>(null)
 
-  useEffect(() => {
-    if (!open || !date || !category) return
+  function refetch() {
+    if (!date || !category) return
     setLoading(true)
     fetchTargetProgressDetail(branchId, date, category)
       .then(setRows)
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    if (!open || !date || !category) return
+    refetch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, date, category, branchId])
 
   if (!open) return null
@@ -32,10 +43,16 @@ export function DetailModal({ open, onClose, branchId, date, category, label }: 
     ? new Date(date + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
     : ''
 
+  function handleSaved() {
+    setEditingRow(null)
+    refetch()
+    onDataChanged?.()
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="glass-card relative w-full sm:max-w-2xl flex flex-col max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl">
+      <div className="relative w-full sm:max-w-2xl flex flex-col max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl bg-popover border border-border">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <div>
@@ -59,13 +76,13 @@ export function DetailModal({ open, onClose, branchId, date, category, label }: 
             </div>
           ) : rows.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              Tidak ada kunjungan pada tanggal ini
+              Tidak ada data pada tanggal ini
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/40">
-                  {['No.', 'Nama Pasien', 'Layanan', 'Waktu', 'Fisio'].map((h) => (
+                  {['No.', 'Nama Pasien', 'Layanan', category === 'kunjungan' ? 'Waktu' : 'Nominal', category === 'kunjungan' ? 'Fisio' : 'Pembayaran'].map((h) => (
                     <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
                       {h}
                     </th>
@@ -74,14 +91,35 @@ export function DetailModal({ open, onClose, branchId, date, category, label }: 
               </thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={r.id} className="border-b border-border/25 hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={r.id}
+                    className={`border-b border-border/25 transition-colors ${
+                      canEdit && r.tx ? 'hover:bg-muted/30 cursor-pointer' : 'hover:bg-muted/20'
+                    }`}
+                    onClick={canEdit && r.tx ? () => setEditingRow(r) : undefined}
+                  >
                     <td className="px-4 py-2.5 text-xs text-muted-foreground w-10">{i + 1}</td>
                     <td className="px-4 py-2.5 text-xs font-medium text-foreground">{r.patientName}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">
                       {r.packageName ? `${r.packageName}${r.jenisPaket ? ` (${r.jenisPaket})` : ''}` : (r.serviceType ?? '—')}
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.visitTime ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.fisioName}</td>
+                    {r.tx ? (
+                      <>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground font-mono">{formatRp(r.tx.harga ?? 0)}</td>
+                        <td className="px-4 py-2.5 text-xs">
+                          {r.tx.payment_status && (
+                            <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold ${PAY_STATUS_BADGE[r.tx.payment_status] ?? ''}`}>
+                              {r.tx.payment_status}
+                            </span>
+                          )}
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.visitTime ?? '—'}</td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.fisioName}</td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -92,10 +130,23 @@ export function DetailModal({ open, onClose, branchId, date, category, label }: 
         {/* Footer count */}
         {!loading && rows.length > 0 && (
           <div className="px-5 py-3 border-t border-border shrink-0 text-center">
-            <p className="text-xs text-muted-foreground">{rows.length} kunjungan</p>
+            <p className="text-xs text-muted-foreground">
+              {rows.length} {category === 'kunjungan' ? 'kunjungan' : 'transaksi'}
+              {canEdit && rows.some((r) => r.tx) ? ' — klik baris untuk edit/hapus' : ''}
+            </p>
           </div>
         )}
       </div>
+
+      {editingRow?.tx && (
+        <EditTransactionSheet
+          transaction={editingRow.tx}
+          open
+          hideTrigger
+          onOpenChange={(next) => { if (!next) setEditingRow(null) }}
+          onSaved={handleSaved}
+        />
+      )}
     </div>
   )
 }

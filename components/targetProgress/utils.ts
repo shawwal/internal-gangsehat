@@ -1,5 +1,6 @@
-import { TA_TYPES, SESI_TYPES, isAttended } from '@/components/performance/utils'
-import type { DailyCounts, VisitForProgress, PackageForProgress } from './types'
+import { isAttended } from '@/components/performance/utils'
+import { TRANSACTION_CATEGORY_MAP } from './types'
+import type { DailyCounts, VisitForProgress, TransactionForProgress } from './types'
 
 export {
   pctValue, formatPct, progressColor,
@@ -10,15 +11,9 @@ export function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate()
 }
 
-// Kunjungan comes from patient_visits attendance alone (kehadiran), unconditionally.
-// TA and Sesi also come from patient_visits, but per "Kehadiran ≠ Pembayaran" they
-// only count when the visit has a confirmed payment (paidVisitIds) — attendance
-// gets you +1 Kunjungan regardless, but TA/Sesi require a validated transaction.
-export function buildDailyCounts(
-  visits: VisitForProgress[],
-  days: number,
-  paidVisitIds: Set<string>,
-): DailyCounts {
+// Kunjungan comes from patient_visits attendance alone (kehadiran), unconditionally —
+// no payment gating at all.
+export function buildDailyCounts(visits: VisitForProgress[], days: number): DailyCounts {
   const daily: DailyCounts = {
     ta: Array(days).fill(0),
     paket_klinik: Array(days).fill(0),
@@ -30,35 +25,17 @@ export function buildDailyCounts(
   for (const v of visits) {
     const day = Number(v.visit_date.slice(8, 10))
     if (!day || day < 1 || day > days) continue
-    if ((TA_TYPES as readonly string[]).includes(v.service_type ?? '') && paidVisitIds.has(v.id)) {
-      daily.ta[day - 1] += 1
-    }
-    if (isAttended(v)) {
-      daily.kunjungan[day - 1] += 1
-      // Sessions used from an existing package are labeled "Paket" on jadwal-harian
-      // (VisitCard.tsx) — exclude them here so they aren't double-counted as Sesi.
-      if (
-        (SESI_TYPES as readonly string[]).includes(v.service_type ?? '') &&
-        !v.package_id &&
-        paidVisitIds.has(v.id)
-      ) {
-        daily.sesi[day - 1] += 1
-      }
-    }
+    if (isAttended(v)) daily.kunjungan[day - 1] += 1
   }
 
   return daily
 }
 
-// Paket Klinik / Paket Visit come from patient_packages (the purchase/order
-// event itself) — one package purchase = one order, regardless of how many
-// sessions it contains or whether they've been attended yet. Per "Kehadiran ≠
-// Pembayaran", a purchase only counts once it has a confirmed payment (paidPackageIds).
-export function buildPackageDailyCounts(
-  packages: PackageForProgress[],
-  days: number,
-  paidPackageIds: Set<string>,
-): DailyCounts {
+// TA/Sesi/Paket Klinik/Paket Visit all come straight from `transactions`: one
+// income row with payment_status LUNAS or DP = one countable event (the caller
+// already filtered for that). Excluding PELUNASAN rows is what keeps a single
+// package/session from being counted twice when it's settled in installments.
+export function buildTransactionDailyCounts(transactions: TransactionForProgress[], days: number): DailyCounts {
   const daily: DailyCounts = {
     ta: Array(days).fill(0),
     paket_klinik: Array(days).fill(0),
@@ -67,12 +44,12 @@ export function buildPackageDailyCounts(
     sesi: Array(days).fill(0),
   }
 
-  for (const p of packages) {
-    if (!paidPackageIds.has(p.id)) continue
-    const day = Number(p.purchased_at.slice(8, 10))
+  for (const t of transactions) {
+    const key = TRANSACTION_CATEGORY_MAP[t.category]
+    if (!key) continue
+    const day = Number(t.transaction_date.slice(8, 10))
     if (!day || day < 1 || day > days) continue
-    if (p.category === 'PAKET KLINIK') daily.paket_klinik[day - 1] += 1
-    else if (p.category === 'PAKET VISIT') daily.paket_visit[day - 1] += 1
+    daily[key][day - 1] += 1
   }
 
   return daily

@@ -5,21 +5,22 @@ import { useCallback, useEffect, useState } from 'react'
 import { Table2, TrendingUp, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { VISIT_STATUS_FILTER } from '@/components/performance/utils'
-import { fetchConfirmedVisitIds, fetchPaidPackageIds } from '@/lib/internal/paymentGating'
 import { MonthPicker } from '@/components/targetProgress/MonthPicker'
 import { BranchPicker } from '@/components/targetProgress/BranchPicker'
 import { ClassicTable } from '@/components/targetProgress/ClassicTable'
 import { ModernView } from '@/components/targetProgress/ModernView'
 import {
   CATEGORY_DEFS,
+  TRANSACTION_CATEGORY_MAP,
+  EDITABLE_ROLES,
   type CategoryKey,
   type CategorySummary,
   type BranchOption,
   type BranchTargetForProgress,
   type VisitForProgress,
-  type PackageForProgress,
+  type TransactionForProgress,
 } from '@/components/targetProgress/types'
-import { daysInMonth, buildDailyCounts, buildPackageDailyCounts, mergeDailyCounts, sum, getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR } from '@/components/targetProgress/utils'
+import { daysInMonth, buildDailyCounts, buildTransactionDailyCounts, mergeDailyCounts, sum, getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR } from '@/components/targetProgress/utils'
 
 type Tab = 'klasik' | 'visual'
 type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'admin' | null
@@ -33,6 +34,7 @@ export default function TargetProgressPage() {
   const [role, setRole] = useState<Role>(null)
 
   const canPickBranch = role === 'director'
+  const canEdit = role !== null && (EDITABLE_ROLES as readonly string[]).includes(role)
 
   const [branchList, setBranchList] = useState<BranchOption[]>([])
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
@@ -85,7 +87,7 @@ export default function TargetProgressPage() {
     const supabase = createClient()
     const range = getMonthRange(month, year)
 
-    const [{ data: targetRow }, { data: visits }, { data: packages }, { data: categorySettings }] = await Promise.all([
+    const [{ data: targetRow }, { data: visits }, { data: txRows }, { data: categorySettings }] = await Promise.all([
       supabase
         .from('branch_targets')
         .select('target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi')
@@ -96,18 +98,21 @@ export default function TargetProgressPage() {
         .maybeSingle(),
       supabase
         .from('patient_visits')
-        .select('id, visit_date, service_type, kehadiran, package_id')
+        .select('id, visit_date, kehadiran')
         .eq('branch_id', selectedBranchId)
         .gte('visit_date', range.start)
         .lte('visit_date', range.end)
         .in('status', [...VISIT_STATUS_FILTER]),
       supabase
-        .from('patient_packages')
-        .select('id, purchased_at, category, order_id')
+        .from('transactions')
+        .select('category, transaction_date')
         .eq('branch_id', selectedBranchId)
-        .gte('purchased_at', range.start)
-        .lte('purchased_at', range.end)
-        .neq('status', 'cancelled'),
+        .eq('type', 'income')
+        .neq('status', 'rejected')
+        .in('payment_status', ['LUNAS', 'DP'])
+        .in('category', Object.keys(TRANSACTION_CATEGORY_MAP))
+        .gte('transaction_date', range.start)
+        .lte('transaction_date', range.end),
       supabase
         .from('branch_target_category_settings')
         .select('category')
@@ -117,18 +122,12 @@ export default function TargetProgressPage() {
     const disabled = new Set((categorySettings ?? []).map(r => r.category as CategoryKey))
 
     const visitRows = (visits ?? []) as VisitForProgress[]
-    const packageRows = (packages ?? []) as PackageForProgress[]
-
-    const packageIdByVisitId = new Map(
-      visitRows.filter((v) => v.package_id).map((v) => [v.id, v.package_id as string]),
-    )
-    const paidVisitIds = await fetchConfirmedVisitIds(supabase, visitRows.map((v) => v.id))
-    const paidPackageIds = await fetchPaidPackageIds(supabase, packageRows, paidVisitIds, packageIdByVisitId)
+    const transactionRows = (txRows ?? []) as TransactionForProgress[]
 
     const days = daysInMonth(year, month)
-    const visitDaily = buildDailyCounts(visitRows, days, paidVisitIds)
-    const packageDaily = buildPackageDailyCounts(packageRows, days, paidPackageIds)
-    const daily = mergeDailyCounts(visitDaily, packageDaily)
+    const visitDaily = buildDailyCounts(visitRows, days)
+    const transactionDaily = buildTransactionDailyCounts(transactionRows, days)
+    const daily = mergeDailyCounts(visitDaily, transactionDaily)
     const t = targetRow as BranchTargetForProgress | null
     const targetFields: Record<CategoryKey, number> = {
       ta: t?.target_ta ?? 0,
@@ -227,6 +226,8 @@ export default function TargetProgressPage() {
                 branchId={selectedBranchId}
                 month={month}
                 year={year}
+                canEdit={canEdit}
+                onDataChanged={load}
               />
             )}
             {tab === 'visual' && (

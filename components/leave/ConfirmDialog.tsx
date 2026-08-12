@@ -11,6 +11,7 @@ interface Props {
   loading?: boolean
   onConfirm: () => void
   onCancel: () => void
+  zIndexClass?: string
 }
 
 export function ConfirmDialog({
@@ -21,6 +22,7 @@ export function ConfirmDialog({
   loading = false,
   onConfirm,
   onCancel,
+  zIndexClass = 'z-50',
 }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
@@ -30,7 +32,7 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className={`fixed inset-0 ${zIndexClass} flex items-center justify-center bg-black/60 backdrop-blur-sm p-4`}
       onClick={onCancel}
     >
       <div
