@@ -140,6 +140,19 @@ export async function fetchOrderDetail(id: string): Promise<OrderDetail | null> 
   }
 }
 
+// ── Resolve a bookings.id from its human-readable kode_transaksi ───────────────
+// Used to link legacy TRX codes (stamped into patient_packages.notes on
+// import) back to the /order/[id] detail page, which is keyed by bookings.id.
+export async function fetchBookingIdByKode(kode: string): Promise<string | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('internal_order_meta')
+    .select('booking_id')
+    .eq('kode_transaksi', kode)
+    .maybeSingle()
+  return data?.booking_id ?? null
+}
+
 export type TherapistOption = { id: string; name: string }
 
 export async function fetchTherapistOptions(): Promise<TherapistOption[]> {

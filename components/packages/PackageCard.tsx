@@ -5,6 +5,7 @@ import { Pencil, Trash2, ChevronDown, ChevronUp, CalendarDays, Wallet, OctagonMi
 import { fetchPackageSessions } from '@/app/actions/packages'
 import { fetchOrderPaymentHistory } from '@/app/actions/transactions'
 import { fetchBranchStaff, fetchVisitWithPatient, updateVisit, deleteVisit, type BranchStaffMember, type VisitWithPatient } from '@/app/actions/jadwal'
+import { fetchBookingIdByKode } from '@/app/actions/orders'
 import type { PatientPackageWithPayment } from '@/app/actions/packages'
 import type { OrderPaymentHistoryEntry } from '@/lib/internal/orderPayments'
 import { SessionList } from './SessionList'
@@ -13,7 +14,7 @@ import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import {
   OP_STATUS_BADGE, STATUS_BADGE, STATUS_LABEL, COMPLETION_BADGE, COMPLETION_LABEL, INPUT_CLS, LABEL_CLS,
 } from './types'
-import { formatDate, formatCurrency, sessionBarColor, sessionTextColor } from './helpers'
+import { formatDate, formatCurrency, sessionBarColor, sessionTextColor, extractKodeTransaksi } from './helpers'
 import type { PatientPackage, PackageSession } from './types'
 import type { ServiceType, UserRole } from '@/types'
 
@@ -71,7 +72,19 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
   const [deleteSessionSaving, setDeleteSessionSaving] = useState(false)
   const [deleteSessionError, setDeleteSessionError]   = useState<string | null>(null)
 
+  const [resolvingOrder, setResolvingOrder] = useState(false)
+
   const canDeleteSession = !!userRole && !['therapist', 'staff', 'sport_massage_therapist'].includes(userRole)
+  const kodeTransaksi = extractKodeTransaksi(pkg.notes)
+
+  async function handleOpenOrder() {
+    if (!kodeTransaksi) return
+    setResolvingOrder(true)
+    const bookingId = await fetchBookingIdByKode(kodeTransaksi)
+    setResolvingOrder(false)
+    if (!bookingId) { alert('Order tidak ditemukan untuk kode ini.'); return }
+    window.open(`/order/${bookingId}`, '_blank', 'noopener,noreferrer')
+  }
 
   async function toggleSessions() {
     if (!expanded && sessions === null) {
@@ -306,10 +319,22 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
 
       {/* Bottom row */}
       <div className="flex items-center justify-between">
-        {pkg.notes
-          ? <p className="text-xs text-muted-foreground truncate max-w-[60%]">{pkg.notes}</p>
-          : <span />
-        }
+        {pkg.notes ? (
+          kodeTransaksi ? (
+            <button
+              onClick={handleOpenOrder}
+              disabled={resolvingOrder}
+              className="text-xs text-primary hover:underline truncate max-w-[60%] text-left disabled:opacity-60"
+              title="Buka order di tab baru"
+            >
+              {resolvingOrder ? 'Membuka...' : pkg.notes}
+            </button>
+          ) : (
+            <p className="text-xs text-muted-foreground truncate max-w-[60%]">{pkg.notes}</p>
+          )
+        ) : (
+          <span />
+        )}
         <p className="text-[10px] text-muted-foreground/60 shrink-0">{formatDate(pkg.created_at)}</p>
       </div>
 

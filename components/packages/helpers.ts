@@ -20,3 +20,12 @@ export function sessionTextColor(remaining: number): string {
   if (remaining <= 2) return 'text-[#FFB35C]'
   return 'text-[#34C759]'
 }
+
+// Legacy imports stamp package notes as "kode:TRX/2025/12/0153" to preserve a
+// traceable link back to the original bookings-system order (see
+// scripts/import-packages-by-phone.mts). Extract that code so it can be
+// resolved to a bookings.id and linked to /order/[id].
+export function extractKodeTransaksi(notes: string | null): string | null {
+  const m = notes?.match(/TRX\/\d{4}\/\d{2}\/\d{4}/)
+  return m ? m[0] : null
+}
