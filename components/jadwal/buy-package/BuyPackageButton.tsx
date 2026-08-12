@@ -7,18 +7,24 @@ import { BuyPackageDialog } from './BuyPackageDialog'
 interface Props {
   branchId: string | null
   onSuccess: () => void
+  compact?: boolean
 }
 
-export function BuyPackageButton({ branchId, onSuccess }: Props) {
+export function BuyPackageButton({ branchId, onSuccess, compact }: Props) {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-primary/30 text-primary text-sm font-medium hover:bg-primary/10 transition-colors cursor-pointer"
+        title="Beli paket baru"
+        className={
+          compact
+            ? 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border border-primary/30 text-primary text-[11px] font-semibold hover:bg-primary/10 transition-colors duration-150 cursor-pointer shrink-0'
+            : 'flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-primary/30 text-primary text-sm font-medium hover:bg-primary/10 transition-colors cursor-pointer'
+        }
       >
-        <PackagePlus size={14} /> Beli Paket
+        <PackagePlus size={compact ? 13 : 14} /> Beli Paket
       </button>
 
       {isOpen && (

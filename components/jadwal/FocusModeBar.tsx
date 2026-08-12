@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { Users, User, ArrowUpAZ, ArrowDownAZ, ChevronLeft, ChevronRight, Calendar, Plus, X, Sun, Sunset } from 'lucide-react'
 import { addDays, toIso, isSameDay, JS_DAY_TO_HARI, HARI_LABEL, MONTH_FULL } from './utils'
+import { BuyPackageButton } from './buy-package/BuyPackageButton'
 import type { DayStaffEntry } from './types'
 
 interface Branch {
@@ -29,6 +30,8 @@ interface Props {
   onExit: () => void
   canCreateOrder?: boolean
   orderNewHref?: string
+  canRecordPayment?: boolean
+  onBuyPackageSuccess?: () => void
 }
 
 export function FocusModeBar({
@@ -42,6 +45,8 @@ export function FocusModeBar({
   onExit,
   canCreateOrder,
   orderNewHref,
+  canRecordPayment,
+  onBuyPackageSuccess,
 }: Props) {
   const focusDateInputRef = useRef<HTMLInputElement>(null)
   const isToday   = isSameDay(selectedDate, today)
@@ -120,6 +125,14 @@ export function FocusModeBar({
           </button>
         )}
       </div>
+
+      {canRecordPayment && (
+        <BuyPackageButton
+          branchId={selectedBranchId}
+          onSuccess={() => onBuyPackageSuccess?.()}
+          compact
+        />
+      )}
 
       {canCreateOrder && orderNewHref && (
         <a

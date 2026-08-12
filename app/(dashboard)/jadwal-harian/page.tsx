@@ -357,6 +357,8 @@ export default function JadwalHarianPage() {
               onExit={() => setIsFocused(false)}
               canCreateOrder={canCreateOrder}
               orderNewHref={orderNewHref}
+              canRecordPayment={canRecordPayment}
+              onBuyPackageSuccess={() => silentReload(null)}
             />
           )}
 
