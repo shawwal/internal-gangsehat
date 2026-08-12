@@ -15,6 +15,9 @@ export const DEFAULT_FORM = {
   completion_status:  '' as PackageCompletionStatus | '',
   status:             'active' as PackageStatus,
   notes:              '',
+  harga:              '',
+  amount:             '',
+  payment_method:     'TUNAI' as 'TUNAI' | 'TRANSFER BCA' | 'EDC BCA',
 }
 
 export type FormState = typeof DEFAULT_FORM

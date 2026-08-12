@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createPatientPackage } from '@/app/actions/packages'
-import { createTransactionManual, fetchLayananHarga } from '@/app/actions/transactions'
+import { createTransactionManual, fetchLayananDetail } from '@/app/actions/transactions'
 import type { CreateTransactionManualInput } from '@/app/actions/transactions'
 import { PACKAGE_CATEGORIES, type PackageCategory } from './types'
 
@@ -10,6 +10,7 @@ interface Props {
   patientId: string
   patientName: string
   branchId: string | null
+  lockedCategory?: PackageCategory
   onCancel: () => void
   onSuccess: () => void
 }
@@ -17,11 +18,12 @@ interface Props {
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
 
-export function PackageForm({ patientId, patientName, branchId, onCancel, onSuccess }: Props) {
-  const [category, setCategory] = useState<PackageCategory>('PAKET KLINIK')
+export function PackageForm({ patientId, patientName, branchId, lockedCategory, onCancel, onSuccess }: Props) {
+  const [category, setCategory] = useState<PackageCategory>(lockedCategory ?? 'PAKET KLINIK')
   const [jenis, setJenis]   = useState<'P1' | 'P2'>('P1')
   const [mulai, setMulai]   = useState<'NEW' | 'EXT.'>('NEW')
   const [nama, setNama]     = useState(() => `Paket Fisio ${jenis}`)
+  const [namaTouched, setNamaTouched] = useState(false)
   const [harga, setHarga]   = useState('')
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState<'TUNAI' | 'TRANSFER BCA' | 'EDC BCA'>('TUNAI')
@@ -32,14 +34,19 @@ export function PackageForm({ patientId, patientName, branchId, onCancel, onSucc
   const sessions = jenis === 'P1' ? 5 : 10
   const isVisit  = category === 'PAKET VISIT'
 
-  // Auto-fill harga from the branch's price list (internal_layanan), keyed by category + session count
+  // Auto-fill harga (and, unless the user already edited it, nama) from the
+  // branch's price list (internal_layanan), keyed by category + session count —
+  // e.g. pulls the real "Paket Home Visit" name for the PAKET VISIT category.
   useEffect(() => {
     let cancelled = false
     const virtualServiceType = isVisit ? 'PAKET VISIT' : 'PAKET TERAPI'
-    fetchLayananHarga(virtualServiceType, branchId, sessions).then((price) => {
-      if (!cancelled) setHarga(price != null ? String(price) : '')
+    fetchLayananDetail(virtualServiceType, branchId, sessions).then((detail) => {
+      if (cancelled) return
+      setHarga(detail ? String(detail.harga) : '')
+      if (!namaTouched) setNama(detail?.nama ?? (isVisit ? `Paket Visit ${jenis}` : `Paket Fisio ${jenis}`))
     })
     return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisit, branchId, sessions])
 
   const hargaNum  = parseFloat(harga.replace(/\D/g, '')) || 0
@@ -49,12 +56,12 @@ export function PackageForm({ patientId, patientName, branchId, onCancel, onSucc
 
   function handleJenis(j: 'P1' | 'P2') {
     setJenis(j)
-    setNama(isVisit ? `Paket Visit ${j}` : `Paket Fisio ${j}`)
+    if (!namaTouched) setNama(isVisit ? `Paket Visit ${j}` : `Paket Fisio ${j}`)
   }
 
   function handleCategory(c: PackageCategory) {
     setCategory(c)
-    setNama(c === 'PAKET VISIT' ? `Paket Visit ${jenis}` : `Paket Fisio ${jenis}`)
+    if (!namaTouched) setNama(c === 'PAKET VISIT' ? `Paket Visit ${jenis}` : `Paket Fisio ${jenis}`)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -110,25 +117,27 @@ export function PackageForm({ patientId, patientName, branchId, onCancel, onSucc
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Kategori */}
-      <div>
-        <label className={labelCls}>Kategori Paket</label>
-        <div className="grid grid-cols-2 gap-2">
-          {PACKAGE_CATEGORIES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => handleCategory(c)}
-              className={`py-2 rounded-xl text-sm font-medium border transition-all ${
-                category === c
-                  ? 'bg-primary/10 text-primary border-primary/30'
-                  : 'border-border text-foreground hover:bg-muted'
-              }`}
-            >
-              {c}
-            </button>
-          ))}
+      {!lockedCategory && (
+        <div>
+          <label className={labelCls}>Kategori Paket</label>
+          <div className="grid grid-cols-2 gap-2">
+            {PACKAGE_CATEGORIES.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => handleCategory(c)}
+                className={`py-2 rounded-xl text-sm font-medium border transition-all ${
+                  category === c
+                    ? 'bg-primary/10 text-primary border-primary/30'
+                    : 'border-border text-foreground hover:bg-muted'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Jenis paket */}
       <div>
@@ -177,7 +186,7 @@ export function PackageForm({ patientId, patientName, branchId, onCancel, onSucc
         <label className={labelCls}>Nama Paket</label>
         <input
           value={nama}
-          onChange={(e) => setNama(e.target.value)}
+          onChange={(e) => { setNama(e.target.value); setNamaTouched(true) }}
           className={inputCls}
           placeholder="mis. Paket Fisio Lutut P1"
         />

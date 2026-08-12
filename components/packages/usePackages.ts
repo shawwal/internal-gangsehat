@@ -5,12 +5,14 @@ import { fetchPatient } from '@/app/actions/patients'
 import { fetchPatientPackagesWithPayment, deletePatientPackage, stopPatientPackage } from '@/app/actions/packages'
 import { createClient } from '@/lib/supabase/client'
 import type { PatientPackageWithPayment } from '@/app/actions/packages'
+import type { UserRole } from '@/types'
 
 export function usePackages(patientId: string) {
   const [packages, setPackages]     = useState<PatientPackageWithPayment[]>([])
   const [patientName, setPatientName] = useState('')
   const [noRm, setNoRm]             = useState('')
   const [branchId, setBranchId]     = useState<string | null>(null)
+  const [userRole, setUserRole]     = useState<UserRole | null>(null)
   const [loading, setLoading]       = useState(true)
 
   async function loadProfile() {
@@ -19,10 +21,11 @@ export function usePackages(patientId: string) {
     if (!user) return
     const { data: profile } = await supabase
       .from('internal_profiles')
-      .select('branch_id')
+      .select('branch_id, role')
       .eq('id', user.id)
       .single()
     setBranchId(profile?.branch_id ?? null)
+    setUserRole((profile?.role as UserRole) ?? null)
   }
 
   async function load() {
@@ -55,5 +58,5 @@ export function usePackages(patientId: string) {
     cancelled: packages.filter((p) => p.status === 'cancelled').length,
   }
 
-  return { packages, patientName, noRm, branchId, loading, stats, load, handleDelete, handleStop }
+  return { packages, patientName, noRm, branchId, userRole, loading, stats, load, handleDelete, handleStop }
 }

@@ -16,7 +16,7 @@ import type { PatientPackage }  from '@/components/packages/types'
 
 export default function PatientPackagesPage() {
   const { id } = useParams() as { id: string }
-  const { packages, patientName, noRm, branchId, loading, stats, load, handleDelete, handleStop } = usePackages(id)
+  const { packages, patientName, noRm, branchId, userRole, loading, stats, load, handleDelete, handleStop } = usePackages(id)
 
   const [showModal, setShowModal]       = useState(false)
   const [editTarget, setEditTarget]     = useState<PatientPackage | null>(null)
@@ -117,10 +117,12 @@ export default function PatientPackagesPage() {
             <PackageCard
               key={pkg.id}
               pkg={pkg}
+              userRole={userRole}
               onEdit={openEdit}
               onDelete={(pkgId) => setDeleteTarget(pkgId)}
               onStop={(pkgId) => setStopTarget(pkgId)}
               onSchedule={(p) => setScheduleTarget(p)}
+              onSessionChange={load}
             />
           ))}
         </div>

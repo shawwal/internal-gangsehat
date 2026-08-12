@@ -413,6 +413,14 @@ export const navigation: NavItem[] = [
     group: 'clinic',
   },
   {
+    key: 'home-visit',
+    label: 'Home Visit',
+    href: '/home-visit',
+    icon: 'Home',
+    roles: ['director', 'hr', 'manager', 'therapist', 'staff', 'admin'],
+    group: 'clinic',
+  },
+  {
     key: 'medical-records',
     label: 'Rekam Medis',
     href: '/medical-records',

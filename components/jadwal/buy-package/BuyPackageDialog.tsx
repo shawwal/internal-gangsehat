@@ -5,10 +5,19 @@ import { Package, X } from 'lucide-react'
 import type { PatientPlain } from '@/app/actions/patients'
 import { PatientPickerStep } from './PatientPickerStep'
 import { PackageForm } from './PackageForm'
-import type { BuyPackageDialogProps } from './types'
+import type { BuyPackageDialogProps, PackageCategory } from './types'
 
-export function BuyPackageDialog({ branchId, onClose, onSuccess }: BuyPackageDialogProps) {
-  const [patient, setPatient] = useState<PatientPlain | null>(null)
+interface Props extends BuyPackageDialogProps {
+  lockedCategory?: PackageCategory
+  title?: string
+  subtitle?: string
+  initialPatient?: PatientPlain | null
+}
+
+export function BuyPackageDialog({
+  branchId, onClose, onSuccess, lockedCategory, title, subtitle, initialPatient,
+}: Props) {
+  const [patient, setPatient] = useState<PatientPlain | null>(initialPatient ?? null)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4" onClick={onClose}>
@@ -22,8 +31,8 @@ export function BuyPackageDialog({ branchId, onClose, onSuccess }: BuyPackageDia
               <Package size={15} className="text-primary" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">Beli Paket Baru</p>
-              <p className="text-xs text-muted-foreground">Tanpa perlu jadwal kunjungan</p>
+              <p className="text-sm font-semibold text-foreground">{title ?? 'Beli Paket Baru'}</p>
+              <p className="text-xs text-muted-foreground">{subtitle ?? 'Tanpa perlu jadwal kunjungan'}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
@@ -39,6 +48,7 @@ export function BuyPackageDialog({ branchId, onClose, onSuccess }: BuyPackageDia
               patientId={patient.id}
               patientName={patient.name}
               branchId={branchId}
+              lockedCategory={lockedCategory}
               onCancel={onClose}
               onSuccess={onSuccess}
             />

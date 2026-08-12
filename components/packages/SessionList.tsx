@@ -1,11 +1,15 @@
+import { Pencil, Trash2 } from 'lucide-react'
 import type { PackageSession } from '@/types'
 
 interface SessionListProps {
   sessions:       PackageSession[] | null
   loading:        boolean
+  onEdit:         (s: PackageSession) => void
+  onDelete:       (s: PackageSession) => void
+  canDelete:      boolean
 }
 
-export function SessionList({ sessions, loading }: SessionListProps) {
+export function SessionList({ sessions, loading, onEdit, onDelete, canDelete }: SessionListProps) {
   if (loading) {
     return (
       <div className="divide-y divide-border">
@@ -42,13 +46,33 @@ export function SessionList({ sessions, loading }: SessionListProps) {
               <span className="text-muted-foreground">{s.kehadiran ?? '—'}</span>
             </span>
           </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-muted-foreground/60 text-[10px]">
-              {s.therapist_name ?? 'Terapis tidak tercatat'}
-            </span>
-            {s.shift && (
-              <span className="text-[10px] text-muted-foreground/60">· {s.shift}</span>
-            )}
+          <div className="flex items-center justify-between mt-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground/60 text-[10px]">
+                {s.therapist_name ?? 'Terapis tidak tercatat'}
+              </span>
+              {s.shift && (
+                <span className="text-[10px] text-muted-foreground/60">· {s.shift}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => onEdit(s)}
+                className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                title="Edit sesi"
+              >
+                <Pencil size={11} />
+              </button>
+              {canDelete && (
+                <button
+                  onClick={() => onDelete(s)}
+                  className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  title="Hapus sesi"
+                >
+                  <Trash2 size={11} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       ))}

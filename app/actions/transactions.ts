@@ -70,6 +70,26 @@ export async function fetchLayananHarga(serviceType: string, branchId?: string |
   return data ? Number(data.harga) : null
 }
 
+// Like fetchLayananHarga, but also returns the layanan's own name — used where
+// the UI should show the real price-list entry (e.g. "Paket Home Visit")
+// instead of a generically-generated package name.
+export async function fetchLayananDetail(
+  serviceType: string, branchId?: string | null, jumlahSesi?: number | null,
+): Promise<{ nama: string; harga: number } | null> {
+  const kategori = SERVICE_TO_CATEGORY[serviceType]
+  if (!kategori || kategori === 'LAINNYA') return null
+  const supabase = await createClient()
+  let query = supabase
+    .from('internal_layanan')
+    .select('nama, harga')
+    .eq('kategori', kategori)
+    .eq('is_active', true)
+  if (branchId) query = query.eq('branch_id', branchId)
+  if (jumlahSesi != null) query = query.eq('jumlah_sesi', jumlahSesi)
+  const { data } = await query.order('created_at', { ascending: true }).limit(1).single()
+  return data ? { nama: data.nama as string, harga: Number(data.harga) } : null
+}
+
 export async function getPatientOutstanding(patientId: string): Promise<OutstandingTransaction[]> {
   const supabase = await createClient()
   const { data } = await supabase

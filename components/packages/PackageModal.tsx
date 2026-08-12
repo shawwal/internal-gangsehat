@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { createPatientPackage, updatePatientPackage } from '@/app/actions/packages'
+import { createTransactionManual, fetchLayananHarga } from '@/app/actions/transactions'
+import type { CreateTransactionManualInput } from '@/app/actions/transactions'
 import { DEFAULT_FORM, INPUT_CLS, LABEL_CLS } from './types'
 import type { PatientPackage, JenisPaket, PackageOperationalStatus, PackageCompletionStatus, PackageStatus, FormState } from './types'
 
@@ -27,6 +29,9 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
           completion_status:  editTarget.completion_status ?? '',
           status:             editTarget.status,
           notes:              editTarget.notes ?? '',
+          harga:              DEFAULT_FORM.harga,
+          amount:             DEFAULT_FORM.amount,
+          payment_method:     DEFAULT_FORM.payment_method,
         }
       : DEFAULT_FORM,
   )
@@ -39,9 +44,26 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
     setForm((f) => ({ ...f, [key]: val }))
   }
 
+  // Auto-fill harga from the branch's price list (internal_layanan) — create-only
+  useEffect(() => {
+    if (isEdit) return
+    let cancelled = false
+    const virtualServiceType = form.category === 'PAKET VISIT' ? 'PAKET VISIT' : 'PAKET TERAPI'
+    fetchLayananHarga(virtualServiceType, branchId, sessionCount).then((price) => {
+      if (!cancelled) set('harga', price != null ? String(price) : '')
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, form.category, branchId, sessionCount])
+
+  const hargaNum  = parseFloat(form.harga.replace(/\D/g, '')) || 0
+  const amountNum = parseFloat(form.amount.replace(/\D/g, '')) || 0
+  const sisa      = Math.max(hargaNum - amountNum, 0)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.package_name.trim()) { setError('Nama paket wajib diisi.'); return }
+    if (!isEdit && (!form.harga || !form.amount)) { setError('Isi harga dan jumlah bayar.'); return }
     setSaving(true)
     setError(null)
 
@@ -58,7 +80,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
       })
       if (err) { setError(err); setSaving(false); return }
     } else {
-      const { error: err } = await createPatientPackage({
+      const { id: pkgId, error: err } = await createPatientPackage({
         patient_id:   patientId,
         branch_id:    branchId,
         package_name: form.package_name.trim(),
@@ -67,7 +89,26 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
         category:     form.category,
         notes:        form.notes.trim() || null,
       })
-      if (err) { setError(err); setSaving(false); return }
+      if (err || !pkgId) { setError(err ?? 'Gagal membuat paket.'); setSaving(false); return }
+
+      const txInput: CreateTransactionManualInput = {
+        type:             'income',
+        category:         form.category,
+        harga:            hargaNum,
+        amount:           amountNum,
+        discount:         0,
+        payment_method:   form.payment_method,
+        payment_status:   sisa === 0 ? 'LUNAS' : 'DP',
+        penjamin:         null,
+        description:      `${form.package_name.trim()} — ${sessionCount} sesi`,
+        transaction_date: new Date().toISOString().slice(0, 10),
+        visit_id:         null,
+        patient_id:       patientId,
+        package_id:       pkgId,
+        branch_id:        branchId,
+      }
+      const { error: txErr } = await createTransactionManual(txInput)
+      if (txErr) { setError(`Paket dibuat, tapi gagal mencatat pembayaran: ${txErr}`); setSaving(false); return }
     }
 
     setSaving(false)
@@ -166,6 +207,59 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
               ))}
             </div>
           </div>
+
+          {!isEdit && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL_CLS}>Harga Paket (Rp)</label>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    value={form.harga}
+                    onChange={(e) => set('harga', e.target.value)}
+                    className={INPUT_CLS}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLS}>Jumlah Bayar (Rp)</label>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    value={form.amount}
+                    onChange={(e) => set('amount', e.target.value)}
+                    className={INPUT_CLS}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              {(hargaNum > 0 || amountNum > 0) && (
+                <div className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium ${
+                  sisa === 0 ? 'bg-[#34C759]/10 text-[#34C759]' : 'bg-[#FFB35C]/10 text-[#FFB35C]'
+                }`}>
+                  <span>{sisa === 0 ? 'Lunas' : 'Sisa tagihan'}</span>
+                  <span>{sisa === 0 ? '✓' : `Rp ${sisa.toLocaleString('id-ID')}`}</span>
+                </div>
+              )}
+
+              <div>
+                <label className={LABEL_CLS}>Metode Pembayaran</label>
+                <select
+                  value={form.payment_method}
+                  onChange={(e) => set('payment_method', e.target.value as FormState['payment_method'])}
+                  className={INPUT_CLS}
+                >
+                  <option value="TUNAI">TUNAI</option>
+                  <option value="TRANSFER BCA">TRANSFER BCA</option>
+                  <option value="EDC BCA">EDC BCA</option>
+                </select>
+              </div>
+            </>
+          )}
 
           <div>
             <label className={LABEL_CLS}>Status Operasional</label>
