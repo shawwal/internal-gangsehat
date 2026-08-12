@@ -22,6 +22,7 @@ import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { DetachPackageDialog } from '@/components/jadwal/DetachPackageDialog'
 import { AttachPackageDialog } from '@/components/jadwal/AttachPackageDialog'
+import { BuyPackageButton } from '@/components/jadwal/buy-package/BuyPackageButton'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders, updateVisit } from '@/app/actions/jadwal'
 import { fetchReminderTemplate } from '@/app/actions/reminder-template'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
@@ -276,6 +277,12 @@ export default function JadwalHarianPage() {
                       <option key={b.id} value={b.id}>{b.name}</option>
                     ))}
                   </select>
+                )}
+                {canRecordPayment && (
+                  <BuyPackageButton
+                    branchId={selectedBranchId ?? null}
+                    onSuccess={() => silentReload(null)}
+                  />
                 )}
                 {canCreateOrder && (
                   <a
