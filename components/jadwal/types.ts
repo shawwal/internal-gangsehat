@@ -51,24 +51,27 @@ export interface VisitCardProps {
 }
 
 export const STATUS_LABEL: Record<VisitStatus, string> = {
-  scheduled: 'Terjadwal',
-  completed: 'Selesai',
-  cancelled: 'Batal',
-  no_show:   'Tdk Hadir',
+  scheduled:   'Terjadwal',
+  completed:   'Selesai',
+  cancelled:   'Batal',
+  no_show:     'Tdk Hadir',
+  rescheduled: 'Reschedule',
 }
 
 export const STATUS_COLOR: Record<VisitStatus, string> = {
-  scheduled: 'bg-blue-500/20 border-blue-400/50 text-blue-300',
-  completed: 'bg-[#34C759]/20 border-[#34C759]/50 text-[#34C759]',
-  cancelled: 'bg-destructive/20 border-destructive/50 text-destructive',
-  no_show:   'bg-muted/30 border-border/40 text-muted-foreground',
+  scheduled:   'bg-blue-500/20 border-blue-400/50 text-blue-300',
+  completed:   'bg-[#34C759]/20 border-[#34C759]/50 text-[#34C759]',
+  cancelled:   'bg-destructive/20 border-destructive/50 text-destructive',
+  no_show:     'bg-muted/30 border-border/40 text-muted-foreground',
+  rescheduled: 'bg-[#FFB35C]/20 border-[#FFB35C]/50 text-[#FFB35C]',
 }
 
 export const STATUS_BADGE: Record<VisitStatus, string> = {
-  scheduled: 'bg-blue-500/20 text-blue-300',
-  completed: 'bg-[#34C759]/20 text-[#34C759]',
-  cancelled: 'bg-destructive/15 text-destructive',
-  no_show:   'bg-muted/40 text-muted-foreground',
+  scheduled:   'bg-blue-500/20 text-blue-300',
+  completed:   'bg-[#34C759]/20 text-[#34C759]',
+  cancelled:   'bg-destructive/15 text-destructive',
+  no_show:     'bg-muted/40 text-muted-foreground',
+  rescheduled: 'bg-[#FFB35C]/20 text-[#FFB35C]',
 }
 
 export const SERVICE_TYPE_LABEL: Record<string, string> = {

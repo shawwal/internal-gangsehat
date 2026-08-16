@@ -11,14 +11,14 @@ import { createHomeVisitSession } from '@/app/actions/homeVisit'
 import { PatientPickerStep } from '@/components/jadwal/buy-package/PatientPickerStep'
 import { PackageForm } from '@/components/jadwal/buy-package/PackageForm'
 import type { PatientPackage } from '@/types'
-import type { BodyRegion, ServiceType, VisitStatus } from '@/types'
+import type { ServiceType, VisitStatus } from '@/types'
 import { INPUT_CLS, LABEL_CLS } from './types'
 
-const BODY_REGIONS: BodyRegion[] = [
-  'HEAD', 'NECK', 'SHOULDER', 'UPPER ARM', 'ELBOW', 'LOWER ARM',
-  'WRIST', 'HAND', 'SPINE', 'CHEST', 'UPPER BACK', 'LOWER BACK',
-  'ABDOMINAL', 'HIP/PELVIC', 'THIGH', 'KNEE', 'CALF', 'ANKLE',
-  'FOOT', 'CNS', 'PNS', 'SYSTEMIC', 'CARDIOVASCULAR', 'PULMONAL', 'PERFORMANCE',
+const STATUS_OPTIONS: { value: VisitStatus; label: string }[] = [
+  { value: 'scheduled',   label: 'Terjadwal' },
+  { value: 'completed',   label: 'Selesai' },
+  { value: 'cancelled',   label: 'Batal' },
+  { value: 'rescheduled', label: 'Reschedule' },
 ]
 
 type Step = 'patient' | 'service' | 'book' | 'buy-package'
@@ -61,9 +61,7 @@ export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
   const [branchStaff, setBranchStaff] = useState<BranchStaffMember[]>([])
   const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0])
   const [staffId, setStaffId] = useState('')
-  const [shift, setShift] = useState<'PAGI' | 'SORE' | ''>('')
-  const [kehadiran, setKehadiran] = useState<'HADIR' | 'TIDAK HADIR'>('HADIR')
-  const [regio, setRegio] = useState<BodyRegion | ''>('')
+  const [status, setStatus] = useState<VisitStatus>('completed')
   const [complaint, setComplaint] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
@@ -114,14 +112,14 @@ export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
       attending_staff_id:  staffId || null,
       visit_date:          visitDate,
       service_type:        chosenService,
-      shift:               shift || null,
-      kehadiran,
-      regio:               regio || null,
+      shift:               null,
+      kehadiran:           null,
+      regio:               null,
       sumber_pasien:       null,
       chief_complaint:     complaint || null,
       diagnosis:           null,
       treatment:           null,
-      status:              'completed' as VisitStatus,
+      status,
       notes:               notes || null,
       package_id:          chosenPackageId,
     })
@@ -307,28 +305,9 @@ export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
                   <input required type="date" value={visitDate} onChange={(e) => setVisitDate(e.target.value)} className={INPUT_CLS} />
                 </div>
                 <div>
-                  <label className={LABEL_CLS}>Shift</label>
-                  <select value={shift} onChange={(e) => setShift(e.target.value as typeof shift)} className={INPUT_CLS}>
-                    <option value="">— Pilih —</option>
-                    <option value="PAGI">PAGI</option>
-                    <option value="SORE">SORE</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={LABEL_CLS}>Regio</label>
-                  <select value={regio} onChange={(e) => setRegio(e.target.value as BodyRegion | '')} className={INPUT_CLS}>
-                    <option value="">— Pilih —</option>
-                    {BODY_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={LABEL_CLS}>Kehadiran</label>
-                  <select value={kehadiran} onChange={(e) => setKehadiran(e.target.value as typeof kehadiran)} className={INPUT_CLS}>
-                    <option value="HADIR">HADIR</option>
-                    <option value="TIDAK HADIR">TIDAK HADIR</option>
+                  <label className={LABEL_CLS}>Status Layanan</label>
+                  <select value={status} onChange={(e) => setStatus(e.target.value as VisitStatus)} className={INPUT_CLS}>
+                    {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </div>
               </div>

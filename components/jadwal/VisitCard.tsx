@@ -16,10 +16,11 @@ const REMIND_ROLES  = ['admin', 'director', 'manager']
 const ALL_STATUSES: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
 
 const STATUS_ICON: Record<VisitStatus, React.ReactNode> = {
-  scheduled: <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />,
-  completed: <Check size={12} className="text-[#34C759]" />,
-  cancelled: <X size={12} className="text-destructive" />,
-  no_show:   <UserX size={12} className="text-muted-foreground" />,
+  scheduled:   <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />,
+  completed:   <Check size={12} className="text-[#34C759]" />,
+  cancelled:   <X size={12} className="text-destructive" />,
+  no_show:     <UserX size={12} className="text-muted-foreground" />,
+  rescheduled: <span className="w-2 h-2 rounded-full bg-[#FFB35C] inline-block" />,
 }
 
 interface Props {

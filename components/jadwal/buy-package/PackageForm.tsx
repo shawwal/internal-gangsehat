@@ -20,7 +20,7 @@ const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
 
 export function PackageForm({ patientId, patientName, branchId, lockedCategory, onCancel, onSuccess }: Props) {
   const [category, setCategory] = useState<PackageCategory>(lockedCategory ?? 'PAKET KLINIK')
-  const [jenis, setJenis]   = useState<'P1' | 'P2'>('P1')
+  const [jenis, setJenis]   = useState<'P1' | 'P2'>(lockedCategory === 'PAKET VISIT' ? 'P2' : 'P1')
   const [mulai, setMulai]   = useState<'NEW' | 'EXT.'>('NEW')
   const [nama, setNama]     = useState(() => `Paket Fisio ${jenis}`)
   const [namaTouched, setNamaTouched] = useState(false)
@@ -139,26 +139,28 @@ export function PackageForm({ patientId, patientName, branchId, lockedCategory, 
         </div>
       )}
 
-      {/* Jenis paket */}
-      <div>
-        <label className={labelCls}>Jenis Paket</label>
-        <div className="grid grid-cols-2 gap-2">
-          {(['P1', 'P2'] as const).map((j) => (
-            <button
-              key={j}
-              type="button"
-              onClick={() => handleJenis(j)}
-              className={`py-2.5 rounded-xl text-sm font-medium border transition-all ${
-                jenis === j
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'border-border text-foreground hover:bg-muted'
-              }`}
-            >
-              {j} · {j === 'P1' ? 5 : 10} sesi
-            </button>
-          ))}
+      {/* Jenis paket — home visit only has one variant (10 sesi), so no toggle needed */}
+      {!isVisit && (
+        <div>
+          <label className={labelCls}>Jenis Paket</label>
+          <div className="grid grid-cols-2 gap-2">
+            {(['P1', 'P2'] as const).map((j) => (
+              <button
+                key={j}
+                type="button"
+                onClick={() => handleJenis(j)}
+                className={`py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                  jenis === j
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-foreground hover:bg-muted'
+                }`}
+              >
+                {j} · {j === 'P1' ? 5 : 10} sesi
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Mulai paket */}
       <div>

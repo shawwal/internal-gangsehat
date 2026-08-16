@@ -26,17 +26,19 @@ import { logActivity } from '@/lib/activityLog'
 const STATUS_OPTIONS: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
 
 const STATUS_LABEL: Record<VisitStatus, string> = {
-  scheduled: 'Terjadwal',
-  completed: 'Selesai',
-  cancelled: 'Dibatalkan',
-  no_show:   'Tidak Hadir',
+  scheduled:   'Terjadwal',
+  completed:   'Selesai',
+  cancelled:   'Dibatalkan',
+  no_show:     'Tidak Hadir',
+  rescheduled: 'Reschedule',
 }
 
 const STATUS_BADGE: Record<VisitStatus, string> = {
-  scheduled: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
-  completed: 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/20',
-  cancelled: 'bg-destructive/15 text-destructive border-destructive/20',
-  no_show:   'bg-muted/40 text-muted-foreground border-border',
+  scheduled:   'bg-blue-500/15 text-blue-400 border-blue-500/20',
+  completed:   'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/20',
+  cancelled:   'bg-destructive/15 text-destructive border-destructive/20',
+  no_show:     'bg-muted/40 text-muted-foreground border-border',
+  rescheduled: 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/20',
 }
 
 const SERVICE_TYPES: ServiceType[] = [

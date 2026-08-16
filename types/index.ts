@@ -43,7 +43,7 @@ export interface Patient {
   provinsi: string | null
 }
 
-export type VisitStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show'
+export type VisitStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled'
 
 // Service types (LAYANAN) — maps to Excel purchase codes:
 // K.TA → TERAPI AWAL, K.ST → SESI TERAPI, K.PT → PAKET TERAPI

@@ -4,10 +4,11 @@ import type { VisitStatus } from '@/types'
 import { STATUS_BADGE } from './types'
 
 const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
-  scheduled: 'Terjadwal',
-  completed: 'Selesai',
-  cancelled: 'Batal',
-  no_show:   'Tdk Hadir',
+  scheduled:   'Terjadwal',
+  completed:   'Selesai',
+  cancelled:   'Batal',
+  no_show:     'Tdk Hadir',
+  rescheduled: 'Reschedule',
 }
 
 interface VisitSummaryProps {
