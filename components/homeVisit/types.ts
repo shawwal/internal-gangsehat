@@ -2,25 +2,21 @@ import type { BodyRegion, ServiceType, VisitStatus } from '@/types'
 
 export const HOME_VISIT_SERVICE_TYPES: ServiceType[] = ['TA VISIT', 'SESI VISIT', 'PAKET VISIT']
 
-export interface HomeVisitPackageInfo {
-  jenis_paket: 'P1' | 'P2' | null
-  used_sessions: number
-  total_sessions: number
-  status: 'active' | 'completed' | 'cancelled' | 'stopped'
-  payment_status: 'LUNAS' | 'DP' | null
-  outstanding: number
-}
-
-export interface HomeVisitPatientRow {
+export interface HomeVisitSessionRow {
+  id: string
+  visit_date: string
   patient_id: string
   patient_name: string
+  patient_address: string | null
   no_rm: string | null
-  branch_id: string | null
+  branch_id: string
   branch_name: string
-  last_visit_date: string
-  last_service_type: ServiceType | null
-  last_kehadiran: 'HADIR' | 'TIDAK HADIR' | null
-  package: HomeVisitPackageInfo | null
+  service_type: ServiceType | null
+  attending_staff_name: string | null
+  package: { jenis_paket: 'P1' | 'P2' | null; used_sessions: number; total_sessions: number } | null
+  payment_status: 'LUNAS' | 'DP' | 'PELUNASAN' | null
+  payment_outstanding: number
+  has_payment: boolean
 }
 
 export interface HomeVisitStatsData {
@@ -35,13 +31,13 @@ export const VISIT_FORM_DEFAULT = {
   attending_staff_id: '',
   service_type:       '' as ServiceType | '',
   shift:              '' as 'PAGI' | 'SORE' | '',
-  kehadiran:          '' as 'HADIR' | 'TIDAK HADIR' | '',
+  kehadiran:          'HADIR' as 'HADIR' | 'TIDAK HADIR' | '',
   regio:              '' as BodyRegion | '',
   sumber_pasien:      '',
   chief_complaint:    '',
   diagnosis:          '',
   treatment:          '',
-  status:             'scheduled' as VisitStatus,
+  status:             'completed' as VisitStatus,
   notes:              '',
 }
 

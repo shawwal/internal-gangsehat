@@ -2,10 +2,19 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
-import type { ServiceType, UserRole } from '@/types'
-import type { HomeVisitPatientRow, HomeVisitPackageInfo, HomeVisitStatsData } from '@/components/homeVisit/types'
+import { generateOrderId } from '@/lib/internal/orderId'
+import { logActivity } from '@/lib/activityLog'
+import type { BodyRegion, ServiceType, UserRole, VisitStatus } from '@/types'
+import type { HomeVisitSessionRow, HomeVisitStatsData } from '@/components/homeVisit/types'
 
 const HOME_VISIT_TYPES: ServiceType[] = ['TA VISIT', 'SESI VISIT', 'PAKET VISIT']
+
+// A visit's own service_type must never be 'PAKET VISIT' — that value is only
+// used as the transactions/patient_packages category for a package purchase.
+// Individual sessions consuming a package are logged as TA VISIT / SESI VISIT
+// with package_id pointing at the package.
+const NO_PACKAGE_SERVICE_TYPES = new Set(['TA VISIT'])
+const PACKAGE_CATEGORIES = new Set(['PAKET VISIT', 'PAKET KLINIK'])
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -41,15 +50,13 @@ async function searchPatientIds(supabase: SupabaseServerClient, term: string): P
   return (data ?? []).map((p: { id: string }) => p.id)
 }
 
-interface PkgTxRow { order_id: string; harga: number; amount: number; discount: number; status: string }
-
-// ── Paginated list ──────────────────────────────────────────────────────────────
-export async function fetchHomeVisitPatients(params: {
+// ── Daily Session Log — one row per home-visit session ──────────────────────────
+export async function fetchHomeVisitSessions(params: {
   search: string
   branchId?: string // 'all' or uuid — only honored for director
   page: number
   pageSize: number
-}): Promise<{ rows: HomeVisitPatientRow[]; total: number }> {
+}): Promise<{ rows: HomeVisitSessionRow[]; total: number }> {
   const supabase = await createClient()
   const viewer = await resolveViewer(supabase)
   if (!viewer) return { rows: [], total: 0 }
@@ -63,8 +70,9 @@ export async function fetchHomeVisitPatients(params: {
 
   let visitQuery = supabase
     .from('patient_visits')
-    .select('id, patient_id, branch_id, visit_date, service_type, kehadiran, branches!branch_id(name)')
+    .select('id, patient_id, branch_id, visit_date, service_type, attending_staff_id, package_id, status, branches!branch_id(name)')
     .in('service_type', HOME_VISIT_TYPES)
+    .neq('status', 'cancelled')
     .order('visit_date', { ascending: false })
 
   if (isCrossBranch(viewer.role)) {
@@ -76,107 +84,87 @@ export async function fetchHomeVisitPatients(params: {
   }
   if (patientIds) visitQuery = visitQuery.in('patient_id', patientIds)
 
-  const { data: visits } = await visitQuery.limit(5000)
+  const { data: visits } = await visitQuery.limit(2000)
   if (!visits?.length) return { rows: [], total: 0 }
 
-  // Reduce to one row per patient — the latest home-visit visit
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const latestByPatient = new Map<string, any>()
-  for (const v of visits) {
-    const existing = latestByPatient.get(v.patient_id as string)
-    if (!existing || (v.visit_date as string) > (existing.visit_date as string)) {
-      latestByPatient.set(v.patient_id as string, v)
-    }
-  }
-  const uniquePatientIds = [...latestByPatient.keys()]
+  const total = visits.length
+  const from = (params.page - 1) * params.pageSize
+  const pageVisits = visits.slice(from, from + params.pageSize)
 
-  // Attach PAKET VISIT package info (if any) per patient
-  const pkgQuery = supabase
-    .from('patient_packages_with_stats')
-    .select('id, patient_id, jenis_paket, used_sessions, total_sessions, status, order_id')
-    .eq('category', 'PAKET VISIT')
-    .in('patient_id', uniquePatientIds)
-    .order('created_at', { ascending: false })
-  const { data: packages } = await pkgQuery
+  const patientIdsOnPage = [...new Set(pageVisits.map((v) => v.patient_id as string))]
+  const staffIdsOnPage   = [...new Set(pageVisits.map((v) => v.attending_staff_id as string).filter(Boolean))]
+  const packageIdsOnPage = [...new Set(pageVisits.map((v) => v.package_id as string).filter(Boolean))]
+  const visitIdsOnPage   = pageVisits.map((v) => v.id as string)
 
-  const orderIds = (packages ?? []).map((p) => p.order_id).filter((v): v is string => !!v)
-  const { data: pkgTxs } = orderIds.length > 0
-    ? await supabase
-        .from('transactions')
-        .select('order_id, harga, amount, discount, status')
-        .in('order_id', orderIds)
-        .eq('category', 'PAKET VISIT')
-        .neq('status', 'rejected')
-    : { data: [] as PkgTxRow[] }
-
-  const txByOrder = new Map<string, PkgTxRow[]>()
-  for (const t of (pkgTxs ?? []) as PkgTxRow[]) {
-    const list = txByOrder.get(t.order_id) ?? []
-    list.push(t)
-    txByOrder.set(t.order_id, list)
-  }
-
-  const packageByPatient = new Map<string, HomeVisitPackageInfo>()
-  for (const p of packages ?? []) {
-    if (packageByPatient.has(p.patient_id as string)) continue // keep most recent (already ordered desc)
-    const rows = p.order_id ? txByOrder.get(p.order_id as string) : undefined
-    let paymentStatus: 'LUNAS' | 'DP' | null = null
-    let outstanding = 0
-    if (rows && rows.length > 0) {
-      const harga = rows[0].harga
-      const amountPaid = rows.reduce((s, r) => s + (r.amount ?? 0), 0)
-      const discountTotal = rows.reduce((s, r) => s + (r.discount ?? 0), 0)
-      outstanding = Math.max(harga - amountPaid - discountTotal, 0)
-      paymentStatus = outstanding === 0 ? 'LUNAS' : 'DP'
-    }
-    packageByPatient.set(p.patient_id as string, {
-      jenis_paket:    (p.jenis_paket ?? null) as HomeVisitPackageInfo['jenis_paket'],
-      used_sessions:  Number(p.used_sessions ?? 0),
-      total_sessions: p.total_sessions as number,
-      status:         p.status as HomeVisitPackageInfo['status'],
-      payment_status: paymentStatus,
-      outstanding,
-    })
-  }
-
-  // Batch-decrypt patient names + no_rm
-  const { data: patients } = await supabase
-    .from('patients')
-    .select('id, encrypted_name, encrypted_phone, no_rm')
-    .in('id', uniquePatientIds)
+  const [{ data: patients }, { data: staff }, { data: packages }, { data: txns }] = await Promise.all([
+    supabase.from('patients').select('id, encrypted_name, encrypted_phone, encrypted_address, no_rm').in('id', patientIdsOnPage),
+    staffIdsOnPage.length > 0
+      ? supabase.from('internal_profiles').select('id, full_name').in('id', staffIdsOnPage)
+      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
+    packageIdsOnPage.length > 0
+      ? supabase.from('patient_packages_with_stats').select('id, jenis_paket, used_sessions, total_sessions').in('id', packageIdsOnPage)
+      : Promise.resolve({ data: [] as { id: string; jenis_paket: string | null; used_sessions: number; total_sessions: number }[] }),
+    visitIdsOnPage.length > 0
+      ? supabase.from('transactions').select('visit_id, category, payment_status, outstanding, status').in('visit_id', visitIdsOnPage).neq('status', 'rejected')
+      : Promise.resolve({ data: [] as { visit_id: string; category: string; payment_status: string | null; outstanding: number; status: string }[] }),
+  ])
 
   const nameMap = new Map<string, string>()
+  const addrMap = new Map<string, string | null>()
   const rmMap   = new Map<string, string | null>()
   for (const p of patients ?? []) {
     rmMap.set(p.id, p.no_rm ?? null)
     try {
-      const dec = decryptPatientPII({ encrypted_name: p.encrypted_name ?? '', encrypted_phone: p.encrypted_phone ?? '' })
+      const dec = decryptPatientPII({
+        encrypted_name:    p.encrypted_name ?? '',
+        encrypted_phone:   p.encrypted_phone ?? '',
+        encrypted_address: p.encrypted_address ?? undefined,
+      })
       nameMap.set(p.id, dec.name || 'Pasien')
+      addrMap.set(p.id, dec.address ?? null)
     } catch {
       nameMap.set(p.id, 'Pasien')
+      addrMap.set(p.id, null)
     }
   }
 
-  let rows: HomeVisitPatientRow[] = uniquePatientIds.map((pid) => {
-    const v = latestByPatient.get(pid)
+  const staffMap = new Map((staff ?? []).map((s) => [s.id, s.full_name as string]))
+  const packageMap = new Map((packages ?? []).map((p) => [p.id, {
+    jenis_paket:    (p.jenis_paket ?? null) as 'P1' | 'P2' | null,
+    used_sessions:  Number(p.used_sessions ?? 0),
+    total_sessions: Number(p.total_sessions ?? 0),
+  }]))
+
+  const payMap = new Map<string, { payment_status: string | null; outstanding: number }>()
+  for (const t of txns ?? []) {
+    if (PACKAGE_CATEGORIES.has(t.category ?? '')) continue
+    const vid = t.visit_id as string
+    const existing = payMap.get(vid)
+    if (!existing || (t.outstanding ?? 0) < existing.outstanding) {
+      payMap.set(vid, { payment_status: t.payment_status, outstanding: t.outstanding ?? 0 })
+    }
+  }
+
+  const rows: HomeVisitSessionRow[] = pageVisits.map((v) => {
+    const pay = payMap.get(v.id as string)
     return {
-      patient_id:         pid,
-      patient_name:       nameMap.get(pid) ?? 'Pasien',
-      no_rm:              rmMap.get(pid) ?? null,
-      branch_id:          v.branch_id,
-      branch_name:        v.branches?.name ?? '',
-      last_visit_date:    v.visit_date,
-      last_service_type:  v.service_type,
-      last_kehadiran:     v.kehadiran,
-      package:            packageByPatient.get(pid) ?? null,
+      id:                   v.id as string,
+      visit_date:           v.visit_date as string,
+      patient_id:           v.patient_id as string,
+      patient_name:         nameMap.get(v.patient_id as string) ?? 'Pasien',
+      patient_address:      addrMap.get(v.patient_id as string) ?? null,
+      no_rm:                rmMap.get(v.patient_id as string) ?? null,
+      branch_id:            v.branch_id as string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      branch_name:          (v as any).branches?.name ?? '',
+      service_type:         v.service_type as ServiceType | null,
+      attending_staff_name: v.attending_staff_id ? (staffMap.get(v.attending_staff_id as string) ?? null) : null,
+      package:              v.package_id ? (packageMap.get(v.package_id as string) ?? null) : null,
+      payment_status:       (pay?.payment_status as HomeVisitSessionRow['payment_status']) ?? null,
+      payment_outstanding:  pay?.outstanding ?? 0,
+      has_payment:          !!pay,
     }
   })
-
-  rows.sort((a, b) => (a.last_visit_date < b.last_visit_date ? 1 : a.last_visit_date > b.last_visit_date ? -1 : 0))
-
-  const total = rows.length
-  const from = (params.page - 1) * params.pageSize
-  rows = rows.slice(from, from + params.pageSize)
 
   return { rows, total }
 }
@@ -225,4 +213,74 @@ export async function fetchHomeVisitStats(branchId?: string): Promise<HomeVisitS
     visitsThisMonth,
     noPackageYet,
   }
+}
+
+// ── Create a new home-visit session ──────────────────────────────────────────
+// Shared by the "+ New Session" flow (quick booking against a service card)
+// and any future detailed-entry form. Generates a fresh order_id per session
+// and resolves package_id the same way jadwal.ts::createVisit does — a
+// TA VISIT can never draw from a package.
+export interface CreateHomeVisitSessionInput {
+  patient_id: string
+  branch_id: string
+  attending_staff_id: string | null
+  visit_date: string
+  service_type: ServiceType
+  shift: 'PAGI' | 'SORE' | null
+  kehadiran: 'HADIR' | 'TIDAK HADIR' | null
+  regio: BodyRegion | null
+  sumber_pasien: string | null
+  chief_complaint: string | null
+  diagnosis: string | null
+  treatment: string | null
+  status: VisitStatus
+  notes: string | null
+  package_id: string | null
+}
+
+export async function createHomeVisitSession(
+  input: CreateHomeVisitSessionInput,
+): Promise<{ id: string | null; error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { id: null, error: 'Tidak terautentikasi' }
+
+  const orderId = await generateOrderId(supabase)
+  const packageId = NO_PACKAGE_SERVICE_TYPES.has(input.service_type) ? null : input.package_id
+
+  const { data, error } = await supabase.from('patient_visits').insert({
+    patient_id:          input.patient_id,
+    branch_id:           input.branch_id,
+    attending_staff_id:  input.attending_staff_id ?? user.id,
+    visit_date:          input.visit_date,
+    service_type:        input.service_type,
+    shift:                input.shift ?? null,
+    kehadiran:           input.kehadiran ?? null,
+    regio:               input.regio ?? null,
+    sumber_pasien:       input.sumber_pasien ?? null,
+    chief_complaint:     input.chief_complaint ?? null,
+    diagnosis:           input.diagnosis ?? null,
+    treatment:           input.treatment ?? null,
+    status:              input.status,
+    notes:               input.notes ?? null,
+    package_id:          packageId,
+    order_id:            orderId,
+    updated_at:          new Date().toISOString(),
+  }).select('id').single()
+
+  if (error) return { id: null, error: error.message }
+
+  if (data?.id) {
+    await logActivity({
+      supabase, userId: user.id, action: 'create', resourceType: 'patient_visit',
+      resourceId: data.id, resourceLabel: input.patient_id, branchId: input.branch_id,
+      newValues: {
+        visit_date: input.visit_date, service_type: input.service_type,
+        status: input.status, package_id: packageId,
+        attending_staff_id: input.attending_staff_id ?? user.id,
+      },
+    })
+  }
+
+  return { id: data?.id ?? null, error: null }
 }
