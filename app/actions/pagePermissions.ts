@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/activityLog'
 import { navigation } from '@/config/navigation'
+import { PAGE_TABLE_MAP } from '@/lib/pageTableMap'
 import type { UserRole } from '@/types'
 
 type RequireDirectorResult =
@@ -37,6 +38,8 @@ export interface PageRegistryRow {
   href: string
   group: string
   defaultRoles: UserRole[]
+  /** Tables whose RLS is wired to this page's toggle (see lib/pageTableMap.ts). Empty for most pages. */
+  tables: string[]
 }
 
 /** Every page in the nav registry with its coded default roles and any director overrides. */
@@ -59,6 +62,7 @@ export async function getPagePermissions(): Promise<
       href: item.href!,
       group: item.group,
       defaultRoles: item.roles,
+      tables: PAGE_TABLE_MAP[item.key] ?? [],
     })),
     overrides: (overrides ?? []) as PagePermissionRow[],
   }
@@ -93,6 +97,25 @@ export async function setPagePermission(
     resourceId: `${pageKey}:${role}`, resourceLabel: `${item.label} — ${role}`,
     oldValues: null, newValues: { allowed },
   })
+
+  // Pilot pages: also drive the underlying table's RLS (role_table_permissions),
+  // not just page/sidebar visibility — see lib/pageTableMap.ts.
+  const tables = PAGE_TABLE_MAP[pageKey] ?? []
+  for (const table of tables) {
+    const { error: tableError } = await supabase
+      .from('role_table_permissions')
+      .upsert(
+        { table_name: table, role, allowed, updated_by: userId, updated_at: new Date().toISOString() },
+        { onConflict: 'table_name,role' }
+      )
+    if (tableError) return { error: `Halaman tersimpan, tapi gagal memperbarui akses data pada tabel ${table}: ${tableError.message}` }
+
+    logActivity({
+      supabase, userId, action: 'update', resourceType: 'role_page_permission',
+      resourceId: `table:${table}:${role}`, resourceLabel: `Akses data ${table} — ${role}`,
+      oldValues: null, newValues: { allowed },
+    })
+  }
 
   revalidatePath('/', 'layout')
   return { success: true }

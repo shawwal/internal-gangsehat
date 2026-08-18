@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { Loader2, RotateCcw } from 'lucide-react'
+import { Database, Loader2, RotateCcw } from 'lucide-react'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { NAV_GROUP_LABELS, type NavGroup } from '@/config/navigation'
 import {
@@ -98,6 +98,10 @@ export default function AccessControlPage() {
           Atur halaman mana yang dapat diakses tiap role. Perubahan berlaku langsung di sidebar dan navigasi URL.
           Role <span className="font-medium">Director</span> selalu memiliki akses penuh dan tidak dapat dibatasi di sini.
         </p>
+        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+          <Database size={12} className="text-primary" />
+          Halaman bertanda ikon ini juga langsung mengubah akses data (RLS) pada tabel terkait — bukan cuma tampilan halaman.
+        </p>
       </div>
 
       {error && (
@@ -136,7 +140,17 @@ export default function AccessControlPage() {
                   </tr>
                   {groupPages.map((page) => (
                     <tr key={page.key} className="border-t border-border/50">
-                      <td className="py-2.5 pr-4 whitespace-nowrap sticky left-0 bg-transparent">{page.label}</td>
+                      <td className="py-2.5 pr-4 whitespace-nowrap sticky left-0 bg-transparent">
+                        <span className="inline-flex items-center gap-1.5">
+                          {page.label}
+                          {page.tables.length > 0 && (
+                            <span title={`Juga mengubah akses data pada: ${page.tables.join(', ')}`}>
+                              <Database size={12} className="text-primary shrink-0" />
+                            </span>
+                          )}
+                        </span>
+                        <span className="block text-[11px] font-mono text-muted-foreground/70">{page.href}</span>
+                      </td>
                       {ROLE_COLUMNS.map((col) => {
                         const cellKey = `${page.key}:${col.role}`
                         const allowed = effectiveAllowed(page, col.role)
