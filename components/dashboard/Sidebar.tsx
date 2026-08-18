@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import * as Icons from 'lucide-react'
-import { navForRole, NAV_GROUP_LABELS } from '@/config/navigation'
+import { navForKeys, NAV_GROUP_LABELS } from '@/config/navigation'
 import type { NavGroup } from '@/config/navigation'
 import type { UserRole } from '@/types'
 import { createClient } from '@/lib/supabase/client'
@@ -20,10 +20,11 @@ function Icon({ name, size = 18 }: { name: string; size?: number }) {
 interface Props {
   role: UserRole
   branchId: string | null
+  allowedNavKeys: string[]
   collapsed: boolean
 }
 
-export function Sidebar({ role, branchId, collapsed }: Props) {
+export function Sidebar({ role, branchId, allowedNavKeys, collapsed }: Props) {
   const pathname = usePathname()
 
   // Sport Massage nav item is nav-hidden (not route-guarded) for branch-scoped
@@ -43,7 +44,7 @@ export function Sidebar({ role, branchId, collapsed }: Props) {
     return () => { cancelled = true }
   }, [branchId])
 
-  const items = navForRole(role).filter(
+  const items = navForKeys(allowedNavKeys).filter(
     (i) => i.key !== 'jadwal-sport-massage' || sportMassageEnabled,
   )
 

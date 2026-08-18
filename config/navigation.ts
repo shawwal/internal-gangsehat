@@ -178,6 +178,14 @@ export const navigation: NavItem[] = [
     roles: ['director', 'manager'],
     group: 'system',
   },
+  {
+    key: 'access-control',
+    label: 'Akses Halaman',
+    href: '/director/access-control',
+    icon: 'ShieldCheck',
+    roles: ['director'],
+    group: 'system',
+  },
 
   // Finance
   {
@@ -464,4 +472,10 @@ export const navigation: NavItem[] = [
 
 export function navForRole(role: UserRole): NavItem[] {
   return navigation.filter((item) => item.roles.includes(role))
+}
+
+/** Filters the nav registry down to the given set of allowed keys, preserving nav order. */
+export function navForKeys(keys: string[]): NavItem[] {
+  const allowed = new Set(keys)
+  return navigation.filter((item) => allowed.has(item.key))
 }

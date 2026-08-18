@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import * as Icons from 'lucide-react'
 import { X, Search } from 'lucide-react'
-import { navForRole, NAV_GROUP_LABELS } from '@/config/navigation'
+import { navForKeys, NAV_GROUP_LABELS } from '@/config/navigation'
 import type { NavGroup, NavItem } from '@/config/navigation'
 import type { UserRole } from '@/types'
 
@@ -74,11 +74,12 @@ function NavGridItem({ item, isActive, isDark }: { item: NavItem; isActive: bool
 
 interface Props {
   role: UserRole
+  allowedNavKeys: string[]
   isOpen: boolean
   onClose: () => void
 }
 
-export function NavDrawer({ role, isOpen, onClose }: Props) {
+export function NavDrawer({ allowedNavKeys, isOpen, onClose }: Props) {
   const pathname = usePathname()
   const [isDark, setIsDark] = useState(false)
   const [search, setSearch] = useState('')
@@ -109,7 +110,7 @@ export function NavDrawer({ role, isOpen, onClose }: Props) {
     return () => { document.body.style.overflow = '' }
   }, [isOpen])
 
-  const items = navForRole(role)
+  const items = navForKeys(allowedNavKeys)
 
   function isItemActive(item: NavItem) {
     if (!item.href) return false

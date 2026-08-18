@@ -13,6 +13,7 @@ export const ACTIVITY_RESOURCE_TYPES = {
   branch_financial_report: 'Laporan Keuangan Cabang',
   campaign: 'Kampanye',
   branch: 'Cabang',
+  role_page_permission: 'Akses Halaman',
 } as const
 
 export type ActivityResourceType = keyof typeof ACTIVITY_RESOURCE_TYPES

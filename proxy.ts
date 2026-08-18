@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { navigation } from '@/config/navigation'
+import { buildOverrideMap, isPathAllowed } from '@/lib/pagePermissions'
+import type { UserRole } from '@/types'
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -78,18 +81,18 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL('/pending', request.url))
     }
 
-    const routeAccess: Array<{ prefix: string; allowed: string[] }> = [
-      { prefix: '/director',  allowed: ['director'] },
-      { prefix: '/activity-log', allowed: ['director', 'manager'] },
-      { prefix: '/import',    allowed: ['director', 'admin'] },
-      { prefix: '/finance',   allowed: ['finance', 'director', 'manager', 'admin'] },
-      { prefix: '/hr',        allowed: ['hr', 'director', 'manager'] },
-      { prefix: '/marketing', allowed: ['marketing', 'director', 'manager'] },
-      { prefix: '/admin',     allowed: ['admin', 'director'] },
-    ]
-    const matched = routeAccess.find(r => pathname.startsWith(r.prefix))
-    if (matched) {
-      if (!profile || !matched.allowed.includes(profile.role)) {
+    // Route-level role guard, driven by config/navigation.ts's coded default
+    // roles plus any director overrides in role_page_permissions. Covers
+    // every nav-registered page (not just a hardcoded prefix list). A
+    // missing profile row is left alone here (handled by the dashboard
+    // layout's transient fallback) rather than redirected, matching prior
+    // behavior.
+    if (profile && profile.role !== 'non-staff') {
+      const { data: overrideRows } = await supabase
+        .from('role_page_permissions')
+        .select('page_key, role, allowed')
+      const overrides = buildOverrideMap(overrideRows ?? [])
+      if (!isPathAllowed(pathname, profile.role as UserRole, navigation, overrides)) {
         return NextResponse.redirect(new URL('/unauthorized', request.url))
       }
     }

@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
+import { navigation } from '@/config/navigation'
+import { allowedNavKeysForRole, buildOverrideMap } from '@/lib/pagePermissions'
 import type { UserRole } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -31,6 +33,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     avatar_url: null,
   }
 
+  const { data: overrideRows } = await supabase
+    .from('role_page_permissions')
+    .select('page_key, role, allowed')
+  const overrides = buildOverrideMap(overrideRows ?? [])
+  const allowedNavKeys = allowedNavKeysForRole(resolved.role as UserRole, navigation, overrides)
+
   return (
     <DashboardShell
       profile={resolved as {
@@ -41,6 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         branch_id: string | null
         avatar_url: string | null
       }}
+      allowedNavKeys={allowedNavKeys}
     >
       {children}
     </DashboardShell>

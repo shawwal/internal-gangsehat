@@ -18,10 +18,11 @@ interface Props {
     branch_id: string | null
     avatar_url: string | null
   }
+  allowedNavKeys: string[]
   children: React.ReactNode
 }
 
-export function DashboardShell({ profile, children }: Props) {
+export function DashboardShell({ profile, allowedNavKeys, children }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -31,7 +32,7 @@ export function DashboardShell({ profile, children }: Props) {
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar — hidden on mobile */}
       <div className="hidden md:flex">
-        <Sidebar role={profile.role} branchId={profile.branch_id} collapsed={collapsed} />
+        <Sidebar role={profile.role} branchId={profile.branch_id} allowedNavKeys={allowedNavKeys} collapsed={collapsed} />
       </div>
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -48,10 +49,10 @@ export function DashboardShell({ profile, children }: Props) {
       </div>
 
       {/* Mobile bottom tab bar */}
-      <BottomTabBar role={profile.role} onMorePress={() => setDrawerOpen(true)} />
+      <BottomTabBar role={profile.role} allowedNavKeys={allowedNavKeys} onMorePress={() => setDrawerOpen(true)} />
 
       {/* Mobile full-menu drawer */}
-      <NavDrawer role={profile.role} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <NavDrawer role={profile.role} allowedNavKeys={allowedNavKeys} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
     </ToastProvider>
     </LocaleProvider>

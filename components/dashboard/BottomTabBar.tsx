@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import * as Icons from 'lucide-react'
 import { LayoutGrid } from 'lucide-react'
-import { navForRole } from '@/config/navigation'
+import { navForKeys } from '@/config/navigation'
 import type { UserRole } from '@/types'
 
 function NavIcon({ name }: { name: string }) {
@@ -17,10 +17,11 @@ function NavIcon({ name }: { name: string }) {
 
 interface Props {
   role: UserRole
+  allowedNavKeys: string[]
   onMorePress: () => void
 }
 
-export function BottomTabBar({ role, onMorePress }: Props) {
+export function BottomTabBar({ allowedNavKeys, onMorePress }: Props) {
   const pathname = usePathname()
   const [isDark, setIsDark] = useState(false)
 
@@ -32,7 +33,7 @@ export function BottomTabBar({ role, onMorePress }: Props) {
     return () => obs.disconnect()
   }, [])
 
-  const allItems = navForRole(role)
+  const allItems = navForKeys(allowedNavKeys)
   const tabs = allItems.slice(0, 4)
 
   function isActive(href?: string) {
