@@ -4,13 +4,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { Search, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchHomeVisitSessions, fetchHomeVisitStats } from '@/app/actions/homeVisit'
+import { updateVisitStatus } from '@/app/actions/jadwal'
 import { NewSessionDialog, type NewSessionResult } from '@/components/homeVisit/NewSessionDialog'
 import { PaymentDialog, type PaymentVisitInfo } from '@/components/visits/PaymentDialog'
 import { HomeVisitStats } from '@/components/homeVisit/HomeVisitStats'
 import { HomeVisitSessionLog } from '@/components/homeVisit/HomeVisitSessionLog'
 import { Pagination } from '@/components/leave/Pagination'
 import type { HomeVisitSessionRow, HomeVisitStatsData } from '@/components/homeVisit/types'
-import type { UserRole } from '@/types'
+import type { UserRole, VisitStatus } from '@/types'
 
 const PAGE_SIZE = 10
 const CROSS_BRANCH_ROLES: UserRole[] = ['director']
@@ -82,6 +83,17 @@ export default function HomeVisitPage() {
     loadStats()
   }
 
+  function handleStatusChange(id: string, status: VisitStatus) {
+    if (status === 'cancelled') {
+      // fetchHomeVisitSessions excludes cancelled visits — drop it locally instead of waiting on a reload
+      setRows((rs) => rs.filter((r) => r.id !== id))
+      setTotal((t) => Math.max(0, t - 1))
+    } else {
+      setRows((rs) => rs.map((r) => (r.id === id ? { ...r, status } : r)))
+    }
+    updateVisitStatus(id, status)
+  }
+
   function handleSessionCreated(result: NewSessionResult) {
     setShowNewSession(false)
     refresh()
@@ -125,7 +137,7 @@ export default function HomeVisitPage() {
         />
       </div>
 
-      <HomeVisitSessionLog rows={rows} loading={loading} showBranch={showBranch} />
+      <HomeVisitSessionLog rows={rows} loading={loading} showBranch={showBranch} onStatusChange={handleStatusChange} />
 
       <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={handlePage} />
 

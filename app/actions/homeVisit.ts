@@ -158,6 +158,7 @@ export async function fetchHomeVisitSessions(params: {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       branch_name:          (v as any).branches?.name ?? '',
       service_type:         v.service_type as ServiceType | null,
+      status:               v.status as VisitStatus,
       attending_staff_name: v.attending_staff_id ? (staffMap.get(v.attending_staff_id as string) ?? null) : null,
       package:              v.package_id ? (packageMap.get(v.package_id as string) ?? null) : null,
       payment_status:       (pay?.payment_status as HomeVisitSessionRow['payment_status']) ?? null,

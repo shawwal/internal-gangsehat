@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MapPinned } from 'lucide-react'
-import type { HomeVisitSessionRow } from './types'
+import type { VisitStatus } from '@/types'
+import { HOME_VISIT_STATUS_OPTIONS, STATUS_BADGE, type HomeVisitSessionRow } from './types'
 
 function formatDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -43,6 +44,23 @@ function ServiceCell({ row }: { row: HomeVisitSessionRow }) {
   )
 }
 
+function StatusCell({ row, onStatusChange }: { row: HomeVisitSessionRow; onStatusChange: (id: string, status: VisitStatus) => void }) {
+  return (
+    <select
+      value={row.status}
+      onChange={(e) => onStatusChange(row.id, e.target.value as VisitStatus)}
+      onClick={(e) => e.stopPropagation()}
+      className={`text-[10px] px-1.5 py-1 rounded-full border-0 font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary ${STATUS_BADGE[row.status]}`}
+    >
+      {HOME_VISIT_STATUS_OPTIONS.map((opt) => (
+        <option key={opt.value} value={opt.value} className="bg-background text-foreground">
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 function PaymentCell({ row }: { row: HomeVisitSessionRow }) {
   if (row.package) {
     return <span className="text-[10px] text-muted-foreground/70">Termasuk paket</span>
@@ -62,9 +80,10 @@ interface Props {
   rows: HomeVisitSessionRow[]
   loading: boolean
   showBranch: boolean
+  onStatusChange: (id: string, status: VisitStatus) => void
 }
 
-export function HomeVisitSessionLog({ rows, loading, showBranch }: Props) {
+export function HomeVisitSessionLog({ rows, loading, showBranch, onStatusChange }: Props) {
   return (
     <div className="glass-card overflow-hidden">
       <div className="overflow-x-auto">
@@ -79,6 +98,7 @@ export function HomeVisitSessionLog({ rows, loading, showBranch }: Props) {
               )}
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Layanan</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fisioterapis</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status Layanan</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status Bayar</th>
             </tr>
           </thead>
@@ -86,14 +106,14 @@ export function HomeVisitSessionLog({ rows, loading, showBranch }: Props) {
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <tr key={i} className="border-b border-border/50">
-                  {Array.from({ length: showBranch ? 7 : 6 }).map((_, j) => (
+                  {Array.from({ length: showBranch ? 8 : 7 }).map((_, j) => (
                     <td key={j} className="px-4 py-3"><div className="h-4 bg-muted animate-pulse rounded-lg" /></td>
                   ))}
                 </tr>
               ))
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={showBranch ? 7 : 6} className="px-4 py-16 text-center">
+                <td colSpan={showBranch ? 8 : 7} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                       <MapPinned size={22} className="text-primary" />
@@ -123,6 +143,7 @@ export function HomeVisitSessionLog({ rows, loading, showBranch }: Props) {
                 )}
                 <td className="px-4 py-3"><ServiceCell row={row} /></td>
                 <td className="px-4 py-3 text-xs text-foreground/80">{row.attending_staff_name ?? '—'}</td>
+                <td className="px-4 py-3"><StatusCell row={row} onStatusChange={onStatusChange} /></td>
                 <td className="px-4 py-3"><PaymentCell row={row} /></td>
               </tr>
             ))}
