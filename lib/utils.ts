@@ -32,9 +32,11 @@ export function todayJakartaISO(): string {
 
 export function formatWaNumber(phone: string): string {
   const clean = phone.replace(/\D/g, '')
-  if (clean.startsWith('0')) return '62' + clean.slice(1)
   if (clean.startsWith('62')) return clean
-  return clean
+  if (clean.startsWith('0')) return '62' + clean.slice(1)
+  // No leading 0 or 62 (e.g. phone stored/typed without the leading 0) —
+  // still needs the country code for wa.me links to resolve.
+  return '62' + clean
 }
 
 export function fillTemplate(template: string, vars: Record<string, string>): string {

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { ExternalLink, Package, MessageCircle } from 'lucide-react'
 import { StatusBadge } from '@/components/internal/StatusBadge'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatWaNumber } from '@/lib/utils'
 import { daysColor } from './types'
 import type { PackageOrderRow } from './types'
 
@@ -141,7 +141,7 @@ export function PackagesTable({
                     <div className="flex items-center gap-1.5">
                       {row.patient_phone && (
                         <a
-                          href={`https://wa.me/${row.patient_phone.replace(/\D/g, '').replace(/^0/, '62')}`}
+                          href={`https://wa.me/${formatWaNumber(row.patient_phone)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="WhatsApp pasien"
