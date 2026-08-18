@@ -35,6 +35,7 @@ interface Props {
   onPayment?: (id: string) => void
   onRemind?: (id: string) => void
   onWhatsApp?: (id: string) => void
+  onWhatsAppConfirmation?: (id: string) => void
   isRefreshing?: boolean
   onSellPackage?: (id: string) => void
   onDetachPackage?: (id: string) => void
@@ -42,7 +43,7 @@ interface Props {
   onMarkPresent?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -56,7 +57,8 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && !visit.package_id
   const isIncomplete     = visit.status === 'completed' && (!visit.diagnosis || !visit.treatment || (isRegioRequired(visit.service_type) && !visit.regio))
   const canRemind        = !!userRole && REMIND_ROLES.includes(userRole) && isIncomplete && !!onRemind
-  const canSendWhatsApp  = visit.status === 'scheduled' && !!visit.patient_phone && !!onWhatsApp
+  const canSendWhatsApp             = !!visit.patient_phone && !!onWhatsApp
+  const canSendWhatsAppConfirmation = !!visit.patient_phone && !!onWhatsAppConfirmation
 
   // A visit scheduled against an existing package keeps its literal service_type
   // (e.g. 'SESI TERAPI') but is still a package session — package_id wins.
@@ -343,18 +345,28 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
               </>
             )}
 
+            {(canSendWhatsApp || canSendWhatsAppConfirmation) && (
+              <hr className="border-white/10 my-1.5" />
+            )}
             {canSendWhatsApp && (
-              <>
-                <hr className="border-white/10 my-1.5" />
-                <button
-                  onClick={() => { onWhatsApp!(visit.id); setMenuOpen(false) }}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-[#25D366] hover:bg-[#25D366]/10 transition-colors cursor-pointer"
-                  role="menuitem"
-                >
-                  <FaWhatsapp size={13} />
-                  Kirim Pengingat WA
-                </button>
-              </>
+              <button
+                onClick={() => { onWhatsApp!(visit.id); setMenuOpen(false) }}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-[#25D366] hover:bg-[#25D366]/10 transition-colors cursor-pointer"
+                role="menuitem"
+              >
+                <FaWhatsapp size={13} />
+                Kirim Pengingat WA
+              </button>
+            )}
+            {canSendWhatsAppConfirmation && (
+              <button
+                onClick={() => { onWhatsAppConfirmation!(visit.id); setMenuOpen(false) }}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-[#25D366] hover:bg-[#25D366]/10 transition-colors cursor-pointer"
+                role="menuitem"
+              >
+                <FaWhatsapp size={13} />
+                Kirim Konfirmasi WA
+              </button>
             )}
 
             {showSellPackageItem && (

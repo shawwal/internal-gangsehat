@@ -24,9 +24,9 @@ import { DetachPackageDialog } from '@/components/jadwal/DetachPackageDialog'
 import { AttachPackageDialog } from '@/components/jadwal/AttachPackageDialog'
 import { BuyPackageButton } from '@/components/jadwal/buy-package/BuyPackageButton'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders, updateVisit } from '@/app/actions/jadwal'
-import { fetchReminderTemplate } from '@/app/actions/reminder-template'
+import { fetchReminderTemplate, fetchOrderConfirmationTemplate, fetchAdminPhone } from '@/app/actions/reminder-template'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
-import { fillTemplate, formatDate, formatWaNumber } from '@/lib/utils'
+import { fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/utils'
 import type { AssignTarget, RefreshingCell } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
@@ -92,10 +92,14 @@ export default function JadwalHarianPage() {
   const [remindAllLoading, setRemindAllLoading] = useState(false)
   const { showToast } = useToast()
 
-  // WhatsApp reminder template — loaded once
-  const [reminderTemplate, setReminderTemplate] = useState<string | null>(null)
+  // WhatsApp templates & admin phone — loaded once
+  const [reminderTemplate, setReminderTemplate]         = useState<string | null>(null)
+  const [confirmationTemplate, setConfirmationTemplate] = useState<string | null>(null)
+  const [adminPhone, setAdminPhone]                     = useState('')
   useEffect(() => {
     fetchReminderTemplate().then(setReminderTemplate)
+    fetchOrderConfirmationTemplate().then(setConfirmationTemplate)
+    fetchAdminPhone().then(setAdminPhone)
   }, [])
 
   // Toolbar state — start with the SSR-safe default; the real localStorage
@@ -199,13 +203,35 @@ export default function JadwalHarianPage() {
     const therapistName = attendingStaff?.nickname || attendingStaff?.full_name || ''
 
     const msg = fillTemplate(reminderTemplate ?? '', {
-      nama:      visit.patient_name,
-      tanggal:   formatDate(visit.visit_date),
-      jam:       visit.visit_time ?? '',
-      layanan:   visit.service_type ?? '',
-      cabang:    branchName,
-      terapis:   therapistName,
-      order_id:  visit.order_id ?? '',
+      nama:        visit.patient_name,
+      tanggal:     formatDate(visit.visit_date),
+      jam:         visit.visit_time ?? '',
+      layanan:     visit.service_type ?? '',
+      cabang:      branchName,
+      terapis:     therapistName,
+      order_id:    visit.order_id ?? '',
+      nomor_admin: adminPhone,
+    })
+
+    const num = formatWaNumber(visit.patient_phone)
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
+  function handleWhatsAppConfirmation(visitId: string) {
+    const visit = visits.find((v) => v.id === visitId)
+    if (!visit || !visit.patient_phone) return
+
+    const branchName = branches.find((b) => b.id === visit.branch_id)?.name ?? ''
+
+    const msg = fillTemplate(confirmationTemplate ?? '', {
+      nama:        visit.patient_name,
+      hari:        formatHari(visit.visit_date),
+      tanggal:     formatDate(visit.visit_date),
+      jam:         visit.visit_time ?? '',
+      layanan:     visit.service_type ?? '',
+      cabang:      branchName,
+      order_id:    visit.order_id ?? '',
+      nomor_admin: adminPhone,
     })
 
     const num = formatWaNumber(visit.patient_phone)
@@ -396,6 +422,7 @@ export default function JadwalHarianPage() {
                 onPayment={handleOpenPayment}
                 onRemind={canSendReminders ? handleRemind : undefined}
                 onWhatsApp={handleWhatsAppReminder}
+                onWhatsAppConfirmation={handleWhatsAppConfirmation}
                 refreshingCell={refreshingCell}
                 onSellPackage={handleSellPackage}
                 onDetachPackage={handleDetachPackage}

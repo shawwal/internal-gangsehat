@@ -91,6 +91,7 @@ interface Props {
   onPayment?: (visitId: string) => void
   onRemind?: (visitId: string) => void
   onWhatsApp?: (visitId: string) => void
+  onWhatsAppConfirmation?: (visitId: string) => void
   refreshingCell?: RefreshingCell | null
   onSellPackage?: (visitId: string) => void
   onDetachPackage?: (visitId: string) => void
@@ -99,7 +100,7 @@ interface Props {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent }: Props) {
   // Current time (used later for time line after range is known)
   const now   = new Date()
   const today = now.toISOString().split('T')[0]
@@ -300,6 +301,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                       onPayment={onPayment}
                       onRemind={onRemind}
                       onWhatsApp={onWhatsApp}
+                      onWhatsAppConfirmation={onWhatsAppConfirmation}
                       isRefreshing={refreshingCell?.type === 'visit' && refreshingCell.visitId === v.id}
                       onSellPackage={onSellPackage}
                       onDetachPackage={onDetachPackage}
@@ -498,6 +500,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                           onPayment={onPayment}
                           onRemind={onRemind}
                           onWhatsApp={onWhatsApp}
+                          onWhatsAppConfirmation={onWhatsAppConfirmation}
                           isRefreshing={refreshingCell?.type === 'visit' && refreshingCell.visitId === v.id}
                           onSellPackage={onSellPackage}
                           onDetachPackage={onDetachPackage}

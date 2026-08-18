@@ -10,17 +10,18 @@ interface Props {
   page: number
   pageSize: number
   onRemind: (row: Row) => void
+  onConfirm: (row: Row) => void
   onCancel: (row: Row) => void | Promise<void>
 }
 
 const HEADERS = [
-  'No', 'Tanggal', 'Jam', 'Pasien', 'Umur', 'Keluhan', 'Fisio', 'Tipe Order',
+  'No', 'Tanggal', 'Jam', 'Pasien', 'Umur', 'Keluhan', 'Fisio', 'Tipe Order', 'Order ID',
   'Layanan', 'Pertemuan Ke', 'Kurang Bayar', 'Kehadiran', 'Status', 'Catatan Admin', '',
 ]
 
 const th = 'px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap'
 
-export function JadwalListTable({ rows, loading, page, pageSize, onRemind, onCancel }: Props) {
+export function JadwalListTable({ rows, loading, page, pageSize, onRemind, onConfirm, onCancel }: Props) {
   return (
     <div className="glass-card overflow-hidden">
       <div className="overflow-x-auto">
@@ -56,6 +57,7 @@ export function JadwalListTable({ rows, loading, page, pageSize, onRemind, onCan
                 row={row}
                 no={(page - 1) * pageSize + i + 1}
                 onRemind={onRemind}
+                onConfirm={onConfirm}
                 onCancel={onCancel}
               />
             ))}

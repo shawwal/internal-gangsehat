@@ -4,18 +4,20 @@ import { formatCurrency } from '@/lib/utils'
 import { StatusBadge } from './StatusBadge'
 import { KehadiranBadge } from './KehadiranBadge'
 import { RowActions } from './RowActions'
+import { OrderIdCell } from './OrderIdCell'
 import { formatShortDate, TIPE_ORDER_LABEL, type JadwalListRow as Row } from './types'
 
 interface Props {
   row: Row
   no: number
   onRemind: (row: Row) => void
+  onConfirm: (row: Row) => void
   onCancel: (row: Row) => void | Promise<void>
 }
 
 const td = 'px-4 py-3 align-top text-sm text-foreground'
 
-export function JadwalListRow({ row, no, onRemind, onCancel }: Props) {
+export function JadwalListRow({ row, no, onRemind, onConfirm, onCancel }: Props) {
   return (
     <tr className="border-b border-border/50 hover:bg-primary/5 transition-colors">
       <td className={td}>{no}</td>
@@ -33,6 +35,7 @@ export function JadwalListRow({ row, no, onRemind, onCancel }: Props) {
       <td className={td}>{row.chief_complaint || '—'}</td>
       <td className={td}>{row.attending_staff_name ?? '—'}</td>
       <td className={td}>{TIPE_ORDER_LABEL}</td>
+      <td className={`${td} whitespace-nowrap`}><OrderIdCell orderId={row.order_id} /></td>
       <td className={td}>{row.service_type ?? '—'}</td>
       <td className={td}>{row.pertemuan_ke}</td>
       <td className={`${td} whitespace-nowrap`}>{formatCurrency(row.kurang_bayar)}</td>
@@ -40,7 +43,7 @@ export function JadwalListRow({ row, no, onRemind, onCancel }: Props) {
       <td className={td}><StatusBadge status={row.admin_status} /></td>
       <td className={td}>{row.notes || '—'}</td>
       <td className={td}>
-        <RowActions row={row} onRemind={onRemind} onCancel={onCancel} />
+        <RowActions row={row} onRemind={onRemind} onConfirm={onConfirm} onCancel={onCancel} />
       </td>
     </tr>
   )

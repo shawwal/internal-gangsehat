@@ -43,3 +43,15 @@ export function fillTemplate(template: string, vars: Record<string, string>): st
 
 export const DEFAULT_REMINDER_TEMPLATE =
   'KONFIRMASI PENDAFTARAN JADWAL FISIOTERAPI\n\nNama: {{nama}}\nTanggal: {{tanggal}}\nJam: {{jam}}\nOrder ID: {{order_id}}\n\nKami dari Fisioterapi Gang Sehat ingin mengingatkan jadwal terapi Anda pada {{tanggal}} pukul {{jam}} di {{cabang}}. Sampai jumpa!'
+
+export const DEFAULT_ORDER_CONFIRMATION_TEMPLATE =
+  'KONFIRMASI PENDAFTARAN JADWAL FISIOTERAPI\n\n* Nama: {{nama}}\n* Hari : {{hari}}\n* Tanggal: {{tanggal}}\n* Jam: {{jam}}\n* Order ID: {{order_id}}\nCatatan: admin akan mengingatkan kembali H-1 sebelum jadwal kunjungan anda'
+
+const HARI_ID = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', "JUM'AT", 'SABTU']
+
+export function formatHari(date: string | Date): string {
+  const d = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? new Date(date + 'T00:00:00')
+    : new Date(date)
+  return HARI_ID[d.getDay()]
+}
