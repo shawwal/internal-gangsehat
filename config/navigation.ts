@@ -197,6 +197,14 @@ export const navigation: NavItem[] = [
     group: 'dashboard',
   },
   {
+    key: 'finance-accounting',
+    label: 'Akuntansi',
+    href: '/finance/accounting',
+    icon: 'BookOpen',
+    roles: ['finance'],
+    group: 'finance',
+  },
+  {
     key: 'transactions',
     label: 'Transaksi',
     href: '/finance/transactions',

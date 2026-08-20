@@ -406,6 +406,7 @@ export interface CreateTransactionManualInput {
   patient_id?: string | null
   package_id?: string | null
   branch_id?: string | null
+  fisio_id?: string | null
 }
 
 export async function createTransactionManual(
@@ -470,6 +471,7 @@ export async function createTransactionManual(
     transaction_date: input.transaction_date,
     visit_id:         input.visit_id ?? null,
     patient_id:       input.patient_id ?? null,
+    fisio_id:         input.fisio_id ?? null,
     status:           autoConfirm ? 'confirmed' : 'pending',
     confirmed_by:     autoConfirm ? user.id : null,
     updated_at:       new Date().toISOString(),
