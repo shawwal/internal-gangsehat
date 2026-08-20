@@ -8,6 +8,17 @@ export const MONTH_NAMES = [
 export const PAYMENT_METHODS: PaymentMethod[] = ['TUNAI', 'TRANSFER BCA', 'EDC BCA']
 export const PAYMENT_STATUSES: PaymentDetailStatus[] = ['LUNAS', 'DP', 'PELUNASAN']
 
+// The coarse income buckets `transactions.category` actually stores app-wide
+// (see SERVICE_TO_CATEGORY in app/actions/transactions.ts and the INCOME_CATEGORIES
+// list used by finance/transactions, director/finance, PaymentDialog, etc.) —
+// also the same set `internal_layanan.kategori` is chosen from. Aggregations here
+// (Laporan, Arus Kas) must key off this list, not the specific item name, or they
+// won't match any transaction actually recorded anywhere else in the app.
+export const INCOME_CATEGORIES = [
+  'TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK',
+  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
+]
+
 export function formatRp(n: number): string {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 }

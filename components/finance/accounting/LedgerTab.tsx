@@ -105,7 +105,14 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
     setForm((f) => ({
       ...f,
       itemId,
-      category: item?.nama ?? '',
+      // `category` stores the coarse bucket (TA KLINIK, PAKET KLINIK, ...) —
+      // the same convention used everywhere else transactions are written
+      // (finance/transactions, PaymentDialog, director/finance), so income
+      // recorded here still aggregates correctly in Laporan/Arus Kas and in
+      // the rest of the app's reports. The specific item name goes into
+      // `description` instead, so it's still visible on the transaction.
+      category: item?.kategori ?? '',
+      description: item && !f.description ? item.nama : f.description,
       harga: item ? String(item.harga) : f.harga,
       amount: item ? String(item.harga) : f.amount,
     }))
@@ -234,7 +241,10 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
                   <td className="px-4 py-3 text-muted-foreground">{r.transaction_date}</td>
-                  <td className="px-4 py-3 font-medium text-foreground">{r.category}</td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-foreground">{isIncome && r.description ? r.description : r.category}</p>
+                    {isIncome && r.description && <p className="text-xs text-muted-foreground">{r.category}</p>}
+                  </td>
                   <td className={`px-4 py-3 text-right font-medium ${isIncome ? 'text-chart-4' : 'text-destructive'}`}>
                     {isIncome ? '+' : '-'}{formatRp(r.amount)}
                   </td>

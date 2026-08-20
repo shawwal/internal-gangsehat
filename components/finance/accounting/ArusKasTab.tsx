@@ -3,12 +3,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Save } from 'lucide-react'
 import { fetchTransactionsForRange, fetchOpeningBalance, setOpeningBalance, type AccountingTxnRow } from '@/app/actions/accounting'
-import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
 import { fetchExpenseCategories, type ExpenseCategoryRow } from '@/app/actions/accounting'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { openPrintableReport } from '@/lib/pdf-export'
 import { ExportMenu } from './ExportMenu'
-import { formatRp, MONTH_NAMES, yearRange, inputCls } from './shared'
+import { formatRp, MONTH_NAMES, INCOME_CATEGORIES, yearRange, inputCls } from './shared'
 
 interface Props {
   branchId: string
@@ -17,10 +16,16 @@ interface Props {
 
 interface MatrixRow { key: string; label: string; monthly: number[] }
 
+/** transaction_date is a plain "YYYY-MM-DD" string — parse the month directly
+ * rather than via `new Date(...)`, which reinterprets it in the browser's local
+ * timezone and can shift dates near midnight into the wrong month. */
+function monthIndexOf(dateStr: string): number {
+  return Number(dateStr.slice(5, 7)) - 1
+}
+
 export function ArusKasTab({ branchId, branchName }: Props) {
   const [year, setYear] = useState(new Date().getFullYear())
   const [txns, setTxns] = useState<AccountingTxnRow[]>([])
-  const [layanan, setLayanan] = useState<LayananRow[]>([])
   const [expenseCats, setExpenseCats] = useState<ExpenseCategoryRow[]>([])
   const [opening, setOpening] = useState(0)
   const [openingInput, setOpeningInput] = useState('0')
@@ -32,12 +37,10 @@ export function ArusKasTab({ branchId, branchName }: Props) {
     const { from, toExclusive } = yearRange(year)
     Promise.all([
       fetchTransactionsForRange(branchId, from, toExclusive),
-      fetchLayananByBranch(branchId),
       fetchExpenseCategories(branchId),
       fetchOpeningBalance(branchId, year),
-    ]).then(([t, l, e, ob]) => {
+    ]).then(([t, e, ob]) => {
       setTxns(t)
-      setLayanan(l.filter((r) => r.is_active))
       setExpenseCats(e.filter((r) => r.is_active))
       setOpening(ob)
       setOpeningInput(String(ob))
@@ -45,20 +48,24 @@ export function ArusKasTab({ branchId, branchName }: Props) {
     })
   }, [branchId, year])
 
+  // Income rows key off the same coarse category bucket `transactions.category`
+  // stores app-wide (TA KLINIK, PAKET KLINIK, ...) — not the specific item name,
+  // since that's the only thing consistently recorded across every entry point
+  // (finance/transactions, director/finance, PaymentDialog, and this page).
   const incomeRows = useMemo<MatrixRow[]>(() => {
-    return layanan.map((l) => {
+    return INCOME_CATEGORIES.map((cat) => {
       const monthly = Array.from({ length: 12 }, (_, mi) =>
-        txns.filter((t) => t.type === 'income' && t.category === l.nama && new Date(t.transaction_date).getMonth() === mi)
+        txns.filter((t) => t.type === 'income' && t.category === cat && monthIndexOf(t.transaction_date) === mi)
           .reduce((s, t) => s + Number(t.amount), 0),
       )
-      return { key: l.id, label: l.nama, monthly }
+      return { key: cat, label: cat, monthly }
     })
-  }, [layanan, txns])
+  }, [txns])
 
   const expenseRows = useMemo<MatrixRow[]>(() => {
     return expenseCats.map((c) => {
       const monthly = Array.from({ length: 12 }, (_, mi) =>
-        txns.filter((t) => t.type === 'expense' && t.category === c.name && new Date(t.transaction_date).getMonth() === mi)
+        txns.filter((t) => t.type === 'expense' && t.category === c.name && monthIndexOf(t.transaction_date) === mi)
           .reduce((s, t) => s + Number(t.amount), 0),
       )
       return { key: c.id, label: c.name, monthly }

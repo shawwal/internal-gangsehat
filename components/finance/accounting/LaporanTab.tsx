@@ -154,7 +154,7 @@ export function LaporanTab({ branchId, branchName, dateFrom, dateToExclusive, pe
           <div className="grid lg:grid-cols-2 gap-4">
             <div className="glass-card overflow-hidden">
               <div className="px-4 py-3 border-b border-border">
-                <h3 className="text-sm font-semibold text-foreground">Rekap Jenis Pemeriksaan</h3>
+                <h3 className="text-sm font-semibold text-foreground">Rekap Kategori Layanan</h3>
               </div>
               <table className="w-full text-sm">
                 <thead>
