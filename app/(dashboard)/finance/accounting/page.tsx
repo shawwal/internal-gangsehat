@@ -19,12 +19,16 @@ const TABS: { key: TabKey; label: string; icon: typeof BookOpen }[] = [
   { key: 'pengaturan',  label: 'Pengaturan',  icon: Settings2 },
 ]
 
+interface BranchOption { id: string; name: string }
+
 export default function AccountingPage() {
   const [tab, setTab] = useState<TabKey>('pemasukan')
   const [loading, setLoading] = useState(true)
+  const [role, setRole] = useState<string | null>(null)
   const [branchId, setBranchId] = useState<string | null>(null)
   const [branchName, setBranchName] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
+  const [branchOptions, setBranchOptions] = useState<BranchOption[]>([])
 
   const now = useMemo(() => new Date(), [])
   const [range, setRange] = useState(() => {
@@ -39,22 +43,60 @@ export default function AccountingPage() {
       if (!user) { setLoading(false); return }
       const { data: profile } = await supabase
         .from('internal_profiles')
-        .select('branch_id, branches!branch_id(name)')
+        .select('role, branch_id, branches!branch_id(name)')
         .eq('id', user.id)
         .single()
       setUserId(user.id)
+      setRole(profile?.role ?? null)
       setBranchId(profile?.branch_id ?? null)
       setBranchName(((profile?.branches as unknown as { name: string } | null))?.name ?? '')
+
+      // Director accounts are branch_id = NULL by design (cross-branch access) —
+      // let them pick a branch to preview instead of hitting a dead end here.
+      if (profile?.role === 'director') {
+        const { data: branches } = await supabase.from('branches').select('id, name').eq('is_active', true).order('name')
+        setBranchOptions((branches ?? []) as BranchOption[])
+      }
       setLoading(false)
     }
     load()
   }, [])
 
+  function selectBranch(id: string) {
+    const b = branchOptions.find((x) => x.id === id)
+    setBranchId(id)
+    setBranchName(b?.name ?? '')
+  }
+
   if (loading) return <p className="text-sm text-muted-foreground">Memuat...</p>
 
-  if (!branchId || !userId) {
+  if (!userId) {
     return (
-      <div className="bg-secondary/10 border border-secondary/30 rounded-xl px-4 py-3 text-sm text-secondary-foreground">
+      <div className="bg-secondary/10 border border-secondary/30 rounded-xl px-4 py-3 text-sm text-foreground">
+        Sesi Anda tidak valid. Silakan login kembali.
+      </div>
+    )
+  }
+
+  if (!branchId) {
+    if (role === 'director') {
+      return (
+        <div className="glass-card p-6 max-w-sm">
+          <h2 className="text-base font-semibold text-foreground mb-1">Pilih Cabang</h2>
+          <p className="text-sm text-muted-foreground mb-4">Akun direktur tidak terikat ke satu cabang — pilih cabang untuk melihat pembukuannya.</p>
+          <select
+            defaultValue=""
+            onChange={(e) => { if (e.target.value) selectBranch(e.target.value) }}
+            className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="" disabled>Pilih cabang...</option>
+            {branchOptions.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        </div>
+      )
+    }
+    return (
+      <div className="bg-secondary/10 border border-secondary/30 rounded-xl px-4 py-3 text-sm text-foreground">
         Akun Anda belum terhubung ke cabang. Hubungi direktur untuk pengaturan cabang.
       </div>
     )
@@ -62,12 +104,23 @@ export default function AccountingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <BookOpen size={20} className="text-primary" />
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Akuntansi</h1>
-          <p className="text-sm text-muted-foreground">{branchName} · Pembukuan harian cabang Anda</p>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <BookOpen size={20} className="text-primary" />
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Akuntansi</h1>
+            <p className="text-sm text-muted-foreground">{branchName} · Pembukuan harian cabang Anda</p>
+          </div>
         </div>
+        {role === 'director' && branchOptions.length > 0 && (
+          <select
+            value={branchId}
+            onChange={(e) => selectBranch(e.target.value)}
+            className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {branchOptions.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        )}
       </div>
 
       <div className="glass-card p-1.5 inline-flex flex-wrap gap-1">
