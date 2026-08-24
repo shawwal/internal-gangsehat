@@ -88,11 +88,32 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
 
         <select
           value={filters.period}
+          disabled={!!filters.date}
           onChange={(e) => onChange({ ...filters, period: e.target.value as RecordFiltersState['period'] })}
-          className={selectCls}
+          className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {PERIOD_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
         </select>
+
+        <div className="relative flex items-center">
+          <input
+            type="date"
+            value={filters.date}
+            onChange={(e) => onChange({ ...filters, date: e.target.value })}
+            title="Pilih tanggal kunjungan spesifik"
+            className={`${selectCls} pr-7`}
+          />
+          {filters.date && (
+            <button
+              type="button"
+              onClick={() => onChange({ ...filters, date: '' })}
+              title="Hapus filter tanggal"
+              className="absolute right-1.5 text-muted-foreground hover:text-foreground text-xs leading-none cursor-pointer"
+            >
+              ✕
+            </button>
+          )}
+        </div>
 
         <button
           type="button"

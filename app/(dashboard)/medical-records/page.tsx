@@ -30,6 +30,7 @@ export default function MedicalRecordsPage() {
     const branchId = searchParams.get('branchId')
     const completeness = searchParams.get('completeness')
     const period = searchParams.get('period')
+    const date = searchParams.get('date')
     const sortOrder = searchParams.get('sortOrder')
     const groupBy = searchParams.get('groupBy')
     return {
@@ -41,6 +42,7 @@ export default function MedicalRecordsPage() {
         ? { completeness }
         : {}),
       ...(period === '7' || period === '30' || period === '90' || period === 'all' ? { period } : {}),
+      ...(date ? { date } : {}),
       ...(sortOrder === 'asc' || sortOrder === 'desc' ? { sortOrder } : {}),
       ...(groupBy === 'date' || groupBy === 'patient' ? { groupBy } : {}),
     }
@@ -79,6 +81,7 @@ export default function MedicalRecordsPage() {
       search: currentFilters.search,
       completeness: currentFilters.completeness,
       period: currentFilters.period,
+      date: currentFilters.date,
       sortOrder: currentFilters.sortOrder,
       groupBy: currentFilters.groupBy,
       staffId: currentFilters.staffId,
@@ -94,6 +97,7 @@ export default function MedicalRecordsPage() {
     const result = await fetchMedicalRecordStats({
       search: currentFilters.search,
       period: currentFilters.period,
+      date: currentFilters.date,
       staffId: currentFilters.staffId,
       branchId: currentFilters.branchId,
     })
@@ -122,6 +126,7 @@ export default function MedicalRecordsPage() {
     if (filters.search)                        params.set('q', filters.search)
     if (filters.completeness !== 'incomplete') params.set('completeness', filters.completeness)
     if (filters.period !== '30')               params.set('period', filters.period)
+    if (filters.date)                          params.set('date', filters.date)
     if (filters.sortOrder !== 'desc')          params.set('sortOrder', filters.sortOrder)
     if (filters.groupBy !== 'date')            params.set('groupBy', filters.groupBy)
     if (filters.staffId !== 'all')             params.set('staffId', filters.staffId)
@@ -161,7 +166,7 @@ export default function MedicalRecordsPage() {
     try {
       const { rows: incompleteRows } = await fetchMedicalRecords({
         page: 1, pageSize: 500,
-        search: filters.search, period: filters.period,
+        search: filters.search, period: filters.period, date: filters.date,
         sortOrder: filters.sortOrder, staffId: filters.staffId, branchId: filters.branchId,
         completeness: 'incomplete',
       })

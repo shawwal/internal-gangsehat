@@ -38,6 +38,7 @@ export interface MedicalRecordsParams {
   search: string
   completeness: RecordCompleteness
   period: RecordPeriod
+  date?: string      // exact YYYY-MM-DD — when set, overrides `period`
   sortOrder: RecordSortOrder
   groupBy?: RecordGroupBy  // 'date' (default, DB-level pagination) or 'patient' (in-memory)
   staffId?: string   // 'all' or uuid — only honored for team-scope viewers
@@ -141,8 +142,12 @@ function applyScopedFilters(query: any, viewer: ViewerContext, params: MedicalRe
     if (params.staffId && params.staffId !== 'all') query = query.eq('attending_staff_id', params.staffId)
   }
 
-  const startDate = periodStartDate(params.period)
-  if (startDate) query = query.gte('visit_date', startDate)
+  if (params.date) {
+    query = query.eq('visit_date', params.date)
+  } else {
+    const startDate = periodStartDate(params.period)
+    if (startDate) query = query.gte('visit_date', startDate)
+  }
 
   if (params.completeness === 'incomplete') {
     query = query.or(`diagnosis.is.null,treatment.is.null,and(service_type.in.${REGIO_REQUIRED_IN},regio.is.null)`)

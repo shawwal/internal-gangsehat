@@ -6,6 +6,7 @@ export interface RecordFiltersState {
   search: string
   completeness: RecordCompleteness
   period: RecordPeriod
+  date: string      // exact YYYY-MM-DD — when set, overrides `period`
   sortOrder: RecordSortOrder
   groupBy: RecordGroupBy
   staffId: string   // 'all' or uuid — team scope only
@@ -16,6 +17,7 @@ export const DEFAULT_RECORD_FILTERS: RecordFiltersState = {
   search: '',
   completeness: 'incomplete',
   period: '30',
+  date: '',
   sortOrder: 'desc',
   groupBy: 'date',
   staffId: 'all',
