@@ -16,6 +16,7 @@ import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentP
 import { EditPackageTransactionDialog } from '@/components/visits/EditPackageTransactionDialog'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { getVisitFormRoute } from '@/lib/visitRouting'
+import { SERVICE_TYPES, getEffectivePackageServiceType } from '@/lib/serviceType'
 import { fetchBranchStaff, deleteVisit, updateVisit, type BranchStaffMember } from '@/app/actions/jadwal'
 import type { PaymentVisitInfo } from '@/components/visits/PaymentDialog'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
@@ -40,11 +41,6 @@ const STATUS_BADGE: Record<VisitStatus, string> = {
   no_show:     'bg-muted/40 text-muted-foreground border-border',
   rescheduled: 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/20',
 }
-
-const SERVICE_TYPES: ServiceType[] = [
-  'TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI',
-  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
-]
 
 const BODY_REGIONS: BodyRegion[] = [
   'HEAD', 'NECK', 'SHOULDER', 'UPPER ARM', 'ELBOW', 'LOWER ARM',
@@ -156,17 +152,9 @@ function getPackageSale(visit: PatientVisit): { harga: number; outstanding: numb
   return { harga: txs[0].harga as number, outstanding: txs[0].outstanding }
 }
 
-// Package sessions can be stored with a literal service_type of 'SESI TERAPI'/'SESI VISIT'
-// even though package_id is set (depends on which flow created the visit — see
-// AssignDialog vs PackageSessionWizard). package_id is the source of truth: mirror
-// VisitCard.tsx's precedence and normalize the label to the PAKET variant.
 function getDisplayServiceType(visit: PatientVisit): ServiceType | null {
   const packageId = (visit as unknown as { package_id: string | null }).package_id
-  if (packageId) {
-    if (visit.service_type === 'SESI TERAPI') return 'PAKET TERAPI'
-    if (visit.service_type === 'SESI VISIT')  return 'PAKET VISIT'
-  }
-  return visit.service_type
+  return getEffectivePackageServiceType(visit.service_type, packageId)
 }
 
 // Packages sold via the jadwal-harian "Paket" tab have no source visit —

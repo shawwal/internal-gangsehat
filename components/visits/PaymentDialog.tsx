@@ -7,7 +7,9 @@ import {
 } from 'lucide-react'
 import { createTransactionForVisit, updateTransaction, getPatientOutstanding, fetchLayananHarga } from '@/app/actions/transactions'
 import type { OutstandingTransaction } from '@/app/actions/transactions'
-import type { VisitTransaction } from '@/app/actions/jadwal'
+import { updateVisit, type VisitTransaction } from '@/app/actions/jadwal'
+import { SERVICE_TYPES, SERVICE_TO_CATEGORY, CATEGORY_TO_SERVICE_TYPE, getEffectivePackageServiceType } from '@/lib/serviceType'
+import type { ServiceType } from '@/types'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface PaymentVisitInfo {
@@ -17,6 +19,8 @@ export interface PaymentVisitInfo {
   visit_date: string
   service_type: string | null
   branch_id?: string | null
+  /** set → visit is part of a package; used to normalize a mislabeled service_type */
+  package_id?: string | null
   attending_staff_name?: string
 }
 
@@ -29,16 +33,6 @@ interface Props {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const SERVICE_TO_CATEGORY: Record<string, string> = {
-  'TERAPI AWAL':  'TA KLINIK',
-  'SESI TERAPI':  'SESI KLINIK',
-  'PAKET TERAPI': 'PAKET KLINIK',
-  'TA VISIT':     'TA VISIT',
-  'SESI VISIT':   'SESI VISIT',
-  'PAKET VISIT':  'PAKET VISIT',
-  'LAINNYA':      'LAINNYA',
-}
-
 const PAYMENT_ROLES = ['finance', 'manager', 'director']
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -70,6 +64,9 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   const [showOutstanding, setShowOutstanding] = useState(false)
   const [loadingOuts, setLoadingOuts]         = useState(true)
 
+  const [serviceType, setServiceType]     = useState<ServiceType>(
+    () => getEffectivePackageServiceType(visit.service_type, visit.package_id) ?? 'LAINNYA',
+  )
   const [harga, setHarga]                 = useState(existingTransaction?.harga != null ? String(existingTransaction.harga) : '')
   const [discount, setDiscount]           = useState(existingTransaction?.discount != null ? String(existingTransaction.discount) : '')
   const [amount, setAmount]               = useState(existingTransaction?.amount != null ? String(existingTransaction.amount) : '')
@@ -113,11 +110,10 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   }, [visit.patient_id])
 
   useEffect(() => {
-    if (!visit.service_type) return
-    fetchLayananHarga(visit.service_type, visit.branch_id).then((price) => {
+    fetchLayananHarga(serviceType, visit.branch_id).then((price) => {
       if (price != null) setHarga(String(price))
     })
-  }, [visit.service_type, visit.branch_id])
+  }, [serviceType, visit.branch_id])
 
   function handleClose() {
     if (submitting) return
@@ -139,6 +135,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
       penjamin:    penjamin    || null,
       description: description || null,
       transaction_date: txDate,
+      category: SERVICE_TO_CATEGORY[serviceType],
     }
     const result = isEditing
       ? await updateTransaction(existingTransaction.id, payload)
@@ -149,12 +146,18 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
       setTimeout(() => setShakeBtn(false), 400)
       setSubmitting(false)
     } else {
+      // Keep the visit's own service_type in sync with whatever Layanan/Kategori
+      // ended up being saved here, so the jadwal-harian grid card (which reads
+      // service_type directly) reflects the same correction the user just made.
+      if (serviceType !== visit.service_type) {
+        await updateVisit(visit.id, { service_type: serviceType })
+      }
       setSuccess(true)
       setTimeout(() => { onSuccess(); onClose() }, 1400)
     }
   }
 
-  const category = SERVICE_TO_CATEGORY[visit.service_type ?? ''] ?? 'LAINNYA'
+  const category = SERVICE_TO_CATEGORY[serviceType]
 
   return (
     <>
@@ -217,12 +220,29 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-xl bg-primary/8 border border-primary/10 px-3 py-2.5">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Layanan</p>
-                  <p className="text-xs font-semibold text-foreground">{visit.service_type ?? '—'}</p>
+                  <label className="block text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Layanan</label>
+                  <select
+                    value={serviceType}
+                    onChange={(e) => setServiceType(e.target.value as ServiceType)}
+                    className="w-full bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer -ml-0.5"
+                  >
+                    {SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
                 <div className="rounded-xl bg-muted/30 border border-border/40 px-3 py-2.5">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Kategori</p>
-                  <p className="text-xs font-semibold text-foreground">{category}</p>
+                  <label className="block text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Kategori</label>
+                  <select
+                    value={category}
+                    onChange={(e) => {
+                      const matched = CATEGORY_TO_SERVICE_TYPE[e.target.value]
+                      if (matched) setServiceType(matched)
+                    }}
+                    className="w-full bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer -ml-0.5"
+                  >
+                    {SERVICE_TYPES.map((s) => (
+                      <option key={s} value={SERVICE_TO_CATEGORY[s]}>{SERVICE_TO_CATEGORY[s]}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

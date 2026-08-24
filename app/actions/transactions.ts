@@ -114,6 +114,7 @@ export interface CreateTransactionInput {
   penjamin: string | null
   description: string | null
   transaction_date: string
+  category: string
 }
 
 export async function createTransactionForVisit(
@@ -143,7 +144,7 @@ export async function createTransactionForVisit(
 
   if (visitErr || !visit) return { error: 'Kunjungan tidak ditemukan' }
 
-  const category = SERVICE_TO_CATEGORY[visit.service_type ?? ''] ?? 'LAINNYA'
+  const category = input.category
 
   const insertPayload = {
     visit_id:         visitId,

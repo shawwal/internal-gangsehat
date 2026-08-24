@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CalendarDays, X } from 'lucide-react'
+import { CalendarDays, Plus, Trash2, X } from 'lucide-react'
 import { createBulkVisits } from '@/app/actions/jadwal'
 import type { PatientPackage } from './types'
 
@@ -16,6 +16,7 @@ interface Props {
 interface SessionRow {
   date: string
   shift: 'PAGI' | 'SORE' | ''
+  kehadiran: 'HADIR' | 'TIDAK HADIR' | ''
 }
 
 const inputCls = 'px-2.5 py-1.5 border border-border rounded-lg text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary w-full'
@@ -30,15 +31,14 @@ function buildInitialSessions(count: number): SessionRow[] {
   const rows: SessionRow[] = []
   let cursor = new Date()
   for (let i = 0; i < count; i++) {
-    rows.push({ date: nextWeekday(cursor), shift: 'PAGI' })
+    rows.push({ date: nextWeekday(cursor), shift: 'PAGI', kehadiran: '' })
     cursor = new Date(rows[i].date)
   }
   return rows
 }
 
 export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSuccess }: Props) {
-  const sessionCount = pkg.remaining_sessions
-  const [sessions, setSessions] = useState<SessionRow[]>(() => buildInitialSessions(sessionCount))
+  const [sessions, setSessions] = useState<SessionRow[]>(() => buildInitialSessions(Math.max(pkg.remaining_sessions, 1)))
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState<string | null>(null)
 
@@ -48,6 +48,16 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
 
   function updateRow(i: number, patch: Partial<SessionRow>) {
     setSessions((prev) => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r))
+  }
+
+  function addRow() {
+    const last = sessions[sessions.length - 1]
+    const base = last?.date ? new Date(last.date) : new Date()
+    setSessions((prev) => [...prev, { date: nextWeekday(base), shift: 'PAGI', kehadiran: '' }])
+  }
+
+  function removeRow(i: number) {
+    setSessions((prev) => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -71,6 +81,7 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
       status:             'scheduled' as const,
       notes:              null,
       package_id:         pkg.id,
+      kehadiran:          s.kehadiran || null,
     }))
 
     const { error: err, created } = await createBulkVisits(inputs)
@@ -94,7 +105,7 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">Jadwalkan Sesi</p>
-              <p className="text-xs text-muted-foreground">{pkg.package_name} · {sessionCount} sesi tersisa</p>
+              <p className="text-xs text-muted-foreground">{pkg.package_name} · {pkg.remaining_sessions} sesi tersisa</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
@@ -105,13 +116,15 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
         {/* Body */}
         <form id="session-wizard-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5">
           <div className="space-y-2">
-            <div className="grid grid-cols-[2rem_1fr_7rem] gap-2 pb-1 border-b border-border">
+            <div className="grid grid-cols-[2rem_1fr_6rem_7rem_1.5rem] gap-2 pb-1 border-b border-border">
               <span className="text-xs font-medium text-muted-foreground">#</span>
               <span className="text-xs font-medium text-muted-foreground">Tanggal</span>
               <span className="text-xs font-medium text-muted-foreground">Shift</span>
+              <span className="text-xs font-medium text-muted-foreground">Kehadiran</span>
+              <span />
             </div>
             {sessions.map((s, i) => (
-              <div key={i} className="grid grid-cols-[2rem_1fr_7rem] gap-2 items-center">
+              <div key={i} className="grid grid-cols-[2rem_1fr_6rem_7rem_1.5rem] gap-2 items-center">
                 <span className="text-xs text-muted-foreground text-center">{i + 1}</span>
                 <input
                   required
@@ -129,9 +142,36 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
                   <option value="PAGI">PAGI</option>
                   <option value="SORE">SORE</option>
                 </select>
+                <select
+                  value={s.kehadiran}
+                  onChange={(e) => updateRow(i, { kehadiran: e.target.value as SessionRow['kehadiran'] })}
+                  className={inputCls}
+                >
+                  <option value="">—</option>
+                  <option value="HADIR">HADIR</option>
+                  <option value="TIDAK HADIR">TIDAK HADIR</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => removeRow(i)}
+                  disabled={sessions.length <= 1}
+                  className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                  title="Hapus baris"
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
             ))}
           </div>
+
+          <button
+            type="button"
+            onClick={addRow}
+            className="flex items-center gap-1 mt-3 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors border border-primary/20"
+          >
+            <Plus size={12} />
+            Tambah sesi
+          </button>
 
           {error && <p className="text-xs text-destructive mt-3">{error}</p>}
         </form>
@@ -151,7 +191,7 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
             disabled={saving}
             className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
           >
-            {saving ? 'Menyimpan...' : `Jadwalkan ${sessionCount} Sesi`}
+            {saving ? 'Menyimpan...' : `Jadwalkan ${sessions.length} Sesi`}
           </button>
         </div>
       </div>

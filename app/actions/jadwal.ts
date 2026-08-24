@@ -81,6 +81,7 @@ export interface CreateVisitInput {
   status: VisitStatus
   notes: string | null
   package_id?: string | null
+  kehadiran?: string | null
 }
 
 // ── Fetch all visits for a date with decrypted patient names ───────────────────
@@ -542,6 +543,7 @@ export async function createBulkVisits(
       status:              input.status,
       notes:               input.notes ?? null,
       package_id:          resolvePackageId(input.service_type, input.package_id),
+      kehadiran:           input.kehadiran ?? null,
       order_id:            orderId,
       updated_at:          new Date().toISOString(),
     })

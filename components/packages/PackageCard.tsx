@@ -193,7 +193,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          {onSchedule && pkg.status === 'active' && pkg.remaining_sessions > 0 && (
+          {onSchedule && pkg.status === 'active' && (
             <button
               onClick={() => onSchedule(pkg)}
               className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors border border-primary/20"
