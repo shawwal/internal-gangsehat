@@ -129,17 +129,24 @@ export interface PatientsPageResult {
   total: number
 }
 
+// Phone-like search terms (digits/+/-/spaces only) can't be matched via
+// name_normalized and phone is only stored as an irreversible hash — those
+// still need the app-side decrypt scan below.
+const PHONE_LIKE = /^[0-9+\-\s]+$/
+
 /**
  * Server-side paginated patient list. Only the requested page is decrypted
  * and sent to the client.
  *
- * Fast path: gender filter, created_at/no_rm sort, and count all happen in
- * Postgres — one request via `{ count: 'exact' }` + `.range()`.
+ * Fast path: gender filter, created_at/no_rm/name sort, name search, and
+ * count all happen in Postgres — one request via `{ count: 'exact' }` +
+ * `.range()`. Name search uses the plaintext `name_normalized` column
+ * (kept in sync on create/update) so it never touches encrypted_name.
  *
- * Slow path (search term, or sort by name): name/phone are AES-encrypted at
- * rest so Postgres can't ilike/order them — scan in 1000-row batches
- * server-side, decrypt only name+phone to filter/sort, then fully decrypt
- * just the requested page.
+ * Slow path (phone-number search only): phone is AES-encrypted at rest and
+ * only hashed for exact lookups, so Postgres can't ilike it — scan in
+ * 1000-row batches server-side, decrypt only name+phone to filter/sort,
+ * then fully decrypt just the requested page.
  */
 export async function fetchPatientsPage(params: PatientsPageParams): Promise<PatientsPageResult> {
   const supabase = await createClient()
@@ -147,6 +154,7 @@ export async function fetchPatientsPage(params: PatientsPageParams): Promise<Pat
   const search = params.search.trim().toLowerCase()
   const ascending = sortOrder === 'asc'
   const from = (page - 1) * pageSize
+  const phoneSearch = search.length > 0 && PHONE_LIKE.test(search)
 
   // Resolve "my patients" — get distinct patient IDs where current user is attending staff
   let myPatientIds: string[] | null = null
@@ -162,16 +170,21 @@ export async function fetchPatientsPage(params: PatientsPageParams): Promise<Pat
     }
   }
 
-  // Fast path — everything expressible in SQL
-  if (!search && sortField !== 'name') {
+  // Fast path — everything expressible in SQL (no search, or a name search)
+  if (!phoneSearch) {
     let query = supabase
       .from('patients')
       .select(SELECT_COLS, { count: 'exact' })
       .eq('is_active', true)
     if (gender !== 'all') query = query.eq('gender', gender)
     if (myPatientIds) query = query.in('id', myPatientIds)
+    if (search) query = query.ilike('name_normalized', `%${search}%`)
+    if (sortField === 'name') {
+      query = query.order('name_normalized', { ascending, nullsFirst: false })
+    } else {
+      query = query.order(sortField, { ascending, nullsFirst: false })
+    }
     const { data, count } = await query
-      .order(sortField, { ascending, nullsFirst: false })
       .order('id', { ascending: true }) // stable tiebreaker across pages
       .range(from, from + pageSize - 1)
     return {
@@ -180,7 +193,7 @@ export async function fetchPatientsPage(params: PatientsPageParams): Promise<Pat
     }
   }
 
-  // Slow path — encrypted name/phone force an app-side scan
+  // Slow path — phone search against encrypted phone forces an app-side scan
   const BATCH = 1000
   const rows: Record<string, unknown>[] = []
   let offset = 0
