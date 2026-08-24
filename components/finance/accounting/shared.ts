@@ -5,7 +5,7 @@ export const MONTH_NAMES = [
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ]
 
-export const PAYMENT_METHODS: PaymentMethod[] = ['TUNAI', 'TRANSFER BCA', 'EDC BCA']
+export const PAYMENT_METHODS: PaymentMethod[] = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
 export const PAYMENT_STATUSES: PaymentDetailStatus[] = ['LUNAS', 'DP', 'PELUNASAN']
 
 // The coarse income buckets `transactions.category` actually stores app-wide

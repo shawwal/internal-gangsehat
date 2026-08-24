@@ -55,7 +55,7 @@ All tables: `id uuid PK DEFAULT gen_random_uuid()`, `created_at timestamptz DEFA
 ### Finance
 | Table | Key columns |
 |-------|-------------|
-| `transactions` | branch_id, patient_id, visit_id, type(income/expense), category, amount, harga, discount, outstanding(GENERATED), description, receipt_url, status(pending/confirmed/rejected), payment_method(TUNAI/TRANSFER BCA/EDC BCA), payment_status(LUNAS/DP/PELUNASAN), penjamin, fisio_id, recorded_by, confirmed_by, transaction_date |
+| `transactions` | branch_id, patient_id, visit_id, type(income/expense), category, amount, harga, discount, outstanding(GENERATED), description, receipt_url, status(pending/confirmed/rejected), payment_method(TUNAI/TRANSFER BCA/EDC BCA/TRANSFER BANK KALBAR), payment_status(LUNAS/DP/PELUNASAN), penjamin, fisio_id, recorded_by, confirmed_by, transaction_date |
 | `branch_financial_reports` | branch_id, period_year, period_month(1-12), total_income, total_expense, net_profit(GENERATED), patient_count, visit_count, submitted_by, reviewed_by, status(draft/submitted/approved/rejected) — UNIQUE(branch_id, period_year, period_month) |
 
 `status` = approval workflow; `payment_status` = payment detail — independent fields.
@@ -84,7 +84,7 @@ get_my_branch()        → uuid   -- branch_id of auth.uid(); NULL for director
 
 **Expense categories**: `BEBAN PELAYANAN` | `GAJI` | `SEWA` | `LISTRIK` | `MARKETING` | `TUKAR TUNAI` | `LAINNYA`
 
-**Payment method**: `TUNAI` | `TRANSFER BCA` | `EDC BCA`
+**Payment method**: `TUNAI` | `TRANSFER BCA` | `EDC BCA` | `TRANSFER BANK KALBAR`
 
 **Payment status**: `LUNAS` | `DP` | `PELUNASAN`
 

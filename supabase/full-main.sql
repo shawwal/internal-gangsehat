@@ -533,7 +533,7 @@ CREATE TABLE public.transactions (
   harga numeric NOT NULL DEFAULT 0,
   discount numeric NOT NULL DEFAULT 0,
   outstanding numeric DEFAULT GREATEST(((harga - amount) - discount), (0)::numeric),
-  payment_method text CHECK (payment_method = ANY (ARRAY['TUNAI'::text, 'TRANSFER BCA'::text, 'EDC BCA'::text])),
+  payment_method text CHECK (payment_method = ANY (ARRAY['TUNAI'::text, 'TRANSFER BCA'::text, 'EDC BCA'::text, 'TRANSFER BANK KALBAR'::text])),
   payment_status text CHECK (payment_status = ANY (ARRAY['LUNAS'::text, 'DP'::text, 'PELUNASAN'::text])),
   penjamin text,
   fisio_id uuid,

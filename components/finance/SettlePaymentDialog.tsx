@@ -8,7 +8,7 @@ import { formatCurrency } from '@/lib/utils'
 import { PaymentHistoryTable } from './PaymentHistoryTable'
 import type { OrderPaymentSummary } from '@/lib/internal/orderPayments'
 
-const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA']
+const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
 
 export interface SettleTransaction {
   id: string

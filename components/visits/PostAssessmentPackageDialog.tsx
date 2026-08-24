@@ -39,7 +39,7 @@ export function PostAssessmentPackageDialog({
   const [nama, setNama]     = useState(() => isVisit ? `Paket Visit ${jenis}` : `Paket Fisio ${jenis}`)
   const [harga, setHarga]   = useState('')
   const [amount, setAmount] = useState('')
-  const [method, setMethod] = useState<'TUNAI' | 'TRANSFER BCA' | 'EDC BCA'>('TUNAI')
+  const [method, setMethod] = useState<'TUNAI' | 'TRANSFER BCA' | 'EDC BCA' | 'TRANSFER BANK KALBAR'>('TUNAI')
   const [notes, setNotes]   = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
@@ -244,6 +244,7 @@ export function PostAssessmentPackageDialog({
               <option value="TUNAI">TUNAI</option>
               <option value="TRANSFER BCA">TRANSFER BCA</option>
               <option value="EDC BCA">EDC BCA</option>
+              <option value="TRANSFER BANK KALBAR">TRANSFER BANK KALBAR</option>
             </select>
           </div>
 

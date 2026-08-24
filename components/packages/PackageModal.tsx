@@ -256,6 +256,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
                   <option value="TUNAI">TUNAI</option>
                   <option value="TRANSFER BCA">TRANSFER BCA</option>
                   <option value="EDC BCA">EDC BCA</option>
+                  <option value="TRANSFER BANK KALBAR">TRANSFER BANK KALBAR</option>
                 </select>
               </div>
             </>

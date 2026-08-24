@@ -17,7 +17,7 @@ export const DEFAULT_FORM = {
   notes:              '',
   harga:              '',
   amount:             '',
-  payment_method:     'TUNAI' as 'TUNAI' | 'TRANSFER BCA' | 'EDC BCA',
+  payment_method:     'TUNAI' as 'TUNAI' | 'TRANSFER BCA' | 'EDC BCA' | 'TRANSFER BANK KALBAR',
 }
 
 export type FormState = typeof DEFAULT_FORM

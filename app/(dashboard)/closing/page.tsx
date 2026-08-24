@@ -19,7 +19,7 @@ type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 
 
 const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA']
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
-const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA']
+const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
 
 const STATUS_LABEL: Record<string, string> = {
   scheduled: 'Terjadwal',

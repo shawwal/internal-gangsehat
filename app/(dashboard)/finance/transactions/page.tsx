@@ -50,7 +50,7 @@ const EXPENSE_CATEGORIES = [
   'TUKAR TUNAI',
   'LAINNYA',
 ]
-const PAYMENT_METHODS: PaymentMethod[]         = ['TUNAI', 'TRANSFER BCA', 'EDC BCA']
+const PAYMENT_METHODS: PaymentMethod[]         = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
 const PAYMENT_STATUSES: PaymentDetailStatus[]  = ['LUNAS', 'DP', 'PELUNASAN']
 
 function getDefaultForm() {

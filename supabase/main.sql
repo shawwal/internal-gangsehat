@@ -263,7 +263,7 @@ CREATE TABLE public.patient_visits (
 
 -- transactions: id(pk) branch_id(fk→branches) patient_id(fk→patients) visit_id(fk→patient_visits)
 -- type[income|expense] category amount(jumlah_bayar) harga(full_price) discount outstanding(GENERATED=harga-amount-discount)
--- payment_method[TUNAI|TRANSFER BCA|EDC BCA] payment_status[LUNAS|DP|PELUNASAN] penjamin(guarantor)
+-- payment_method[TUNAI|TRANSFER BCA|EDC BCA|TRANSFER BANK KALBAR] payment_status[LUNAS|DP|PELUNASAN] penjamin(guarantor)
 -- fisio_id(fk→internal_profiles) status[pending|confirmed|rejected]
 -- NOTE: status=approval workflow; payment_status=payment detail — independent fields
 CREATE TABLE public.transactions (
@@ -274,7 +274,7 @@ CREATE TABLE public.transactions (
   outstanding numeric GENERATED(harga-amount-discount),
   description text, receipt_url text,
   status text DEFAULT 'pending' CHECK(pending|confirmed|rejected), rejection_reason text,
-  payment_method text CHECK(TUNAI|TRANSFER BCA|EDC BCA),
+  payment_method text CHECK(TUNAI|TRANSFER BCA|EDC BCA|TRANSFER BANK KALBAR),
   payment_status text CHECK(LUNAS|DP|PELUNASAN),
   penjamin text, fisio_id uuid FK→internal_profiles,
   recorded_by uuid FK→internal_profiles, confirmed_by uuid FK→internal_profiles,

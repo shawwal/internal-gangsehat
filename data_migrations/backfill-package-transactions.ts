@@ -57,7 +57,7 @@ const APPLY = process.argv.includes('--apply')
 const PACKAGE_CATEGORIES_LEDGER = new Set(['KLINIK FT PAKET', 'VISIT FT PAKET'])
 const EVENT_GAP_DAYS = 14
 const MATCH_WINDOW_DAYS = 21
-const ALLOWED_PAYMENT_METHODS = new Set(['TUNAI', 'TRANSFER BCA', 'EDC BCA'])
+const ALLOWED_PAYMENT_METHODS = new Set(['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR'])
 
 // ── crypto ───────────────────────────────────────────────────────────────────
 const encKey = Buffer.from(ENCRYPTION_KEY, 'hex')

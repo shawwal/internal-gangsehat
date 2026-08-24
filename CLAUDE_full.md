@@ -105,7 +105,7 @@ These are the canonical value lists used throughout the system, derived from the
 **Expense** (`type = 'expense'`): `BEBAN PELAYANAN`, `GAJI`, `SEWA`, `LISTRIK`, `MARKETING`, `TUKAR TUNAI`, `LAINNYA`
 
 ### Payment Methods (`transactions.payment_method`)
-`TUNAI` | `TRANSFER BCA` | `EDC BCA`
+`TUNAI` | `TRANSFER BCA` | `EDC BCA` | `TRANSFER BANK KALBAR`
 
 ### Payment Detail Status (`transactions.payment_status`)
 `LUNAS` (fully paid) | `DP` (down payment) | `PELUNASAN` (final/settlement payment)

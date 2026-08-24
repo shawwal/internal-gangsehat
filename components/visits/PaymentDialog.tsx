@@ -390,6 +390,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                     <option value="TUNAI">TUNAI</option>
                     <option value="TRANSFER BCA">TRANSFER BCA</option>
                     <option value="EDC BCA">EDC BCA</option>
+                    <option value="TRANSFER BANK KALBAR">TRANSFER BANK KALBAR</option>
                   </select>
                 </div>
                 <div>

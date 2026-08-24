@@ -32,7 +32,7 @@ export function PaketPaymentStep({
 }: PaketPaymentStepProps) {
   const [harga, setHarga]   = useState(hargaDefault > 0 ? String(hargaDefault) : '')
   const [amount, setAmount] = useState('')
-  const [method, setMethod] = useState<'TUNAI' | 'TRANSFER BCA' | 'EDC BCA'>('TUNAI')
+  const [method, setMethod] = useState<'TUNAI' | 'TRANSFER BCA' | 'EDC BCA' | 'TRANSFER BANK KALBAR'>('TUNAI')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
 
@@ -147,6 +147,7 @@ export function PaketPaymentStep({
               <option value="TUNAI">TUNAI</option>
               <option value="TRANSFER BCA">TRANSFER BCA</option>
               <option value="EDC BCA">EDC BCA</option>
+              <option value="TRANSFER BANK KALBAR">TRANSFER BANK KALBAR</option>
             </select>
           </div>
 
