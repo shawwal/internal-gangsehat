@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import {
-  ChevronLeft, Plus, Activity, CheckCircle2, Clock, UserX, FileText, User, CreditCard, Trash2, Pencil,
+  ChevronLeft, Plus, Activity, CheckCircle2, Clock, UserX, FileText, User, CreditCard, Trash2, Pencil, Package, ChevronRight,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchPatient } from '@/app/actions/patients'
+import { fetchPatientPackagesWithPayment } from '@/app/actions/packages'
+import type { PatientPackageWithPayment } from '@/app/actions/packages'
 import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { ExportButton } from '@/components/ui/ExportButton'
@@ -211,6 +213,7 @@ export default function PatientVisitsPage() {
 
   const [visits, setVisits]           = useState<PatientVisit[]>([])
   const [standalonePackages, setStandalonePackages] = useState<StandalonePackageTx[]>([])
+  const [packages, setPackages]       = useState<PatientPackageWithPayment[]>([])
   const [patientName, setPatientName] = useState('')
   const [noRm, setNoRm]               = useState('')
   const [loading, setLoading]         = useState(true)
@@ -292,7 +295,7 @@ export default function PatientVisitsPage() {
 
   async function load() {
     const supabase = createClient()
-    const [patient, { data: v }, { data: pkgTx }] = await Promise.all([
+    const [patient, { data: v }, { data: pkgTx }, pkgs] = await Promise.all([
       fetchPatient(id),
       supabase
         .from('patient_visits')
@@ -307,11 +310,13 @@ export default function PatientVisitsPage() {
         .in('category', ['PAKET KLINIK', 'PAKET VISIT'])
         .neq('status', 'rejected')
         .order('transaction_date', { ascending: false }),
+      fetchPatientPackagesWithPayment(id),
     ])
     setPatientName(patient?.name ?? '')
     setNoRm(patient?.no_rm ?? '')
     setVisits((v ?? []) as unknown as PatientVisit[])
     setStandalonePackages((pkgTx ?? []) as StandalonePackageTx[])
+    setPackages(pkgs)
     setLoading(false)
   }
 
@@ -397,6 +402,10 @@ export default function PatientVisitsPage() {
     return Promise.resolve()
   }
 
+  // Active packages with sessions remaining
+  const activePackages = packages.filter((p) => p.status === 'active')
+  const totalRemainingSessions = activePackages.reduce((sum, p) => sum + p.remaining_sessions, 0)
+
   // Derived stats — visit-specific, unaffected by standalone package purchases
   const total     = visits.length
   const completed = visits.filter((v) => v.status === 'completed').length
@@ -452,6 +461,44 @@ export default function PatientVisitsPage() {
         <StatCard label="Terjadwal"       value={scheduled} icon={Clock}        color="bg-blue-500/10 text-blue-400"         loading={loading} />
         <StatCard label="Tidak Hadir"     value={noShow}    icon={UserX}        color="bg-destructive/10 text-destructive"  loading={loading} />
       </div>
+
+      {/* Active packages summary */}
+      {!loading && (
+        <Link
+          href={`/patients/${id}/packages`}
+          className="glass-card p-4 flex items-center justify-between gap-3 hover:bg-primary/5 transition-colors group"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-primary/10 text-primary">
+              <Package size={17} />
+            </div>
+            <div className="min-w-0">
+              {activePackages.length === 0 ? (
+                <>
+                  <p className="text-sm font-medium text-foreground">Tidak ada paket aktif</p>
+                  <p className="text-xs text-muted-foreground">Lihat semua paket yang pernah dibeli</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-foreground">
+                    {totalRemainingSessions.toLocaleString('id-ID')} sesi tersisa
+                    <span className="text-muted-foreground font-normal">
+                      {' '}· {activePackages.length} paket aktif
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {activePackages.map((p) => `${p.package_name} (${p.remaining_sessions}/${p.total_sessions})`).join(', ')}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+          <span className="flex items-center gap-1 text-xs font-medium text-primary shrink-0">
+            Lihat Semua Paket
+            <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+          </span>
+        </Link>
+      )}
 
       {/* Table */}
       <div className="glass-card overflow-hidden">
