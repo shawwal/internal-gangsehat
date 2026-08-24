@@ -156,6 +156,19 @@ function getPackageSale(visit: PatientVisit): { harga: number; outstanding: numb
   return { harga: txs[0].harga as number, outstanding: txs[0].outstanding }
 }
 
+// Package sessions can be stored with a literal service_type of 'SESI TERAPI'/'SESI VISIT'
+// even though package_id is set (depends on which flow created the visit — see
+// AssignDialog vs PackageSessionWizard). package_id is the source of truth: mirror
+// VisitCard.tsx's precedence and normalize the label to the PAKET variant.
+function getDisplayServiceType(visit: PatientVisit): ServiceType | null {
+  const packageId = (visit as unknown as { package_id: string | null }).package_id
+  if (packageId) {
+    if (visit.service_type === 'SESI TERAPI') return 'PAKET TERAPI'
+    if (visit.service_type === 'SESI VISIT')  return 'PAKET VISIT'
+  }
+  return visit.service_type
+}
+
 // Packages sold via the jadwal-harian "Paket" tab have no source visit —
 // they never link a visit_id, so they're fetched separately and merged
 // into the timeline below rather than joined off a patient_visits row.
@@ -381,7 +394,7 @@ export default function PatientVisitsPage() {
     exportToExcel(visits, [
       { header: 'Tanggal',      value: (v) => v.visit_date },
       { header: 'Shift',        value: (v) => v.shift ?? '' },
-      { header: 'Layanan',      value: (v) => v.service_type ?? '' },
+      { header: 'Layanan',      value: (v) => getDisplayServiceType(v) ?? '' },
       { header: 'Terapis',      value: therapistName },
       { header: 'Regio',        value: (v) => v.regio ?? '' },
       { header: 'Sumber',       value: (v) => v.sumber_pasien ?? '' },
@@ -576,11 +589,14 @@ export default function PatientVisitsPage() {
                     </td>
 
                     <td className="px-4 py-3">
-                      {v.service_type ? (
-                        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${SERVICE_BADGE[v.service_type]}`}>
-                          {v.service_type}
-                        </span>
-                      ) : <span className="text-muted-foreground/40 text-xs">—</span>}
+                      {(() => {
+                        const displayServiceType = getDisplayServiceType(v)
+                        return displayServiceType ? (
+                          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${SERVICE_BADGE[displayServiceType]}`}>
+                            {displayServiceType}
+                          </span>
+                        ) : <span className="text-muted-foreground/40 text-xs">—</span>
+                      })()}
                     </td>
 
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -1004,7 +1020,7 @@ export default function PatientVisitsPage() {
           title="Hapus Kunjungan"
           description={
             deleteError ??
-            `Hapus kunjungan tanggal ${formatDate(deleteTarget.visit_date)}${deleteTarget.service_type ? ` (${deleteTarget.service_type})` : ''}? Tindakan ini tidak dapat dibatalkan.`
+            `Hapus kunjungan tanggal ${formatDate(deleteTarget.visit_date)}${getDisplayServiceType(deleteTarget) ? ` (${getDisplayServiceType(deleteTarget)})` : ''}? Tindakan ini tidak dapat dibatalkan.`
           }
           confirmLabel="Hapus"
           danger
