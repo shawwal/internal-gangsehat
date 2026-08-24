@@ -270,7 +270,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                     <p className="text-xs font-semibold text-[#FFB35C]">Ada Tunggakan Pasien</p>
                     <p className="text-[11px] text-muted-foreground">
                       {outstanding.length} transaksi belum lunas ·{' '}
-                      {fmt(outstanding.reduce((s, t) => s + t.outstanding, 0))} total sisa
+                      {fmt(outstanding.reduce((s, t) => s + t.outstanding, 0))} sudah dibayar
                     </p>
                   </div>
                   {showOutstanding
