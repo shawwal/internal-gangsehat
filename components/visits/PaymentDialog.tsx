@@ -88,14 +88,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   const d = Number(discount) || 0
   const a = Number(amount) || 0
   const sisa = Math.max(h - a - d, 0)
-  // Other unpaid transactions for this patient (excluding the one being edited,
-  // if any) — folded into the displayed total so "Sisa Tagihan" reflects
-  // everything the patient still owes, not just this one transaction.
-  const priorOutstanding = outstanding
-    .filter((t) => t.id !== existingTransaction?.id)
-    .reduce((s, t) => s + t.outstanding, 0)
-  const totalSisa = sisa + priorOutstanding
-  const prevSisaRef = useRef(totalSisa)
+  const prevSisaRef = useRef(sisa)
 
   // Auto-suggest payment status based on amounts
   useEffect(() => {
@@ -105,11 +98,11 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
 
   // Animate the sisa number when it changes
   useEffect(() => {
-    if (totalSisa !== prevSisaRef.current) {
-      prevSisaRef.current = totalSisa
+    if (sisa !== prevSisaRef.current) {
+      prevSisaRef.current = sisa
       setSisaKey((k) => k + 1)
     }
-  }, [totalSisa])
+  }, [sisa])
 
   function refreshOutstanding() {
     getPatientOutstanding(visit.patient_id).then((data) => {
@@ -392,24 +385,21 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                 />
               </div>
 
-              {/* Live sisa preview — this transaction's remainder plus any other
-                  unpaid balance the patient already has on record. */}
+              {/* Live sisa preview — this transaction's own remainder only. */}
               <div className={`rounded-xl px-4 py-3 flex items-center justify-between transition-colors duration-200 ${
-                totalSisa > 0
+                sisa > 0
                   ? 'bg-destructive/8 border border-destructive/20'
                   : 'bg-[#34C759]/8 border border-[#34C759]/20'
               }`}>
-                <span className="text-xs text-muted-foreground font-medium">
-                  Sisa Tagihan{priorOutstanding > 0 ? ' (termasuk tunggakan lain)' : ''}
-                </span>
+                <span className="text-xs text-muted-foreground font-medium">Sisa Tagihan</span>
                 <span
                   key={sisaKey}
                   style={{ animation: sisaKey > 0 ? 'numTick 260ms ease forwards' : undefined }}
                   className={`text-sm font-bold tabular-nums transition-colors duration-200 ${
-                    totalSisa > 0 ? 'text-destructive' : 'text-[#34C759]'
+                    sisa > 0 ? 'text-destructive' : 'text-[#34C759]'
                   }`}
                 >
-                  {fmt(totalSisa)}
+                  {fmt(sisa)}
                 </span>
               </div>
 
