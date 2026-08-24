@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink, Link2, UserCheck } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
@@ -46,8 +46,10 @@ interface Props {
 export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
+  const [menuReady, setMenuReady] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const anchorRectRef = useRef<DOMRect | null>(null)
 
   // Therapists/staff view the schedule but don't manage it — no status changes,
   // deletes, payments, or reminders from the quick-action menu.
@@ -91,13 +93,37 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
     e.stopPropagation()
     if (!canManageVisit) { onOpenRecord(visit.id); return }
     if (!cardRef.current) return
-    const rect      = cardRef.current.getBoundingClientRect()
-    const menuWidth = 208
-    const left      = Math.min(rect.right, window.innerWidth - menuWidth - 8)
-    const top       = Math.min(rect.bottom + 4, window.innerHeight - 320)
-    setMenuPos({ top, left })
+    anchorRectRef.current = cardRef.current.getBoundingClientRect()
+    setMenuPos(null)
+    setMenuReady(false)
     setMenuOpen(true)
   }
+
+  // Position is computed from the menu's real rendered height (measured here),
+  // not a guess — the item count varies a lot by role, so a fixed offset either
+  // leaves a big gap or, worse, pushes items below the viewport unreachable.
+  useLayoutEffect(() => {
+    if (!menuOpen) { setMenuPos(null); setMenuReady(false); return }
+    if (!menuRef.current || !anchorRectRef.current) return
+    const rect       = anchorRectRef.current
+    const menuWidth  = 208
+    const menuHeight = menuRef.current.offsetHeight
+    const margin = 8
+    const gap    = 4
+
+    const spaceBelow = window.innerHeight - rect.bottom - gap
+    const spaceAbove = rect.top - gap
+    const openUpward = menuHeight > spaceBelow && (menuHeight <= spaceAbove || spaceAbove > spaceBelow)
+
+    let top = openUpward ? rect.top - gap - menuHeight : rect.bottom + gap
+    top = Math.max(margin, Math.min(top, window.innerHeight - menuHeight - margin))
+
+    let left = Math.min(rect.right, window.innerWidth - menuWidth - margin)
+    left = Math.max(margin, left)
+
+    setMenuPos({ top, left })
+    setMenuReady(true)
+  }, [menuOpen])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -105,11 +131,17 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
     function onMouseDown(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) close()
     }
+    // Scrolling the menu's own (overflow-y-auto) content must not close it —
+    // only close on scroll of the page/grid behind it.
+    function onScroll(e: Event) {
+      if (menuRef.current && menuRef.current.contains(e.target as Node)) return
+      close()
+    }
     document.addEventListener('mousedown', onMouseDown)
-    document.addEventListener('scroll', close, true)
+    document.addEventListener('scroll', onScroll, true)
     return () => {
       document.removeEventListener('mousedown', onMouseDown)
-      document.removeEventListener('scroll', close, true)
+      document.removeEventListener('scroll', onScroll, true)
     }
   }, [menuOpen])
 
@@ -223,7 +255,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
       )}
 
       {/* Context menu */}
-      {menuOpen && menuPos && createPortal(
+      {menuOpen && createPortal(
         <>
           <style>{`@keyframes vcBadgeIn { from{opacity:0;transform:scale(0.6)} to{opacity:1;transform:scale(1)} }`}</style>
           <div className="fixed inset-0 z-200" onClick={() => setMenuOpen(false)} />
@@ -231,8 +263,13 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
           <div
             ref={menuRef}
             role="menu"
-            className="dark fixed z-201 w-52 rounded-xl border border-white/15 p-1.5 shadow-2xl backdrop-blur-xl bg-gray-900/95"
-            style={{ top: menuPos.top, left: menuPos.left }}
+            className="dark fixed z-201 w-52 rounded-xl border border-white/15 p-1.5 shadow-2xl backdrop-blur-xl bg-gray-900/95 overflow-y-auto"
+            style={{
+              top: menuPos?.top ?? -9999,
+              left: menuPos?.left ?? -9999,
+              maxHeight: 'calc(100vh - 16px)',
+              visibility: menuReady ? 'visible' : 'hidden',
+            }}
           >
             <p className="text-[10px] text-muted-foreground/70 px-2.5 pt-1 pb-2 uppercase tracking-widest font-semibold">
               Ubah Status
