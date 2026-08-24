@@ -126,7 +126,7 @@ export default function JadwalSportMassagePage() {
   }
 
   async function handleMarkPresent(visitId: string) {
-    await updateVisit(visitId, { kehadiran: 'HADIR' })
+    await updateVisit(visitId, { kehadiran: 'HADIR', status: 'completed' })
     silentReload({ type: 'visit', visitId })
   }
 
