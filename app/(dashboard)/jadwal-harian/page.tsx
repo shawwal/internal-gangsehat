@@ -366,7 +366,7 @@ export default function JadwalHarianPage() {
         <div
           className="glass-card overflow-hidden"
           style={isFocused
-            ? { display: 'grid', gridTemplateRows: 'auto 1fr', height: 'calc(100vh - 4rem)', minHeight: '400px' }
+            ? { display: 'grid', gridTemplateRows: 'auto 1fr', gridTemplateColumns: 'minmax(0, 1fr)', height: 'calc(100vh - 4rem)', minHeight: '400px' }
             : { height: 'calc(100vh - 22rem)', minHeight: '400px' }
           }
         >
