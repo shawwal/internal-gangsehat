@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   AlertTriangle, Calendar, CheckCircle2, ChevronDown, ChevronUp,
   CreditCard, Loader2, Stethoscope, User, X,
@@ -82,27 +82,16 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   const [error, setError]           = useState<string | null>(null)
   const [success, setSuccess]       = useState(false)
   const [shakeBtn, setShakeBtn]     = useState(false)
-  const [sisaKey, setSisaKey]       = useState(0)
 
   const h = Number(harga) || 0
   const d = Number(discount) || 0
   const a = Number(amount) || 0
-  const sisa = Math.max(h - a - d, 0)
-  const prevSisaRef = useRef(sisa)
 
   // Auto-suggest payment status based on amounts
   useEffect(() => {
     if (h > 0 && a >= h - d) setPaymentStatus('LUNAS')
     else if (a > 0)           setPaymentStatus('DP')
   }, [h, d, a])
-
-  // Animate the sisa number when it changes
-  useEffect(() => {
-    if (sisa !== prevSisaRef.current) {
-      prevSisaRef.current = sisa
-      setSisaKey((k) => k + 1)
-    }
-  }, [sisa])
 
   function refreshOutstanding() {
     getPatientOutstanding(visit.patient_id).then((data) => {
@@ -180,7 +169,6 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
         @keyframes payBdOut   { from{opacity:1}                                          to{opacity:0} }
         @keyframes payPanelIn { from{opacity:0;transform:translateX(40px)}               to{opacity:1;transform:translateX(0)} }
         @keyframes payPanelOut{ from{opacity:1;transform:translateX(0)}                  to{opacity:0;transform:translateX(40px)} }
-        @keyframes numTick    { 0%{transform:scale(1)} 40%{transform:scale(1.16)} 100%{transform:scale(1)} }
         @keyframes shakeX     { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
         @keyframes slideDown  { from{opacity:0;transform:translateY(-8px)}               to{opacity:1;transform:translateY(0)} }
         @keyframes successPop { 0%{transform:scale(.8);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
@@ -274,24 +262,41 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                 className="rounded-2xl border border-[#FFB35C]/30 bg-[#FFB35C]/8 overflow-hidden"
                 style={{ animation: 'slideDown 250ms ease forwards' }}
               >
-                <button
-                  type="button"
-                  onClick={() => setShowOutstanding((v) => !v)}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 text-left cursor-pointer"
-                >
-                  <AlertTriangle size={14} className="text-[#FFB35C] shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-[#FFB35C]">Ada Tunggakan Pasien</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {outstanding.length} transaksi belum lunas ·{' '}
-                      {fmt(outstanding.reduce((s, t) => s + t.outstanding, 0))} total sisa
-                    </p>
-                  </div>
-                  {showOutstanding
-                    ? <ChevronUp size={14} className="text-muted-foreground shrink-0" />
-                    : <ChevronDown size={14} className="text-muted-foreground shrink-0" />
-                  }
-                </button>
+                <div className="w-full flex items-center gap-2.5 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowOutstanding((v) => !v)}
+                    className="flex-1 min-w-0 flex items-center gap-2.5 text-left cursor-pointer"
+                  >
+                    <AlertTriangle size={14} className="text-[#FFB35C] shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[#FFB35C]">Ada Tunggakan Pasien</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {outstanding.length} transaksi belum lunas ·{' '}
+                        {fmt(outstanding.reduce((s, t) => s + t.outstanding, 0))} total sisa
+                      </p>
+                    </div>
+                  </button>
+                  {outstanding.length === 1 && outstanding[0].order_id && (
+                    <button
+                      type="button"
+                      onClick={() => setSettleTarget(outstanding[0])}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#FFB35C]/15 text-[#FFB35C] hover:bg-[#FFB35C]/25 transition-colors cursor-pointer shrink-0"
+                    >
+                      Bayar
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowOutstanding((v) => !v)}
+                    className="shrink-0 cursor-pointer"
+                  >
+                    {showOutstanding
+                      ? <ChevronUp size={14} className="text-muted-foreground" />
+                      : <ChevronDown size={14} className="text-muted-foreground" />
+                    }
+                  </button>
+                </div>
 
                 {showOutstanding && (
                   <div className="border-t border-[#FFB35C]/15 divide-y divide-[#FFB35C]/10">
@@ -383,24 +388,6 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                   placeholder="0"
                   className={inputCls}
                 />
-              </div>
-
-              {/* Live sisa preview — this transaction's own remainder only. */}
-              <div className={`rounded-xl px-4 py-3 flex items-center justify-between transition-colors duration-200 ${
-                sisa > 0
-                  ? 'bg-destructive/8 border border-destructive/20'
-                  : 'bg-[#34C759]/8 border border-[#34C759]/20'
-              }`}>
-                <span className="text-xs text-muted-foreground font-medium">Sisa Tagihan</span>
-                <span
-                  key={sisaKey}
-                  style={{ animation: sisaKey > 0 ? 'numTick 260ms ease forwards' : undefined }}
-                  className={`text-sm font-bold tabular-nums transition-colors duration-200 ${
-                    sisa > 0 ? 'text-destructive' : 'text-[#34C759]'
-                  }`}
-                >
-                  {fmt(sisa)}
-                </span>
               </div>
 
               {/* Metode + Status */}
