@@ -121,10 +121,20 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   useEffect(refreshOutstanding, [visit.patient_id])
 
   useEffect(() => {
+    // Editing an existing transaction already has its real harga — never
+    // silently overwrite it with a price-list guess.
+    if (isEditing) return
+    // Package categories (PAKET KLINIK / PAKET VISIT) can have several price
+    // tiers per branch (different package variants/session counts); this
+    // lookup has no way to know which one is intended, so auto-filling here
+    // would silently substitute the wrong package's price. Leave it for staff
+    // to enter manually instead.
+    const category = SERVICE_TO_CATEGORY[serviceType]
+    if (category === 'PAKET KLINIK' || category === 'PAKET VISIT') return
     fetchLayananHarga(serviceType, visit.branch_id).then((price) => {
       if (price != null) setHarga(String(price))
     })
-  }, [serviceType, visit.branch_id])
+  }, [serviceType, visit.branch_id, isEditing])
 
   function handleClose() {
     if (submitting) return
