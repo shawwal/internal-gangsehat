@@ -96,7 +96,7 @@ interface Props {
   onSellPackage?: (visitId: string) => void
   onDetachPackage?: (visitId: string) => void
   onAttachPackage?: (visitId: string) => void
-  onMarkPresent?: (visitId: string) => void
+  onMarkPresent?: (visitId: string, present: boolean) => void
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────

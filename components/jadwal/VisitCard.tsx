@@ -40,7 +40,7 @@ interface Props {
   onSellPackage?: (id: string) => void
   onDetachPackage?: (id: string) => void
   onAttachPackage?: (id: string) => void
-  onMarkPresent?: (id: string) => void
+  onMarkPresent?: (id: string, present: boolean) => void
 }
 
 export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent }: Props) {
@@ -87,7 +87,10 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   // Front-desk check-in — the only place kehadiran can be set before a therapist
   // opens the SOAP/assessment form (those forms only default it on save). This
   // is the prerequisite for the RM Lock gate in the form pages themselves.
-  const showMarkPresentItem = canManageVisit && visit.kehadiran !== 'HADIR' && !!onMarkPresent
+  // Stays visible after check-in too, flipped to "Tandai Tidak Hadir", so an
+  // accidental press can be undone from the same spot.
+  const showMarkPresentItem = canManageVisit && !!onMarkPresent
+  const isMarkedPresent     = visit.kehadiran === 'HADIR'
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
@@ -312,12 +315,17 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
               <>
                 <hr className="border-white/10 my-1.5" />
                 <button
-                  onClick={() => { onMarkPresent?.(visit.id); setMenuOpen(false) }}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-[#34C759] hover:bg-[#34C759]/10 transition-colors cursor-pointer"
+                  onClick={() => { onMarkPresent?.(visit.id, !isMarkedPresent); setMenuOpen(false) }}
+                  className={[
+                    'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors cursor-pointer',
+                    isMarkedPresent
+                      ? 'text-[#FFB35C] hover:bg-[#FFB35C]/10'
+                      : 'text-[#34C759] hover:bg-[#34C759]/10',
+                  ].join(' ')}
                   role="menuitem"
                 >
-                  <UserCheck size={13} />
-                  Tandai Hadir
+                  {isMarkedPresent ? <UserX size={13} /> : <UserCheck size={13} />}
+                  {isMarkedPresent ? 'Tandai Tidak Hadir' : 'Tandai Hadir'}
                 </button>
               </>
             )}

@@ -162,8 +162,10 @@ export default function JadwalHarianPage() {
     setAttachVisit(visits.find((v) => v.id === visitId) ?? null)
   }
 
-  async function handleMarkPresent(visitId: string) {
-    await updateVisit(visitId, { kehadiran: 'HADIR', status: 'completed' })
+  async function handleMarkPresent(visitId: string, present: boolean) {
+    await updateVisit(visitId, present
+      ? { kehadiran: 'HADIR', status: 'completed' }
+      : { kehadiran: 'TIDAK HADIR', status: 'scheduled' })
     silentReload({ type: 'visit', visitId })
   }
 
