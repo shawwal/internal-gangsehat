@@ -5,8 +5,9 @@ import {
   AlertTriangle, Calendar, CheckCircle2, ChevronDown, ChevronUp,
   CreditCard, Loader2, Stethoscope, User, X,
 } from 'lucide-react'
-import { createTransactionForVisit, getPatientOutstanding, fetchLayananHarga } from '@/app/actions/transactions'
+import { createTransactionForVisit, updateTransaction, getPatientOutstanding, fetchLayananHarga } from '@/app/actions/transactions'
 import type { OutstandingTransaction } from '@/app/actions/transactions'
+import type { VisitTransaction } from '@/app/actions/jadwal'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface PaymentVisitInfo {
@@ -21,6 +22,8 @@ export interface PaymentVisitInfo {
 
 interface Props {
   visit: PaymentVisitInfo
+  /** Existing payment to edit in place, rather than adding a new one. */
+  existingTransaction?: VisitTransaction | null
   onClose: () => void
   onSuccess: () => void
 }
@@ -60,20 +63,21 @@ function fmtShortDate(d: string) {
 const inputCls = 'w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function PaymentDialog({ visit, onClose, onSuccess }: Props) {
+export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }: Props) {
+  const isEditing = !!existingTransaction
   const [isClosing, setIsClosing]             = useState(false)
   const [outstanding, setOutstanding]         = useState<OutstandingTransaction[]>([])
   const [showOutstanding, setShowOutstanding] = useState(false)
   const [loadingOuts, setLoadingOuts]         = useState(true)
 
-  const [harga, setHarga]                 = useState('')
-  const [discount, setDiscount]           = useState('')
-  const [amount, setAmount]               = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('TUNAI')
-  const [paymentStatus, setPaymentStatus] = useState('LUNAS')
-  const [penjamin, setPenjamin]           = useState('')
-  const [description, setDescription]     = useState('')
-  const [txDate, setTxDate]               = useState(visit.visit_date)
+  const [harga, setHarga]                 = useState(existingTransaction?.harga != null ? String(existingTransaction.harga) : '')
+  const [discount, setDiscount]           = useState(existingTransaction?.discount != null ? String(existingTransaction.discount) : '')
+  const [amount, setAmount]               = useState(existingTransaction?.amount != null ? String(existingTransaction.amount) : '')
+  const [paymentMethod, setPaymentMethod] = useState(existingTransaction?.payment_method ?? 'TUNAI')
+  const [paymentStatus, setPaymentStatus] = useState(existingTransaction?.payment_status ?? 'LUNAS')
+  const [penjamin, setPenjamin]           = useState(existingTransaction?.penjamin ?? '')
+  const [description, setDescription]     = useState(existingTransaction?.description ?? '')
+  const [txDate, setTxDate]               = useState(existingTransaction?.transaction_date ?? visit.visit_date)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState<string | null>(null)
@@ -126,7 +130,7 @@ export function PaymentDialog({ visit, onClose, onSuccess }: Props) {
     if (submitting) return
     setSubmitting(true)
     setError(null)
-    const result = await createTransactionForVisit(visit.id, {
+    const payload = {
       harga: h,
       discount: d,
       amount: a,
@@ -135,7 +139,10 @@ export function PaymentDialog({ visit, onClose, onSuccess }: Props) {
       penjamin:    penjamin    || null,
       description: description || null,
       transaction_date: txDate,
-    })
+    }
+    const result = isEditing
+      ? await updateTransaction(existingTransaction.id, payload)
+      : await createTransactionForVisit(visit.id, payload)
     if (result.error) {
       setError(result.error)
       setShakeBtn(true)
@@ -181,7 +188,7 @@ export function PaymentDialog({ visit, onClose, onSuccess }: Props) {
             <div>
               <div className="flex items-center gap-2">
                 <CreditCard size={15} className="text-primary" />
-                <h2 className="text-sm font-semibold text-foreground">Catat Pembayaran</h2>
+                <h2 className="text-sm font-semibold text-foreground">{isEditing ? 'Edit Pembayaran' : 'Catat Pembayaran'}</h2>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">{fmtDate(visit.visit_date)}</p>
             </div>
@@ -423,7 +430,7 @@ export function PaymentDialog({ visit, onClose, onSuccess }: Props) {
                 style={{ animation: 'successPop 400ms cubic-bezier(0.34,1.56,0.64,1) forwards' }}
               >
                 <CheckCircle2 size={20} className="text-[#34C759]" />
-                <span className="text-sm font-semibold text-[#34C759]">Pembayaran berhasil dicatat!</span>
+                <span className="text-sm font-semibold text-[#34C759]">{isEditing ? 'Pembayaran berhasil diperbarui!' : 'Pembayaran berhasil dicatat!'}</span>
               </div>
             ) : (
               <div className="flex gap-2">

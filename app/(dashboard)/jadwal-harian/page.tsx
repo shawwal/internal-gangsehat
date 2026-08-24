@@ -509,6 +509,7 @@ export default function JadwalHarianPage() {
               || staff.find((s) => s.staff_id === paymentVisit.attending_staff_id)?.full_name
               || undefined,
           }}
+          existingTransaction={paymentVisit.visit_transaction}
           onClose={() => setPaymentVisit(null)}
           onSuccess={() => {
             const visitId = paymentVisit.id

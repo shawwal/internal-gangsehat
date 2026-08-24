@@ -20,6 +20,18 @@ async function decryptedPatientName(supabase: Awaited<ReturnType<typeof createCl
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+export interface VisitTransaction {
+  id: string
+  harga: number | null
+  discount: number | null
+  amount: number | null
+  payment_method: string | null
+  payment_status: string | null
+  penjamin: string | null
+  description: string | null
+  transaction_date: string
+}
+
 export interface DailyVisit {
   id: string
   patient_id: string
@@ -44,6 +56,7 @@ export interface DailyVisit {
   visit_payment_status: string | null
   visit_package_price: number | null
   visit_package_outstanding: number | null
+  visit_transaction: VisitTransaction | null
 }
 
 const PACKAGE_CATEGORIES = new Set(['PAKET VISIT', 'PAKET KLINIK'])
@@ -116,9 +129,10 @@ export async function fetchDailyVisits(
   const visitIds = visits.map((v) => v.id)
   const { data: txns } = await supabase
     .from('transactions')
-    .select('visit_id, category, harga, payment_status, outstanding, status')
+    .select('id, visit_id, category, harga, discount, amount, payment_method, payment_status, penjamin, description, transaction_date, outstanding, status, created_at')
     .in('visit_id', visitIds)
     .neq('status', 'rejected')
+    .order('created_at', { ascending: true })
 
   // Per-visit: last non-rejected transaction wins for display.
   // Package-sale transactions (from PostAssessmentPackageDialog) are linked
@@ -127,6 +141,9 @@ export async function fetchDailyVisits(
   // whether the source visit itself (e.g. the TA assessment) was paid.
   const payMap = new Map<string, { payment_status: string | null; all_paid: boolean }>()
   const packageMap = new Map<string, { harga: number; outstanding: number }>()
+  // Most recent non-package transaction per visit — offered up for editing
+  // rather than always stacking another payment row.
+  const latestTxnMap = new Map<string, VisitTransaction>()
   for (const t of txns ?? []) {
     const vid = t.visit_id as string
     if (PACKAGE_CATEGORIES.has(t.category ?? '')) {
@@ -142,6 +159,17 @@ export async function fetchDailyVisits(
         all_paid: existing.all_paid && t.outstanding === 0,
       })
     }
+    latestTxnMap.set(vid, {
+      id:               t.id,
+      harga:            t.harga,
+      discount:         t.discount,
+      amount:           t.amount,
+      payment_method:   t.payment_method,
+      payment_status:   t.payment_status,
+      penjamin:         t.penjamin,
+      description:      t.description,
+      transaction_date: t.transaction_date,
+    })
   }
 
   return visits.map((v) => {
@@ -170,6 +198,7 @@ export async function fetchDailyVisits(
       visit_payment_status: pay ? (pay.all_paid ? 'LUNAS' : pay.payment_status) : null,
       visit_package_price:       pkg?.harga ?? null,
       visit_package_outstanding: pkg?.outstanding ?? null,
+      visit_transaction:    latestTxnMap.get(v.id) ?? null,
     }
   })
 }

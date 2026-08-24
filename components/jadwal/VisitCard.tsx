@@ -53,7 +53,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   // deletes, payments, or reminders from the quick-action menu.
   const canManageVisit   = !!userRole && !['therapist', 'staff', 'sport_massage_therapist'].includes(userRole)
   const canRecordPayment = !!userRole && PAYMENT_ROLES.includes(userRole)
-  const showPaymentItem  = canRecordPayment && visit.status === 'completed' && !visit.package_id
+  const showPaymentItem  = canRecordPayment && visit.status === 'completed'
   const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && !visit.package_id
   const isIncomplete     = visit.status === 'completed' && (!visit.diagnosis || !visit.treatment || (isRegioRequired(visit.service_type) && !visit.regio))
   const canRemind        = !!userRole && REMIND_ROLES.includes(userRole) && isIncomplete && !!onRemind
@@ -73,9 +73,8 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const showSellPackageItem = canRecordPayment && visit.status === 'completed'
     && (isAssessmentVisit ? (visit.has_payment && visit.visit_payment_status === 'LUNAS') : true)
 
-  // A visit linked to a package hides the normal payment item (its cost is
-  // assumed covered by the package) — this lets staff correct that when the
-  // link was a mistake, or the patient wants to pay for this session on its own.
+  // Detaching lets staff correct a mistaken package link, or bill this session
+  // on its own when the patient wants to pay outside the package.
   const showDetachPackageItem = canRecordPayment && !!visit.package_id
 
   // Mirror of the above: a visit that wasn't booked against a package can be
@@ -298,7 +297,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
                     ? <BanknoteArrowUp size={13} />
                     : <CreditCard size={13} />
                   }
-                  {visit.has_payment ? 'Tambah Pembayaran' : 'Catat Pembayaran'}
+                  {visit.has_payment ? 'Edit Pembayaran' : 'Catat Pembayaran'}
                 </button>
               </>
             )}
