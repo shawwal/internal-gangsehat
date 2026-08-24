@@ -53,6 +53,8 @@ export interface OutstandingTransaction {
   discount: number
   outstanding: number
   payment_status: string | null
+  order_id: string | null
+  payment_method: string | null
 }
 
 export async function fetchLayananHarga(serviceType: string, branchId?: string | null, jumlahSesi?: number | null): Promise<number | null> {
@@ -94,13 +96,55 @@ export async function getPatientOutstanding(patientId: string): Promise<Outstand
   const supabase = await createClient()
   const { data } = await supabase
     .from('transactions')
-    .select('id, transaction_date, category, harga, amount, discount, outstanding, payment_status')
+    .select('id, transaction_date, category, harga, amount, discount, outstanding, payment_status, order_id, payment_method, description')
     .eq('patient_id', patientId)
     .eq('type', 'income')
     .neq('status', 'rejected')
-    .gt('outstanding', 0)
     .order('transaction_date', { ascending: false })
-  return (data ?? []) as OutstandingTransaction[]
+  const rows = data ?? []
+
+  // Package/order purchases follow a SALDO model — every installment payment
+  // is inserted as its OWN transactions row sharing one order_id, copying the
+  // original harga/discount but only its own incremental amount (see
+  // addPaymentToOrder below). Since `outstanding` is a per-row GENERATED
+  // column, each installment row looks like its own standalone unpaid balance
+  // unless rows sharing an order_id are summed together first — otherwise a
+  // package with 2+ payments recorded shows a phantom extra "debt" per
+  // installment instead of one correct remaining balance.
+  const standalone = rows.filter((r) => !r.order_id)
+  const byOrder = new Map<string, typeof rows>()
+  for (const r of rows) {
+    if (!r.order_id) continue
+    const list = byOrder.get(r.order_id) ?? []
+    list.push(r)
+    byOrder.set(r.order_id, list)
+  }
+
+  const result: OutstandingTransaction[] = []
+
+  for (const r of standalone) {
+    if (r.outstanding > 0) result.push(r as OutstandingTransaction)
+  }
+
+  for (const orderRows of byOrder.values()) {
+    const summary = computeOrderPaymentSummary(orderRows as OrderPaymentRow[])
+    if (summary.sisa <= 0) continue
+    const latest = [...orderRows].sort((a, b) => b.transaction_date.localeCompare(a.transaction_date))[0]
+    result.push({
+      id: latest.id,
+      transaction_date: latest.transaction_date,
+      category: latest.category,
+      harga: summary.harga,
+      amount: summary.totalPaid,
+      discount: summary.discount,
+      outstanding: summary.sisa,
+      payment_status: latest.payment_status,
+      order_id: latest.order_id,
+      payment_method: latest.payment_method,
+    })
+  }
+
+  return result.sort((a, b) => b.transaction_date.localeCompare(a.transaction_date))
 }
 
 // ── Create transaction linked to a visit (from PaymentDialog) ─────────────────

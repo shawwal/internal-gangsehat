@@ -10,6 +10,7 @@ import type { OutstandingTransaction } from '@/app/actions/transactions'
 import { updateVisit, type VisitTransaction } from '@/app/actions/jadwal'
 import { SERVICE_TYPES, SERVICE_TO_CATEGORY, CATEGORY_TO_SERVICE_TYPE, getEffectivePackageServiceType } from '@/lib/serviceType'
 import type { ServiceType } from '@/types'
+import { SettlePaymentDialog } from '@/components/finance/SettlePaymentDialog'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface PaymentVisitInfo {
@@ -63,6 +64,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   const [outstanding, setOutstanding]         = useState<OutstandingTransaction[]>([])
   const [showOutstanding, setShowOutstanding] = useState(false)
   const [loadingOuts, setLoadingOuts]         = useState(true)
+  const [settleTarget, setSettleTarget]       = useState<OutstandingTransaction | null>(null)
 
   const [serviceType, setServiceType]     = useState<ServiceType>(
     () => getEffectivePackageServiceType(visit.service_type, visit.package_id) ?? 'LAINNYA',
@@ -109,12 +111,14 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
     }
   }, [totalSisa])
 
-  useEffect(() => {
+  function refreshOutstanding() {
     getPatientOutstanding(visit.patient_id).then((data) => {
       setOutstanding(data)
       setLoadingOuts(false)
     })
-  }, [visit.patient_id])
+  }
+
+  useEffect(refreshOutstanding, [visit.patient_id])
 
   useEffect(() => {
     fetchLayananHarga(serviceType, visit.branch_id).then((price) => {
@@ -289,9 +293,9 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                 {showOutstanding && (
                   <div className="border-t border-[#FFB35C]/15 divide-y divide-[#FFB35C]/10">
                     {outstanding.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between px-4 py-2.5">
-                        <div>
-                          <p className="text-xs font-medium text-foreground">{t.category}</p>
+                      <div key={t.id} className="flex items-center justify-between px-4 py-2.5 gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-foreground truncate">{t.category}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <p className="text-[10px] text-muted-foreground">{fmtShortDate(t.transaction_date)}</p>
                             {t.payment_status && (
@@ -301,7 +305,18 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                             )}
                           </div>
                         </div>
-                        <p className="text-xs font-semibold text-[#FFB35C]">{fmt(t.outstanding)}</p>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <p className="text-xs font-semibold text-[#FFB35C]">{fmt(t.outstanding)}</p>
+                          {t.order_id && (
+                            <button
+                              type="button"
+                              onClick={() => setSettleTarget(t)}
+                              className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-[#FFB35C]/15 text-[#FFB35C] hover:bg-[#FFB35C]/25 transition-colors cursor-pointer"
+                            >
+                              Bayar
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -490,6 +505,26 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
           </div>
         </div>
       </div>
+
+      {settleTarget && (
+        <SettlePaymentDialog
+          transaction={{
+            id: settleTarget.id,
+            order_id: settleTarget.order_id,
+            patient_name: visit.patient_name,
+            category: settleTarget.category,
+            harga: settleTarget.harga,
+            discount: settleTarget.discount,
+            amount: settleTarget.amount,
+            payment_method: settleTarget.payment_method,
+            visitLabel: null,
+          }}
+          onClose={() => {
+            setSettleTarget(null)
+            refreshOutstanding()
+          }}
+        />
+      )}
     </>
   )
 }
