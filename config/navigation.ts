@@ -472,6 +472,14 @@ export const navigation: NavItem[] = [
     group: 'griya',
   },
   {
+    key: 'griya-settings',
+    label: 'Paket & Tarif Griya Anak',
+    href: '/griya-anak/pengaturan',
+    icon: 'Tag',
+    roles: ['director', 'manager', 'admin'],
+    group: 'griya',
+  },
+  {
     key: 'notifications',
     label: 'Notifikasi',
     href: '/notifications',

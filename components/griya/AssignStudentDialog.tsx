@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Search, UserPlus } from 'lucide-react'
 import { searchPatients, addPatient, type PatientPlain } from '@/app/actions/patients'
 import { assignRecurringSlot, addSubstitute } from '@/app/actions/griyaJadwal'
+import { PackageForm } from '@/components/jadwal/buy-package/PackageForm'
 import { HARI_LABEL } from './constants'
 import { GRIYA_SERVICE_TYPES, type CellTarget } from './types'
 
@@ -34,6 +35,7 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [buyingPackage, setBuyingPackage] = useState(false)
 
   useEffect(() => { setTimeout(() => searchRef.current?.focus(), 80) }, [])
 
@@ -184,6 +186,16 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
               </select>
             </div>
 
+            {picked && (
+              <button
+                type="button"
+                onClick={() => setBuyingPackage(true)}
+                className="text-xs font-medium text-primary hover:underline cursor-pointer"
+              >
+                + Beli paket untuk {picked.name.split(' ')[0]}
+              </button>
+            )}
+
             {mode === 'assign' && (
               <>
                 <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
@@ -212,6 +224,22 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
           </button>
         </div>
       </div>
+
+      {buyingPackage && picked && (
+        <div className="fixed inset-0 z-[55] bg-black/50 flex items-center justify-center p-4" onClick={() => setBuyingPackage(false)}>
+          <div className="glass-card w-full max-w-md max-h-[85vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-foreground mb-3">Beli Paket — {picked.name}</h3>
+            <PackageForm
+              patientId={picked.id}
+              patientName={picked.name}
+              branchId={target.branchId}
+              lockedCategory="PAKET KLINIK"
+              onCancel={() => setBuyingPackage(false)}
+              onSuccess={() => setBuyingPackage(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
