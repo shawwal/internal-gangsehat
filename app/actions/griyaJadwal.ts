@@ -353,21 +353,38 @@ export async function moveSlot(input: MoveSlotInput): Promise<{ error: string | 
 
   // this_week — materialise / move the visit row for that date
   if (!input.date) return { error: 'Tanggal wajib diisi untuk pemindahan satu minggu.' }
-  const orderId = await generateOrderId(supabase)
-  const { error } = await supabase
+  const { data: existing } = await supabase
     .from('patient_visits')
-    .upsert({
-      griya_slot_id: input.slotId,
-      patient_id: slot.patient_id as string,
-      branch_id: slot.branch_id as string,
-      attending_staff_id: input.therapist_id,
-      visit_date: input.date,
-      visit_time: input.slot_time,
-      service_type: (slot.service_type as string) ?? 'SESI TERAPI',
-      status: 'scheduled',
-      order_id: orderId,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'griya_slot_id,visit_date' })
+    .select('id')
+    .eq('griya_slot_id', input.slotId)
+    .eq('visit_date', input.date)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await supabase
+      .from('patient_visits')
+      .update({
+        attending_staff_id: input.therapist_id,
+        visit_time: input.slot_time,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+    return { error: error?.message ?? null }
+  }
+
+  const orderId = await generateOrderId(supabase)
+  const { error } = await supabase.from('patient_visits').insert({
+    griya_slot_id: input.slotId,
+    patient_id: slot.patient_id as string,
+    branch_id: slot.branch_id as string,
+    attending_staff_id: input.therapist_id,
+    visit_date: input.date,
+    visit_time: input.slot_time,
+    service_type: (slot.service_type as string) ?? 'SESI TERAPI',
+    status: 'scheduled',
+    order_id: orderId,
+    updated_at: new Date().toISOString(),
+  })
   return { error: error?.message ?? null }
 }
 
@@ -397,8 +414,12 @@ export async function markAttendance(
     .maybeSingle()
 
   const patch = input.present
-    ? { kehadiran: 'HADIR', status: 'completed' }
-    : { kehadiran: 'TIDAK HADIR', status: 'cancelled', notes: input.reason ?? 'IZIN' }
+    ? { kehadiran: 'HADIR', status: 'completed', notes: null as string | null }
+    : {
+        kehadiran: 'TIDAK HADIR',
+        status: input.reason === 'ALPA' ? 'no_show' : 'cancelled',
+        notes: input.reason ?? 'IZIN',
+      }
 
   if (existing) {
     const { error } = await supabase
