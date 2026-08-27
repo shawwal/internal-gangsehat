@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useSportMassageSettings } from '@/hooks/useSportMassageSettings'
+import { useGriyaSettings } from '@/hooks/useGriyaSettings'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { fetchLayananByBranch, upsertLayanan, type LayananRow } from '@/app/actions/layanan'
 
@@ -52,6 +53,7 @@ export default function BranchSettingsPage() {
 
   const branchIds = useMemo(() => branches.map(b => b.id), [branches])
   const { enabledMap, loading: settingsLoading, toggle } = useSportMassageSettings(branchIds)
+  const { enabledMap: griyaMap, loading: griyaLoading, toggle: toggleGriya } = useGriyaSettings(branchIds)
 
   // Load sport massage layanan price for branches whose toggle is on
   useEffect(() => {
@@ -158,6 +160,32 @@ export default function BranchSettingsPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      <div className="pt-2">
+        <h2 className="text-base font-semibold text-foreground">Fitur Griya Anak</h2>
+        <p className="text-sm text-muted-foreground">Aktifkan jadwal mingguan, paket &amp; tarif, dan toko untuk cabang Griya Anak</p>
+      </div>
+
+      {griyaLoading ? (
+        <div className="text-sm text-muted-foreground">Memuat pengaturan...</div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {branches.map(b => (
+            <div key={b.id} className="glass-card p-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="font-medium text-foreground">{b.name}</div>
+                  <div className="text-xs text-muted-foreground">Fitur Griya Anak</div>
+                </div>
+                <ToggleSwitch
+                  checked={griyaMap[b.id] ?? false}
+                  onClick={() => toggleGriya(b.id, !(griyaMap[b.id] ?? false))}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

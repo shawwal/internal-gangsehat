@@ -14,6 +14,9 @@ export const ACTIVITY_RESOURCE_TYPES = {
   campaign: 'Kampanye',
   branch: 'Cabang',
   role_page_permission: 'Akses Halaman',
+  griya_slot: 'Jadwal Griya Anak',
+  griya_product: 'Produk Toko Griya Anak',
+  griya_sale: 'Penjualan Toko Griya Anak',
 } as const
 
 export type ActivityResourceType = keyof typeof ACTIVITY_RESOURCE_TYPES

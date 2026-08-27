@@ -1,6 +1,6 @@
 import type { UserRole } from '@/types'
 
-export type NavGroup = 'dashboard' | 'management' | 'hr' | 'operations' | 'finance' | 'schedule' | 'clinic' | 'marketing' | 'system'
+export type NavGroup = 'dashboard' | 'management' | 'hr' | 'operations' | 'finance' | 'schedule' | 'clinic' | 'marketing' | 'griya' | 'system'
 
 export const NAV_GROUP_LABELS: Record<NavGroup, string> = {
   dashboard:  'Beranda',
@@ -11,6 +11,7 @@ export const NAV_GROUP_LABELS: Record<NavGroup, string> = {
   schedule:   'Jadwal',
   clinic:     'Klinik',
   marketing:  'Marketing',
+  griya:      'Griya Anak',
   system:     'Sistem',
 }
 
@@ -459,6 +460,16 @@ export const navigation: NavItem[] = [
     icon: 'PieChart',
     roles: ['director'],
     group: 'clinic',
+  },
+  // Griya Anak — branch-scoped feature set (nav-hidden unless
+  // branch_griya_settings.enabled for the caller's branch; see Sidebar.tsx)
+  {
+    key: 'griya-jadwal',
+    label: 'Jadwal Griya Anak',
+    href: '/griya-anak/jadwal',
+    icon: 'Grid3x3',
+    roles: ['director', 'manager', 'admin', 'therapist'],
+    group: 'griya',
   },
   {
     key: 'notifications',
