@@ -480,6 +480,14 @@ export const navigation: NavItem[] = [
     group: 'griya',
   },
   {
+    key: 'griya-toko',
+    label: 'Toko Griya Anak',
+    href: '/griya-anak/toko',
+    icon: 'Store',
+    roles: ['director', 'manager', 'admin'],
+    group: 'griya',
+  },
+  {
     key: 'notifications',
     label: 'Notifikasi',
     href: '/notifications',

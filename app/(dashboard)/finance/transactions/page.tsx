@@ -38,6 +38,7 @@ const INCOME_CATEGORIES = [
   'SESI VISIT',
   'PAKET VISIT',
   'SPORT MASSAGE',
+  'TOKO',
   'LAINNYA',
 ]
 // Expense categories aligned with Excel PENGELUARAN
