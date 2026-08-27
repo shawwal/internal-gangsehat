@@ -44,8 +44,24 @@ export function Sidebar({ role, branchId, allowedNavKeys, collapsed }: Props) {
     return () => { cancelled = true }
   }, [branchId])
 
+  // Griya Anak feature set (jadwal / pengaturan / toko) — nav-hidden for
+  // branch-scoped roles unless their branch has it enabled. Director sees it.
+  const [griyaEnabled, setGriyaEnabled] = useState(true)
+  useEffect(() => {
+    if (!branchId) { setGriyaEnabled(true); return }
+    let cancelled = false
+    createClient()
+      .from('branch_griya_settings')
+      .select('enabled')
+      .eq('branch_id', branchId)
+      .maybeSingle()
+      .then(({ data }) => { if (!cancelled) setGriyaEnabled(data?.enabled ?? false) })
+    return () => { cancelled = true }
+  }, [branchId])
+
   const items = navForKeys(allowedNavKeys).filter(
-    (i) => i.key !== 'jadwal-sport-massage' || sportMassageEnabled,
+    (i) => (i.key !== 'jadwal-sport-massage' || sportMassageEnabled)
+        && (!i.key.startsWith('griya-') || griyaEnabled),
   )
 
   // Build ordered groups, preserving nav order
