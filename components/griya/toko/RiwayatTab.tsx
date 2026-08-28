@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { fetchSales, fetchSaleItems, voidSale, type SaleRow, type SaleItemRow } from '@/app/actions/griyaToko'
+import { fetchSales, fetchSaleItems, voidSale, deleteSale, type SaleRow, type SaleItemRow } from '@/app/actions/griyaToko'
 import { Pagination } from '@/components/leave/Pagination'
 import { useToast } from '@/context/ToastContext'
 
@@ -75,13 +75,16 @@ export function RiwayatTab({ branchId }: { branchId: string }) {
                     {s.status === 'void' ? 'Dibatalkan' : 'Selesai'}
                   </span>
                 </td>
-                <td className="px-4 py-2 text-right">
+                <td className="px-4 py-2 text-right whitespace-nowrap">
                   <button onClick={() => setOpenId(openId === s.id ? null : s.id)} className="text-xs text-primary cursor-pointer">Detail</button>
                   {s.status !== 'void' && (
                     <button
-                      onClick={async () => { if (confirm('Batalkan penjualan ini? Stok akan dikembalikan.')) { const { error } = await voidSale(s.id); if (error) showToast(error, 'error'); else { showToast('Dibatalkan', 'success'); reload() } } }}
-                      className="text-xs text-destructive ml-3 cursor-pointer">Batalkan</button>
+                      onClick={async () => { if (confirm('Batalkan penjualan ini? Stok akan dikembalikan, catatan tetap ada.')) { const { error } = await voidSale(s.id); if (error) showToast(error, 'error'); else { showToast('Dibatalkan', 'success'); reload() } } }}
+                      className="text-xs text-[#FFB35C] ml-3 cursor-pointer">Batalkan</button>
                   )}
+                  <button
+                    onClick={async () => { if (confirm('Hapus permanen dari riwayat? Stok dikembalikan & pemasukan dihapus.')) { const { error } = await deleteSale(s.id); if (error) showToast(error, 'error'); else { showToast('Dihapus', 'success'); reload() } } }}
+                    className="text-xs text-destructive ml-3 cursor-pointer">Hapus</button>
                 </td>
               </tr>
             ))}

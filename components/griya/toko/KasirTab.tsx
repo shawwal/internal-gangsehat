@@ -31,8 +31,12 @@ export function KasirTab({ branchId }: { branchId: string }) {
   const [patientQ, setPatientQ] = useState('')
   const [patientResults, setPatientResults] = useState<PatientPlain[]>([])
   const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => { fetchProducts(branchId, { activeOnly: true }).then(setProducts) }, [branchId])
+  useEffect(() => {
+    setLoading(true)
+    fetchProducts(branchId, { activeOnly: true }).then((r) => { setProducts(r); setLoading(false) })
+  }, [branchId])
 
   useEffect(() => {
     const term = patientQ.trim()
@@ -82,6 +86,8 @@ export function KasirTab({ branchId }: { branchId: string }) {
     setSaving(false)
     if (error) { showToast(error, 'error'); return }
     showToast('Penjualan tersimpan', 'success')
+    // optimistic: drop the sold qty from local stock immediately
+    setProducts((prev) => prev.map((p) => cart[p.id] ? { ...p, stock: p.stock - cart[p.id] } : p))
     setCart({}); setDiscount(''); setAmountPaid(''); setPatient(null); setPatientQ('')
     fetchProducts(branchId, { activeOnly: true }).then(setProducts)
   }
@@ -107,14 +113,20 @@ export function KasirTab({ branchId }: { branchId: string }) {
           </div>
         )}
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((p) => (
-            <button key={p.id} onClick={() => add(p)} disabled={p.stock === 0}
-              className="glass-card p-3 text-left hover:border-primary/50 transition-colors disabled:opacity-40 cursor-pointer">
-              <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
-              <p className="text-xs text-muted-foreground">{rp(p.price)} · stok {p.stock}</p>
-            </button>
-          ))}
-          {filtered.length === 0 && <p className="text-sm text-muted-foreground col-span-full py-4 text-center">Tidak ada produk.</p>}
+          {loading ? (
+            Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-16 rounded-2xl bg-muted animate-pulse" />)
+          ) : (
+            <>
+              {filtered.map((p) => (
+                <button key={p.id} onClick={() => add(p)} disabled={p.stock === 0}
+                  className="glass-card p-3 text-left hover:border-primary/50 transition-colors disabled:opacity-40 cursor-pointer">
+                  <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
+                  <p className="text-xs text-muted-foreground">{rp(p.price)} · stok {p.stock}</p>
+                </button>
+              ))}
+              {filtered.length === 0 && <p className="text-sm text-muted-foreground col-span-full py-4 text-center">Tidak ada produk.</p>}
+            </>
+          )}
         </div>
       </div>
 

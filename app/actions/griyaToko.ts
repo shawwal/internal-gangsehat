@@ -270,6 +270,22 @@ export async function fetchSaleItems(saleId: string): Promise<SaleItemRow[]> {
   return (data ?? []) as SaleItemRow[]
 }
 
+/** Restore stock for a sale's line items (+movement rows). Best-effort. */
+async function restockFromSale(a: AuthOk, saleId: string, branchId: string) {
+  const { data: items } = await a.supabase
+    .from('griya_sale_items').select('product_id, qty').eq('sale_id', saleId)
+  for (const it of items ?? []) {
+    if (!it.product_id) continue
+    const { data: p } = await a.supabase.from('griya_products').select('stock').eq('id', it.product_id).single()
+    if (!p) continue
+    await a.supabase.from('griya_products').update({ stock: p.stock + it.qty }).eq('id', it.product_id)
+    await a.supabase.from('griya_stock_movements').insert({
+      product_id: it.product_id, branch_id: branchId, delta: it.qty,
+      reason: 'void', sale_id: saleId, created_by: a.userId,
+    })
+  }
+}
+
 export async function voidSale(saleId: string): Promise<{ error: string | null }> {
   const a = await requireWrite()
   if ('error' in a) return { error: a.error }
@@ -279,20 +295,7 @@ export async function voidSale(saleId: string): Promise<{ error: string | null }
   if (!sale) return { error: 'Penjualan tidak ditemukan' }
   if (sale.status === 'void') return { error: 'Penjualan sudah dibatalkan' }
 
-  const { data: items } = await a.supabase
-    .from('griya_sale_items').select('product_id, qty').eq('sale_id', saleId)
-
-  for (const it of items ?? []) {
-    if (!it.product_id) continue
-    const { data: p } = await a.supabase.from('griya_products').select('stock').eq('id', it.product_id).single()
-    if (p) {
-      await a.supabase.from('griya_products').update({ stock: p.stock + it.qty }).eq('id', it.product_id)
-      await a.supabase.from('griya_stock_movements').insert({
-        product_id: it.product_id, branch_id: sale.branch_id, delta: it.qty,
-        reason: 'void', sale_id: saleId, created_by: a.userId,
-      })
-    }
-  }
+  await restockFromSale(a, saleId, sale.branch_id as string)
 
   await a.supabase.from('griya_sales').update({ status: 'void' }).eq('id', saleId)
   if (sale.transaction_id) {
@@ -304,6 +307,34 @@ export async function voidSale(saleId: string): Promise<{ error: string | null }
   await logActivity({
     supabase: a.supabase, userId: a.userId, action: 'update', resourceType: 'griya_sale',
     resourceId: saleId, branchId: sale.branch_id as string, newValues: { status: 'void' },
+  })
+  return { error: null }
+}
+
+/** Hard-delete a sale from history. Restores stock if it was still completed,
+ *  removes the linked income transaction, then deletes the sale (+items cascade). */
+export async function deleteSale(saleId: string): Promise<{ error: string | null }> {
+  const a = await requireWrite()
+  if ('error' in a) return { error: a.error }
+
+  const { data: sale } = await a.supabase
+    .from('griya_sales').select('branch_id, status, transaction_id').eq('id', saleId).single()
+  if (!sale) return { error: 'Penjualan tidak ditemukan' }
+
+  if (sale.status === 'completed') {
+    await restockFromSale(a, saleId, sale.branch_id as string)
+  }
+  if (sale.transaction_id) {
+    await a.supabase.from('transactions').delete().eq('id', sale.transaction_id)
+  }
+  // detach movements (sale_id FK is ON DELETE SET NULL), then delete the sale
+  await a.supabase.from('griya_stock_movements').update({ sale_id: null }).eq('sale_id', saleId)
+  const { error } = await a.supabase.from('griya_sales').delete().eq('id', saleId)
+  if (error) return { error: error.message }
+
+  await logActivity({
+    supabase: a.supabase, userId: a.userId, action: 'delete', resourceType: 'griya_sale',
+    resourceId: saleId, branchId: sale.branch_id as string,
   })
   return { error: null }
 }

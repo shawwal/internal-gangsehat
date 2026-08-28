@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ShoppingCart, Package, History } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { resolveGriyaBranchId } from '@/app/actions/griyaJadwal'
+import { useGriyaBranch } from '@/hooks/useGriyaBranch'
 import { KasirTab } from '@/components/griya/toko/KasirTab'
 import { ProdukTab } from '@/components/griya/toko/ProdukTab'
 import { RiwayatTab } from '@/components/griya/toko/RiwayatTab'
@@ -15,27 +14,23 @@ const TABS: { key: Tab; label: string; icon: typeof Package }[] = [
   { key: 'riwayat', label: 'Riwayat', icon: History },
 ]
 
+function Skeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="h-6 w-48 rounded bg-muted" />
+      <div className="h-10 w-full rounded-xl bg-muted" />
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-16 rounded-2xl bg-muted" />)}
+      </div>
+    </div>
+  )
+}
+
 export default function GriyaTokoPage() {
-  const [branchId, setBranchId] = useState<string | null | undefined>(undefined)
-  const [enabled, setEnabled] = useState<boolean | null>(null)
+  const { loading, branchId, enabled } = useGriyaBranch()
   const [tab, setTab] = useState<Tab>('kasir')
 
-  useEffect(() => {
-    (async () => {
-      const bid = await resolveGriyaBranchId()
-      setBranchId(bid)
-      if (!bid) { setEnabled(false); return }
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data: profile } = await supabase.from('internal_profiles').select('role').eq('id', user!.id).single()
-      const { data: s } = await supabase.from('branch_griya_settings').select('enabled').eq('branch_id', bid).maybeSingle()
-      setEnabled(profile?.role === 'director' ? true : (s?.enabled ?? false))
-    })()
-  }, [])
-
-  if (branchId === undefined || enabled === null) {
-    return <div className="text-sm text-muted-foreground">Memuat...</div>
-  }
+  if (loading) return <Skeleton />
   if (!branchId || !enabled) {
     return <div className="glass-card p-8 text-sm text-muted-foreground">Fitur Toko Griya Anak belum aktif untuk cabang ini.</div>
   }
