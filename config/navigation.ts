@@ -496,6 +496,14 @@ export const navigation: NavItem[] = [
     group: 'griya',
   },
   {
+    key: 'griya-akuntansi',
+    label: 'Akuntansi Griya Anak',
+    href: '/griya-anak/akuntansi',
+    icon: 'BookOpen',
+    roles: ['director', 'manager', 'admin'],
+    group: 'griya',
+  },
+  {
     key: 'notifications',
     label: 'Notifikasi',
     href: '/notifications',

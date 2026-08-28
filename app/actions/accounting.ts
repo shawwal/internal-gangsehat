@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 
-const MANAGE_ROLES = ['finance', 'manager', 'director']
+const MANAGE_ROLES = ['finance', 'manager', 'director', 'admin']
 
 async function requireBranchAccess(): Promise<{ userId: string; role: string; branchId: string | null } | { error: string }> {
   const supabase = await createClient()
