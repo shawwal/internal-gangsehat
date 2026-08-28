@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, ExternalLink, GraduationCap, RotateCcw, Phone, MapPin, Users, CalendarClock } from 'lucide-react'
+import { ChevronLeft, ExternalLink, GraduationCap, RotateCcw, Phone, MapPin, Users, CalendarClock, Pencil } from 'lucide-react'
+import { StudentEditForm } from '@/components/griya/StudentEditForm'
 import { fetchPatient, type PatientPlain } from '@/app/actions/patients'
 import { fetchPatientPackages } from '@/app/actions/packages'
 import type { PatientPackage } from '@/types'
@@ -37,6 +38,7 @@ export default function GriyaSiswaDetailPage() {
   const [packages, setPackages] = useState<PatientPackage[]>([])
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -90,7 +92,13 @@ export default function GriyaSiswaDetailPage() {
             {patient.birthDate && ` · lahir ${fmtDate(patient.birthDate)}`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {canEdit && !editing && (
+            <button onClick={() => setEditing(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted cursor-pointer">
+              <Pencil size={14} /> Ubah Data
+            </button>
+          )}
           <a href={`/patients/${id}/visits`} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted cursor-pointer">
             <ExternalLink size={14} /> Rekam Pasien
@@ -110,25 +118,35 @@ export default function GriyaSiswaDetailPage() {
         </div>
       </div>
 
-      {/* info + stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="glass-card p-4 md:col-span-2 space-y-2 text-sm">
-          {patient.keluhan && <p><span className="text-muted-foreground">Keluhan:</span> {patient.keluhan}</p>}
-          {patient.medical_notes && <p className="flex gap-1.5"><Users size={14} className="mt-0.5 shrink-0 text-muted-foreground" />{patient.medical_notes}</p>}
-          {patient.phone && <p className="flex gap-1.5"><Phone size={14} className="mt-0.5 shrink-0 text-muted-foreground" />{patient.phone}</p>}
-          {(patient.address || patient.kecamatan) && (
-            <p className="flex gap-1.5">
-              <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
-              {[patient.address, patient.kelurahan, patient.kecamatan, patient.kabupaten_kota].filter(Boolean).join(', ')}
-            </p>
-          )}
+      {editing ? (
+        <StudentEditForm
+          patient={patient}
+          onCancel={() => setEditing(false)}
+          onSaved={() => { setEditing(false); showToast('Data disimpan', 'success'); load() }}
+        />
+      ) : (
+        /* info + stats */
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="glass-card p-4 md:col-span-2 space-y-2 text-sm">
+            {patient.no_rm && <p><span className="text-muted-foreground">No. RM:</span> {patient.no_rm}</p>}
+            {patient.agama && <p><span className="text-muted-foreground">Agama:</span> {patient.agama}</p>}
+            {patient.keluhan && <p><span className="text-muted-foreground">Keluhan:</span> {patient.keluhan}</p>}
+            {patient.medical_notes && <p className="flex gap-1.5"><Users size={14} className="mt-0.5 shrink-0 text-muted-foreground" />{patient.medical_notes}</p>}
+            {patient.phone && <p className="flex gap-1.5"><Phone size={14} className="mt-0.5 shrink-0 text-muted-foreground" />{patient.phone}</p>}
+            {(patient.address || patient.kecamatan) && (
+              <p className="flex gap-1.5">
+                <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
+                {[patient.address, patient.kelurahan, patient.kecamatan, patient.kabupaten_kota].filter(Boolean).join(', ')}
+              </p>
+            )}
+          </div>
+          <div className="glass-card p-4 grid grid-cols-3 gap-2 text-center">
+            <div><div className="text-lg font-bold text-[#34C759]">{detail?.stats.attended ?? 0}</div><div className="text-[10px] text-muted-foreground uppercase">Hadir</div></div>
+            <div><div className="text-lg font-bold text-[#FF3B30]">{detail?.stats.absent ?? 0}</div><div className="text-[10px] text-muted-foreground uppercase">Absen</div></div>
+            <div><div className="text-lg font-bold text-primary">{detail?.stats.scheduled ?? 0}</div><div className="text-[10px] text-muted-foreground uppercase">Terjadwal</div></div>
+          </div>
         </div>
-        <div className="glass-card p-4 grid grid-cols-3 gap-2 text-center">
-          <div><div className="text-lg font-bold text-[#34C759]">{detail?.stats.attended ?? 0}</div><div className="text-[10px] text-muted-foreground uppercase">Hadir</div></div>
-          <div><div className="text-lg font-bold text-[#FF3B30]">{detail?.stats.absent ?? 0}</div><div className="text-[10px] text-muted-foreground uppercase">Absen</div></div>
-          <div><div className="text-lg font-bold text-primary">{detail?.stats.scheduled ?? 0}</div><div className="text-[10px] text-muted-foreground uppercase">Terjadwal</div></div>
-        </div>
-      </div>
+      )}
 
       {/* recurring schedule */}
       <div className="glass-card overflow-hidden">

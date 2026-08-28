@@ -471,6 +471,7 @@ export interface UpdatePatientInput {
   kecamatan?: string
   kabupaten_kota?: string
   provinsi?: string
+  keluhan?: string
 }
 
 export async function updatePatient(
@@ -491,7 +492,7 @@ export async function updatePatient(
     idNumber:         input.idNumber,
     emergencyContact: input.emergencyContact,
   })
-  const { error } = await supabase.from('patients').update({
+  const { data: updated, error } = await supabase.from('patients').update({
     encrypted_name:              enc.encrypted_name,
     encrypted_phone:             enc.encrypted_phone,
     encrypted_address:           enc.encrypted_address           ?? null,
@@ -513,7 +514,12 @@ export async function updatePatient(
     kecamatan:     input.kecamatan      ?? null,
     kabupaten_kota: input.kabupaten_kota ?? null,
     provinsi:      input.provinsi       ?? null,
-  }).eq('id', id)
+    keluhan:       input.keluhan        ?? null,
+  }).eq('id', id).select('id')
+
+  if (!error && (!updated || updated.length === 0)) {
+    return { error: 'Perubahan tidak tersimpan — akun Anda tidak punya izin mengubah data pasien.' }
+  }
 
   if (!error) {
     const { data: { user } } = await supabase.auth.getUser()
