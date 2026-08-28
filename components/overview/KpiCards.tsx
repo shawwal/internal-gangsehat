@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Users, TrendingUp, TrendingDown, Activity, Package } from 'lucide-react'
-import { formatRp } from './utils'
+import { formatRp, formatRpCompact } from './utils'
 
 interface StatCardProps {
   title: string
@@ -9,9 +9,10 @@ interface StatCardProps {
   color: string
   sub?: string
   href?: string
+  fullValue?: string
 }
 
-function GlassStatCard({ title, value, icon, color, sub, href }: StatCardProps) {
+function GlassStatCard({ title, value, icon, color, sub, href, fullValue }: StatCardProps) {
   const inner = (
     <>
       <div className="flex items-center justify-between mb-3">
@@ -20,21 +21,21 @@ function GlassStatCard({ title, value, icon, color, sub, href }: StatCardProps) 
           {icon}
         </div>
       </div>
-      <p className="text-2xl font-bold text-foreground">{value}</p>
+      <p className="text-2xl font-bold text-foreground tracking-tight tabular-nums whitespace-nowrap" title={fullValue}>{value}</p>
       {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
     </>
   )
 
   if (href) {
     return (
-      <Link href={href} className="glass-card p-5 hover:scale-[1.02] hover:ring-1 hover:ring-primary/30 transition-all duration-200 cursor-pointer block">
+      <Link href={href} className="glass-card p-5 min-w-0 hover:scale-[1.02] hover:ring-1 hover:ring-primary/30 transition-all duration-200 cursor-pointer block">
         {inner}
       </Link>
     )
   }
 
   return (
-    <div className="glass-card p-5 hover:scale-[1.02] transition-transform duration-200 cursor-default">
+    <div className="glass-card p-5 min-w-0 hover:scale-[1.02] transition-transform duration-200 cursor-default">
       {inner}
     </div>
   )
@@ -94,7 +95,8 @@ export function KpiCards({
       />
       <GlassStatCard
         title="Pemasukan"
-        value={formatRp(totalIncome)}
+        value={formatRpCompact(totalIncome)}
+        fullValue={formatRp(totalIncome)}
         icon={<TrendingUp size={16} className="text-white" />}
         color="bg-[var(--chart-4)]"
         sub="Lihat per cabang →"
@@ -102,12 +104,13 @@ export function KpiCards({
       />
       <GlassStatCard
         title={netProfit >= 0 ? 'Laba Bersih' : 'Rugi Bersih'}
-        value={formatRp(Math.abs(netProfit))}
+        value={formatRpCompact(Math.abs(netProfit))}
+        fullValue={formatRp(Math.abs(netProfit))}
         icon={netProfit >= 0
           ? <TrendingUp size={16} className="text-white" />
           : <TrendingDown size={16} className="text-white" />}
         color={netProfit >= 0 ? 'bg-green-500' : 'bg-destructive'}
-        sub={`Keluar ${formatRp(totalExpense)}`}
+        sub={`Keluar ${formatRpCompact(totalExpense)}`}
       />
     </div>
   )

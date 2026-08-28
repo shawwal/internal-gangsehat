@@ -191,7 +191,7 @@ export const navigation: NavItem[] = [
   // Finance
   {
     key: 'finance-home',
-    label: 'Beranda',
+    label: 'Beranda Keuangan',
     href: '/finance',
     icon: 'LayoutDashboard',
     roles: ['finance'],
@@ -241,7 +241,7 @@ export const navigation: NavItem[] = [
   // HR
   {
     key: 'hr-home',
-    label: 'Beranda',
+    label: 'Beranda HR',
     href: '/hr',
     icon: 'LayoutDashboard',
     roles: ['hr'],
@@ -363,7 +363,7 @@ export const navigation: NavItem[] = [
   // Marketing
   {
     key: 'marketing-home',
-    label: 'Beranda',
+    label: 'Beranda Marketing',
     href: '/marketing',
     icon: 'LayoutDashboard',
     roles: ['marketing'],
