@@ -1,5 +1,6 @@
 -- Migration: seed Griya Anak's real service catalog + store items (Milestone 2/3)
--- Run this in the Supabase SQL editor. Safe to run after 067 + 068.
+-- Run this in the Supabase SQL editor, AFTER 066 + 067 + 068.
+-- (The store-items part self-skips with a NOTICE if 068 hasn't run yet.)
 --
 -- Source: the "PENGATURAN" sheet of FT-KLINIK GRIYA ANAK.xlsx (Griya Anak's
 -- own price list). Services (non-highlighted rows) go to internal_layanan;
@@ -50,19 +51,23 @@ BEGIN
   );
 
   -- ── store items → griya_products (stock 0 — restock in /griya-anak/toko) ─
-  INSERT INTO public.griya_products (branch_id, name, category, price, stock, is_active)
-  SELECT v_branch, p.name, p.category, p.price, 0, true
-  FROM (VALUES
-    ('Buku',       'BUKU',        30000),
-    ('Busy Jar',   'ALAT TERAPI', 40000),
-    ('Puzzle',     'ALAT TERAPI', 30000),
-    ('Sikat',      'ALAT TERAPI', 60000),
-    ('Flash Card', 'BUKU',        60000),
-    ('Strappal',   'ALAT TERAPI', 50000),
-    ('Sepatu',     'MERCHANDISE', 0)
-  ) AS p(name, category, price)
-  WHERE NOT EXISTS (
-    SELECT 1 FROM public.griya_products gp
-    WHERE gp.branch_id = v_branch AND gp.name = p.name
-  );
+  IF to_regclass('public.griya_products') IS NULL THEN
+    RAISE NOTICE 'Skipping store items — run 068-griya-anak-toko.sql first, then re-run this file.';
+  ELSE
+    INSERT INTO public.griya_products (branch_id, name, category, price, stock, is_active)
+    SELECT v_branch, p.name, p.category, p.price, 0, true
+    FROM (VALUES
+      ('Buku',       'BUKU',        30000),
+      ('Busy Jar',   'ALAT TERAPI', 40000),
+      ('Puzzle',     'ALAT TERAPI', 30000),
+      ('Sikat',      'ALAT TERAPI', 60000),
+      ('Flash Card', 'BUKU',        60000),
+      ('Strappal',   'ALAT TERAPI', 50000),
+      ('Sepatu',     'MERCHANDISE', 0)
+    ) AS p(name, category, price)
+    WHERE NOT EXISTS (
+      SELECT 1 FROM public.griya_products gp
+      WHERE gp.branch_id = v_branch AND gp.name = p.name
+    );
+  END IF;
 END $$;
