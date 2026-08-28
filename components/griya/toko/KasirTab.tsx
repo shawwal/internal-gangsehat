@@ -21,6 +21,7 @@ export function KasirTab({ branchId }: { branchId: string }) {
   const { showToast } = useToast()
   const [products, setProducts] = useState<GriyaProduct[]>([])
   const [q, setQ] = useState('')
+  const [cat, setCat] = useState<string>('ALL')
   const [cart, setCart] = useState<Record<string, number>>({})
   const [discount, setDiscount] = useState('')
   const [method, setMethod] = useState(PAYMENT_METHODS[0])
@@ -40,7 +41,10 @@ export function KasirTab({ branchId }: { branchId: string }) {
     return () => clearTimeout(t)
   }, [patientQ])
 
-  const filtered = products.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()))
+  const categories = ['ALL', ...Array.from(new Set(products.map((p) => p.category))).sort()]
+  const filtered = products.filter(
+    (p) => (cat === 'ALL' || p.category === cat) && p.name.toLowerCase().includes(q.toLowerCase()),
+  )
   const subtotal = useMemo(
     () => Object.entries(cart).reduce((s, [id, qty]) => s + (products.find((p) => p.id === id)?.price ?? 0) * qty, 0),
     [cart, products],
@@ -90,6 +94,18 @@ export function KasirTab({ branchId }: { branchId: string }) {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari produk..." className={`${inputCls} pl-8`} />
         </div>
+        {categories.length > 2 && (
+          <div className="flex gap-1.5 flex-wrap">
+            {categories.map((c) => (
+              <button key={c} onClick={() => setCat(c)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
+                  cat === c ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-muted'
+                }`}>
+                {c === 'ALL' ? 'Semua' : c}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((p) => (
             <button key={p.id} onClick={() => add(p)} disabled={p.stock === 0}

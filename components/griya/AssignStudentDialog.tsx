@@ -4,9 +4,15 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Search, UserPlus } from 'lucide-react'
 import { searchPatients, addPatient, type PatientPlain } from '@/app/actions/patients'
 import { assignRecurringSlot, addSubstitute } from '@/app/actions/griyaJadwal'
+import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
 import { PackageForm } from '@/components/jadwal/buy-package/PackageForm'
+import { CATEGORY_TO_SERVICE_TYPE } from '@/lib/serviceType'
 import { HARI_LABEL } from './constants'
 import { GRIYA_SERVICE_TYPES, type CellTarget } from './types'
+
+function rp(n: number) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
+}
 
 interface Props {
   target: CellTarget
@@ -30,6 +36,8 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
 
   // slot options
   const [serviceType, setServiceType] = useState<string>('SESI TERAPI')
+  const [layanan, setLayanan] = useState<LayananRow[]>([])
+  const [layananId, setLayananId] = useState<string>('')
   const [startDate, setStartDate] = useState(target.dateIso)
   const [onlyThisWeek, setOnlyThisWeek] = useState(mode === 'substitute')
 
@@ -38,6 +46,10 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
   const [buyingPackage, setBuyingPackage] = useState(false)
 
   useEffect(() => { setTimeout(() => searchRef.current?.focus(), 80) }, [])
+
+  useEffect(() => {
+    fetchLayananByBranch(target.branchId).then((rows) => setLayanan(rows.filter((r) => r.is_active)))
+  }, [target.branchId])
 
   useEffect(() => {
     const term = q.trim()
@@ -180,10 +192,31 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
           <div className="space-y-3 pt-3 border-t border-border/30">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Layanan</label>
-              <select value={serviceType} onChange={(e) => setServiceType(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
-                {GRIYA_SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              {layanan.length > 0 ? (
+                <select
+                  value={layananId}
+                  onChange={(e) => {
+                    setLayananId(e.target.value)
+                    const row = layanan.find((l) => l.id === e.target.value)
+                    if (row) setServiceType(CATEGORY_TO_SERVICE_TYPE[row.kategori] ?? 'LAINNYA')
+                  }}
+                  className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">— pilih layanan —</option>
+                  {Array.from(new Set(layanan.map((l) => l.kategori))).map((kat) => (
+                    <optgroup key={kat} label={kat}>
+                      {layanan.filter((l) => l.kategori === kat).map((l) => (
+                        <option key={l.id} value={l.id}>{l.nama} · {rp(l.harga)}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              ) : (
+                <select value={serviceType} onChange={(e) => setServiceType(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
+                  {GRIYA_SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              )}
             </div>
 
             {picked && (
