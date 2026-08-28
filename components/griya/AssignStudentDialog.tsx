@@ -98,7 +98,7 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="glass-card w-full max-w-md h-[78vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="glass-card w-full max-w-2xl max-h-[88vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between p-5 border-b border-border/30">
           <div>
             <h2 className="text-base font-semibold text-foreground">
@@ -145,7 +145,7 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
                   <button onClick={() => setPicked(null)} className="text-xs text-primary cursor-pointer">ganti</button>
                 </div>
               ) : (
-                <div className="space-y-1 max-h-52 overflow-y-auto">
+                <div className="space-y-1 max-h-72 overflow-y-auto">
                   {searching && <p className="text-xs text-muted-foreground px-1">Mencari...</p>}
                   {results.map((p) => (
                     <button
