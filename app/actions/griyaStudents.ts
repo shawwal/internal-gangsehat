@@ -63,22 +63,20 @@ export async function searchGriyaStudents(term: string, branchId?: string | null
   }
   if (!bid) return []
 
-  const { data: members } = await supabase
-    .from('griya_students').select('patient_id').eq('branch_id', bid).neq('status', 'inactive')
-  const ids = (members ?? []).map((m) => m.patient_id)
-  if (ids.length === 0) return []
-
+  // Embed patients so the name filter/limit run DB-side — a client-side
+  // .in('id', [...1000s]) would blow the PostgREST URL limit.
   const { data } = await supabase
-    .from('patients')
-    .select('id, encrypted_name, no_rm, name_normalized')
-    .in('id', ids)
-    .ilike('name_normalized', `%${q}%`)
-    .order('name_normalized')
+    .from('griya_students')
+    .select('patient_id, patients!inner(id, encrypted_name, no_rm, name_normalized)')
+    .eq('branch_id', bid)
+    .neq('status', 'inactive')
+    .ilike('patients.name_normalized', `%${q}%`)
     .limit(25)
 
-  return (data ?? []).map((p) => {
+  return (data ?? []).map((row) => {
+    const p = (row as unknown as { patients: { id: string; encrypted_name: string | null; no_rm: string | null } }).patients
     const dec = decName(p)
-    return { id: p.id as string, name: dec.name, no_rm: (p.no_rm as string | null) ?? null }
+    return { id: p.id, name: dec.name, no_rm: p.no_rm ?? null }
   })
 }
 
@@ -117,58 +115,55 @@ export async function fetchGriyaStudentsPage(params: {
   }
   if (!bid) return { students: [], total: 0 }
 
-  // membership rows for this branch
-  let mq = supabase.from('griya_students').select('patient_id, status, created_at').eq('branch_id', bid)
-  if (params.status && params.status !== 'all') mq = mq.eq('status', params.status)
-  const { data: members } = await mq
-  let rows = (members ?? []) as { patient_id: string; status: string; created_at: string }[]
-  if (rows.length === 0) return { students: [], total: 0 }
-
-  const ids = rows.map((r) => r.patient_id)
-
-  // decrypt names (+ optional name search)
-  const { data: patients } = await supabase
-    .from('patients')
-    .select('id, encrypted_name, encrypted_phone, encrypted_birth_date, gender, keluhan, name_normalized')
-    .in('id', ids)
-
   const term = params.search?.trim().toLowerCase() ?? ''
-  const pMap = new Map<string, GriyaStudentRow>()
-  for (const p of patients ?? []) {
-    if (term && !String(p.name_normalized ?? '').includes(term)) continue
-    const dec = decName(p)
-    pMap.set(p.id as string, {
-      patient_id: p.id as string,
-      name: dec.name,
-      phone: dec.phone,
-      gender: (p.gender as string | null) ?? null,
-      birthDate: dec.birthDate,
-      keluhan: (p.keluhan as string | null) ?? null,
-      status: 'active',
-      activeSlots: 0,
-      createdAt: '',
-    })
-  }
+  const from = (params.page - 1) * params.pageSize
+  const to = from + params.pageSize - 1
 
-  // active slot counts
+  // Embed patients — filter/sort/paginate DB-side (name_normalized is plaintext).
+  let query = supabase
+    .from('griya_students')
+    .select(
+      'patient_id, status, created_at, patients!inner(id, encrypted_name, encrypted_phone, encrypted_birth_date, gender, keluhan, name_normalized)',
+      { count: 'exact' },
+    )
+    .eq('branch_id', bid)
+  if (params.status && params.status !== 'all') query = query.eq('status', params.status)
+  if (term) query = query.ilike('patients.name_normalized', `%${term}%`)
+  query = query.order('created_at', { ascending: true }).range(from, to)
+
+  const { data, count } = await query
+  const pageRows = (data ?? []) as unknown as {
+    patient_id: string; status: string; created_at: string
+    patients: { id: string; encrypted_name: string | null; encrypted_phone: string | null; encrypted_birth_date: string | null; gender: string | null; keluhan: string | null }
+  }[]
+  if (pageRows.length === 0) return { students: [], total: count ?? 0 }
+
+  const pageIds = pageRows.map((r) => r.patient_id)
   const { data: slots } = await supabase
     .from('griya_schedule_slots')
     .select('patient_id')
     .eq('branch_id', bid)
     .eq('status', 'active')
-    .in('patient_id', ids)
+    .in('patient_id', pageIds)
   const slotCount = new Map<string, number>()
   for (const s of slots ?? []) slotCount.set(s.patient_id as string, (slotCount.get(s.patient_id as string) ?? 0) + 1)
 
-  rows = rows.filter((r) => pMap.has(r.patient_id))
-  const merged = rows.map((r) => {
-    const base = pMap.get(r.patient_id)!
-    return { ...base, status: r.status, createdAt: r.created_at, activeSlots: slotCount.get(r.patient_id) ?? 0 }
+  const students: GriyaStudentRow[] = pageRows.map((r) => {
+    const dec = decName(r.patients)
+    return {
+      patient_id: r.patient_id,
+      name: dec.name,
+      phone: dec.phone,
+      gender: r.patients.gender ?? null,
+      birthDate: dec.birthDate,
+      keluhan: r.patients.keluhan ?? null,
+      status: r.status,
+      activeSlots: slotCount.get(r.patient_id) ?? 0,
+      createdAt: r.created_at,
+    }
   })
-  merged.sort((a, b) => a.name.localeCompare(b.name, 'id'))
 
-  const from = (params.page - 1) * params.pageSize
-  return { students: merged.slice(from, from + params.pageSize), total: merged.length }
+  return { students, total: count ?? students.length }
 }
 
 // ── mutations ───────────────────────────────────────────────────────────────
