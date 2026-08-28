@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Crown, Loader2, Trash2, Pencil, ArrowDownCircle, X } from 'lucide-react'
+import { Crown, Loader2, Trash2, Pencil, ArrowDownCircle, KeyRound, X } from 'lucide-react'
 import { UserAvatar } from './UserAvatar'
+import { LoginIndicator } from './LoginIndicator'
 import { formatDate, ROLE_LABELS, STAFF_ROLES } from './types'
 import type { UserRow, BranchOption, UserRole } from './types'
+import type { UserAuthMeta } from '@/app/actions/users-auth-meta'
 
 interface Props {
   users: UserRow[]
@@ -12,11 +14,13 @@ interface Props {
   onUpdateField: (id: string, patch: Partial<Pick<UserRow, 'role' | 'branch_id' | 'is_active'>>) => void
   onDeleteTarget: (user: UserRow) => void
   onEditDetails: (user: UserRow) => void
+  onChangePassword: (user: UserRow) => void
+  authMeta: Record<string, UserAuthMeta>
 }
 
 interface DowngradeTarget { id: string; name: string }
 
-export function DirectorCards({ users, branches, currentUserId, savingId, onUpdateField, onDeleteTarget, onEditDetails }: Props) {
+export function DirectorCards({ users, branches, currentUserId, savingId, onUpdateField, onDeleteTarget, onEditDetails, onChangePassword, authMeta }: Props) {
   const [downgradeTarget, setDowngradeTarget] = useState<DowngradeTarget | null>(null)
   const [newRole, setNewRole]   = useState<UserRole>('staff')
   const [newBranch, setNewBranch] = useState('')
@@ -77,6 +81,13 @@ export function DirectorCards({ users, branches, currentUserId, savingId, onUpda
                   {!isSelf && (
                     <>
                       <button
+                        onClick={() => onChangePassword(u)}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        title="Ubah kata sandi"
+                      >
+                        <KeyRound size={13} />
+                      </button>
+                      <button
                         onClick={() => openDowngrade(u)}
                         className="p-1.5 rounded-lg text-muted-foreground hover:text-secondary-foreground hover:bg-secondary/20 transition-colors"
                         title="Turunkan peran"
@@ -117,7 +128,10 @@ export function DirectorCards({ users, branches, currentUserId, savingId, onUpda
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground">Bergabung {formatDate(u.created_at)}</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">Bergabung {formatDate(u.created_at)}</p>
+                <LoginIndicator meta={authMeta[u.id]} />
+              </div>
             </div>
           )
         })}

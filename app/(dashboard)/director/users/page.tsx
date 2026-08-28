@@ -6,6 +6,7 @@ import { UserPlus, Loader2, Archive } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activityLog'
 import { deleteInternalUser } from '@/app/actions/delete-user'
+import { getUsersAuthMeta, type UserAuthMeta } from '@/app/actions/users-auth-meta'
 import { UserTabs }    from '@/components/users/UserTabs'
 import { UserFilters } from '@/components/users/UserFilters'
 import { StaffTable }  from '@/components/users/StaffTable'
@@ -13,12 +14,14 @@ import { DirectorCards } from '@/components/users/DirectorCards'
 import { InviteModal } from '@/components/users/InviteModal'
 import { DeleteModal } from '@/components/users/DeleteModal'
 import { EditUserModal } from '@/components/users/EditUserModal'
+import { ChangePasswordModal } from '@/components/users/ChangePasswordModal'
 import { STAFF_ROLES } from '@/components/users/types'
 import type { UserRow, BranchOption, Tab, UserRole } from '@/components/users/types'
 
 export default function UsersPage() {
   const [users, setUsers]       = useState<UserRow[]>([])
   const [branches, setBranches] = useState<BranchOption[]>([])
+  const [authMeta, setAuthMeta] = useState<Record<string, UserAuthMeta>>({})
   const [loading, setLoading]   = useState(true)
   const [tab, setTab]           = useState<Tab>('staff')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -32,6 +35,7 @@ export default function UsersPage() {
   const [savingId, setSavingId]       = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null)
   const [editTarget, setEditTarget]   = useState<UserRow | null>(null)
+  const [pwTarget, setPwTarget]       = useState<UserRow | null>(null)
   const [isPending, startTransition]  = useTransition()
 
   async function load() {
@@ -49,6 +53,10 @@ export default function UsersPage() {
     setUsers((usersData ?? []) as unknown as UserRow[])
     setBranches((branchData ?? []) as BranchOption[])
     setLoading(false)
+
+    getUsersAuthMeta().then((res) => {
+      if (!res.error) setAuthMeta(res.data)
+    })
   }
 
   useEffect(() => { load() }, [])
@@ -165,6 +173,8 @@ export default function UsersPage() {
           onUpdateField={updateField}
           onDeleteTarget={setDeleteTarget}
           onEditDetails={setEditTarget}
+          onChangePassword={setPwTarget}
+          authMeta={authMeta}
         />
       ) : (
         <StaffTable
@@ -176,6 +186,8 @@ export default function UsersPage() {
           onUpdateField={updateField}
           onDeleteTarget={setDeleteTarget}
           onEditDetails={setEditTarget}
+          onChangePassword={setPwTarget}
+          authMeta={authMeta}
         />
       )}
 
@@ -197,6 +209,13 @@ export default function UsersPage() {
           isPending={isPending}
           onCancel={() => setDeleteTarget(null)}
           onConfirm={confirmDelete}
+        />
+      )}
+
+      {pwTarget && (
+        <ChangePasswordModal
+          user={pwTarget}
+          onClose={() => setPwTarget(null)}
         />
       )}
 

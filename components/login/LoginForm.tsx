@@ -92,6 +92,27 @@ export function LoginForm() {
         <p className="text-sm text-muted-foreground mt-1">Masuk ke akun Anda untuk melanjutkan</p>
       </div>
 
+      {/* Google — primary option */}
+      <button
+        type="button"
+        onClick={handleGoogle}
+        disabled={busy}
+        className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl text-sm font-semibold border border-border bg-background text-foreground hover:bg-muted active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer min-h-[48px]"
+      >
+        {googleLoading ? <Spinner /> : <GoogleIcon />}
+        <span>Masuk dengan Google</span>
+      </button>
+
+      {/* Divider */}
+      <div className="relative my-5">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card px-2 text-muted-foreground">atau masuk dengan email</span>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Email */}
         <div>
@@ -158,27 +179,6 @@ export function LoginForm() {
           ) : 'Masuk'}
         </button>
       </form>
-
-      {/* Divider */}
-      <div className="relative my-5">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-2 text-muted-foreground">atau lanjutkan dengan</span>
-        </div>
-      </div>
-
-      {/* Google */}
-      <button
-        type="button"
-        onClick={handleGoogle}
-        disabled={busy}
-        className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl text-sm font-medium border border-border bg-background text-foreground hover:bg-muted active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer min-h-[48px]"
-      >
-        {googleLoading ? <Spinner /> : <GoogleIcon />}
-        <span>Masuk dengan Google</span>
-      </button>
 
       <p className="text-center text-sm text-muted-foreground mt-6">
         Belum punya akun?{' '}

@@ -1,7 +1,9 @@
-import { Loader2, Trash2, Building2, Pencil } from 'lucide-react'
+import { Loader2, Trash2, Building2, Pencil, KeyRound } from 'lucide-react'
 import { UserAvatar } from './UserAvatar'
+import { LoginIndicator } from './LoginIndicator'
 import { ROLE_LABELS, ROLE_COLOR, formatDate } from './types'
 import type { UserRow, BranchOption, UserRole } from './types'
+import type { UserAuthMeta } from '@/app/actions/users-auth-meta'
 
 interface Props {
   users: UserRow[]
@@ -12,9 +14,11 @@ interface Props {
   onUpdateField: (id: string, patch: Partial<Pick<UserRow, 'role' | 'branch_id' | 'is_active'>>) => void
   onDeleteTarget: (user: UserRow) => void
   onEditDetails: (user: UserRow) => void
+  onChangePassword: (user: UserRow) => void
+  authMeta: Record<string, UserAuthMeta>
 }
 
-export function StaffTable({ users, branches, currentUserId, savingId, search, onUpdateField, onDeleteTarget, onEditDetails }: Props) {
+export function StaffTable({ users, branches, currentUserId, savingId, search, onUpdateField, onDeleteTarget, onEditDetails, onChangePassword, authMeta }: Props) {
   return (
     <div className="bg-card rounded-2xl border border-border overflow-hidden">
       <div className="overflow-x-auto">
@@ -24,6 +28,7 @@ export function StaffTable({ users, branches, currentUserId, savingId, search, o
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Nama</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Role</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground min-w-[200px]">Cabang</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Login</th>
               <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Bergabung</th>
               <th className="px-4 py-3 w-10" />
@@ -103,6 +108,11 @@ export function StaffTable({ users, branches, currentUserId, savingId, search, o
                     )}
                   </td>
 
+                  {/* Login */}
+                  <td className="px-4 py-3">
+                    <LoginIndicator meta={authMeta[u.id]} />
+                  </td>
+
                   {/* Status */}
                   <td className="px-4 py-3 text-center">
                     <button
@@ -136,6 +146,15 @@ export function StaffTable({ users, branches, currentUserId, savingId, search, o
                         >
                           <Pencil size={13} />
                         </button>
+                        {!isSelf && (
+                          <button
+                            onClick={() => onChangePassword(u)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                            title="Ubah kata sandi"
+                          >
+                            <KeyRound size={13} />
+                          </button>
+                        )}
                         {!isSelf && (
                           <button
                             onClick={() => onDeleteTarget(u)}
