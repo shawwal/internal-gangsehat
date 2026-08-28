@@ -80,11 +80,11 @@ export default function GriyaJadwalPage() {
         if (cell?.visit?.id) setPayVisit(cell)
         else showToast('Tandai hadir dulu sebelum mencatat pembayaran.', 'info')
         break
-      case 'open':
-        if (cell?.slot?.patient_id || cell?.visit?.patient_id) {
-          window.open(`/patients/${cell.slot?.patient_id ?? cell.visit?.patient_id}/visits`, '_blank', 'noopener,noreferrer')
-        }
+      case 'open': {
+        const pid = cell?.slot?.patient_id ?? cell?.visit?.patient_id
+        if (pid) window.open(`/griya-anak/siswa/${pid}`, '_blank', 'noopener,noreferrer')
         break
+      }
     }
   }
 

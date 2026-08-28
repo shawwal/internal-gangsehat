@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Search, ExternalLink, UserPlus, X, GraduationCap, RotateCcw, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { Search, ChevronRight, UserPlus, X, GraduationCap, RotateCcw, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveGriyaBranchId } from '@/app/actions/griyaJadwal'
 import {
@@ -119,7 +120,11 @@ export default function GriyaSiswaPage() {
               <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Belum ada siswa.</td></tr>
             ) : rows.map((r) => (
               <tr key={r.patient_id} className={`border-b border-border last:border-0 ${r.status === 'inactive' ? 'opacity-50' : ''}`}>
-                <td className="px-4 py-2 font-medium text-foreground">{r.name}</td>
+                <td className="px-4 py-2 font-medium">
+                  <Link href={`/griya-anak/siswa/${r.patient_id}`} className="text-foreground hover:text-primary hover:underline">
+                    {r.name}
+                  </Link>
+                </td>
                 <td className="px-4 py-2 text-muted-foreground hidden sm:table-cell">{r.gender ? GENDER_LABEL[r.gender] : '—'}</td>
                 <td className="px-4 py-2 text-muted-foreground hidden md:table-cell">{calcAge(r.birthDate)}</td>
                 <td className="px-4 py-2 text-muted-foreground hidden lg:table-cell max-w-xs truncate">{r.keluhan ?? '—'}</td>
@@ -129,8 +134,8 @@ export default function GriyaSiswaPage() {
                 </td>
                 <td className="px-4 py-2">
                   <div className="flex items-center justify-end gap-1">
-                    <a href={`/patients/${r.patient_id}/visits`} target="_blank" rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Buka rekam pasien"><ExternalLink size={13} /></a>
+                    <Link href={`/griya-anak/siswa/${r.patient_id}`}
+                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Lihat detail siswa"><ChevronRight size={14} /></Link>
                     {canEdit && r.status !== 'graduated' && (
                       <button onClick={() => act(() => setGriyaStudentStatus(r.patient_id, 'graduated'), 'Ditandai lulus')}
                         className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Tandai lulus"><GraduationCap size={13} /></button>

@@ -109,7 +109,7 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
               <MenuBtn icon={<UserPlus2 size={14} />} label="Cari Pengganti" onClick={() => { setMenu(null); onAction('substitute', cell) }} />
             )}
             {canEdit && <MenuBtn icon={<CreditCard size={14} />} label="Bayar" onClick={() => { setMenu(null); onAction('pay', cell) }} />}
-            <MenuBtn icon={<ExternalLink size={14} />} label="Buka Pasien" onClick={() => { setMenu(null); onAction('open', cell) }} />
+            <MenuBtn icon={<ExternalLink size={14} />} label="Lihat Siswa" onClick={() => { setMenu(null); onAction('open', cell) }} />
           </div>
         </>,
         document.body,

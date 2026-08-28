@@ -166,6 +166,119 @@ export async function fetchGriyaStudentsPage(params: {
   return { students, total: count ?? students.length }
 }
 
+// ── student detail ──────────────────────────────────────────────────────────
+
+export interface GriyaStudentSlot {
+  id: string
+  discipline: string
+  hari: string
+  slot_time: string
+  therapist_name: string
+  service_type: string | null
+  status: string
+  start_date: string
+  end_date: string | null
+}
+
+export interface GriyaStudentVisit {
+  id: string
+  visit_date: string
+  visit_time: string | null
+  service_type: string | null
+  status: string
+  kehadiran: string | null
+  notes: string | null
+  therapist_name: string | null
+}
+
+export interface GriyaStudentDetail {
+  found: boolean
+  status: string | null
+  enrolledAt: string | null
+  branchId: string | null
+  slots: GriyaStudentSlot[]
+  visits: GriyaStudentVisit[]
+  stats: { attended: number; absent: number; scheduled: number }
+}
+
+function hhmm(t: string | null): string {
+  return t ? String(t).slice(0, 5) : ''
+}
+
+export async function fetchGriyaStudentDetail(patientId: string): Promise<GriyaStudentDetail> {
+  const supabase = await createClient()
+
+  const { data: member } = await supabase
+    .from('griya_students')
+    .select('status, created_at, branch_id')
+    .eq('patient_id', patientId)
+    .maybeSingle()
+
+  const branchId = member?.branch_id ?? (await (async () => {
+    const a = await auth()
+    return 'error' in a ? null : resolveBranch(a)
+  })())
+
+  const [slotsRes, visitsRes] = await Promise.all([
+    supabase
+      .from('griya_schedule_slots')
+      .select('id, discipline, hari, slot_time, service_type, status, start_date, end_date, internal_profiles!therapist_id(full_name, nickname)')
+      .eq('patient_id', patientId)
+      .order('hari', { ascending: true }),
+    supabase
+      .from('patient_visits')
+      .select('id, visit_date, visit_time, service_type, status, kehadiran, notes, internal_profiles!attending_staff_id(full_name, nickname)')
+      .eq('patient_id', patientId)
+      .order('visit_date', { ascending: false })
+      .limit(60),
+  ])
+
+  const slots: GriyaStudentSlot[] = ((slotsRes.data ?? []) as Record<string, unknown>[]).map((s) => {
+    const p = s.internal_profiles as { full_name?: string; nickname?: string | null } | null
+    return {
+      id: s.id as string,
+      discipline: s.discipline as string,
+      hari: s.hari as string,
+      slot_time: hhmm(s.slot_time as string),
+      therapist_name: p?.nickname || p?.full_name || 'Terapis',
+      service_type: (s.service_type as string) ?? null,
+      status: s.status as string,
+      start_date: s.start_date as string,
+      end_date: (s.end_date as string) ?? null,
+    }
+  })
+
+  const visits: GriyaStudentVisit[] = ((visitsRes.data ?? []) as Record<string, unknown>[]).map((v) => {
+    const p = v.internal_profiles as { full_name?: string; nickname?: string | null } | null
+    return {
+      id: v.id as string,
+      visit_date: v.visit_date as string,
+      visit_time: v.visit_time ? hhmm(v.visit_time as string) : null,
+      service_type: (v.service_type as string) ?? null,
+      status: v.status as string,
+      kehadiran: (v.kehadiran as string) ?? null,
+      notes: (v.notes as string) ?? null,
+      therapist_name: p?.nickname || p?.full_name || null,
+    }
+  })
+
+  const stats = {
+    attended: visits.filter((v) => v.kehadiran === 'HADIR' || v.status === 'completed').length,
+    absent: visits.filter((v) => v.kehadiran === 'TIDAK HADIR' || v.status === 'no_show').length,
+    scheduled: visits.filter((v) => v.status === 'scheduled').length,
+  }
+
+  return {
+    found: !!member,
+    status: member?.status ?? null,
+    enrolledAt: member?.created_at ?? null,
+    branchId,
+    slots,
+    visits,
+    stats,
+  }
+}
+
 // ── mutations ───────────────────────────────────────────────────────────────
 
 /** Idempotent enrol — used by the jadwal actions and "Tambah Siswa". */
