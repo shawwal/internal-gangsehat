@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, Eye, EyeOff, PackagePlus } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye, EyeOff, PackagePlus, Check, X } from 'lucide-react'
 import {
   fetchProducts, upsertProduct, toggleProductActive, deleteProduct, adjustStock,
   type GriyaProduct,
@@ -21,12 +21,27 @@ export function ProdukTab({ branchId }: { branchId: string }) {
   const [edit, setEdit] = useState<GriyaProduct | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [restock, setRestock] = useState<GriyaProduct | null>(null)
+  const [stockEditId, setStockEditId] = useState<string | null>(null)
+  const [stockVal, setStockVal] = useState('')
+  const [stockSaving, setStockSaving] = useState(false)
 
   const reload = useCallback(() => {
     setLoading(true)
     fetchProducts(branchId).then((r) => { setRows(r); setLoading(false) })
   }, [branchId])
   useEffect(() => { reload() }, [reload])
+
+  async function saveStock(p: GriyaProduct) {
+    const target = Number(stockVal.replace(/[^\d-]/g, ''))
+    if (Number.isNaN(target) || target === p.stock) { setStockEditId(null); return }
+    setStockSaving(true)
+    const delta = target - p.stock
+    const { error } = await adjustStock(p.id, delta, delta > 0 ? 'restock' : 'adjustment', 'Set stok manual')
+    setStockSaving(false)
+    setStockEditId(null)
+    if (error) { alert(error); return }
+    reload()
+  }
 
   return (
     <div className="space-y-3">
@@ -58,7 +73,30 @@ export function ProdukTab({ branchId }: { branchId: string }) {
                 <td className="px-4 py-2 font-medium text-foreground">{p.name}{p.sku && <span className="text-xs text-muted-foreground ml-2">{p.sku}</span>}</td>
                 <td className="px-4 py-2 text-muted-foreground hidden sm:table-cell">{p.category}</td>
                 <td className="px-4 py-2 text-right">{rp(p.price)}</td>
-                <td className={`px-4 py-2 text-right font-medium ${p.stock <= LOW_STOCK ? 'text-amber-400' : ''}`}>{p.stock}</td>
+                <td className="px-4 py-2 text-right">
+                  {stockEditId === p.id ? (
+                    <div className="flex items-center justify-end gap-1">
+                      <input
+                        autoFocus
+                        value={stockVal}
+                        onChange={(e) => setStockVal(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') saveStock(p); if (e.key === 'Escape') setStockEditId(null) }}
+                        inputMode="numeric"
+                        className="w-16 px-2 py-1 text-right border border-border rounded-lg text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      <button disabled={stockSaving} onClick={() => saveStock(p)} className="p-1 text-[#34C759] cursor-pointer"><Check size={13} /></button>
+                      <button onClick={() => setStockEditId(null)} className="p-1 text-destructive cursor-pointer"><X size={13} /></button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setStockEditId(p.id); setStockVal(String(p.stock)) }}
+                      className={`font-medium px-1.5 py-0.5 rounded-md hover:bg-muted cursor-pointer ${p.stock <= LOW_STOCK ? 'text-amber-400' : ''}`}
+                      title="Klik untuk ubah stok"
+                    >
+                      {p.stock}
+                    </button>
+                  )}
+                </td>
                 <td className="px-4 py-2">
                   <div className="flex items-center justify-end gap-1">
                     <button onClick={() => setRestock(p)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Stok masuk"><PackagePlus size={13} /></button>
