@@ -202,12 +202,13 @@ async function main() {
   console.log(`Parsed ${recs.length} unique children  (junk rows: ${junk}, in-file dupes: ${dupInFile})`)
 
   const existing = new Set<string>()
+  const existingHashes = new Set<string>()
   let from = 0
   const PAGE = 1000
   for (;;) {
     const { data, error } = await supabase
       .from('patients')
-      .select('encrypted_name, encrypted_birth_date')
+      .select('encrypted_name, encrypted_birth_date, phone_hash')
       .range(from, from + PAGE - 1)
     if (error) { console.error('fetch existing failed:', error.message); process.exit(1) }
     if (!data || data.length === 0) break
@@ -215,11 +216,12 @@ async function main() {
       const nm = normName(decrypt(p.encrypted_name))
       const bd = p.encrypted_birth_date ? decrypt(p.encrypted_birth_date).slice(0, 10) : ''
       if (nm) existing.add(`${nm}|${bd}`)
+      if (p.phone_hash) existingHashes.add(p.phone_hash as string)
     }
     if (data.length < PAGE) break
     from += PAGE
   }
-  console.log(`Existing patients: ${existing.size} name+dob keys`)
+  console.log(`Existing patients: ${existing.size} name+dob keys, ${existingHashes.size} phone hashes`)
 
   const toInsert = recs.filter((r) => !existing.has(r.key))
   const skippedExisting = recs.length - toInsert.length
@@ -237,15 +239,23 @@ async function main() {
   const griyaBranchId = branch?.id ?? null
   if (!griyaBranchId) console.warn('WARN: Griya Anak branch not found — patients created but not added to griya_students roster.')
 
+  // phone_hash has a UNIQUE index, but siblings share a parent's number — keep
+  // the real (encrypted) phone, drop the hash for the 2nd+ child on a number.
+  const usedHashes = new Set<string>()
+
   let ok = 0, fail = 0
   for (const r of toInsert) {
+    const h = r.phone ? hashPhone(r.phone) : null
+    const phoneHash = h && !usedHashes.has(h) && !existingHashes.has(h) ? h : null
+    if (phoneHash) usedHashes.add(phoneHash)
+
     const { data: inserted, error } = await supabase.from('patients').insert({
       encrypted_name: encrypt(r.name),
       encrypted_phone: encrypt(r.phone || '-'),
       encrypted_address: r.address ? encrypt(r.address) : null,
       encrypted_birth_date: r.dob ? encrypt(r.dob) : null,
       gender: r.gender,
-      phone_hash: r.phone ? hashPhone(r.phone) : null,
+      phone_hash: phoneHash,
       name_normalized: r.name.trim().toLowerCase(),
       agama: r.agama,
       kelurahan: r.kelurahan,
