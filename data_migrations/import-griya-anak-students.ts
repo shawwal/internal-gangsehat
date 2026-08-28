@@ -232,9 +232,14 @@ async function main() {
 
   if (!APPLY) { console.log('\nDRY RUN — pass --apply to write.'); return }
 
+  const { data: branch } = await supabase
+    .from('branches').select('id').ilike('name', '%Griya Anak%').eq('is_active', true).limit(1).maybeSingle()
+  const griyaBranchId = branch?.id ?? null
+  if (!griyaBranchId) console.warn('WARN: Griya Anak branch not found — patients created but not added to griya_students roster.')
+
   let ok = 0, fail = 0
   for (const r of toInsert) {
-    const { error } = await supabase.from('patients').insert({
+    const { data: inserted, error } = await supabase.from('patients').insert({
       encrypted_name: encrypt(r.name),
       encrypted_phone: encrypt(r.phone || '-'),
       encrypted_address: r.address ? encrypt(r.address) : null,
@@ -250,9 +255,16 @@ async function main() {
       keluhan: r.keluhan,
       medical_notes: r.medical_notes,
       is_active: true,
-    })
-    if (error) { fail++; console.error(`  FAIL ${r.name}: ${error.message}`) }
-    else ok++
+    }).select('id').single()
+    if (error || !inserted) { fail++; console.error(`  FAIL ${r.name}: ${error?.message}`); continue }
+    ok++
+
+    if (griyaBranchId) {
+      const { error: e2 } = await supabase.from('griya_students').insert({
+        patient_id: inserted.id, branch_id: griyaBranchId, source: 'excel-import',
+      })
+      if (e2) console.warn(`  roster WARN ${r.name}: ${e2.message}`)
+    }
     if ((ok + fail) % 100 === 0) console.log(`  ...${ok + fail}/${toInsert.length}`)
   }
   console.log(`\nDone. Inserted ${ok}, failed ${fail}.`)

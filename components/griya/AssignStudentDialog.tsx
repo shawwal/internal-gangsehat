@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { X, Search, UserPlus } from 'lucide-react'
-import { searchPatients, addPatient, type PatientPlain } from '@/app/actions/patients'
+import { addPatient } from '@/app/actions/patients'
+import { searchGriyaStudents, type GriyaStudentOption } from '@/app/actions/griyaStudents'
 import { assignRecurringSlot, addSubstitute } from '@/app/actions/griyaJadwal'
 import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
 import { PackageForm } from '@/components/jadwal/buy-package/PackageForm'
@@ -24,9 +25,9 @@ interface Props {
 export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
   const [tab, setTab] = useState<'search' | 'new'>('search')
   const [q, setQ] = useState('')
-  const [results, setResults] = useState<PatientPlain[]>([])
+  const [results, setResults] = useState<GriyaStudentOption[]>([])
   const [searching, setSearching] = useState(false)
-  const [picked, setPicked] = useState<PatientPlain | null>(null)
+  const [picked, setPicked] = useState<GriyaStudentOption | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   // new-child form
@@ -56,10 +57,10 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
     if (term.length < 2) { setResults([]); return }
     setSearching(true)
     const t = setTimeout(() => {
-      searchPatients(term).then((r) => { setResults(r); setSearching(false) })
+      searchGriyaStudents(term, target.branchId).then((r) => { setResults(r); setSearching(false) })
     }, 300)
     return () => clearTimeout(t)
-  }, [q])
+  }, [q, target.branchId])
 
   async function save() {
     setSaving(true); setError(null)
@@ -159,6 +160,11 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
               ) : (
                 <div className="space-y-1 max-h-72 overflow-y-auto">
                   {searching && <p className="text-xs text-muted-foreground px-1">Mencari...</p>}
+                  {!searching && q.trim().length >= 2 && results.length === 0 && (
+                    <p className="text-xs text-muted-foreground px-1">
+                      Tidak ada siswa Griya Anak dengan nama itu. Anak baru? Pakai tab &quot;Anak baru&quot;.
+                    </p>
+                  )}
                   {results.map((p) => (
                     <button
                       key={p.id}

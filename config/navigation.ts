@@ -472,6 +472,14 @@ export const navigation: NavItem[] = [
     group: 'griya',
   },
   {
+    key: 'griya-siswa',
+    label: 'Siswa Griya Anak',
+    href: '/griya-anak/siswa',
+    icon: 'GraduationCap',
+    roles: ['director', 'manager', 'admin', 'therapist'],
+    group: 'griya',
+  },
+  {
     key: 'griya-settings',
     label: 'Paket & Tarif Griya Anak',
     href: '/griya-anak/pengaturan',

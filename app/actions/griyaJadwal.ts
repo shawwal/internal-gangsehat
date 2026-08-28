@@ -105,6 +105,13 @@ async function requireWrite(): Promise<AuthResult> {
   return a
 }
 
+/** Ensure a child is on the Griya Anak roster (idempotent). Best-effort. */
+async function ensureEnrolled(a: AuthOk, patientId: string, branchId: string, source: string) {
+  await a.supabase
+    .from('griya_students')
+    .upsert({ patient_id: patientId, branch_id: branchId, source, created_by: a.userId }, { onConflict: 'patient_id', ignoreDuplicates: true })
+}
+
 /** Resolves the Griya Anak branch id — the caller's own branch, or (for a
  *  director) the branch named "Griya Anak". */
 export async function resolveGriyaBranchId(): Promise<string | null> {
@@ -259,6 +266,8 @@ export async function assignRecurringSlot(input: AssignSlotInput): Promise<{ err
   const a = await requireWrite()
   if ('error' in a) return { error: a.error }
   const { supabase, userId } = a
+
+  await ensureEnrolled(a, input.patient_id, input.branch_id, 'jadwal')
 
   if (input.onlyThisWeek) {
     const orderId = await generateOrderId(supabase)
@@ -468,6 +477,8 @@ export async function addSubstitute(input: AddSubstituteInput): Promise<{ error:
   const a = await requireWrite()
   if ('error' in a) return { error: a.error }
   const { supabase, userId } = a
+
+  await ensureEnrolled(a, input.patient_id, input.branch_id, 'jadwal')
 
   const orderId = await generateOrderId(supabase)
   const { error } = await supabase.from('patient_visits').insert({
