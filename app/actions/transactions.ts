@@ -19,6 +19,14 @@ const SERVICE_TO_CATEGORY: Record<string, string> = {
 const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
 const PACKAGE_CATEGORIES = new Set(['PAKET KLINIK', 'PAKET VISIT'])
 
+/** Turn a raw Postgres CHECK-constraint failure into something an admin can act on. */
+function friendlyTxnError(msg: string): string {
+  if (msg.includes('transactions_payment_method_check')) {
+    return 'Metode pembayaran ini belum aktif di database. Minta admin sistem menjalankan migrasi 065 (TRANSFER BANK KALBAR).'
+  }
+  return msg
+}
+
 function formatRp(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 }
@@ -214,7 +222,7 @@ export async function createTransactionForVisit(
 
   const { data: inserted, error } = await supabase.from('transactions').insert(insertPayload).select('id').single()
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyTxnError(error.message) }
 
   await logActivity({
     supabase,
@@ -300,7 +308,7 @@ export async function addPaymentToOrder(
 
   const { data: inserted, error } = await supabase.from('transactions').insert(insertPayload).select('id').single()
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyTxnError(error.message) }
 
   await logActivity({
     supabase,
@@ -524,7 +532,7 @@ export async function createTransactionManual(
 
   const { data: inserted, error } = await supabase.from('transactions').insert(insertPayload).select('id').single()
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyTxnError(error.message) }
 
   await logActivity({
     supabase,
