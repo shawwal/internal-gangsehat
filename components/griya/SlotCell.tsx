@@ -3,11 +3,11 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { Plus, Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2 } from 'lucide-react'
+import { Plus, Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil } from 'lucide-react'
 import type { ResolvedCell } from './resolve'
 
 export type CellAction =
-  | 'assign' | 'substitute' | 'attendance' | 'markPresent' | 'move' | 'end' | 'pay' | 'open'
+  | 'assign' | 'substitute' | 'attendance' | 'markPresent' | 'move' | 'end' | 'pay' | 'open' | 'editVisit'
 
 interface Props {
   cellKey: string
@@ -107,6 +107,9 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
             )}
             {freed && canEdit && (
               <MenuBtn icon={<UserPlus2 size={14} />} label="Cari Pengganti" onClick={() => { setMenu(null); onAction('substitute', cell) }} />
+            )}
+            {canEdit && cell.visit?.id && (
+              <MenuBtn icon={<Pencil size={14} />} label="Ubah Kunjungan" onClick={() => { setMenu(null); onAction('editVisit', cell) }} />
             )}
             {canEdit && <MenuBtn icon={<CreditCard size={14} />} label="Bayar" onClick={() => { setMenu(null); onAction('pay', cell) }} />}
             <MenuBtn icon={<ExternalLink size={14} />} label="Lihat Siswa" onClick={() => { setMenu(null); onAction('open', cell) }} />

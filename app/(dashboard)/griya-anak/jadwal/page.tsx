@@ -15,6 +15,7 @@ import { EndEnrollmentDialog } from '@/components/griya/EndEnrollmentDialog'
 import { MoveScopeDialog, type MoveDest } from '@/components/griya/MoveScopeDialog'
 import { ManageTherapistsDialog } from '@/components/griya/ManageTherapistsDialog'
 import { AddStudentButton } from '@/components/griya/AddStudentButton'
+import { EditVisitDialog } from '@/components/griya/EditVisitDialog'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { markAttendance } from '@/app/actions/griyaJadwal'
 import type { CellAction } from '@/components/griya/SlotCell'
@@ -35,6 +36,7 @@ export default function GriyaJadwalPage() {
   const [moveSlot, setMoveSlot] = useState<GriyaSlot | null>(null)
   const [moveDialog, setMoveDialog] = useState<{ slot: GriyaSlot; dest: MoveDest } | null>(null)
   const [payVisit, setPayVisit] = useState<ResolvedCell | null>(null)
+  const [editVisit, setEditVisit] = useState<ResolvedCell | null>(null)
   const [manageOpen, setManageOpen] = useState(false)
 
   function targetFor(cellKey: string, cell?: ResolvedCell): CellTarget | null {
@@ -81,6 +83,9 @@ export default function GriyaJadwalPage() {
         if (cell?.visit?.id) setPayVisit(cell)
         else showToast('Tandai hadir dulu sebelum mencatat pembayaran.', 'info')
         break
+      case 'editVisit':
+        if (cell?.visit?.id) setEditVisit(cell)
+        break
       case 'open': {
         const pid = cell?.slot?.patient_id ?? cell?.visit?.patient_id
         if (pid) window.open(`/griya-anak/siswa/${pid}`, '_blank', 'noopener,noreferrer')
@@ -90,7 +95,7 @@ export default function GriyaJadwalPage() {
   }
 
   function afterMutation() {
-    setAssign(null); setAttendance(null); setEndTarget(null); setMoveDialog(null); setPayVisit(null)
+    setAssign(null); setAttendance(null); setEndTarget(null); setMoveDialog(null); setPayVisit(null); setEditVisit(null)
     reload({ silent: true })
   }
 
@@ -169,6 +174,24 @@ export default function GriyaJadwalPage() {
           }}
           onClose={() => setPayVisit(null)}
           onSuccess={afterMutation}
+        />
+      )}
+      {editVisit?.visit && branchId && (
+        <EditVisitDialog
+          visit={{
+            id: editVisit.visit.id,
+            visit_date: editVisit.visit.visit_date,
+            visit_time: editVisit.visit.visit_time,
+            service_type: editVisit.visit.service_type,
+            status: editVisit.visit.status,
+            kehadiran: editVisit.visit.kehadiran,
+            notes: editVisit.visit.notes,
+            attending_staff_id: editVisit.visit.attending_staff_id,
+            patient_name: editVisit.studentName,
+          }}
+          branchId={branchId}
+          onClose={() => setEditVisit(null)}
+          onSaved={afterMutation}
         />
       )}
       {manageOpen && branchId && (

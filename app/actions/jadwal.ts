@@ -460,6 +460,7 @@ export async function updateVisit(
   visitId: string,
   data: {
     visit_date?: string
+    visit_time?: string | null
     attending_staff_id?: string | null
     service_type?: string | null
     shift?: string | null
@@ -477,7 +478,7 @@ export async function updateVisit(
   const { data: { user } } = await supabase.auth.getUser()
   const { data: oldRow } = await supabase
     .from('patient_visits')
-    .select('visit_date, attending_staff_id, service_type, shift, kehadiran, regio, sumber_pasien, chief_complaint, diagnosis, treatment, status, notes, patient_id, branch_id')
+    .select('visit_date, visit_time, attending_staff_id, service_type, shift, kehadiran, regio, sumber_pasien, chief_complaint, diagnosis, treatment, status, notes, patient_id, branch_id')
     .eq('id', visitId)
     .single()
 

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ExternalLink, GraduationCap, RotateCcw, Phone, MapPin, Users, CalendarClock, Pencil } from 'lucide-react'
 import { StudentEditForm } from '@/components/griya/StudentEditForm'
+import { EditVisitDialog } from '@/components/griya/EditVisitDialog'
 import { fetchPatient, type PatientPlain } from '@/app/actions/patients'
 import { fetchPatientPackages } from '@/app/actions/packages'
 import type { PatientPackage } from '@/types'
@@ -39,6 +40,7 @@ export default function GriyaSiswaDetailPage() {
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
+  const [editVisitId, setEditVisitId] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -224,6 +226,7 @@ export default function GriyaSiswaDetailPage() {
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Terapis</th>
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground">Kehadiran</th>
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell">Catatan</th>
+                  {canEdit && <th className="px-4 py-2" />}
                 </tr>
               </thead>
               <tbody>
@@ -236,6 +239,14 @@ export default function GriyaSiswaDetailPage() {
                       <td className="px-4 py-2 text-muted-foreground hidden md:table-cell">{v.therapist_name ?? '—'}</td>
                       <td className="px-4 py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${b.c}`}>{b.t}</span></td>
                       <td className="px-4 py-2 text-muted-foreground hidden lg:table-cell max-w-xs truncate">{v.notes ?? ''}</td>
+                      {canEdit && (
+                        <td className="px-4 py-2 text-right">
+                          <button onClick={() => setEditVisitId(v.id)}
+                            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground cursor-pointer" title="Ubah kunjungan">
+                            <Pencil size={13} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   )
                 })}
@@ -244,6 +255,19 @@ export default function GriyaSiswaDetailPage() {
           </div>
         )}
       </div>
+
+      {editVisitId && detail?.branchId && (() => {
+        const v = detail.visits.find((x) => x.id === editVisitId)
+        if (!v) return null
+        return (
+          <EditVisitDialog
+            visit={{ ...v, patient_name: patient.name }}
+            branchId={detail.branchId}
+            onClose={() => setEditVisitId(null)}
+            onSaved={() => { setEditVisitId(null); showToast('Kunjungan diperbarui', 'success'); load() }}
+          />
+        )
+      })()}
     </div>
   )
 }
