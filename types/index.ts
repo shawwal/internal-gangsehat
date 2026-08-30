@@ -314,6 +314,7 @@ export interface PatientPackage {
   package_name: string
   package_type: PackageType
   total_sessions: number
+  legacy_used_sessions: number // manual "used before it was tracked in-app" offset
   used_sessions: number       // computed from patient_visits via view
   remaining_sessions: number  // computed: total_sessions - used_sessions
   notes: string | null

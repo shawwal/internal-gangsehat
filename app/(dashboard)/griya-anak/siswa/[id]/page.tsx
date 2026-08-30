@@ -6,11 +6,13 @@ import Link from 'next/link'
 import { ChevronLeft, ExternalLink, GraduationCap, RotateCcw, Phone, MapPin, Users, CalendarClock, Pencil } from 'lucide-react'
 import { StudentEditForm } from '@/components/griya/StudentEditForm'
 import { EditVisitDialog } from '@/components/griya/EditVisitDialog'
+import { EditPackageDialog } from '@/components/griya/EditPackageDialog'
+import { GriyaBuyPackageDialog } from '@/components/griya/GriyaBuyPackageDialog'
 import { fetchPatient, type PatientPlain } from '@/app/actions/patients'
 import { fetchPatientPackages, fetchPackageSessions } from '@/app/actions/packages'
 import { deleteVisit } from '@/app/actions/jadwal'
 import { SessionList } from '@/components/packages/SessionList'
-import { ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react'
+import { ChevronDown, ChevronRight as ChevronRightIcon, Plus } from 'lucide-react'
 import type { PatientPackage, PackageSession } from '@/types'
 import { fetchGriyaStudentDetail, setGriyaStudentStatus, type GriyaStudentDetail } from '@/app/actions/griyaStudents'
 import { GENDER_LABEL, calcAge } from '@/components/patients/detail/constants'
@@ -44,6 +46,7 @@ export default function GriyaSiswaDetailPage() {
   const [role, setRole] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [editVisitId, setEditVisitId] = useState<string | null>(null)
+  const [buyingPkg, setBuyingPkg] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -193,9 +196,19 @@ export default function GriyaSiswaDetailPage() {
       </div>
 
       {/* packages */}
-      {packages.length > 0 && (
-        <div className="glass-card overflow-hidden">
-          <div className="px-4 py-3 border-b border-border"><h2 className="text-sm font-semibold text-foreground">Paket</h2></div>
+      <div className="glass-card overflow-hidden">
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-foreground">Paket</h2>
+          {canEdit && detail?.branchId && (
+            <button onClick={() => setBuyingPkg(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 cursor-pointer">
+              <Plus size={13} /> Tambah Paket
+            </button>
+          )}
+        </div>
+        {packages.length === 0 ? (
+          <p className="px-4 py-5 text-sm text-muted-foreground text-center">Belum ada paket.</p>
+        ) : (
           <div className="divide-y divide-border">
             {packages.map((p) => (
               <PackagePanel
@@ -207,7 +220,17 @@ export default function GriyaSiswaDetailPage() {
               />
             ))}
           </div>
-        </div>
+        )}
+      </div>
+
+      {buyingPkg && detail?.branchId && (
+        <GriyaBuyPackageDialog
+          patientId={id}
+          patientName={patient.name}
+          branchId={detail.branchId}
+          onClose={() => setBuyingPkg(false)}
+          onDone={() => { setBuyingPkg(false); showToast('Paket ditambahkan', 'success'); load() }}
+        />
       )}
 
       {/* visit history */}
@@ -280,6 +303,7 @@ function PackagePanel({ pkg, canEdit, onEditVisit, onChanged }: {
   const [open, setOpen] = useState(false)
   const [sessions, setSessions] = useState<PackageSession[] | null>(null)
   const [loading, setLoading] = useState(false)
+  const [editingPkg, setEditingPkg] = useState(false)
 
   const remaining = pkg.total_sessions - pkg.used_sessions
 
@@ -304,9 +328,11 @@ function PackagePanel({ pkg, canEdit, onEditVisit, onChanged }: {
 
   return (
     <div>
-      <button onClick={toggle} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-muted/40 cursor-pointer">
-        {open ? <ChevronDown size={14} className="text-muted-foreground shrink-0" /> : <ChevronRightIcon size={14} className="text-muted-foreground shrink-0" />}
-        <span className="font-medium text-foreground truncate flex-1 text-left">{pkg.package_name}</span>
+      <div className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-muted/40">
+        <button onClick={toggle} className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer text-left">
+          {open ? <ChevronDown size={14} className="text-muted-foreground shrink-0" /> : <ChevronRightIcon size={14} className="text-muted-foreground shrink-0" />}
+          <span className="font-medium text-foreground truncate flex-1">{pkg.package_name}</span>
+        </button>
         <span className="text-muted-foreground shrink-0">{pkg.used_sessions}/{pkg.total_sessions} sesi</span>
         <span className={`text-xs shrink-0 ${remaining <= 0 ? 'text-[#FF3B30]' : 'text-muted-foreground'}`}>
           {remaining > 0 ? `${remaining} tersisa` : '⚠ habis'}
@@ -314,7 +340,16 @@ function PackagePanel({ pkg, canEdit, onEditVisit, onChanged }: {
         <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${pkg.status === 'active' ? 'bg-[#34C759]/15 text-[#34C759]' : 'bg-muted text-muted-foreground'}`}>
           {pkg.status === 'active' ? 'Aktif' : pkg.status}
         </span>
-      </button>
+        {canEdit && (
+          <button onClick={() => setEditingPkg(true)}
+            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground cursor-pointer shrink-0" title="Ubah paket">
+            <Pencil size={13} />
+          </button>
+        )}
+      </div>
+      {editingPkg && (
+        <EditPackageDialog pkg={pkg} onClose={() => setEditingPkg(false)} onSaved={() => { setEditingPkg(false); onChanged() }} />
+      )}
       {open && (
         <div className="bg-muted/20 border-t border-border">
           <SessionList

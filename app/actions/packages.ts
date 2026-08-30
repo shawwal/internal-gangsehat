@@ -26,6 +26,7 @@ export async function fetchPatientPackages(
     package_name:       p.package_name,
     package_type:       p.package_type as PatientPackage['package_type'],
     total_sessions:     p.total_sessions,
+    legacy_used_sessions: Number(p.legacy_used_sessions ?? 0),
     used_sessions:      Number(p.used_sessions ?? 0),
     remaining_sessions: Number(p.remaining_sessions ?? p.total_sessions),
     notes:              p.notes ?? null,
@@ -286,14 +287,20 @@ export async function updatePatientPackage(
     completion_status?: 'LANJUT' | 'SEMBUH' | 'TIDAK LANJUT' | 'STOP' | null
     status?: 'active' | 'completed' | 'cancelled' | 'stopped'
     notes?: string | null
+    total_sessions?: number
+    legacy_used_sessions?: number
   },
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
 
   const update: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() }
 
-  // Sync total_sessions when jenis_paket changes
-  if (patch.jenis_paket) {
+  if (patch.total_sessions != null) {
+    // Admin set a custom purchased-session count — drop the P1/P2 label so it
+    // can't contradict the number.
+    update.jenis_paket = null
+  } else if (patch.jenis_paket) {
+    // Sync total_sessions when jenis_paket changes
     update.total_sessions = patch.jenis_paket === 'P1' ? 5 : 10
   }
 
