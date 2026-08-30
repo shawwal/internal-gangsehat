@@ -6,7 +6,10 @@ import { addPatient } from '@/app/actions/patients'
 import { searchGriyaStudents, type GriyaStudentOption } from '@/app/actions/griyaStudents'
 import { assignRecurringSlot, addSubstitute } from '@/app/actions/griyaJadwal'
 import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
-import { PackageForm } from '@/components/jadwal/buy-package/PackageForm'
+import { fetchPatientPackages } from '@/app/actions/packages'
+import type { PatientPackage } from '@/types'
+import { PackageSelector } from '@/components/jadwal/assign/PackageSelector'
+import { GriyaBuyPackageDialog } from './GriyaBuyPackageDialog'
 import { CATEGORY_TO_SERVICE_TYPE } from '@/lib/serviceType'
 import { HARI_LABEL } from './constants'
 import { GRIYA_SERVICE_TYPES, type CellTarget } from './types'
@@ -42,6 +45,11 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
   const [startDate, setStartDate] = useState(target.dateIso)
   const [onlyThisWeek, setOnlyThisWeek] = useState(mode === 'substitute')
 
+  // packages
+  const [packages, setPackages] = useState<PatientPackage[]>([])
+  const [selectedPkgId, setSelectedPkgId] = useState<string | null>(null)
+  const [pkgLoading, setPkgLoading] = useState(false)
+
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [buyingPackage, setBuyingPackage] = useState(false)
@@ -51,6 +59,33 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
   useEffect(() => {
     fetchLayananByBranch(target.branchId).then((rows) => setLayanan(rows.filter((r) => r.is_active)))
   }, [target.branchId])
+
+  function loadPackages(patientId: string, autoSelect?: string) {
+    setPkgLoading(true)
+    fetchPatientPackages(patientId).then((pkgs) => {
+      setPackages(pkgs)
+      setPkgLoading(false)
+      if (autoSelect) setSelectedPkgId(autoSelect)
+      else if (pkgs.filter((p) => p.status === 'active').length === 1) {
+        setSelectedPkgId(pkgs.find((p) => p.status === 'active')!.id)
+      }
+    })
+  }
+
+  const pickedId = picked?.id ?? null
+  useEffect(() => {
+    if (!pickedId) { setPackages([]); setSelectedPkgId(null); return }
+    let live = true
+    setPkgLoading(true)
+    fetchPatientPackages(pickedId).then((pkgs) => {
+      if (!live) return
+      setPackages(pkgs)
+      setPkgLoading(false)
+      const actives = pkgs.filter((p) => p.status === 'active')
+      if (actives.length === 1) setSelectedPkgId(actives[0].id)
+    })
+    return () => { live = false }
+  }, [pickedId])
 
   useEffect(() => {
     const term = q.trim()
@@ -84,6 +119,7 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
         date: target.dateIso,
         slot_time: target.hour,
         service_type: serviceType,
+        package_id: selectedPkgId,
         coveringName: target.slot?.patient_name ?? null,
       })
       setSaving(false)
@@ -100,6 +136,7 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
       hari: target.hari,
       slot_time: target.hour,
       service_type: serviceType,
+      package_id: selectedPkgId,
       start_date: startDate,
       onlyThisWeek: onlyThisWeek ? { date: target.dateIso } : null,
     })
@@ -226,13 +263,22 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
             </div>
 
             {picked && (
-              <button
-                type="button"
-                onClick={() => setBuyingPackage(true)}
-                className="text-xs font-medium text-primary hover:underline cursor-pointer"
-              >
-                + Beli paket untuk {picked.name.split(' ')[0]}
-              </button>
+              <div className="space-y-1.5">
+                <PackageSelector
+                  packages={packages}
+                  pkgLoading={pkgLoading}
+                  selectedPkgId={selectedPkgId}
+                  setSelectedPkgId={setSelectedPkgId}
+                  willCreate={0}
+                />
+                <button
+                  type="button"
+                  onClick={() => setBuyingPackage(true)}
+                  className="text-xs font-medium text-primary hover:underline cursor-pointer"
+                >
+                  + Beli paket untuk {picked.name.split(' ')[0]}
+                </button>
+              </div>
             )}
 
             {mode === 'assign' && (
@@ -265,19 +311,13 @@ export function AssignStudentDialog({ target, mode, onClose, onSaved }: Props) {
       </div>
 
       {buyingPackage && picked && (
-        <div className="fixed inset-0 z-[55] bg-black/50 flex items-center justify-center p-4" onClick={() => setBuyingPackage(false)}>
-          <div className="glass-card w-full max-w-md max-h-[85vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-semibold text-foreground mb-3">Beli Paket — {picked.name}</h3>
-            <PackageForm
-              patientId={picked.id}
-              patientName={picked.name}
-              branchId={target.branchId}
-              lockedCategory="PAKET KLINIK"
-              onCancel={() => setBuyingPackage(false)}
-              onSuccess={() => setBuyingPackage(false)}
-            />
-          </div>
-        </div>
+        <GriyaBuyPackageDialog
+          patientId={picked.id}
+          patientName={picked.name}
+          branchId={target.branchId}
+          onClose={() => setBuyingPackage(false)}
+          onDone={(pkgId) => { setBuyingPackage(false); loadPackages(picked.id, pkgId) }}
+        />
       )}
     </div>
   )

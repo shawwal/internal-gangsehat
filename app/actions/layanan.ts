@@ -35,6 +35,23 @@ export async function updateLayananHarga(
   return { error: error?.message ?? null }
 }
 
+export async function updateLayanan(
+  id: string,
+  patch: { nama: string; kategori: string; jumlah_sesi: number | null; harga: number },
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('internal_layanan')
+    .update({
+      nama: patch.nama.trim(),
+      kategori: patch.kategori,
+      jumlah_sesi: patch.jumlah_sesi,
+      harga: patch.harga,
+    })
+    .eq('id', id)
+  return { error: error?.message ?? null }
+}
+
 export async function upsertLayanan(
   row: Omit<LayananRow, 'created_at'>,
 ): Promise<{ error: string | null }> {

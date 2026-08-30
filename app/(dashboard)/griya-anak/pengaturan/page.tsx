@@ -1,31 +1,30 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Check, X, Trash2, Eye, EyeOff, AlertTriangle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 import {
-  fetchLayananByBranch, updateLayananHarga, toggleLayananActive, upsertLayanan, deleteLayanan,
+  fetchLayananByBranch, toggleLayananActive, upsertLayanan, updateLayanan, deleteLayanan,
   type LayananRow,
 } from '@/app/actions/layanan'
 import { resolveGriyaBranchId } from '@/app/actions/griyaJadwal'
 import { createClient } from '@/lib/supabase/client'
 
-const KATEGORI_OPTIONS = ['TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK', 'LAINNYA']
+const KATEGORI_OPTIONS = ['TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA']
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
 function rp(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 }
 
+type FormState = { nama: string; kategori: string; jumlah_sesi: string; harga: string }
+const BLANK: FormState = { nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '' }
+
 export default function GriyaPengaturanPage() {
   const [branchId, setBranchId] = useState<string | null | undefined>(undefined)
   const [enabled, setEnabled] = useState<boolean | null>(null)
   const [rows, setRows] = useState<LayananRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [editId, setEditId] = useState<string | null>(null)
-  const [editHarga, setEditHarga] = useState('')
-  const [showAdd, setShowAdd] = useState(false)
-  const [addForm, setAddForm] = useState({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '' })
-  const [addError, setAddError] = useState<string | null>(null)
+  const [modal, setModal] = useState<{ mode: 'add' } | { mode: 'edit'; row: LayananRow } | null>(null)
 
   useEffect(() => {
     (async () => {
@@ -47,35 +46,11 @@ export default function GriyaPengaturanPage() {
   }
   useEffect(() => { if (branchId) reload() }, [branchId])
 
-  async function saveHarga(id: string) {
-    const { error } = await updateLayananHarga(id, Number(editHarga.replace(/\./g, '')))
-    if (error) { alert(error); return }
-    setEditId(null); reload()
-  }
   async function toggleActive(row: LayananRow) { await toggleLayananActive(row.id, !row.is_active); reload() }
   async function remove(id: string) {
     if (!confirm('Hapus layanan ini?')) return
     const { error } = await deleteLayanan(id)
     if (error) { alert(error); return }
-    reload()
-  }
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault()
-    setAddError(null)
-    if (!addForm.nama.trim()) { setAddError('Nama wajib diisi'); return }
-    if (!branchId) return
-    const { error } = await upsertLayanan({
-      id: crypto.randomUUID(),
-      branch_id: branchId,
-      nama: addForm.nama.trim(),
-      kategori: addForm.kategori,
-      jumlah_sesi: addForm.jumlah_sesi ? Number(addForm.jumlah_sesi) : null,
-      harga: Number(addForm.harga.replace(/\./g, '')) || 0,
-      is_active: true,
-    })
-    if (error) { setAddError(error); return }
-    setShowAdd(false)
-    setAddForm({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '' })
     reload()
   }
 
@@ -101,7 +76,7 @@ export default function GriyaPengaturanPage() {
       <div className="glass-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Layanan &amp; Harga</h3>
-          <button onClick={() => setShowAdd(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90">
+          <button onClick={() => setModal({ mode: 'add' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90">
             <Plus size={13} /> Tambah
           </button>
         </div>
@@ -126,21 +101,11 @@ export default function GriyaPengaturanPage() {
                   <td className="px-4 py-2 text-muted-foreground hidden sm:table-cell">{r.kategori}</td>
                   <td className="px-4 py-2 text-muted-foreground hidden sm:table-cell">{r.jumlah_sesi ?? '—'}</td>
                   <td className="px-4 py-2 text-right">
-                    {editId === r.id ? (
-                      <div className="flex items-center justify-end gap-1">
-                        <input autoFocus value={editHarga} onChange={(e) => setEditHarga(e.target.value)} className={`${inputCls} w-28 text-right py-1`} />
-                        <button onClick={() => saveHarga(r.id)} className="p-1 text-[#34C759]"><Check size={14} /></button>
-                        <button onClick={() => setEditId(null)} className="p-1 text-destructive"><X size={14} /></button>
-                      </div>
-                    ) : (
-                      <span className={r.harga === 0 ? 'text-amber-400' : ''}>{rp(r.harga)}</span>
-                    )}
+                    <span className={r.harga === 0 ? 'text-amber-400' : ''}>{rp(r.harga)}</span>
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center justify-end gap-1">
-                      {editId !== r.id && (
-                        <button onClick={() => { setEditId(r.id); setEditHarga(String(r.harga)) }} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Edit harga"><Pencil size={13} /></button>
-                      )}
+                      <button onClick={() => setModal({ mode: 'edit', row: r })} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Ubah layanan"><Pencil size={13} /></button>
                       <button onClick={() => toggleActive(r)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title={r.is_active ? 'Nonaktifkan' : 'Aktifkan'}>
                         {r.is_active ? <EyeOff size={13} /> : <Eye size={13} />}
                       </button>
@@ -155,28 +120,74 @@ export default function GriyaPengaturanPage() {
         )}
       </div>
 
-      {showAdd && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAdd(false)}>
-          <div className="glass-card p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-base font-semibold text-foreground mb-4">Tambah Layanan</h2>
-            <form onSubmit={handleAdd} className="space-y-3">
-              <input value={addForm.nama} onChange={(e) => setAddForm((f) => ({ ...f, nama: e.target.value }))} placeholder="Nama layanan" className={inputCls} />
-              <select value={addForm.kategori} onChange={(e) => setAddForm((f) => ({ ...f, kategori: e.target.value }))} className={inputCls}>
-                {KATEGORI_OPTIONS.map((k) => <option key={k} value={k}>{k}</option>)}
-              </select>
-              <div className="grid grid-cols-2 gap-3">
-                <input type="number" value={addForm.jumlah_sesi} onChange={(e) => setAddForm((f) => ({ ...f, jumlah_sesi: e.target.value }))} placeholder="Jumlah sesi" className={inputCls} />
-                <input value={addForm.harga} onChange={(e) => setAddForm((f) => ({ ...f, harga: e.target.value }))} placeholder="Harga (Rp)" className={inputCls} />
-              </div>
-              {addError && <p className="text-xs text-destructive">{addError}</p>}
-              <div className="flex gap-2 pt-1">
-                <button type="button" onClick={() => setShowAdd(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted">Batal</button>
-                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">Simpan</button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {modal && branchId && (
+        <LayananModal
+          branchId={branchId}
+          row={modal.mode === 'edit' ? modal.row : null}
+          onClose={() => setModal(null)}
+          onSaved={() => { setModal(null); reload() }}
+        />
       )}
+    </div>
+  )
+}
+
+function LayananModal({ branchId, row, onClose, onSaved }: {
+  branchId: string
+  row: LayananRow | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState<FormState>(
+    row
+      ? { nama: row.nama, kategori: row.kategori, jumlah_sesi: row.jumlah_sesi != null ? String(row.jumlah_sesi) : '', harga: String(row.harga) }
+      : BLANK,
+  )
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const set = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (!form.nama.trim()) { setError('Nama wajib diisi'); return }
+    const payload = {
+      nama: form.nama.trim(),
+      kategori: form.kategori,
+      jumlah_sesi: form.jumlah_sesi ? Number(form.jumlah_sesi) : null,
+      harga: Number(form.harga.replace(/\./g, '')) || 0,
+    }
+    setSaving(true)
+    const { error } = row
+      ? await updateLayanan(row.id, payload)
+      : await upsertLayanan({ id: crypto.randomUUID(), branch_id: branchId, is_active: true, ...payload })
+    setSaving(false)
+    if (error) { setError(error); return }
+    onSaved()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="glass-card p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-base font-semibold text-foreground mb-4">{row ? 'Ubah Layanan' : 'Tambah Layanan'}</h2>
+        <form onSubmit={submit} className="space-y-3">
+          <input value={form.nama} onChange={set('nama')} placeholder="Nama layanan" className={inputCls} />
+          <select value={form.kategori} onChange={set('kategori')} className={inputCls}>
+            {KATEGORI_OPTIONS.map((k) => <option key={k} value={k}>{k}</option>)}
+          </select>
+          <div className="grid grid-cols-2 gap-3">
+            <input type="number" min="1" value={form.jumlah_sesi} onChange={set('jumlah_sesi')} placeholder="Jumlah sesi" className={inputCls} />
+            <input value={form.harga} onChange={set('harga')} placeholder="Harga (Rp)" className={inputCls} />
+          </div>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted">Batal</button>
+            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60">
+              {saving ? 'Menyimpan...' : 'Simpan'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

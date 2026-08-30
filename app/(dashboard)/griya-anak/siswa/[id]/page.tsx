@@ -7,8 +7,11 @@ import { ChevronLeft, ExternalLink, GraduationCap, RotateCcw, Phone, MapPin, Use
 import { StudentEditForm } from '@/components/griya/StudentEditForm'
 import { EditVisitDialog } from '@/components/griya/EditVisitDialog'
 import { fetchPatient, type PatientPlain } from '@/app/actions/patients'
-import { fetchPatientPackages } from '@/app/actions/packages'
-import type { PatientPackage } from '@/types'
+import { fetchPatientPackages, fetchPackageSessions } from '@/app/actions/packages'
+import { deleteVisit } from '@/app/actions/jadwal'
+import { SessionList } from '@/components/packages/SessionList'
+import { ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react'
+import type { PatientPackage, PackageSession } from '@/types'
 import { fetchGriyaStudentDetail, setGriyaStudentStatus, type GriyaStudentDetail } from '@/app/actions/griyaStudents'
 import { GENDER_LABEL, calcAge } from '@/components/patients/detail/constants'
 import { HARI_LABEL, DISCIPLINE_LABEL } from '@/components/griya/constants'
@@ -193,21 +196,17 @@ export default function GriyaSiswaDetailPage() {
       {packages.length > 0 && (
         <div className="glass-card overflow-hidden">
           <div className="px-4 py-3 border-b border-border"><h2 className="text-sm font-semibold text-foreground">Paket</h2></div>
-          <table className="w-full text-sm">
-            <tbody>
-              {packages.map((p) => (
-                <tr key={p.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-2 font-medium">{p.package_name}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{p.used_sessions}/{p.total_sessions} sesi</td>
-                  <td className="px-4 py-2 text-right">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${p.status === 'active' ? 'bg-[#34C759]/15 text-[#34C759]' : 'bg-muted text-muted-foreground'}`}>
-                      {p.status === 'active' ? 'Aktif' : p.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="divide-y divide-border">
+            {packages.map((p) => (
+              <PackagePanel
+                key={p.id}
+                pkg={p}
+                canEdit={canEdit}
+                onEditVisit={(vid) => setEditVisitId(vid)}
+                onChanged={load}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -268,6 +267,65 @@ export default function GriyaSiswaDetailPage() {
           />
         )
       })()}
+    </div>
+  )
+}
+
+function PackagePanel({ pkg, canEdit, onEditVisit, onChanged }: {
+  pkg: PatientPackage
+  canEdit: boolean
+  onEditVisit: (visitId: string) => void
+  onChanged: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [sessions, setSessions] = useState<PackageSession[] | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const remaining = pkg.total_sessions - pkg.used_sessions
+
+  function toggle() {
+    const next = !open
+    setOpen(next)
+    if (next && sessions === null) {
+      setLoading(true)
+      fetchPackageSessions(pkg.id).then((s) => { setSessions(s); setLoading(false) })
+    }
+  }
+
+  async function handleDelete(s: PackageSession) {
+    if (!confirm('Hapus sesi ini dari riwayat?')) return
+    const { error } = await deleteVisit(s.id)
+    if (error) { alert(error); return }
+    setSessions(null)
+    setLoading(true)
+    fetchPackageSessions(pkg.id).then((rows) => { setSessions(rows); setLoading(false) })
+    onChanged()
+  }
+
+  return (
+    <div>
+      <button onClick={toggle} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-muted/40 cursor-pointer">
+        {open ? <ChevronDown size={14} className="text-muted-foreground shrink-0" /> : <ChevronRightIcon size={14} className="text-muted-foreground shrink-0" />}
+        <span className="font-medium text-foreground truncate flex-1 text-left">{pkg.package_name}</span>
+        <span className="text-muted-foreground shrink-0">{pkg.used_sessions}/{pkg.total_sessions} sesi</span>
+        <span className={`text-xs shrink-0 ${remaining <= 0 ? 'text-[#FF3B30]' : 'text-muted-foreground'}`}>
+          {remaining > 0 ? `${remaining} tersisa` : '⚠ habis'}
+        </span>
+        <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${pkg.status === 'active' ? 'bg-[#34C759]/15 text-[#34C759]' : 'bg-muted text-muted-foreground'}`}>
+          {pkg.status === 'active' ? 'Aktif' : pkg.status}
+        </span>
+      </button>
+      {open && (
+        <div className="bg-muted/20 border-t border-border">
+          <SessionList
+            sessions={sessions}
+            loading={loading}
+            onEdit={(s) => { if (canEdit) onEditVisit(s.id) }}
+            onDelete={handleDelete}
+            canDelete={canEdit}
+          />
+        </div>
+      )}
     </div>
   )
 }

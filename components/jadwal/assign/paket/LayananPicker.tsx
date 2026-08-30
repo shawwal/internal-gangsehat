@@ -22,7 +22,7 @@ export function LayananPicker({ branchId, selected, onSelect }: Props) {
     if (!branchId) { setRows([]); return }
     setLoading(true)
     fetchLayananByBranch(branchId).then((data) => {
-      setRows(data.filter((r) => r.kategori === 'PAKET KLINIK' && r.is_active))
+      setRows(data.filter((r) => r.kategori.includes('PAKET') && r.is_active))
       setLoading(false)
     })
   }, [branchId])

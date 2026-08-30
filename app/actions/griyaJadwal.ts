@@ -52,6 +52,7 @@ export interface GriyaWeekVisit {
   status: string
   kehadiran: string | null
   notes: string | null
+  package_id: string | null
 }
 
 export interface GriyaScheduleRow {
@@ -149,7 +150,7 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
       .or(`end_date.is.null,end_date.gte.${weekMondayIso}`),
     supabase
       .from('patient_visits')
-      .select('id, patient_id, griya_slot_id, attending_staff_id, visit_date, visit_time, service_type, status, kehadiran, notes')
+      .select('id, patient_id, griya_slot_id, attending_staff_id, visit_date, visit_time, service_type, status, kehadiran, notes, package_id')
       .eq('branch_id', branchId)
       .gte('visit_date', weekMondayIso)
       .lte('visit_date', weekEndIso),
@@ -236,6 +237,7 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
       status: v.status as string,
       kehadiran: (v.kehadiran as string) ?? null,
       notes: (v.notes as string) ?? null,
+      package_id: (v.package_id as string) ?? null,
     })),
     schedules: ((schedulesRes.data ?? []) as Record<string, unknown>[]).map((r) => ({
       staff_id: r.staff_id as string,
@@ -278,6 +280,7 @@ export async function assignRecurringSlot(input: AssignSlotInput): Promise<{ err
       visit_date: input.onlyThisWeek.date,
       visit_time: input.slot_time,
       service_type: input.service_type ?? 'SESI TERAPI',
+      package_id: input.package_id ?? null,
       status: 'scheduled',
       notes: input.notes ?? null,
       order_id: orderId,
@@ -332,7 +335,7 @@ export async function moveSlot(input: MoveSlotInput): Promise<{ error: string | 
 
   const { data: slot } = await supabase
     .from('griya_schedule_slots')
-    .select('id, branch_id, patient_id, therapist_id, discipline, hari, slot_time, service_type')
+    .select('id, branch_id, patient_id, therapist_id, discipline, hari, slot_time, service_type, package_id')
     .eq('id', input.slotId)
     .single()
   if (!slot) return { error: 'Slot tidak ditemukan' }
@@ -390,6 +393,7 @@ export async function moveSlot(input: MoveSlotInput): Promise<{ error: string | 
     visit_date: input.date,
     visit_time: input.slot_time,
     service_type: (slot.service_type as string) ?? 'SESI TERAPI',
+    package_id: (slot.package_id as string) ?? null,
     status: 'scheduled',
     order_id: orderId,
     updated_at: new Date().toISOString(),
@@ -410,7 +414,7 @@ export async function markAttendance(
 
   const { data: slot } = await supabase
     .from('griya_schedule_slots')
-    .select('branch_id, patient_id, therapist_id, service_type, slot_time')
+    .select('branch_id, patient_id, therapist_id, service_type, slot_time, package_id')
     .eq('id', slotId)
     .single()
   if (!slot) return { error: 'Slot tidak ditemukan' }
@@ -429,11 +433,14 @@ export async function markAttendance(
         status: input.reason === 'ALPA' ? 'no_show' : 'cancelled',
         notes: input.reason ?? 'IZIN',
       }
+  // keep every session (attended or not) linked to the slot's package so the
+  // student's package history shows it — the stats view still only counts HADIR.
+  const pkg = (slot.package_id as string) ?? null
 
   if (existing) {
     const { error } = await supabase
       .from('patient_visits')
-      .update({ ...patch, updated_at: new Date().toISOString() })
+      .update({ ...patch, ...(pkg ? { package_id: pkg } : {}), updated_at: new Date().toISOString() })
       .eq('id', existing.id)
     if (error) return { error: error.message }
   } else {
@@ -446,6 +453,7 @@ export async function markAttendance(
       visit_date: date,
       visit_time: hhmm(slot.slot_time as string),
       service_type: (slot.service_type as string) ?? 'SESI TERAPI',
+      package_id: pkg,
       order_id: orderId,
       updated_at: new Date().toISOString(),
       ...patch,
@@ -470,6 +478,7 @@ export interface AddSubstituteInput {
   date: string
   slot_time: string
   service_type?: string | null
+  package_id?: string | null
   coveringName?: string | null
 }
 
@@ -488,6 +497,7 @@ export async function addSubstitute(input: AddSubstituteInput): Promise<{ error:
     visit_date: input.date,
     visit_time: input.slot_time,
     service_type: input.service_type ?? 'SESI TERAPI',
+    package_id: input.package_id ?? null,
     status: 'scheduled',
     griya_slot_id: null,
     notes: input.coveringName ? `Pengganti untuk ${input.coveringName}` : 'Pengganti',
