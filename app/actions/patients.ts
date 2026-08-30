@@ -32,13 +32,20 @@ export interface PatientPlain {
   kabupaten_kota: string | null
   provinsi: string | null
   keluhan: string | null
+  // Griya Anak siswa (migration 073)
+  nama_ibu: string | null
+  pekerjaan_ibu: string | null
+  nama_ayah: string | null
+  pekerjaan_ayah: string | null
+  sumber: string | null
 }
 
 const SELECT_COLS =
   'id, encrypted_name, encrypted_phone, encrypted_address, encrypted_birth_date, ' +
   'encrypted_id_number, encrypted_emergency_contact, ' +
   'gender, blood_type, allergies, medical_notes, is_active, created_at, updated_at, ' +
-  'no_rm, pekerjaan, agama, hobi, kelurahan, kecamatan, kabupaten_kota, provinsi, keluhan'
+  'no_rm, pekerjaan, agama, hobi, kelurahan, kecamatan, kabupaten_kota, provinsi, keluhan, ' +
+  'nama_ibu, pekerjaan_ibu, nama_ayah, pekerjaan_ayah, sumber'
 
 function toPlain(row: Record<string, unknown>): PatientPlain {
   const pii = decryptPatientPII({
@@ -76,6 +83,11 @@ function toPlain(row: Record<string, unknown>): PatientPlain {
     kabupaten_kota:   (row.kabupaten_kota as string | null)  ?? null,
     provinsi:         (row.provinsi as string | null)        ?? null,
     keluhan:          (row.keluhan as string | null)         ?? null,
+    nama_ibu:         (row.nama_ibu as string | null)        ?? null,
+    pekerjaan_ibu:    (row.pekerjaan_ibu as string | null)   ?? null,
+    nama_ayah:        (row.nama_ayah as string | null)       ?? null,
+    pekerjaan_ayah:   (row.pekerjaan_ayah as string | null)  ?? null,
+    sumber:           (row.sumber as string | null)          ?? null,
   }
 }
 
@@ -408,6 +420,12 @@ export async function addPatient(input: {
   kabupaten_kota?: string
   provinsi?: string
   keluhan?: string
+  medical_notes?: string
+  nama_ibu?: string
+  pekerjaan_ibu?: string
+  nama_ayah?: string
+  pekerjaan_ayah?: string
+  sumber?: string
 }): Promise<{ error: string | null; id: string | null }> {
   const supabase = await createClient()
   const enc = encryptPatientPII({
@@ -433,6 +451,12 @@ export async function addPatient(input: {
     kabupaten_kota:       input.kabupaten_kota ?? null,
     provinsi:             input.provinsi       ?? null,
     keluhan:              input.keluhan        ?? null,
+    medical_notes:        input.medical_notes  ?? null,
+    nama_ibu:             input.nama_ibu       ?? null,
+    pekerjaan_ibu:        input.pekerjaan_ibu  ?? null,
+    nama_ayah:            input.nama_ayah      ?? null,
+    pekerjaan_ayah:       input.pekerjaan_ayah ?? null,
+    sumber:               input.sumber         ?? null,
   }).select('id').single()
 
   if (!error && data?.id) {
@@ -472,6 +496,11 @@ export interface UpdatePatientInput {
   kabupaten_kota?: string
   provinsi?: string
   keluhan?: string
+  nama_ibu?: string
+  pekerjaan_ibu?: string
+  nama_ayah?: string
+  pekerjaan_ayah?: string
+  sumber?: string
 }
 
 export async function updatePatient(
@@ -481,7 +510,7 @@ export async function updatePatient(
   const supabase = await createClient()
   const { data: oldRow } = await supabase
     .from('patients')
-    .select('gender, blood_type, allergies, medical_notes, no_rm, pekerjaan, agama, hobi, kelurahan, kecamatan, kabupaten_kota, provinsi')
+    .select('gender, blood_type, allergies, medical_notes, no_rm, pekerjaan, agama, hobi, kelurahan, kecamatan, kabupaten_kota, provinsi, nama_ibu, pekerjaan_ibu, nama_ayah, pekerjaan_ayah, sumber')
     .eq('id', id)
     .single()
   const enc = encryptPatientPII({
@@ -515,6 +544,11 @@ export async function updatePatient(
     kabupaten_kota: input.kabupaten_kota ?? null,
     provinsi:      input.provinsi       ?? null,
     keluhan:       input.keluhan        ?? null,
+    nama_ibu:      input.nama_ibu       ?? null,
+    pekerjaan_ibu: input.pekerjaan_ibu  ?? null,
+    nama_ayah:     input.nama_ayah      ?? null,
+    pekerjaan_ayah: input.pekerjaan_ayah ?? null,
+    sumber:        input.sumber         ?? null,
   }).eq('id', id).select('id')
 
   if (!error && (!updated || updated.length === 0)) {
@@ -533,6 +567,10 @@ export async function updatePatient(
         no_rm: input.no_rm ?? null, pekerjaan: input.pekerjaan ?? null, agama: input.agama ?? null,
         hobi: input.hobi ?? null, kelurahan: input.kelurahan ?? null, kecamatan: input.kecamatan ?? null,
         kabupaten_kota: input.kabupaten_kota ?? null, provinsi: input.provinsi ?? null,
+        keluhan: input.keluhan ?? null,
+        nama_ibu: input.nama_ibu ?? null, pekerjaan_ibu: input.pekerjaan_ibu ?? null,
+        nama_ayah: input.nama_ayah ?? null, pekerjaan_ayah: input.pekerjaan_ayah ?? null,
+        sumber: input.sumber ?? null,
       },
     })
   }

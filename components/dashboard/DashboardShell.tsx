@@ -49,10 +49,10 @@ export function DashboardShell({ profile, allowedNavKeys, children }: Props) {
       </div>
 
       {/* Mobile bottom tab bar */}
-      <BottomTabBar role={profile.role} allowedNavKeys={allowedNavKeys} onMorePress={() => setDrawerOpen(true)} />
+      <BottomTabBar role={profile.role} branchId={profile.branch_id} allowedNavKeys={allowedNavKeys} onMorePress={() => setDrawerOpen(true)} />
 
       {/* Mobile full-menu drawer */}
-      <NavDrawer role={profile.role} allowedNavKeys={allowedNavKeys} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <NavDrawer role={profile.role} branchId={profile.branch_id} allowedNavKeys={allowedNavKeys} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
     </ToastProvider>
     </LocaleProvider>

@@ -1,11 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import * as Icons from 'lucide-react'
 import { LayoutGrid } from 'lucide-react'
-import { navForKeys } from '@/config/navigation'
+import { useNavItems } from '@/hooks/useNavItems'
 import type { UserRole } from '@/types'
 
 function NavIcon({ name }: { name: string }) {
@@ -17,12 +16,12 @@ function NavIcon({ name }: { name: string }) {
 
 interface Props {
   role: UserRole
+  branchId: string | null
   allowedNavKeys: string[]
   onMorePress: () => void
 }
 
-export function BottomTabBar({ allowedNavKeys, onMorePress }: Props) {
-  const pathname = usePathname()
+export function BottomTabBar({ branchId, allowedNavKeys, onMorePress }: Props) {
   const [isDark, setIsDark] = useState(false)
 
   useEffect(() => {
@@ -33,17 +32,8 @@ export function BottomTabBar({ allowedNavKeys, onMorePress }: Props) {
     return () => obs.disconnect()
   }, [])
 
-  const allItems = navForKeys(allowedNavKeys)
-  const tabs = allItems.slice(0, 4)
-
-  function isActive(href?: string) {
-    if (!href) return false
-    if (href === '/') return pathname === '/'
-    // If another nav item starts with this href + '/', it's a parent route — exact match only.
-    const isParent = allItems.some(i => i.href && i.href !== href && i.href.startsWith(href + '/'))
-    if (isParent) return pathname === href
-    return pathname === href || pathname.startsWith(href + '/')
-  }
+  const { items, isActive } = useNavItems(allowedNavKeys, branchId)
+  const tabs = items.slice(0, 4)
 
   const pillBg = isDark
     ? 'rgba(10, 15, 30, 0.78)'

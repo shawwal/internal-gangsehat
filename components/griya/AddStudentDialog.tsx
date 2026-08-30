@@ -5,10 +5,9 @@ import { X, Search, UserPlus } from 'lucide-react'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { createGriyaStudent, enrollGriyaStudent } from '@/app/actions/griyaStudents'
 import { calcAge } from '@/components/patients/detail/constants'
+import { normalizeSumber } from '@/lib/griyaSumber'
 import { useToast } from '@/context/ToastContext'
-
-const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
-const labelCls = 'block text-xs font-medium text-muted-foreground mb-1'
+import { StudentFormFields, type StudentFormValue } from './StudentFormFields'
 
 interface Props {
   branchId: string
@@ -22,7 +21,7 @@ export function AddStudentDialog({ branchId, onClose, onDone }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="glass-card w-full max-w-md max-h-[85vh] flex flex-col p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="glass-card w-full max-w-lg max-h-[88vh] flex flex-col p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-3">
           <div>
             <h2 className="text-base font-semibold text-foreground">Tambah Siswa</h2>
@@ -53,56 +52,31 @@ export function AddStudentDialog({ branchId, onClose, onDone }: Props) {
   )
 }
 
+const BLANK: StudentFormValue = { name: '', phone: '', gender: 'male' }
+
 function NewChildForm({ branchId, onDone }: { branchId: string; onDone: (name: string) => void }) {
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [gender, setGender] = useState<'male' | 'female' | 'other'>('male')
-  const [birthDate, setBirthDate] = useState('')
-  const [keluhan, setKeluhan] = useState('')
+  const [form, setForm] = useState<StudentFormValue>(BLANK)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const ref = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { setTimeout(() => ref.current?.focus(), 80) }, [])
+  const onChange = (k: keyof StudentFormValue, val: string) => setForm((f) => ({ ...f, [k]: val }))
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim() || !phone.trim()) { setError('Nama dan No. WA wajib diisi.'); return }
+    if (!form.name.trim() || !form.phone.trim()) { setError('Nama dan No. WA wajib diisi.'); return }
     setSaving(true); setError(null)
-    const { error } = await createGriyaStudent({ name, phone, gender, birthDate, keluhan }, branchId)
+    const { error } = await createGriyaStudent(
+      { ...form, gender: form.gender ?? 'other', sumber: normalizeSumber(form.sumber) ?? undefined },
+      branchId,
+    )
     setSaving(false)
     if (error) { setError(error); return }
-    onDone(name.trim())
+    onDone(form.name.trim())
   }
 
   return (
-    <form onSubmit={submit} className="flex-1 overflow-y-auto space-y-3">
-      <div>
-        <label className={labelCls}>Nama Anak *</label>
-        <input ref={ref} value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
-      </div>
-      <div>
-        <label className={labelCls}>No. WA Orang Tua *</label>
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} />
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className={labelCls}>Jenis Kelamin</label>
-          <select value={gender} onChange={(e) => setGender(e.target.value as typeof gender)} className={inputCls}>
-            <option value="male">Laki-laki</option>
-            <option value="female">Perempuan</option>
-            <option value="other">Lainnya</option>
-          </select>
-        </div>
-        <div>
-          <label className={labelCls}>Tanggal Lahir</label>
-          <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className={inputCls} />
-        </div>
-      </div>
-      <div>
-        <label className={labelCls}>Keluhan</label>
-        <textarea value={keluhan} onChange={(e) => setKeluhan(e.target.value)} rows={2} className={`${inputCls} resize-none`} />
-      </div>
+    <form onSubmit={submit} className="flex-1 overflow-y-auto space-y-3 pr-1">
+      <StudentFormFields value={form} onChange={onChange} />
 
       {error && <p className="text-xs text-destructive">{error}</p>}
 

@@ -295,8 +295,30 @@ export async function enrollGriyaStudent(
 }
 
 /** Create a brand-new child (patient) and enrol them as a Griya student. */
+export interface CreateGriyaStudentInput {
+  name: string
+  phone: string
+  gender: 'male' | 'female' | 'other'
+  birthDate?: string
+  no_rm?: string
+  agama?: string
+  hobi?: string
+  keluhan?: string
+  medical_notes?: string
+  nama_ibu?: string
+  pekerjaan_ibu?: string
+  nama_ayah?: string
+  pekerjaan_ayah?: string
+  sumber?: string
+  address?: string
+  kelurahan?: string
+  kecamatan?: string
+  kabupaten_kota?: string
+  provinsi?: string
+}
+
 export async function createGriyaStudent(
-  input: { name: string; phone: string; gender: 'male' | 'female' | 'other'; birthDate?: string; keluhan?: string },
+  input: CreateGriyaStudentInput,
   branchId: string,
 ): Promise<{ error: string | null; id: string | null }> {
   const a = await requireWrite()
@@ -306,10 +328,25 @@ export async function createGriyaStudent(
   const phone = input.phone.trim()
   if (!name || !phone) return { error: 'Nama dan No. WA wajib diisi.', id: null }
 
+  const t = (v?: string) => (v?.trim() ? v.trim() : undefined)
   const { id, error } = await addPatient({
     name, phone, gender: input.gender,
-    birthDate: input.birthDate?.trim() || undefined,
-    keluhan: input.keluhan?.trim() || undefined,
+    birthDate: t(input.birthDate),
+    no_rm: t(input.no_rm),
+    agama: t(input.agama),
+    hobi: t(input.hobi),
+    keluhan: t(input.keluhan),
+    medical_notes: t(input.medical_notes),
+    nama_ibu: t(input.nama_ibu),
+    pekerjaan_ibu: t(input.pekerjaan_ibu),
+    nama_ayah: t(input.nama_ayah),
+    pekerjaan_ayah: t(input.pekerjaan_ayah),
+    sumber: t(input.sumber),
+    address: t(input.address),
+    kelurahan: t(input.kelurahan),
+    kecamatan: t(input.kecamatan),
+    kabupaten_kota: t(input.kabupaten_kota),
+    provinsi: t(input.provinsi),
   })
   if (error || !id) return { error: error ?? 'Gagal menambah anak.', id: null }
 

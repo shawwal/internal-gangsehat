@@ -1,11 +1,11 @@
 const ITEMS: { c: string; label: string }[] = [
-  { c: 'bg-[#34C759]/15 border-[#34C759]/40', label: 'Kosong' },
-  { c: 'bg-primary/15 border-primary/40', label: 'Terjadwal' },
+  { c: 'bg-[#34C759]/5 border-dashed border-[#34C759]/70', label: 'Kosong' },
+  { c: 'bg-primary/20 border-primary/60', label: 'Terjadwal' },
   { c: 'bg-[#34C759] border-[#34C759] text-white', label: 'Hadir' },
-  { c: 'bg-[#FFB35C]/20 border-[#FFB35C]/50', label: 'Izin / Sakit' },
-  { c: 'bg-[#FF3B30]/15 border-[#FF3B30]/50', label: 'Alpa' },
-  { c: 'bg-purple-500/15 border-purple-500/50', label: 'Pengganti' },
-  { c: 'bg-muted border-border opacity-60', label: 'Terapis OFF' },
+  { c: 'bg-[#FFB35C]/30 border-[#FFB35C]/70', label: 'Izin / Sakit' },
+  { c: 'bg-[#FF3B30]/20 border-[#FF3B30]/70', label: 'Alpa' },
+  { c: 'bg-purple-500/20 border-purple-500/70', label: 'Pengganti' },
+  { c: 'bg-muted border-muted-foreground/40', label: 'Terapis OFF' },
 ]
 
 export function Legend() {

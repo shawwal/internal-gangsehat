@@ -19,12 +19,12 @@ interface Props {
 }
 
 const STATE_CLS: Record<string, string> = {
-  scheduled: 'bg-primary/15 border-primary/40 text-foreground',
+  scheduled: 'bg-primary/20 border-primary/60 text-foreground',
   hadir: 'bg-[#34C759] border-[#34C759] text-white',
-  izin: 'bg-[#FFB35C]/20 border-[#FFB35C]/50 text-foreground',
-  alpa: 'bg-[#FF3B30]/15 border-[#FF3B30]/50 text-foreground',
-  'moved-out': 'bg-muted border-border text-muted-foreground line-through',
-  adhoc: 'bg-purple-500/15 border-purple-500/50 text-foreground',
+  izin: 'bg-[#FFB35C]/30 border-[#FFB35C]/70 text-foreground',
+  alpa: 'bg-[#FF3B30]/20 border-[#FF3B30]/70 text-foreground',
+  'moved-out': 'bg-muted border-muted-foreground/40 text-muted-foreground line-through',
+  adhoc: 'bg-purple-500/20 border-purple-500/70 text-foreground',
 }
 
 export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onAction }: Props) {
@@ -42,8 +42,8 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
   if (!therapistOn && !cell) {
     return (
       <div
-        className="h-full min-h-[44px] rounded-lg border border-border bg-muted opacity-50"
-        style={{ backgroundImage: 'repeating-linear-gradient(-45deg,transparent,transparent 5px,color-mix(in srgb,currentColor 8%,transparent) 5px,color-mix(in srgb,currentColor 8%,transparent) 6px)' }}
+        className="h-full min-h-[44px] rounded-lg border border-muted-foreground/30 bg-muted"
+        style={{ backgroundImage: 'repeating-linear-gradient(-45deg,transparent,transparent 5px,color-mix(in srgb,var(--muted-foreground) 55%,transparent) 5px,color-mix(in srgb,var(--muted-foreground) 55%,transparent) 7px)' }}
       />
     )
   }
@@ -57,12 +57,12 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
         onClick={() => canEdit && onAction(moveMode ? 'move' : 'assign', cell)}
         className={`group h-full min-h-[44px] rounded-lg border flex items-center justify-center cursor-pointer transition-colors ${
           moveMode ? 'border-primary/70 bg-primary/5 hover:bg-primary/15' : isOver ? 'border-primary bg-primary/10'
-            : 'border-dashed border-[#34C759]/40 hover:bg-[#34C759]/10'
+            : 'border-dashed border-[#34C759]/70 bg-[#34C759]/5 hover:bg-[#34C759]/15'
         }`}
       >
         {cell?.state === 'moved-out'
           ? <span className="text-[10px] text-muted-foreground line-through px-1 truncate">{cell.studentName}</span>
-          : <Plus size={14} className="text-[#34C759]/50 opacity-0 group-hover:opacity-100" />}
+          : <Plus size={14} className="text-[#34C759] opacity-0 group-hover:opacity-100" />}
       </div>
     )
   }

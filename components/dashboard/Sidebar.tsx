@@ -2,13 +2,15 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
 import * as Icons from 'lucide-react'
-import { navForKeys, NAV_GROUP_LABELS } from '@/config/navigation'
+import { ChevronDown, Search } from 'lucide-react'
+import { NAV_GROUP_LABELS } from '@/config/navigation'
 import type { NavGroup } from '@/config/navigation'
 import type { UserRole } from '@/types'
-import { createClient } from '@/lib/supabase/client'
+import { useNavItems } from '@/hooks/useNavItems'
+
+const COLLAPSED_GROUPS_KEY = 'gs_nav_collapsed_groups'
 
 function Icon({ name, size = 18 }: { name: string; size?: number }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,58 +27,39 @@ interface Props {
 }
 
 export function Sidebar({ role, branchId, allowedNavKeys, collapsed }: Props) {
-  const pathname = usePathname()
+  const { items, orderedGroupKeys, groupedItems, isActive } = useNavItems(allowedNavKeys, branchId)
 
-  // Sport Massage nav item is nav-hidden (not route-guarded) for branch-scoped
-  // roles when the caller's branch hasn't enabled the feature. Director
-  // (branch_id NULL) always sees the link; the in-page empty state handles
-  // the "not enabled" case per-branch for directors.
-  const [sportMassageEnabled, setSportMassageEnabled] = useState(true)
+  const [search, setSearch] = useState('')
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<NavGroup>>(new Set())
+
+  // Hydrate persisted accordion state after mount (avoids SSR mismatch)
   useEffect(() => {
-    if (!branchId) { setSportMassageEnabled(true); return }
-    let cancelled = false
-    createClient()
-      .from('branch_sport_massage_settings')
-      .select('enabled')
-      .eq('branch_id', branchId)
-      .maybeSingle()
-      .then(({ data }) => { if (!cancelled) setSportMassageEnabled(data?.enabled ?? false) })
-    return () => { cancelled = true }
-  }, [branchId])
+    try {
+      const raw = localStorage.getItem(COLLAPSED_GROUPS_KEY)
+      if (raw) setCollapsedGroups(new Set(JSON.parse(raw) as NavGroup[]))
+    } catch { /* ignore */ }
+  }, [])
 
-  // Griya Anak feature set (jadwal / pengaturan / toko) — nav-hidden for
-  // branch-scoped roles unless their branch has it enabled. Director sees it.
-  const [griyaEnabled, setGriyaEnabled] = useState(true)
-  useEffect(() => {
-    if (!branchId) { setGriyaEnabled(true); return }
-    let cancelled = false
-    createClient()
-      .from('branch_griya_settings')
-      .select('enabled')
-      .eq('branch_id', branchId)
-      .maybeSingle()
-      .then(({ data }) => { if (!cancelled) setGriyaEnabled(data?.enabled ?? false) })
-    return () => { cancelled = true }
-  }, [branchId])
+  function toggleGroup(group: NavGroup) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(group)) next.delete(group)
+      else next.add(group)
+      try {
+        localStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify([...next]))
+      } catch { /* ignore */ }
+      return next
+    })
+  }
 
-  const items = navForKeys(allowedNavKeys).filter(
-    (i) => (i.key !== 'jadwal-sport-massage' || sportMassageEnabled)
-        && (!i.key.startsWith('griya-') || griyaEnabled),
+  // The group that owns the current route stays expanded regardless of stored state
+  const activeGroup = useMemo(
+    () => items.find((i) => isActive(i.href))?.group ?? null,
+    [items, isActive],
   )
 
-  // Build ordered groups, preserving nav order
-  const orderedGroupKeys = [...new Set(items.map(i => i.group))] as NavGroup[]
-  const groupedItems = orderedGroupKeys.reduce<Record<NavGroup, typeof items>>((acc, g) => {
-    acc[g] = items.filter(i => i.group === g)
-    return acc
-  }, {} as Record<NavGroup, typeof items>)
-
-  function isActive(href?: string) {
-    if (!href) return false
-    const isParent = items.some(i => i.href && i.href !== href && i.href.startsWith(href + '/'))
-    if (isParent) return pathname === href
-    return pathname === href || pathname.startsWith(href + '/')
-  }
+  const query = search.trim().toLowerCase()
+  const searchResults = query ? items.filter((i) => i.label.toLowerCase().includes(query)) : []
 
   return (
     <aside
@@ -103,44 +86,100 @@ export function Sidebar({ role, branchId, allowedNavKeys, collapsed }: Props) {
         )}
       </div>
 
-      {/* Nav groups */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 scrollbar-sidebar">
-        {orderedGroupKeys.map((groupKey, gi) => (
-          <div key={groupKey} className={gi > 0 ? 'mt-4' : ''}>
-            {/* Group label — hidden when collapsed */}
-            {!collapsed && (
-              <p className="text-[10px] font-semibold tracking-widest uppercase px-3 mb-1 text-foreground/30">
-                {NAV_GROUP_LABELS[groupKey]}
-              </p>
-            )}
-            {collapsed && gi > 0 && (
-              <div className="mx-3 my-2 h-px bg-sidebar-border" />
-            )}
+      {/* Search — expanded sidebar only */}
+      {!collapsed && (
+        <div className="px-3 pt-3 shrink-0">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-foreground/30" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari menu..."
+              className="w-full pl-8 pr-3 py-2 rounded-xl text-sm bg-muted/50 border border-sidebar-border focus:outline-none focus:border-primary/40 text-foreground/80 placeholder:text-foreground/30"
+            />
+          </div>
+        </div>
+      )}
 
-            <div className="space-y-0.5">
-              {groupedItems[groupKey].map((item) => {
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 scrollbar-sidebar">
+        {!collapsed && query ? (
+          /* Flat search results */
+          <div className="space-y-0.5">
+            {searchResults.length > 0 ? (
+              searchResults.map((item) => {
                 const active = isActive(item.href)
                 return (
                   <Link
                     key={item.key}
                     href={item.href!}
-                    title={collapsed ? item.label : undefined}
                     className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      collapsed ? 'justify-center' : ''
-                    } ${
                       active
                         ? 'bg-primary text-primary-foreground shadow-sm'
                         : 'text-foreground/60 hover:text-foreground hover:bg-muted dark:text-foreground/50 dark:hover:text-foreground'
                     }`}
                   >
                     <span className="shrink-0"><Icon name={item.icon} /></span>
-                    {!collapsed && <span>{item.label}</span>}
+                    <span>{item.label}</span>
                   </Link>
                 )
-              })}
-            </div>
+              })
+            ) : (
+              <p className="text-center text-sm py-8 text-foreground/40">
+                Tidak ada menu yang cocok dengan &ldquo;{search.trim()}&rdquo;
+              </p>
+            )}
           </div>
-        ))}
+        ) : (
+          orderedGroupKeys.map((groupKey, gi) => {
+            const isGroupCollapsed =
+              !collapsed && groupKey !== activeGroup && collapsedGroups.has(groupKey)
+            return (
+              <div key={groupKey} className={gi > 0 ? 'mt-4' : ''}>
+                {/* Group header */}
+                {!collapsed && (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(groupKey)}
+                    className="w-full flex items-center justify-between px-3 mb-1 text-[10px] font-semibold tracking-widest uppercase text-foreground/30 hover:text-foreground/60 transition-colors"
+                  >
+                    <span>{NAV_GROUP_LABELS[groupKey]}</span>
+                    <ChevronDown
+                      size={12}
+                      className={`transition-transform ${isGroupCollapsed ? '-rotate-90' : ''}`}
+                    />
+                  </button>
+                )}
+                {collapsed && gi > 0 && <div className="mx-3 my-2 h-px bg-sidebar-border" />}
+
+                {!isGroupCollapsed && (
+                  <div className="space-y-0.5">
+                    {groupedItems[groupKey].map((item) => {
+                      const active = isActive(item.href)
+                      return (
+                        <Link
+                          key={item.key}
+                          href={item.href!}
+                          title={collapsed ? item.label : undefined}
+                          className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                            collapsed ? 'justify-center' : ''
+                          } ${
+                            active
+                              ? 'bg-primary text-primary-foreground shadow-sm'
+                              : 'text-foreground/60 hover:text-foreground hover:bg-muted dark:text-foreground/50 dark:hover:text-foreground'
+                          }`}
+                        >
+                          <span className="shrink-0"><Icon name={item.icon} /></span>
+                          {!collapsed && <span>{item.label}</span>}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })
+        )}
       </nav>
 
       {/* Role badge */}

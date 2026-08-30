@@ -130,8 +130,20 @@ export default function GriyaSiswaDetailPage() {
           <div className="glass-card p-4 md:col-span-2 space-y-2 text-sm">
             {patient.no_rm && <p><span className="text-muted-foreground">No. RM:</span> {patient.no_rm}</p>}
             {patient.agama && <p><span className="text-muted-foreground">Agama:</span> {patient.agama}</p>}
+            {patient.sumber && <p><span className="text-muted-foreground">Sumber:</span> {patient.sumber}</p>}
             {patient.keluhan && <p><span className="text-muted-foreground">Keluhan:</span> {patient.keluhan}</p>}
-            {patient.medical_notes && <p className="flex gap-1.5"><Users size={14} className="mt-0.5 shrink-0 text-muted-foreground" />{patient.medical_notes}</p>}
+            {(patient.nama_ibu || patient.nama_ayah) && (
+              <p className="flex gap-1.5">
+                <Users size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
+                <span>
+                  {[
+                    patient.nama_ibu && `Ibu: ${patient.nama_ibu}${patient.pekerjaan_ibu ? ` (${patient.pekerjaan_ibu})` : ''}`,
+                    patient.nama_ayah && `Ayah: ${patient.nama_ayah}${patient.pekerjaan_ayah ? ` (${patient.pekerjaan_ayah})` : ''}`,
+                  ].filter(Boolean).join(' · ')}
+                </span>
+              </p>
+            )}
+            {patient.medical_notes && <p className="text-muted-foreground">{patient.medical_notes}</p>}
             {patient.phone && <p className="flex gap-1.5"><Phone size={14} className="mt-0.5 shrink-0 text-muted-foreground" />{patient.phone}</p>}
             {(patient.address || patient.kecamatan) && (
               <p className="flex gap-1.5">

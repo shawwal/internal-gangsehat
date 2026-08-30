@@ -23,6 +23,7 @@ import * as path from 'path'
 import * as crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import * as XLSX from 'xlsx'
+import { normalizeSumber } from '../lib/griyaSumber'
 
 // ── env ──────────────────────────────────────────────────────────────────────
 for (const envFile of ['../.env', '../.env.local']) {
@@ -91,8 +92,24 @@ function dateToIso(v: unknown): string | null {
   }
   const s = String(v ?? '').trim()
   const dmy = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
-  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`
+  if (dmy) {
+    let d = +dmy[1], mo = +dmy[2]
+    if (mo > 12 && d <= 12) [d, mo] = [mo, d]   // tolerate M/D/Y
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null
+    return `${dmy[3]}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+  }
   return null
+}
+function normAgama(raw: string): string | null {
+  const v = raw.trim().toUpperCase()
+  if (!v) return null
+  if (v === 'PROTESTAN' || v === 'KRISTEN' || v.includes('PROTESTAN')) return 'KRISTEN PROTESTAN'
+  if (v === 'KATOLIK' || v.includes('KATOLIK')) return 'KRISTEN KATOLIK'
+  if (v.startsWith('BUD')) return 'BUDHA'
+  if (v.startsWith('KHONG') || v.startsWith('KONG')) return 'KONGHUCU'
+  if (v.startsWith('ISLAM')) return 'ISLAM'
+  if (v.startsWith('HINDU')) return 'HINDU'
+  return 'LAINNYA'
 }
 function normGender(raw: string): 'male' | 'female' | 'other' {
   const v = raw.trim().toLowerCase()
@@ -133,6 +150,7 @@ const IDX = {
   kabkota: col('Kabupaten/Kota'),
   provinsi: col('Provinsi'),
   phone: col('No. HP/WA'),
+  sumber: col('Sumber'),
 }
 if (IDX.name < 0) { console.error('Column "Nama Anak" not found. Header:', header); process.exit(1) }
 
@@ -149,7 +167,11 @@ interface Rec {
   kabupaten_kota: string | null
   provinsi: string | null
   keluhan: string | null
-  medical_notes: string | null
+  nama_ibu: string | null
+  pekerjaan_ibu: string | null
+  nama_ayah: string | null
+  pekerjaan_ayah: string | null
+  sumber: string | null
   sourceRow: number
 }
 
@@ -172,10 +194,6 @@ for (let i = 1; i < grid.length; i++) {
 
   const ibu = str(r, IDX.ibu), pekIbu = str(r, IDX.pekIbu)
   const ayah = str(r, IDX.ayah), pekAyah = str(r, IDX.pekAyah)
-  const parents = [
-    ibu && `Ibu: ${titleCase(ibu)}${pekIbu ? ` (${pekIbu})` : ''}`,
-    ayah && `Ayah: ${titleCase(ayah)}${pekAyah ? ` (${pekAyah})` : ''}`,
-  ].filter(Boolean).join(' · ')
 
   recs.push({
     key,
@@ -183,14 +201,18 @@ for (let i = 1; i < grid.length; i++) {
     phone: cleanPhone(r[IDX.phone]),
     dob,
     gender: normGender(str(r, IDX.gender)),
-    agama: str(r, IDX.agama) || null,
+    agama: normAgama(str(r, IDX.agama)),
     address: str(r, IDX.alamat) || null,
     kelurahan: str(r, IDX.kelurahan) || null,
     kecamatan: str(r, IDX.kecamatan) || null,
     kabupaten_kota: str(r, IDX.kabkota) || null,
     provinsi: str(r, IDX.provinsi) || null,
     keluhan: str(r, IDX.keluhan) || null,
-    medical_notes: parents || null,
+    nama_ibu: ibu ? titleCase(ibu) : null,
+    pekerjaan_ibu: pekIbu ? pekIbu.toUpperCase() : null,
+    nama_ayah: ayah ? titleCase(ayah) : null,
+    pekerjaan_ayah: pekAyah ? pekAyah.toUpperCase() : null,
+    sumber: normalizeSumber(str(r, IDX.sumber)),
     sourceRow: i + 1,
   })
 }
@@ -201,35 +223,36 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSessio
 async function main() {
   console.log(`Parsed ${recs.length} unique children  (junk rows: ${junk}, in-file dupes: ${dupInFile})`)
 
-  const existing = new Set<string>()
+  const existingById = new Map<string, string>()   // name|dob  -> patient id
   const existingHashes = new Set<string>()
   let from = 0
   const PAGE = 1000
   for (;;) {
     const { data, error } = await supabase
       .from('patients')
-      .select('encrypted_name, encrypted_birth_date, phone_hash')
+      .select('id, encrypted_name, encrypted_birth_date, phone_hash')
       .range(from, from + PAGE - 1)
     if (error) { console.error('fetch existing failed:', error.message); process.exit(1) }
     if (!data || data.length === 0) break
     for (const p of data) {
       const nm = normName(decrypt(p.encrypted_name))
       const bd = p.encrypted_birth_date ? decrypt(p.encrypted_birth_date).slice(0, 10) : ''
-      if (nm) existing.add(`${nm}|${bd}`)
+      if (nm && !existingById.has(`${nm}|${bd}`)) existingById.set(`${nm}|${bd}`, p.id as string)
       if (p.phone_hash) existingHashes.add(p.phone_hash as string)
     }
     if (data.length < PAGE) break
     from += PAGE
   }
-  console.log(`Existing patients: ${existing.size} name+dob keys, ${existingHashes.size} phone hashes`)
+  console.log(`Existing patients: ${existingById.size} name+dob keys, ${existingHashes.size} phone hashes`)
 
-  const toInsert = recs.filter((r) => !existing.has(r.key))
-  const skippedExisting = recs.length - toInsert.length
+  const toInsert = recs.filter((r) => !existingById.has(r.key))
+  const toUpdate = recs.filter((r) => existingById.has(r.key))
   const noPhone = toInsert.filter((r) => !r.phone).length
-  console.log(`\nWill insert: ${toInsert.length}   (already in DB: ${skippedExisting}, of which ${noPhone} have no phone)\n`)
-  console.log('Sample:')
+  console.log(`\nWill INSERT ${toInsert.length} new  (${noPhone} without a phone)`)
+  console.log(`Will UPDATE ${toUpdate.length} existing (backfill parent + sumber + demographics)\n`)
+  console.log('Insert sample:')
   for (const r of toInsert.slice(0, 8)) {
-    console.log(`  ${r.name}  dob=${r.dob ?? '—'}  ${r.gender}  ph=${r.phone || '—'}  ${r.kabupaten_kota ?? ''}`)
+    console.log(`  ${r.name}  dob=${r.dob ?? '—'}  ${r.gender}  ph=${r.phone || '—'}  ${r.kabupaten_kota ?? ''}  sumber=${r.sumber ?? '—'}`)
   }
 
   if (!APPLY) { console.log('\nDRY RUN — pass --apply to write.'); return }
@@ -237,12 +260,45 @@ async function main() {
   const { data: branch } = await supabase
     .from('branches').select('id').ilike('name', '%Griya Anak%').eq('is_active', true).limit(1).maybeSingle()
   const griyaBranchId = branch?.id ?? null
-  if (!griyaBranchId) console.warn('WARN: Griya Anak branch not found — patients created but not added to griya_students roster.')
+  if (!griyaBranchId) console.warn('WARN: Griya Anak branch not found — roster rows will be skipped.')
 
+  // Only overwrite a demographic column when the sheet actually has a value.
+  const demo = (r: Rec) => {
+    const p: Record<string, unknown> = {
+      nama_ibu: r.nama_ibu, pekerjaan_ibu: r.pekerjaan_ibu,
+      nama_ayah: r.nama_ayah, pekerjaan_ayah: r.pekerjaan_ayah,
+      sumber: r.sumber,
+    }
+    if (r.agama) p.agama = r.agama
+    if (r.address) p.encrypted_address = encrypt(r.address)
+    if (r.kelurahan) p.kelurahan = r.kelurahan
+    if (r.kecamatan) p.kecamatan = r.kecamatan
+    if (r.kabupaten_kota) p.kabupaten_kota = r.kabupaten_kota
+    if (r.provinsi) p.provinsi = r.provinsi
+    if (r.keluhan) p.keluhan = r.keluhan
+    return p
+  }
+
+  // ── UPDATE existing ────────────────────────────────────────────────────────
+  let uOk = 0, uFail = 0
+  for (const r of toUpdate) {
+    const id = existingById.get(r.key)!
+    const { error } = await supabase.from('patients').update(demo(r)).eq('id', id)
+    if (error) { uFail++; console.error(`  UPD FAIL ${r.name}: ${error.message}`); continue }
+    uOk++
+    if (griyaBranchId) {
+      await supabase.from('griya_students')
+        .upsert({ patient_id: id, branch_id: griyaBranchId, source: 'excel-import' },
+          { onConflict: 'patient_id', ignoreDuplicates: true })
+    }
+    if ((uOk + uFail) % 200 === 0) console.log(`  upd ...${uOk + uFail}/${toUpdate.length}`)
+  }
+  console.log(`Updated ${uOk}, failed ${uFail}.`)
+
+  // ── INSERT new ─────────────────────────────────────────────────────────────
   // phone_hash has a UNIQUE index, but siblings share a parent's number — keep
   // the real (encrypted) phone, drop the hash for the 2nd+ child on a number.
   const usedHashes = new Set<string>()
-
   let ok = 0, fail = 0
   for (const r of toInsert) {
     const h = r.phone ? hashPhone(r.phone) : null
@@ -263,7 +319,11 @@ async function main() {
       kabupaten_kota: r.kabupaten_kota,
       provinsi: r.provinsi,
       keluhan: r.keluhan,
-      medical_notes: r.medical_notes,
+      nama_ibu: r.nama_ibu,
+      pekerjaan_ibu: r.pekerjaan_ibu,
+      nama_ayah: r.nama_ayah,
+      pekerjaan_ayah: r.pekerjaan_ayah,
+      sumber: r.sumber,
       is_active: true,
     }).select('id').single()
     if (error || !inserted) { fail++; console.error(`  FAIL ${r.name}: ${error?.message}`); continue }
@@ -275,9 +335,9 @@ async function main() {
       })
       if (e2) console.warn(`  roster WARN ${r.name}: ${e2.message}`)
     }
-    if ((ok + fail) % 100 === 0) console.log(`  ...${ok + fail}/${toInsert.length}`)
+    if ((ok + fail) % 100 === 0) console.log(`  ins ...${ok + fail}/${toInsert.length}`)
   }
-  console.log(`\nDone. Inserted ${ok}, failed ${fail}.`)
+  console.log(`\nDone. Inserted ${ok} (failed ${fail}), updated ${uOk} (failed ${uFail}).`)
 }
 
 main()

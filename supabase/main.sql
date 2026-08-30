@@ -16,6 +16,7 @@ CREATE TABLE public.profiles (
 
 -- patients: id(pk) profile_id(fk→profiles) encrypted_* gender blood_type allergies[] medical_notes is_active member_type_id last_booking_*
 -- plain (non-PII) fields: no_rm(UNIQUE partial) pekerjaan agama hobi kelurahan kecamatan kabupaten_kota provinsi phone_hash
+--   griya-anak siswa (migration 073): nama_ibu pekerjaan_ibu nama_ayah pekerjaan_ayah sumber
 -- PII encrypted AES-256-GCM via lib/encryption.ts (server-only). No branch_id — shared with gangsehat.com.
 CREATE TABLE public.patients (
   id uuid PK,

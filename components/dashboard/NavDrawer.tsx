@@ -5,8 +5,9 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import * as Icons from 'lucide-react'
 import { X, Search } from 'lucide-react'
-import { navForKeys, NAV_GROUP_LABELS } from '@/config/navigation'
-import type { NavGroup, NavItem } from '@/config/navigation'
+import { NAV_GROUP_LABELS } from '@/config/navigation'
+import type { NavItem } from '@/config/navigation'
+import { useNavItems } from '@/hooks/useNavItems'
 import type { UserRole } from '@/types'
 
 function NavIcon({ name, className }: { name: string; className?: string }) {
@@ -74,13 +75,15 @@ function NavGridItem({ item, isActive, isDark }: { item: NavItem; isActive: bool
 
 interface Props {
   role: UserRole
+  branchId: string | null
   allowedNavKeys: string[]
   isOpen: boolean
   onClose: () => void
 }
 
-export function NavDrawer({ allowedNavKeys, isOpen, onClose }: Props) {
+export function NavDrawer({ branchId, allowedNavKeys, isOpen, onClose }: Props) {
   const pathname = usePathname()
+  const { items, orderedGroupKeys, groupedItems, isActive } = useNavItems(allowedNavKeys, branchId)
   const [isDark, setIsDark] = useState(false)
   const [search, setSearch] = useState('')
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -110,24 +113,8 @@ export function NavDrawer({ allowedNavKeys, isOpen, onClose }: Props) {
     return () => { document.body.style.overflow = '' }
   }, [isOpen])
 
-  const items = navForKeys(allowedNavKeys)
-
-  function isItemActive(item: NavItem) {
-    if (!item.href) return false
-    const isParent = items.some(i => i.href && i.href !== item.href && i.href.startsWith(item.href + '/'))
-    if (item.href === '/') return pathname === '/'
-    return isParent ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + '/')
-  }
-
   const query = search.trim().toLowerCase()
   const searchResults = query ? items.filter(i => i.label.toLowerCase().includes(query)) : []
-
-  // Build ordered groups, preserving nav order
-  const orderedGroupKeys = [...new Set(items.map(i => i.group))] as NavGroup[]
-  const groupedItems = orderedGroupKeys.reduce<Record<NavGroup, typeof items>>((acc, g) => {
-    acc[g] = items.filter(i => i.group === g)
-    return acc
-  }, {} as Record<NavGroup, typeof items>)
 
   const sheetBg = isDark
     ? 'rgba(10, 14, 28, 0.88)'
@@ -228,7 +215,7 @@ export function NavDrawer({ allowedNavKeys, isOpen, onClose }: Props) {
                 {searchResults.length > 0 ? (
                   <div className="grid grid-cols-4 sm:grid-cols-3 gap-2">
                     {searchResults.map((item) => (
-                      <NavGridItem key={item.key} item={item} isActive={isItemActive(item)} isDark={isDark} />
+                      <NavGridItem key={item.key} item={item} isActive={isActive(item.href)} isDark={isDark} />
                     ))}
                   </div>
                 ) : (
@@ -256,7 +243,7 @@ export function NavDrawer({ allowedNavKeys, isOpen, onClose }: Props) {
                     {/* Items grid — 4 cols (icon-only) on mobile, 3 cols with labels on sm+ */}
                     <div className="grid grid-cols-4 sm:grid-cols-3 gap-2">
                       {groupedItems[groupKey].map((item) => (
-                        <NavGridItem key={item.key} item={item} isActive={isItemActive(item)} isDark={isDark} />
+                        <NavGridItem key={item.key} item={item} isActive={isActive(item.href)} isDark={isDark} />
                       ))}
                     </div>
                   </div>
