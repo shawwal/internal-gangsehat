@@ -14,6 +14,7 @@ import { AttendanceDialog } from '@/components/griya/AttendanceDialog'
 import { EndEnrollmentDialog } from '@/components/griya/EndEnrollmentDialog'
 import { MoveScopeDialog, type MoveDest } from '@/components/griya/MoveScopeDialog'
 import { ManageTherapistsDialog } from '@/components/griya/ManageTherapistsDialog'
+import { AddStudentButton } from '@/components/griya/AddStudentButton'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { markAttendance } from '@/app/actions/griyaJadwal'
 import type { CellAction } from '@/components/griya/SlotCell'
@@ -114,6 +115,7 @@ export default function GriyaJadwalPage() {
               <Users size={14} /> Kelola Terapis
             </button>
           )}
+          <AddStudentButton branchId={branchId} canEdit={canEdit} variant="outline" onAdded={() => reload({ silent: true })} />
         </div>
       </div>
 

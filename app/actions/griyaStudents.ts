@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { normalizeBirthDate } from '@/lib/dates'
 import { logActivity } from '@/lib/activityLog'
+import { addPatient } from '@/app/actions/patients'
 
 const WRITE_ROLES = ['director', 'manager', 'admin']
 
@@ -291,6 +292,30 @@ export async function enrollGriyaStudent(
     .from('griya_students')
     .upsert({ patient_id: patientId, branch_id: branchId, source, created_by: a.userId }, { onConflict: 'patient_id' })
   return { error: error?.message ?? null }
+}
+
+/** Create a brand-new child (patient) and enrol them as a Griya student. */
+export async function createGriyaStudent(
+  input: { name: string; phone: string; gender: 'male' | 'female' | 'other'; birthDate?: string; keluhan?: string },
+  branchId: string,
+): Promise<{ error: string | null; id: string | null }> {
+  const a = await requireWrite()
+  if ('error' in a) return { error: a.error, id: null }
+
+  const name = input.name.trim()
+  const phone = input.phone.trim()
+  if (!name || !phone) return { error: 'Nama dan No. WA wajib diisi.', id: null }
+
+  const { id, error } = await addPatient({
+    name, phone, gender: input.gender,
+    birthDate: input.birthDate?.trim() || undefined,
+    keluhan: input.keluhan?.trim() || undefined,
+  })
+  if (error || !id) return { error: error ?? 'Gagal menambah anak.', id: null }
+
+  const { error: enrollErr } = await enrollGriyaStudent(id, branchId, 'manual')
+  if (enrollErr) return { error: enrollErr, id }
+  return { error: null, id }
 }
 
 export async function setGriyaStudentStatus(

@@ -1,17 +1,17 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Search, ChevronRight, UserPlus, X, GraduationCap, RotateCcw, Trash2 } from 'lucide-react'
+import { Search, ChevronRight, GraduationCap, RotateCcw, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveGriyaBranchId } from '@/app/actions/griyaJadwal'
 import {
-  fetchGriyaStudentsPage, enrollGriyaStudent, setGriyaStudentStatus, removeGriyaStudent,
+  fetchGriyaStudentsPage, setGriyaStudentStatus, removeGriyaStudent,
   type GriyaStudentRow,
 } from '@/app/actions/griyaStudents'
-import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { GENDER_LABEL, calcAge } from '@/components/patients/detail/constants'
 import { Pagination } from '@/components/leave/Pagination'
+import { AddStudentButton } from '@/components/griya/AddStudentButton'
 import { useToast } from '@/context/ToastContext'
 
 const PAGE_SIZE = 15
@@ -35,7 +35,6 @@ export default function GriyaSiswaPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<StatusFilter>('all')
-  const [showEnroll, setShowEnroll] = useState(false)
 
   useEffect(() => {
     (async () => {
@@ -76,12 +75,7 @@ export default function GriyaSiswaPage() {
           <h1 className="text-xl font-semibold text-foreground">Siswa Griya Anak</h1>
           <p className="text-sm text-muted-foreground">{total} anak terdaftar</p>
         </div>
-        {canEdit && (
-          <button onClick={() => setShowEnroll(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 cursor-pointer">
-            <UserPlus size={14} /> Tambah Siswa
-          </button>
-        )}
+        <AddStudentButton branchId={branchId} canEdit={canEdit} onAdded={load} />
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -157,63 +151,6 @@ export default function GriyaSiswaPage() {
       </div>
 
       <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
-
-      {showEnroll && branchId && (
-        <EnrollDialog branchId={branchId} onClose={() => setShowEnroll(false)} onDone={() => { setShowEnroll(false); load() }} />
-      )}
-    </div>
-  )
-}
-
-function EnrollDialog({ branchId, onClose, onDone }: { branchId: string; onClose: () => void; onDone: () => void }) {
-  const { showToast } = useToast()
-  const [q, setQ] = useState('')
-  const [results, setResults] = useState<PatientPlain[]>([])
-  const [busy, setBusy] = useState(false)
-  const ref = useRef<HTMLInputElement>(null)
-
-  useEffect(() => { setTimeout(() => ref.current?.focus(), 80) }, [])
-  useEffect(() => {
-    const term = q.trim()
-    if (term.length < 2) { setResults([]); return }
-    const t = setTimeout(() => { searchPatients(term).then((r) => setResults(r.slice(0, 15))) }, 300)
-    return () => clearTimeout(t)
-  }, [q])
-
-  async function enroll(p: PatientPlain) {
-    setBusy(true)
-    const { error } = await enrollGriyaStudent(p.id, branchId, 'manual')
-    setBusy(false)
-    if (error) { showToast(error, 'error'); return }
-    showToast(`${p.name} ditambahkan`, 'success')
-    onDone()
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="glass-card w-full max-w-md max-h-[80vh] flex flex-col p-5" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Tambah Siswa</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Cari pasien yang sudah ada untuk dijadikan siswa Griya Anak.</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"><X size={16} /></button>
-        </div>
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input ref={ref} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ketik nama..."
-            className="w-full pl-8 pr-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
-        </div>
-        <div className="flex-1 overflow-y-auto mt-2 space-y-1">
-          {results.map((p) => (
-            <button key={p.id} disabled={busy} onClick={() => enroll(p)}
-              className="w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-muted cursor-pointer disabled:opacity-50">
-              {p.name}
-              {p.birthDate && <span className="text-xs text-muted-foreground ml-2">{calcAge(p.birthDate)}</span>}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }
