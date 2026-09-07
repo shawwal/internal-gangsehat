@@ -315,8 +315,9 @@ export interface PatientPackage {
   package_type: PackageType
   total_sessions: number
   legacy_used_sessions: number // manual "used before it was tracked in-app" offset
-  used_sessions: number       // computed from patient_visits via view
+  used_sessions: number       // computed via view: legacy + attended (kehadiran='HADIR') sessions
   remaining_sessions: number  // computed: total_sessions - used_sessions
+  scheduled_sessions: number  // linked visits booked ahead but not yet attended — display only, not deducted from remaining
   notes: string | null
   status: PackageStatus
   jenis_paket: JenisPaket | null
