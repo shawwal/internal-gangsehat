@@ -68,7 +68,7 @@ export function VisitInfoBar({ visitId, value, onChange }: Props) {
   }
 
   return (
-    <div className="glass-card p-4">
+    <div className="glass-card p-4 relative z-40">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold text-muted-foreground">Info Kunjungan</p>
         {saved && (
