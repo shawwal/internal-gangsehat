@@ -472,6 +472,14 @@ export const navigation: NavItem[] = [
     group: 'griya',
   },
   {
+    key: 'griya-jadwal-mingguan',
+    label: 'Jadwal Mingguan Griya Anak',
+    href: '/griya-anak/jadwal-mingguan',
+    icon: 'CalendarRange',
+    roles: ['director', 'manager', 'admin', 'therapist'],
+    group: 'griya',
+  },
+  {
     key: 'griya-siswa',
     label: 'Siswa Griya Anak',
     href: '/griya-anak/siswa',

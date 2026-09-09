@@ -36,10 +36,9 @@ export function useJadwalHarian() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const [{ data: profile }, { data: branchList }, { data: slots }] = await Promise.all([
+      const [{ data: profile }, { data: branchList }] = await Promise.all([
         supabase.from('internal_profiles').select('role, branch_id').eq('id', user.id).single(),
         supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
-        supabase.from('schedule_slots').select('shift, slot_time').eq('is_active', true).order('slot_time'),
       ])
       if (profile?.role && ['director', 'hr', 'manager'].includes(profile.role)) {
         setCanApproveLeave(true)
@@ -49,18 +48,37 @@ export function useJadwalHarian() {
       setBranches(list)
       // Non-directors default to their own branch; directors default to first branch
       setSelectedBranchId(profile?.branch_id ?? list[0]?.id ?? null)
-
-      if (slots && slots.length > 0) {
-        const toHour = (t: string) => parseInt(t.split(':')[0], 10)
-        const hours = slots.map((s) => toHour(s.slot_time))
-        setGridStart(Math.min(...hours))
-        setGridEnd(Math.max(...hours) + 1)
-        const soreHours = slots.filter((s) => s.shift === 'SORE').map((s) => toHour(s.slot_time))
-        if (soreHours.length > 0) setSoreDividerHour(Math.min(...soreHours))
-      }
     }
     loadMeta()
   }, [])
+
+  // Grid bounds + Pagi/Sore divider follow the selected branch's configured slots
+  useEffect(() => {
+    if (!selectedBranchId) return
+    let cancelled = false
+    createClient()
+      .from('schedule_slots')
+      .select('shift, slot_time')
+      .eq('is_active', true)
+      .eq('branch_id', selectedBranchId)
+      .order('slot_time')
+      .then(({ data }) => {
+        if (cancelled) return
+        if (data && data.length > 0) {
+          const toHour = (t: string) => parseInt(t.split(':')[0], 10)
+          const hours = data.map((s) => toHour(s.slot_time))
+          setGridStart(Math.min(...hours))
+          setGridEnd(Math.max(...hours) + 1)
+          const soreHours = data.filter((s) => s.shift === 'SORE').map((s) => toHour(s.slot_time))
+          setSoreDividerHour(soreHours.length > 0 ? Math.min(...soreHours) : 14)
+        } else {
+          setGridStart(8)
+          setGridEnd(21)
+          setSoreDividerHour(14)
+        }
+      })
+    return () => { cancelled = true }
+  }, [selectedBranchId])
 
   // Load schedules, leaves, and visits for a date.
   // `silent` skips the full-grid loading flag so an in-place refresh (after
