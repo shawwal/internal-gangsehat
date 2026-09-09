@@ -45,16 +45,21 @@ export default function ScheduleSlotsPage() {
   }
 
   useEffect(() => {
-    createClient()
-      .from('branches')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('name')
-      .then(({ data }) => {
-        const list = data ?? []
-        setBranches(list)
-        if (list[0]) setBranchId(list[0].id)
-      })
+    async function loadBranches() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      const [{ data: branchList }, { data: profile }] = await Promise.all([
+        supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
+        user
+          ? supabase.from('internal_profiles').select('branch_id').eq('id', user.id).single()
+          : Promise.resolve({ data: null }),
+      ])
+      const list = branchList ?? []
+      setBranches(list)
+      // Default to the viewer's own branch; a director (branch_id NULL) lands on the first.
+      setBranchId(profile?.branch_id ?? list[0]?.id ?? null)
+    }
+    loadBranches()
   }, [])
 
   useEffect(() => {
