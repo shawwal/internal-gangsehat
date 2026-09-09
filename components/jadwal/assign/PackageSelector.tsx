@@ -36,7 +36,8 @@ export function PackageSelector({ packages, pkgLoading, selectedPkgId, setSelect
           <option value="">— Tanpa Paket —</option>
           {packages.map((pkg) => {
             const rem = pkg.total_sessions - pkg.used_sessions
-            const label = `${pkg.package_name} (${pkg.package_type === 'fixed' ? 'Tetap' : 'Fleksibel'}) — ${pkg.used_sessions}/${pkg.total_sessions} · ${rem > 0 ? rem + ' tersisa' : '⚠ habis'}`
+            const sched = pkg.scheduled_sessions > 0 ? ` · ${pkg.scheduled_sessions} terjadwal` : ''
+            const label = `${pkg.package_name} (${pkg.package_type === 'fixed' ? 'Tetap' : 'Fleksibel'}) — ${pkg.used_sessions}/${pkg.total_sessions} · ${rem > 0 ? rem + ' tersisa' : '⚠ habis'}${sched}`
             return (
               <option key={pkg.id} value={pkg.id} disabled={rem <= 0}>
                 {pkg.status !== 'active' ? `[${pkg.status}] ` : ''}{label}

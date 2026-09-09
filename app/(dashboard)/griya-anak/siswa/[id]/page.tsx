@@ -333,7 +333,10 @@ function PackagePanel({ pkg, canEdit, onEditVisit, onChanged }: {
           {open ? <ChevronDown size={14} className="text-muted-foreground shrink-0" /> : <ChevronRightIcon size={14} className="text-muted-foreground shrink-0" />}
           <span className="font-medium text-foreground truncate flex-1">{pkg.package_name}</span>
         </button>
-        <span className="text-muted-foreground shrink-0">{pkg.used_sessions}/{pkg.total_sessions} sesi</span>
+        <span className="text-muted-foreground shrink-0">
+          {pkg.used_sessions}/{pkg.total_sessions} sesi
+          {pkg.scheduled_sessions > 0 && ` · ${pkg.scheduled_sessions} terjadwal`}
+        </span>
         <span className={`text-xs shrink-0 ${remaining <= 0 ? 'text-[#FF3B30]' : 'text-muted-foreground'}`}>
           {remaining > 0 ? `${remaining} tersisa` : '⚠ habis'}
         </span>

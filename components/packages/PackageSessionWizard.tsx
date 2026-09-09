@@ -38,7 +38,7 @@ function buildInitialSessions(count: number): SessionRow[] {
 }
 
 export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSuccess }: Props) {
-  const [sessions, setSessions] = useState<SessionRow[]>(() => buildInitialSessions(Math.max(pkg.remaining_sessions, 1)))
+  const [sessions, setSessions] = useState<SessionRow[]>(() => buildInitialSessions(Math.max(pkg.remaining_sessions - pkg.scheduled_sessions, 1)))
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState<string | null>(null)
 
@@ -105,7 +105,10 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">Jadwalkan Sesi</p>
-              <p className="text-xs text-muted-foreground">{pkg.package_name} · {pkg.remaining_sessions} sesi tersisa</p>
+              <p className="text-xs text-muted-foreground">
+                {pkg.package_name} · {pkg.remaining_sessions} sesi tersisa
+                {pkg.scheduled_sessions > 0 && ` · ${pkg.scheduled_sessions} terjadwal`}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors">

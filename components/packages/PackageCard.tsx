@@ -261,7 +261,10 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
       {/* Session progress bar */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">{pkg.used_sessions} dari {pkg.total_sessions} sesi digunakan</span>
+          <span className="text-muted-foreground">
+            {pkg.used_sessions} dari {pkg.total_sessions} sesi digunakan
+            {pkg.scheduled_sessions > 0 && ` · ${pkg.scheduled_sessions} terjadwal`}
+          </span>
           <span className={`font-semibold ${sessionTextColor(pkg.remaining_sessions)}`}>
             {pkg.remaining_sessions} sesi tersisa
           </span>
