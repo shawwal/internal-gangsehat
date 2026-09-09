@@ -64,7 +64,7 @@ export default function SchedulesPage() {
     async function loadMeta() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      const [{ data: staff }, { data: br }, { data: profile }, { data: slots }] = await Promise.all([
+      const [{ data: staff }, { data: br }, { data: profile }] = await Promise.all([
         supabase
           .from('internal_profiles')
           .select('id, full_name, branch_id, avatar_url')
@@ -72,16 +72,33 @@ export default function SchedulesPage() {
           .order('full_name'),
         supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
         supabase.from('internal_profiles').select('branch_id').eq('id', user!.id).single(),
-        supabase.from('schedule_slots').select('shift, slot_time').eq('is_active', true).order('slot_time'),
       ])
       setStaffList((staff ?? []) as StaffOption[])
       setBranches((br ?? []) as BranchOption[])
       setUserBranchId(profile?.branch_id ?? null)
-      setMorningSlots((slots ?? []).filter((s) => s.shift === 'PAGI').map((s) => s.slot_time))
-      setAfternoonSlots((slots ?? []).filter((s) => s.shift === 'SORE').map((s) => s.slot_time))
     }
     loadMeta()
   }, [])
+
+  // Time-slot options follow the branch being scheduled: the branch picked in the
+  // dialog for a director, or the user's own branch otherwise.
+  useEffect(() => {
+    const slotBranchId = form.branch_id || userBranchId
+    if (!slotBranchId) { setMorningSlots([]); setAfternoonSlots([]); return }
+    let cancelled = false
+    createClient()
+      .from('schedule_slots')
+      .select('shift, slot_time')
+      .eq('is_active', true)
+      .eq('branch_id', slotBranchId)
+      .order('slot_time')
+      .then(({ data }) => {
+        if (cancelled) return
+        setMorningSlots((data ?? []).filter((s) => s.shift === 'PAGI').map((s) => s.slot_time))
+        setAfternoonSlots((data ?? []).filter((s) => s.shift === 'SORE').map((s) => s.slot_time))
+      })
+    return () => { cancelled = true }
+  }, [form.branch_id, userBranchId])
 
   // ── Load data ────────────────────────────────────────────────────────────────
   useEffect(() => {

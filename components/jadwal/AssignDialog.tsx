@@ -91,10 +91,12 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
   useEffect(() => {
     let cancelled = false
     async function loadSlots() {
+      if (!target.branchId) return
       const { data } = await createClient()
         .from('schedule_slots')
         .select('shift, slot_time')
         .eq('is_active', true)
+        .eq('branch_id', target.branchId)
         .order('slot_time')
       if (cancelled || !data || data.length === 0) return
       const toHour = (t: string) => parseInt(t.split(':')[0], 10)
@@ -105,7 +107,7 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
     }
     loadSlots()
     return () => { cancelled = true }
-  }, [])
+  }, [target.branchId])
 
   // ── Debounced patient search ──────────────────────────────────────────────────
   useEffect(() => {

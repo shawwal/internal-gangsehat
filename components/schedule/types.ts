@@ -29,6 +29,7 @@ export interface BranchOption {
 
 export interface ScheduleSlot {
   id: string
+  branch_id: string
   shift: 'PAGI' | 'SORE'
   slot_time: string
   is_active: boolean

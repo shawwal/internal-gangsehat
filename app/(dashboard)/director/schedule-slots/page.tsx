@@ -18,6 +18,9 @@ export default function ScheduleSlotsPage() {
   const [loading, setLoading]   = useState(true)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
+  const [branchId, setBranchId] = useState<string | null>(null)
+
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing]   = useState<ScheduleSlot | null>(null)
   const [form, setForm]         = useState<{ shift: 'PAGI' | 'SORE'; slot_time: string }>({ shift: 'PAGI', slot_time: '' })
@@ -29,14 +32,34 @@ export default function ScheduleSlotsPage() {
     return [...list].sort((a, b) => a.shift.localeCompare(b.shift) || a.slot_time.localeCompare(b.slot_time))
   }
 
-  async function load() {
+  async function load(bId: string) {
     setLoading(true)
-    const { data } = await createClient().from('schedule_slots').select('*').order('shift').order('slot_time')
+    const { data } = await createClient()
+      .from('schedule_slots')
+      .select('*')
+      .eq('branch_id', bId)
+      .order('shift')
+      .order('slot_time')
     setSlots((data ?? []) as ScheduleSlot[])
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    createClient()
+      .from('branches')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name')
+      .then(({ data }) => {
+        const list = data ?? []
+        setBranches(list)
+        if (list[0]) setBranchId(list[0].id)
+      })
+  }, [])
+
+  useEffect(() => {
+    if (branchId) load(branchId)
+  }, [branchId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function openNew(shift?: 'PAGI' | 'SORE') {
     setEditing(null)
@@ -54,6 +77,7 @@ export default function ScheduleSlotsPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    if (!branchId) return
     setSaving(true)
     setError('')
     const supabase = createClient()
@@ -80,7 +104,7 @@ export default function ScheduleSlotsPage() {
 
     const { data, error: err } = await supabase
       .from('schedule_slots')
-      .insert({ shift: form.shift, slot_time: form.slot_time })
+      .insert({ shift: form.shift, slot_time: form.slot_time, branch_id: branchId })
       .select()
       .single()
 
@@ -128,15 +152,29 @@ export default function ScheduleSlotsPage() {
         <div>
           <h1 className="text-xl font-semibold text-foreground">Slot Jadwal</h1>
           <p className="text-sm text-muted-foreground">
-            Kelola pilihan waktu Pagi/Sore yang muncul pada dialog Tambah Jadwal
+            Kelola pilihan waktu Pagi/Sore per cabang yang muncul pada dialog Tambah Jadwal
           </p>
         </div>
-        <button
-          onClick={() => openNew()}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0 cursor-pointer"
-        >
-          <Plus size={16} /> Tambah Slot
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={branchId ?? ''}
+            onChange={(e) => setBranchId(e.target.value || null)}
+            className={`${inputCls} w-auto`}
+            aria-label="Pilih cabang"
+          >
+            {branches.length === 0 && <option value="">Memuat cabang...</option>}
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => openNew()}
+            disabled={!branchId}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors shrink-0 cursor-pointer"
+          >
+            <Plus size={16} /> Tambah Slot
+          </button>
+        </div>
       </div>
 
       {/* Panels */}
