@@ -146,7 +146,9 @@ export default function SchedulesPage() {
 
   // ── Single dialog helpers ────────────────────────────────────────────────────
   function openAdd() {
-    setForm({ ...EMPTY_FORM })
+    // Pre-fill the branch for branch-scoped roles (admin/hr/manager) so the
+    // RLS WITH CHECK (branch_id = get_my_branch()) passes; director stays blank.
+    setForm({ ...EMPTY_FORM, branch_id: userBranchId ?? '' })
     setEditId(null)
     setShowSingle(true)
   }
