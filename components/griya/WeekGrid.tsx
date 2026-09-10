@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import type { GriyaWeek, Discipline } from '@/app/actions/griyaJadwal'
-import { GRIYA_HOURS, DISCIPLINE_SHORT, HARI_LABEL, JS_DAY_TO_HARI } from './constants'
+import { GRIYA_HOURS, DISCIPLINE_SHORT, DISCIPLINE_COLOR, HARI_LABEL, JS_DAY_TO_HARI } from './constants'
 import { resolveDay, type CellState } from './resolve'
 import { addDays, toIso, isSameDay } from '@/components/jadwal/utils'
 
@@ -131,8 +131,9 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter }: Props) {
                       const inner = (
                         <>
                           <span className="block truncate font-medium">{e.studentName}</span>
-                          <span className="block truncate text-[9px] opacity-80">
-                            {e.therapistNick} · {DISCIPLINE_SHORT[e.discipline]}
+                          <span className="flex items-center gap-1 truncate text-[9px] opacity-80">
+                            <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${DISCIPLINE_COLOR[e.discipline]?.dot ?? 'bg-muted-foreground'}`} />
+                            <span className="truncate">{e.therapistNick} · {DISCIPLINE_SHORT[e.discipline]}</span>
                           </span>
                         </>
                       )

@@ -18,6 +18,7 @@ export interface GriyaTherapist {
   therapist_id: string
   full_name: string
   nickname: string | null
+  avatar_url: string | null
   discipline: Discipline
   display_order: number
   is_active: boolean
@@ -138,7 +139,7 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
   const [therapistsRes, slotsRes, visitsRes, schedulesRes] = await Promise.all([
     supabase
       .from('griya_therapists')
-      .select('id, therapist_id, discipline, display_order, is_active, internal_profiles!therapist_id(full_name, nickname)')
+      .select('id, therapist_id, discipline, display_order, is_active, internal_profiles!therapist_id(full_name, nickname, avatar_url)')
       .eq('branch_id', branchId)
       .order('display_order', { ascending: true }),
     supabase
@@ -194,12 +195,13 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
   }
 
   const therapists: GriyaTherapist[] = ((therapistsRes.data ?? []) as Record<string, unknown>[]).map((t) => {
-    const p = t.internal_profiles as { full_name?: string; nickname?: string | null } | null
+    const p = t.internal_profiles as { full_name?: string; nickname?: string | null; avatar_url?: string | null } | null
     return {
       id: t.id as string,
       therapist_id: t.therapist_id as string,
       full_name: p?.full_name ?? 'Terapis',
       nickname: p?.nickname ?? null,
+      avatar_url: p?.avatar_url ?? null,
       discipline: t.discipline as Discipline,
       display_order: t.display_order as number,
       is_active: t.is_active as boolean,

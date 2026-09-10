@@ -2,7 +2,8 @@
 
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import type { GriyaWeek, Hari } from '@/app/actions/griyaJadwal'
-import { GRIYA_HOURS, DISCIPLINE_LABEL, HARI_LABEL } from './constants'
+import { GRIYA_HOURS, DISCIPLINE_LABEL, DISCIPLINE_COLOR, HARI_LABEL } from './constants'
+import { TherapistAvatar } from './TherapistAvatar'
 import { resolveDay, isTherapistOn, therapistColumns, type ResolvedCell } from './resolve'
 import { SlotCell, type CellAction } from './SlotCell'
 import type { MoveDest } from './MoveScopeDialog'
@@ -62,26 +63,35 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
       <div className="glass-card overflow-auto" style={{ maxHeight: 'calc(100vh - 16rem)' }}>
         <div style={{ minWidth: 64 + cols.length * colWidth }}>
           {/* discipline band */}
-          <div className="flex sticky top-0 z-20 bg-gradient-to-r from-[#3B0764] via-[#6D28D9] to-[#FF0090] text-white">
+          <div className="flex sticky top-0 z-20 bg-background">
             <div className="w-16 shrink-0" />
-            {groups.map((g) => (
-              <div key={g.discipline} style={{ width: g.cols.length * colWidth }}
-                className="text-[10px] font-bold uppercase tracking-widest py-1.5 text-center border-l border-white/20">
-                {DISCIPLINE_LABEL[g.discipline as keyof typeof DISCIPLINE_LABEL]}
-              </div>
-            ))}
+            {groups.map((g, gi) => {
+              const dc = DISCIPLINE_COLOR[g.discipline as keyof typeof DISCIPLINE_COLOR]
+              return (
+                <div key={g.discipline + gi} style={{ width: g.cols.length * colWidth }}
+                  className={`text-[10px] font-bold uppercase tracking-widest py-1.5 text-center border-l border-white/20 ${dc?.band ?? 'bg-muted text-foreground'}`}>
+                  {DISCIPLINE_LABEL[g.discipline as keyof typeof DISCIPLINE_LABEL]}
+                </div>
+              )
+            })}
           </div>
           {/* therapist names */}
           <div className="flex sticky top-[26px] z-20 bg-background border-b border-border">
             <div className="w-16 shrink-0 flex items-center justify-center text-[10px] font-mono text-muted-foreground">
               {HARI_LABEL[hari].slice(0, 3)}
             </div>
-            {cols.map((c) => (
-              <div key={c.id} style={{ width: colWidth }}
-                className="px-1 py-2 text-center text-[11px] font-semibold text-foreground border-l border-border truncate">
-                {c.nickname || c.full_name}
-              </div>
-            ))}
+            {cols.map((c) => {
+              const dc = DISCIPLINE_COLOR[c.discipline]
+              return (
+                <div key={c.id} style={{ width: colWidth }}
+                  className={`px-1 py-2 flex flex-col items-center gap-1 border-l border-border border-b-2 ${dc?.bar ?? 'border-b-border'} ${dc?.tint ?? ''}`}>
+                  <TherapistAvatar name={c.nickname || c.full_name} url={c.avatar_url} discipline={c.discipline} size={28} />
+                  <span className="text-center text-[11px] font-semibold text-foreground leading-tight truncate max-w-full">
+                    {c.nickname || c.full_name}
+                  </span>
+                </div>
+              )
+            })}
           </div>
           {/* hour rows */}
           {GRIYA_HOURS.map((hour) => (

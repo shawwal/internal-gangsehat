@@ -1,3 +1,5 @@
+import { DISCIPLINE_COLOR, DISCIPLINE_LABEL, DISCIPLINES } from './constants'
+
 const ITEMS: { c: string; label: string }[] = [
   { c: 'bg-[#34C759]/5 border-dashed border-[#34C759]/70', label: 'Kosong' },
   { c: 'bg-primary/20 border-primary/60', label: 'Terjadwal' },
@@ -10,13 +12,23 @@ const ITEMS: { c: string; label: string }[] = [
 
 export function Legend() {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-      {ITEMS.map((i) => (
-        <div key={i.label} className="flex items-center gap-1.5">
-          <span className={`inline-block w-3.5 h-3.5 rounded border ${i.c}`} />
-          {i.label}
-        </div>
-      ))}
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        {ITEMS.map((i) => (
+          <div key={i.label} className="flex items-center gap-1.5">
+            <span className={`inline-block w-3.5 h-3.5 rounded border ${i.c}`} />
+            {i.label}
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        {DISCIPLINES.map((d) => (
+          <div key={d} className="flex items-center gap-1.5">
+            <span className={`inline-block w-3.5 h-3.5 rounded ${DISCIPLINE_COLOR[d].dot}`} />
+            {DISCIPLINE_LABEL[d]}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

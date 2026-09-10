@@ -27,6 +27,15 @@ export const DISCIPLINE_SHORT: Record<Discipline, string> = {
   FISIOTERAPI: 'FT', TERAPI_WICARA: 'TW', TERAPI_PERILAKU: 'BT', PSIKOLOG: 'PSI',
 }
 
+// Per-discipline colour coding for schedule headers (mirrors the printed sheet).
+// Greens/reds are avoided — those belong to attendance states in SlotCell.
+export const DISCIPLINE_COLOR: Record<Discipline, { band: string; tint: string; bar: string; dot: string }> = {
+  FISIOTERAPI:     { band: 'bg-[#FF0090] text-white', tint: 'bg-[#FF0090]/10', bar: 'border-[#FF0090]', dot: 'bg-[#FF0090]' },
+  TERAPI_WICARA:   { band: 'bg-[#F59E0B] text-white', tint: 'bg-[#F59E0B]/10', bar: 'border-[#F59E0B]', dot: 'bg-[#F59E0B]' },
+  TERAPI_PERILAKU: { band: 'bg-[#6366F1] text-white', tint: 'bg-[#6366F1]/10', bar: 'border-[#6366F1]', dot: 'bg-[#6366F1]' },
+  PSIKOLOG:        { band: 'bg-[#0EA5E9] text-white', tint: 'bg-[#0EA5E9]/10', bar: 'border-[#0EA5E9]', dot: 'bg-[#0EA5E9]' },
+}
+
 export const DISCIPLINES: Discipline[] = ['FISIOTERAPI', 'TERAPI_WICARA', 'TERAPI_PERILAKU', 'PSIKOLOG']
 
 export const ABSENCE_REASONS = ['SAKIT', 'IZIN', 'ALPA', 'LIBUR'] as const
