@@ -1,18 +1,23 @@
 'use client'
 
-import { useMemo } from 'react'
-import type { GriyaWeek, Discipline } from '@/app/actions/griyaJadwal'
-import { GRIYA_HOURS, DISCIPLINE_SHORT, DISCIPLINE_COLOR, HARI_LABEL, JS_DAY_TO_HARI } from './constants'
-import { resolveDay, type CellState } from './resolve'
+import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw } from 'lucide-react'
+import type { GriyaWeek, Discipline, Hari } from '@/app/actions/griyaJadwal'
+import { GRIYA_HOURS, DISCIPLINE_SHORT, DISCIPLINE_COLOR, HARI_LABEL, JS_DAY_TO_HARI, hariOf } from './constants'
+import { resolveDay, type ResolvedCell } from './resolve'
 import { addDays, toIso, isSameDay } from '@/components/jadwal/utils'
+import type { CellAction } from './SlotCell'
 
-interface WeekEntry {
+export interface WeekEntry {
   key: string
+  dateIso: string
+  hari: Hari
+  cell: ResolvedCell
   studentName: string
   patientId: string | null
   therapistNick: string
   discipline: Discipline
-  state: CellState
 }
 
 const STATE_CLS: Record<string, string> = {
@@ -28,9 +33,13 @@ interface Props {
   weekMonday: Date
   today: Date
   disciplineFilter: Discipline | 'ALL'
+  canEdit: boolean
+  onCellAction: (action: CellAction, entry: WeekEntry) => void
 }
 
-export function WeekGrid({ week, weekMonday, today, disciplineFilter }: Props) {
+export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, onCellAction }: Props) {
+  const [menu, setMenu] = useState<{ x: number; y: number; entry: WeekEntry } | null>(null)
+
   const nickById = useMemo(() => {
     const m = new Map<string, { nick: string; discipline: Discipline }>()
     for (const t of week.therapists) m.set(t.therapist_id, { nick: t.nickname || t.full_name, discipline: t.discipline })
@@ -56,11 +65,13 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter }: Props) {
         if (!row) continue
         row[di].push({
           key: cell.key + '|' + iso,
+          dateIso: iso,
+          hari: hariOf(d),
+          cell,
           studentName: cell.studentName,
           patientId: cell.slot?.patient_id ?? cell.visit?.patient_id ?? null,
           therapistNick: meta?.nick ?? '—',
           discipline,
-          state: cell.state,
         })
       }
     })
@@ -83,6 +94,20 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter }: Props) {
   )
 
   const dayColWidth = 190
+
+  function openMenu(e: React.MouseEvent, entry: WeekEntry) {
+    e.preventDefault()
+    setMenu({ x: e.clientX, y: e.clientY, entry })
+  }
+
+  function act(action: CellAction) {
+    if (!menu) return
+    onCellAction(action, menu.entry)
+    setMenu(null)
+  }
+
+  const m = menu?.entry
+  const freed = m ? (m.cell.state === 'izin' || m.cell.state === 'alpa') : false
 
   return (
     <div className="glass-card overflow-auto" style={{ maxHeight: 'calc(100vh - 15rem)' }}>
@@ -127,7 +152,7 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter }: Props) {
                     className={`p-1.5 border-l border-border/40 space-y-1 ${isTod ? 'bg-primary/[0.04]' : ''}`}
                   >
                     {entries.map((e) => {
-                      const cls = STATE_CLS[e.state] ?? STATE_CLS.scheduled
+                      const cls = STATE_CLS[e.cell.state] ?? STATE_CLS.scheduled
                       const inner = (
                         <>
                           <span className="block truncate font-medium">{e.studentName}</span>
@@ -143,6 +168,7 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter }: Props) {
                           href={`/griya-anak/siswa/${e.patientId}`}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onContextMenu={(ev) => openMenu(ev, e)}
                           className={`block rounded-lg border px-1.5 py-1 text-[11px] leading-tight ${cls} hover:opacity-90`}
                         >
                           {inner}
@@ -150,6 +176,7 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter }: Props) {
                       ) : (
                         <div
                           key={e.key}
+                          onContextMenu={(ev) => openMenu(ev, e)}
                           className={`rounded-lg border px-1.5 py-1 text-[11px] leading-tight ${cls}`}
                         >
                           {inner}
@@ -163,6 +190,54 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter }: Props) {
           )
         })}
       </div>
+
+      {menu && m && createPortal(
+        <>
+          <div className="fixed inset-0 z-[60]" onClick={() => setMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMenu(null) }} />
+          <div
+            className="fixed z-[61] glass-card p-1.5 w-52 text-sm shadow-2xl"
+            style={{ top: Math.min(menu.y, window.innerHeight - 320), left: Math.min(menu.x, window.innerWidth - 220) }}
+          >
+            {m.cell.slot && m.cell.state === 'scheduled' && canEdit && (
+              <>
+                <MenuBtn icon={<Check size={14} />} label="Tandai Hadir" onClick={() => act('markPresent')} />
+                <MenuBtn icon={<UserX size={14} />} label="Tandai Tidak Hadir" onClick={() => act('attendance')} />
+                <MenuBtn icon={<Move size={14} />} label="Pindahkan" onClick={() => act('move')} />
+                <MenuBtn icon={<GraduationCap size={14} />} label="Akhiri Jadwal" onClick={() => act('end')} />
+              </>
+            )}
+            {m.cell.slot && m.cell.state === 'hadir' && canEdit && (
+              <>
+                <MenuBtn icon={<UserX size={14} />} label="Tandai Tidak Hadir" onClick={() => act('attendance')} />
+                <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda Hadir" onClick={() => act('unmarkAttendance')} />
+              </>
+            )}
+            {m.cell.slot && (m.cell.state === 'izin' || m.cell.state === 'alpa') && canEdit && (
+              <>
+                <MenuBtn icon={<Check size={14} />} label="Ubah jadi Hadir" onClick={() => act('markPresent')} />
+                <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda" onClick={() => act('unmarkAttendance')} />
+              </>
+            )}
+            {freed && canEdit && (
+              <MenuBtn icon={<UserPlus2 size={14} />} label="Cari Pengganti" onClick={() => act('substitute')} />
+            )}
+            {canEdit && m.cell.visit?.id && (
+              <MenuBtn icon={<Pencil size={14} />} label="Ubah Kunjungan" onClick={() => act('editVisit')} />
+            )}
+            {canEdit && <MenuBtn icon={<CreditCard size={14} />} label="Bayar" onClick={() => act('pay')} />}
+            <MenuBtn icon={<ExternalLink size={14} />} label="Lihat Siswa" onClick={() => act('open')} />
+          </div>
+        </>,
+        document.body,
+      )}
     </div>
+  )
+}
+
+function MenuBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-white/10 text-left cursor-pointer">
+      {icon}{label}
+    </button>
   )
 }

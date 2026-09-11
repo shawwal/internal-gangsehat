@@ -471,6 +471,48 @@ export async function markAttendance(
   return { error: null }
 }
 
+// ── Undo an accidental attendance mark (Hadir/Tidak Hadir → back to Terjadwal) ─
+
+export async function resetAttendance(slotId: string, date: string): Promise<{ error: string | null }> {
+  const a = await requireWrite()
+  if ('error' in a) return { error: a.error }
+  const { supabase, userId } = a
+
+  const { data: slot } = await supabase
+    .from('griya_schedule_slots').select('branch_id').eq('id', slotId).single()
+  if (!slot) return { error: 'Slot tidak ditemukan' }
+
+  const { data: existing } = await supabase
+    .from('patient_visits')
+    .select('id')
+    .eq('griya_slot_id', slotId)
+    .eq('visit_date', date)
+    .maybeSingle()
+  if (!existing) return { error: null } // nothing marked yet — nothing to undo
+
+  const { count: paidCount } = await supabase
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('visit_id', existing.id)
+    .eq('status', 'confirmed')
+  if ((paidCount ?? 0) > 0) {
+    return { error: 'Kunjungan ini sudah punya pembayaran terkonfirmasi — batalkan pembayarannya dulu sebelum membatalkan kehadiran.' }
+  }
+
+  const { error } = await supabase
+    .from('patient_visits')
+    .update({ kehadiran: null, status: 'scheduled', notes: null, updated_at: new Date().toISOString() })
+    .eq('id', existing.id)
+  if (error) return { error: error.message }
+
+  await logActivity({
+    supabase, userId, action: 'update', resourceType: 'griya_slot', resourceId: slotId,
+    branchId: slot.branch_id as string,
+    newValues: { date, kehadiran: null, reset: true },
+  })
+  return { error: null }
+}
+
 // ── Add a substitute into a freed cell for one week ──────────────────────────
 
 export interface AddSubstituteInput {

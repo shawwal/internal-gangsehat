@@ -3,11 +3,11 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { Plus, Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil } from 'lucide-react'
+import { Plus, Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw } from 'lucide-react'
 import type { ResolvedCell } from './resolve'
 
 export type CellAction =
-  | 'assign' | 'substitute' | 'attendance' | 'markPresent' | 'move' | 'end' | 'pay' | 'open' | 'editVisit'
+  | 'assign' | 'substitute' | 'attendance' | 'markPresent' | 'unmarkAttendance' | 'move' | 'end' | 'pay' | 'open' | 'editVisit'
 
 interface Props {
   cellKey: string
@@ -102,8 +102,17 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
                 <MenuBtn icon={<GraduationCap size={14} />} label="Akhiri Jadwal" onClick={() => { setMenu(null); onAction('end', cell) }} />
               </>
             )}
-            {cell.slot && (cell.state === 'hadir' || cell.state === 'izin' || cell.state === 'alpa') && canEdit && (
-              <MenuBtn icon={<Check size={14} />} label="Ubah jadi Hadir" onClick={() => { setMenu(null); onAction('markPresent', cell) }} />
+            {cell.slot && cell.state === 'hadir' && canEdit && (
+              <>
+                <MenuBtn icon={<UserX size={14} />} label="Tandai Tidak Hadir" onClick={() => { setMenu(null); onAction('attendance', cell) }} />
+                <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda Hadir" onClick={() => { setMenu(null); onAction('unmarkAttendance', cell) }} />
+              </>
+            )}
+            {cell.slot && (cell.state === 'izin' || cell.state === 'alpa') && canEdit && (
+              <>
+                <MenuBtn icon={<Check size={14} />} label="Ubah jadi Hadir" onClick={() => { setMenu(null); onAction('markPresent', cell) }} />
+                <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda" onClick={() => { setMenu(null); onAction('unmarkAttendance', cell) }} />
+              </>
             )}
             {freed && canEdit && (
               <MenuBtn icon={<UserPlus2 size={14} />} label="Cari Pengganti" onClick={() => { setMenu(null); onAction('substitute', cell) }} />

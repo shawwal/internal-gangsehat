@@ -17,7 +17,7 @@ import { ManageTherapistsDialog } from '@/components/griya/ManageTherapistsDialo
 import { AddStudentButton } from '@/components/griya/AddStudentButton'
 import { EditVisitDialog } from '@/components/griya/EditVisitDialog'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
-import { markAttendance } from '@/app/actions/griyaJadwal'
+import { markAttendance, resetAttendance } from '@/app/actions/griyaJadwal'
 import type { CellAction } from '@/components/griya/SlotCell'
 import type { ResolvedCell } from '@/components/griya/resolve'
 import type { CellTarget } from '@/components/griya/types'
@@ -77,6 +77,13 @@ export default function GriyaJadwalPage() {
           const { error } = await markAttendance(cell.slot.id, dateIso, { present: true })
           if (error) showToast(error, 'error')
           else { showToast('Ditandai hadir', 'success'); reload({ silent: true }) }
+        }
+        break
+      case 'unmarkAttendance':
+        if (cell?.slot) {
+          const { error } = await resetAttendance(cell.slot.id, dateIso)
+          if (error) showToast(error, 'error')
+          else { showToast('Tanda kehadiran dibatalkan', 'success'); reload({ silent: true }) }
         }
         break
       case 'pay':
