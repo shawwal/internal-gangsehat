@@ -1,5 +1,5 @@
 import type { GriyaWeek, GriyaSlot, GriyaWeekVisit, GriyaTherapist, Hari } from '@/app/actions/griyaJadwal'
-import { hariOf } from './constants'
+import { hariOf, DISCIPLINES } from './constants'
 
 export type CellState = 'scheduled' | 'hadir' | 'izin' | 'alpa' | 'moved-out' | 'adhoc'
 
@@ -87,5 +87,8 @@ export function isTherapistOn(
 export function therapistColumns(therapists: GriyaTherapist[]) {
   return therapists
     .filter((t) => t.is_active)
-    .sort((a, b) => a.display_order - b.display_order)
+    .sort((a, b) =>
+      DISCIPLINES.indexOf(a.discipline) - DISCIPLINES.indexOf(b.discipline) ||
+      a.display_order - b.display_order,
+    )
 }

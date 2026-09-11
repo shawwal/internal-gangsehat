@@ -5,13 +5,14 @@ import { Camera, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
 import { uploadErrorMessage } from '@/lib/storageErrors'
+import { compressImageToWebp } from '@/lib/imageCompress'
 import type { SettingsProfile } from './types'
 
 interface Props {
   initialData: Pick<SettingsProfile, 'id' | 'full_name' | 'phone' | 'avatar_url'>
 }
 
-const MAX_SIZE_BYTES = 2 * 1024 * 1024 // 2 MB
+const MAX_SIZE_BYTES = 8 * 1024 * 1024 // 8 MB — compressed to WebP before upload
 
 export function ProfileCard({ initialData }: Props) {
   const [fullName, setFullName]   = useState(initialData.full_name)
@@ -40,7 +41,7 @@ export function ProfileCard({ initialData }: Props) {
       flash('File harus berupa gambar.', false); return
     }
     if (file.size > MAX_SIZE_BYTES) {
-      flash('Ukuran gambar maksimal 2 MB.', false); return
+      flash('Ukuran gambar maksimal 8 MB.', false); return
     }
 
     if (preview) URL.revokeObjectURL(preview)
@@ -52,10 +53,11 @@ export function ProfileCard({ initialData }: Props) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setUploading(false); return }
 
+    const compressed = await compressImageToWebp(file)
     const path = `avatars/${user.id}`
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(path, file, { upsert: true, contentType: file.type })
+      .upload(path, compressed, { upsert: true, contentType: compressed.type })
 
     if (uploadError) {
       flash(uploadErrorMessage(uploadError.message), false)
@@ -157,7 +159,7 @@ export function ProfileCard({ initialData }: Props) {
         <div className="sm:text-center">
           <p className="text-sm font-medium text-foreground leading-tight">Foto Profil</p>
           <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-            JPG, PNG, WebP.<br className="hidden sm:block" /> Maks 2 MB.
+            JPG, PNG, WebP — dikompres otomatis.<br className="hidden sm:block" /> Maks 8 MB.
           </p>
         </div>
       </div>
