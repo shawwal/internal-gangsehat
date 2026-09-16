@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
+import { SERVICE_TYPES } from '@/lib/serviceType'
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -72,7 +73,6 @@ export interface GriyaWeek {
 }
 
 const WRITE_ROLES = ['director', 'manager', 'admin']
-const GRIYA_SERVICE_TYPES = ['TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI', 'LAINNYA']
 
 function addDaysIso(iso: string, n: number): string {
   const d = new Date(iso + 'T00:00:00')
@@ -164,7 +164,7 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
 
   const slots = (slotsRes.data ?? []) as Record<string, unknown>[]
   const visits = ((visitsRes.data ?? []) as Record<string, unknown>[]).filter(
-    (v) => v.griya_slot_id != null || GRIYA_SERVICE_TYPES.includes((v.service_type as string) ?? ''),
+    (v) => v.griya_slot_id != null || (SERVICE_TYPES as string[]).includes((v.service_type as string) ?? ''),
   )
 
   // Batch-decrypt patient names for every patient referenced by a slot or visit

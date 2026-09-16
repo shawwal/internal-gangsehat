@@ -15,15 +15,12 @@ const taCls = `${inputCls} resize-none`
 const labelCls = 'block text-xs font-medium text-muted-foreground mb-1'
 
 const FIELD_KEYS = [
+  'keluhan_utama',
   'riwayat_keluarga',
-  'usia_ibu_hamil', 'keluhan_ibu_hamil',
-  'usia_kehamilan_lahir', 'jumlah_hamil', 'jumlah_melahirkan', 'cara_lahir', 'tempat_lahir', 'induksi', 'nicu', 'inkubator',
-  'berat_badan_lahir', 'panjang_badan_lahir', 'kondisi_khusus_lahir', 'langsung_menangis',
   'berat_badan', 'tinggi_badan', 'lingkar_kepala',
   'usia_merayap', 'usia_merangkak', 'usia_duduk_mandiri', 'usia_merambat', 'usia_berjalan',
   'usia_menunjuk', 'usia_babbling', 'usia_mengucap_kata', 'toilet_training', 'pertumbuhan_lainnya',
   'riwayat_sakit',
-  'aktivitas_dirumah', 'aktivitas_diluar_rumah', 'kepribadian_anak', 'tipe_sosialisasi', 'hobi_anak',
   'kemampuan_menyedot', 'kemampuan_sikat_gigi', 'kemampuan_menghisap_pipet', 'kemampuan_meniup_lilin',
   'kemampuan_kontrol_liur', 'kemampuan_mengunyah', 'kemampuan_makan', 'bentuk_tekstur_makanan', 'wicara_lainnya',
   'kontak_mata', 'kemampuan_duduk_tenang',
@@ -191,39 +188,16 @@ export default function GriyaTerapiAwalPage() {
       )}
 
       <fieldset disabled={locked} className="contents border-0 m-0 p-0 min-w-0">
+        <Section title="Keluhan Utama">
+          <div className="sm:col-span-2">
+            <Field label="Keluhan utama" k="keluhan_utama" value={form.keluhan_utama} onChange={set} textarea />
+          </div>
+        </Section>
+
         <Section title="Riwayat Keluarga">
           <div className="sm:col-span-2">
             <Field label="Keluarga dengan keluhan yang sama (Paman/Bibi/Keponakan)" k="riwayat_keluarga" value={form.riwayat_keluarga} onChange={set} textarea />
           </div>
-        </Section>
-
-        <Section title="Riwayat Kehamilan">
-          <Field label="Usia ibu ketika hamil" k="usia_ibu_hamil" value={form.usia_ibu_hamil} onChange={set} />
-          <div className="sm:col-span-2">
-            <Field label="Keluhan ibu ketika hamil" k="keluhan_ibu_hamil" value={form.keluhan_ibu_hamil} onChange={set} textarea />
-          </div>
-        </Section>
-
-        <Section title="Riwayat Kelahiran">
-          <Field label="Usia kehamilan saat melahirkan" k="usia_kehamilan_lahir" value={form.usia_kehamilan_lahir} onChange={set} />
-          <Field label="Berapa kali hamil" k="jumlah_hamil" value={form.jumlah_hamil} onChange={set} />
-          <Field label="Berapa kali melahirkan" k="jumlah_melahirkan" value={form.jumlah_melahirkan} onChange={set} />
-          <div>
-            <label className={labelCls}>Cesar/Normal</label>
-            <select value={form.cara_lahir} onChange={(e) => set('cara_lahir', e.target.value)} className={inputCls}>
-              <option value="">—</option>
-              <option value="CESAR">Cesar</option>
-              <option value="NORMAL">Normal</option>
-            </select>
-          </div>
-          <Field label="Tempat lahiran" k="tempat_lahir" value={form.tempat_lahir} onChange={set} />
-          <Field label="Induksi" k="induksi" value={form.induksi} onChange={set} />
-          <Field label="NICU" k="nicu" value={form.nicu} onChange={set} />
-          <Field label="Inkubator" k="inkubator" value={form.inkubator} onChange={set} />
-          <Field label="Berat badan lahir" k="berat_badan_lahir" value={form.berat_badan_lahir} onChange={set} />
-          <Field label="Panjang badan lahir" k="panjang_badan_lahir" value={form.panjang_badan_lahir} onChange={set} />
-          <Field label="Kondisi khusus saat lahir" k="kondisi_khusus_lahir" value={form.kondisi_khusus_lahir} onChange={set} />
-          <Field label="Langsung menangis" k="langsung_menangis" value={form.langsung_menangis} onChange={set} />
         </Section>
 
         <Section title="Masa Pertumbuhan dan Perkembangan">
@@ -248,14 +222,6 @@ export default function GriyaTerapiAwalPage() {
           <div className="sm:col-span-2">
             <Field label="Riwayat" k="riwayat_sakit" value={form.riwayat_sakit} onChange={set} textarea />
           </div>
-        </Section>
-
-        <Section title="Interaksi Antar Personal">
-          <Field label="Aktivitas anak dirumah" k="aktivitas_dirumah" value={form.aktivitas_dirumah} onChange={set} />
-          <Field label="Aktivitas anak ketika diluar rumah" k="aktivitas_diluar_rumah" value={form.aktivitas_diluar_rumah} onChange={set} />
-          <Field label="Kepribadian anak" k="kepribadian_anak" value={form.kepribadian_anak} onChange={set} />
-          <Field label="Tipe sosialisasi" k="tipe_sosialisasi" value={form.tipe_sosialisasi} onChange={set} />
-          <Field label="Hobi anak" k="hobi_anak" value={form.hobi_anak} onChange={set} />
         </Section>
 
         <Section title="Masalah Wicara / Oral Motor">

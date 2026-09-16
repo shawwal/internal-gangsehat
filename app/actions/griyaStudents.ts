@@ -5,6 +5,7 @@ import { decryptPatientPII } from '@/lib/encryption'
 import { normalizeBirthDate } from '@/lib/dates'
 import { logActivity } from '@/lib/activityLog'
 import { addPatient } from '@/app/actions/patients'
+import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
 
 const WRITE_ROLES = ['director', 'manager', 'admin']
 
@@ -107,6 +108,7 @@ export interface GriyaStudentRow {
   status: string
   activeSlots: number
   createdAt: string
+  terapiAwalStatus: 'draft' | 'completed' | null
 }
 
 export interface GriyaStudentsPage {
@@ -163,6 +165,19 @@ export async function fetchGriyaStudentsPage(params: {
   const slotCount = new Map<string, number>()
   for (const s of slots ?? []) slotCount.set(s.patient_id as string, (slotCount.get(s.patient_id as string) ?? 0) + 1)
 
+  // Most recent griya_terapi_awal row per patient (there's at most one active
+  // Terapi Awal cycle per child in practice, but take the latest if several exist).
+  const { data: taRows } = await supabase
+    .from('griya_terapi_awal')
+    .select('patient_id, status, created_at')
+    .eq('branch_id', bid)
+    .in('patient_id', pageIds)
+    .order('created_at', { ascending: false })
+  const taStatus = new Map<string, 'draft' | 'completed'>()
+  for (const t of taRows ?? []) {
+    if (!taStatus.has(t.patient_id as string)) taStatus.set(t.patient_id as string, t.status as 'draft' | 'completed')
+  }
+
   const students: GriyaStudentRow[] = pageRows.map((r) => {
     const dec = decName(r.patients)
     return {
@@ -175,6 +190,7 @@ export async function fetchGriyaStudentsPage(params: {
       status: r.status,
       activeSlots: slotCount.get(r.patient_id) ?? 0,
       createdAt: r.created_at,
+      terapiAwalStatus: taStatus.get(r.patient_id) ?? null,
     }
   })
 
@@ -217,6 +233,7 @@ export interface GriyaStudentDetail {
   slots: GriyaStudentSlot[]
   visits: GriyaStudentVisit[]
   stats: { attended: number; absent: number; scheduled: number }
+  terapiAwal: { visitId: string; status: 'draft' | 'completed' } | null
 }
 
 function hhmm(t: string | null): string {
@@ -289,6 +306,19 @@ export async function fetchGriyaStudentDetail(patientId: string): Promise<GriyaS
     scheduled: visits.filter((v) => v.status === 'scheduled').length,
   }
 
+  // visits is already ordered visit_date desc, so the first Terapi Awal-routed
+  // visit found here is the most recent one.
+  const taVisit = visits.find((v) => getGriyaVisitFormRoute(v.service_type) === 'terapi-awal')
+  let terapiAwal: GriyaStudentDetail['terapiAwal'] = null
+  if (taVisit) {
+    const { data: ta } = await supabase
+      .from('griya_terapi_awal')
+      .select('status')
+      .eq('visit_id', taVisit.id)
+      .maybeSingle()
+    terapiAwal = { visitId: taVisit.id, status: (ta?.status as 'draft' | 'completed') ?? 'draft' }
+  }
+
   return {
     found: !!member,
     status: member?.status ?? null,
@@ -297,6 +327,7 @@ export async function fetchGriyaStudentDetail(patientId: string): Promise<GriyaS
     slots,
     visits,
     stats,
+    terapiAwal,
   }
 }
 

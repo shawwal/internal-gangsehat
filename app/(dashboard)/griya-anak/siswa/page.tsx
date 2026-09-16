@@ -22,6 +22,11 @@ const STATUS_CLS: Record<string, string> = {
   graduated: 'bg-primary/15 text-primary',
   inactive: 'bg-muted text-muted-foreground',
 }
+const TA_LABEL: Record<'draft' | 'completed', string> = { draft: 'Draf', completed: 'Selesai' }
+const TA_CLS: Record<'draft' | 'completed', string> = {
+  draft: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+  completed: 'bg-[#34C759]/15 text-[#34C759]',
+}
 
 export default function GriyaSiswaPage() {
   const { showToast } = useToast()
@@ -103,15 +108,16 @@ export default function GriyaSiswaPage() {
               <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Usia</th>
               <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell">Keluhan</th>
               <th className="text-center px-4 py-2 font-medium text-muted-foreground">Jadwal</th>
+              <th className="text-center px-4 py-2 font-medium text-muted-foreground">TA</th>
               <th className="text-left px-4 py-2 font-medium text-muted-foreground">Status</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Memuat...</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Memuat...</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Belum ada siswa.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Belum ada siswa.</td></tr>
             ) : rows.map((r) => (
               <tr key={r.patient_id} className={`border-b border-border last:border-0 ${r.status === 'inactive' ? 'opacity-50' : ''}`}>
                 <td className="px-4 py-2 font-medium">
@@ -123,6 +129,13 @@ export default function GriyaSiswaPage() {
                 <td className="px-4 py-2 text-muted-foreground hidden md:table-cell">{calcAge(r.birthDate)}</td>
                 <td className="px-4 py-2 text-muted-foreground hidden lg:table-cell max-w-xs truncate">{r.keluhan ?? '—'}</td>
                 <td className="px-4 py-2 text-center">{r.activeSlots > 0 ? r.activeSlots : '—'}</td>
+                <td className="px-4 py-2 text-center">
+                  {r.terapiAwalStatus ? (
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${TA_CLS[r.terapiAwalStatus]}`}>{TA_LABEL[r.terapiAwalStatus]}</span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground/50">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_CLS[r.status]}`}>{STATUS_LABEL[r.status] ?? r.status}</span>
                 </td>

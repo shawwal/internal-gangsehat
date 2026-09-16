@@ -255,24 +255,10 @@ export interface GriyaTerapiAwal {
   created_by: string | null
   created_at: string
   updated_at: string
+  // Keluhan Utama
+  keluhan_utama: string | null
   // Riwayat Keluarga
   riwayat_keluarga: string | null
-  // Riwayat Kehamilan
-  usia_ibu_hamil: string | null
-  keluhan_ibu_hamil: string | null
-  // Riwayat Kelahiran
-  usia_kehamilan_lahir: string | null
-  jumlah_hamil: string | null
-  jumlah_melahirkan: string | null
-  cara_lahir: 'CESAR' | 'NORMAL' | null
-  tempat_lahir: string | null
-  induksi: string | null
-  nicu: string | null
-  inkubator: string | null
-  berat_badan_lahir: string | null
-  panjang_badan_lahir: string | null
-  kondisi_khusus_lahir: string | null
-  langsung_menangis: string | null
   // Masa Pertumbuhan dan Perkembangan
   berat_badan: string | null
   tinggi_badan: string | null
@@ -289,12 +275,6 @@ export interface GriyaTerapiAwal {
   pertumbuhan_lainnya: string | null
   // Riwayat Sakit/Keluhan
   riwayat_sakit: string | null
-  // Interaksi Antar Personal
-  aktivitas_dirumah: string | null
-  aktivitas_diluar_rumah: string | null
-  kepribadian_anak: string | null
-  tipe_sosialisasi: string | null
-  hobi_anak: string | null
   // Masalah Wicara / Oral Motor
   kemampuan_menyedot: string | null
   kemampuan_sikat_gigi: string | null

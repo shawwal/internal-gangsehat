@@ -136,6 +136,35 @@ export default function GriyaSiswaDetailPage() {
         </div>
       </div>
 
+      {/* Terapi Awal status — at-a-glance summary, separate from the per-visit "Periksa" button below */}
+      <div className="glass-card p-4 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Stethoscope size={16} className="text-muted-foreground shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-foreground">Terapi Awal</p>
+            <p className="text-xs text-muted-foreground">
+              {detail?.terapiAwal
+                ? (detail.terapiAwal.status === 'completed' ? 'Sudah diisi' : 'Draf belum diselesaikan')
+                : 'Belum ada kunjungan Terapi Awal'}
+            </p>
+          </div>
+        </div>
+        {detail?.terapiAwal ? (
+          <button
+            onClick={() => router.push(`/griya-anak/siswa/${id}/terapi-awal/${detail.terapiAwal!.visitId}`)}
+            className={`px-3 py-2 rounded-xl text-sm font-medium cursor-pointer ${
+              detail.terapiAwal.status === 'completed'
+                ? 'border border-border hover:bg-muted'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
+          >
+            {detail.terapiAwal.status === 'completed' ? 'Lihat Terapi Awal' : 'Lanjutkan Isi Terapi Awal'}
+          </button>
+        ) : (
+          <span className="text-xs text-muted-foreground">Jadwalkan kunjungan Terapi Awal terlebih dahulu</span>
+        )}
+      </div>
+
       {editing ? (
         <StudentEditForm
           patient={patient}
