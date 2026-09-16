@@ -10,9 +10,19 @@ export function buildOverrideMap(rows: { page_key: string; role: string; allowed
   return map
 }
 
-/** Director always has full access — never subject to overrides, can never be locked out. */
+/**
+ * Director sees/reaches every page conceptually (enforced separately in
+ * `isPathAllowed`, which short-circuits to true for director), but the nav
+ * registry still holds one entry per role for pages that are duplicated
+ * across roles (e.g. `hr-staff` vs `manager-staff`, both → /hr/staff). Those
+ * entries assume a branch-scoped caller and break for director's
+ * branch_id === null. Director already has its own dedicated equivalents
+ * (director-users, director-leave, ...), so for sidebar/nav purposes director
+ * only gets items explicitly marked with the `director` role — never subject
+ * to overrides, since role_page_permissions never stores director rows.
+ */
 export function isAllowed(role: UserRole, item: NavItem, overrides: PermissionOverrides): boolean {
-  if (role === 'director') return true
+  if (role === 'director') return item.roles.includes('director')
   const override = overrides.get(`${item.key}:${role}`)
   if (override !== undefined) return override
   return item.roles.includes(role)
