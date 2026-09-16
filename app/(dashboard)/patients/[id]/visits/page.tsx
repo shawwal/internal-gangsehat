@@ -18,6 +18,9 @@ import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentP
 import { EditPackageTransactionDialog } from '@/components/visits/EditPackageTransactionDialog'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { getVisitFormRoute } from '@/lib/visitRouting'
+import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
+import { fetchIsGriyaStudent } from '@/app/actions/griyaStudents'
+import { SessionNoteModal } from '@/components/griya/SessionNoteModal'
 import { SERVICE_TYPES, getEffectivePackageServiceType } from '@/lib/serviceType'
 import { fetchBranchStaff, deleteVisit, updateVisit, type BranchStaffMember } from '@/app/actions/jadwal'
 import type { PaymentVisitInfo } from '@/components/visits/PaymentDialog'
@@ -229,6 +232,8 @@ export default function PatientVisitsPage() {
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null)
   const [paymentVisit, setPaymentVisit]       = useState<PaymentVisitInfo | null>(null)
   const [packagePrompt, setPackagePrompt]     = useState<(MedicalRecordSavedContext & { visitId: string }) | null>(null)
+  const [isGriyaChild, setIsGriyaChild] = useState(false)
+  const [examineVisit, setExamineVisit] = useState<PatientVisit | null>(null)
 
   const [deleteTarget, setDeleteTarget] = useState<PatientVisit | null>(null)
   const [deleting, setDeleting]         = useState(false)
@@ -244,6 +249,19 @@ export default function PatientVisitsPage() {
   const canDeleteVisit   = !!userRole && !['therapist', 'staff', 'sport_massage_therapist'].includes(userRole)
 
   function openVisit(v: PatientVisit) {
+    if (isGriyaChild) {
+      const groute = getGriyaVisitFormRoute(v.service_type)
+      if (groute === 'terapi-awal') {
+        router.push(`/griya-anak/siswa/${id}/terapi-awal/${v.id}`)
+        return
+      }
+      if (groute === 'session-note') {
+        setExamineVisit(v)
+        return
+      }
+      // No dedicated Griya Anak form for this service type (e.g. LAINNYA) —
+      // fall through to the generic modal below as a last resort.
+    }
     const route = getVisitFormRoute(v.service_type)
     if (route) {
       router.push(`/visits/${v.id}/${route}?from=/patients/${id}/visits`)
@@ -321,6 +339,7 @@ export default function PatientVisitsPage() {
   }
 
   useEffect(() => { loadProfile().then(() => load()) }, [id])
+  useEffect(() => { fetchIsGriyaStudent(id).then(setIsGriyaChild) }, [id])
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -991,6 +1010,20 @@ export default function PatientVisitsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {examineVisit && (
+        <SessionNoteModal
+          target={{
+            visitId: examineVisit.id,
+            patientId: examineVisit.patient_id,
+            patientName: patientName,
+            branchId: examineVisit.branch_id,
+            griyaSlotId: examineVisit.griya_slot_id,
+          }}
+          onClose={() => setExamineVisit(null)}
+          onSaved={() => { setExamineVisit(null); load() }}
+        />
       )}
 
       {/* Medical record modal */}

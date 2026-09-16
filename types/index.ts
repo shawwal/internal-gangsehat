@@ -85,6 +85,8 @@ export interface PatientVisit {
   regio: BodyRegion | null
   sumber_pasien: string | null
   order_id: string | null
+  // Griya Anak only — links this visit back to its recurring schedule slot (migration 066)
+  griya_slot_id: string | null
 }
 
 export type RedFlag =

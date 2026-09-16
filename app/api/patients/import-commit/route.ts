@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'director') {
-    return NextResponse.json({ error: 'Forbidden — director only' }, { status: 403 })
+  if (!profile || !['director', 'admin'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Forbidden — director/admin only' }, { status: 403 })
   }
 
   let body: { rows?: CommitRow[] }

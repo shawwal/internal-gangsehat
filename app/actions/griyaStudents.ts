@@ -8,6 +8,20 @@ import { addPatient } from '@/app/actions/patients'
 
 const WRITE_ROLES = ['director', 'manager', 'admin']
 
+// Used by the generic /patients/[id]/visits page to decide whether a visit
+// belongs to a Griya Anak child, so its "Rekam Medis" button routes into
+// Griya Anak's own forms (griya_terapi_awal / griya_session_notes) instead of
+// the adult MSK terapi_awal_assessments / session_notes forms.
+export async function fetchIsGriyaStudent(patientId: string): Promise<boolean> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('griya_students')
+    .select('patient_id')
+    .eq('patient_id', patientId)
+    .maybeSingle()
+  return !!data
+}
+
 type SupaClient = Awaited<ReturnType<typeof createClient>>
 type AuthOk = { supabase: SupaClient; userId: string; role: string; branchId: string | null }
 type AuthResult = AuthOk | { error: string }
