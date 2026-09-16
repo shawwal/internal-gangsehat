@@ -312,6 +312,16 @@ export const navigation: NavItem[] = [
     group: 'schedule',
   },
 
+  // Sport Massage therapist performance — branch-scoped for admin, cross-branch for director
+  {
+    key: 'sport-massage-performance',
+    label: 'Performa Sport Massage',
+    href: '/jadwal-sport-massage/performa',
+    icon: 'Trophy',
+    roles: ['director', 'admin'],
+    group: 'schedule',
+  },
+
   // My Schedule — every role can manage their own schedule
   {
     key: 'my-schedule',
