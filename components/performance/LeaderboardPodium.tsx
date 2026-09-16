@@ -6,6 +6,7 @@ import type { FisioStats } from './types'
 
 interface LeaderboardPodiumProps {
   top3: FisioStats[]
+  onSelectTherapist: (therapist: FisioStats) => void
 }
 
 function AvatarCircle({
@@ -53,10 +54,12 @@ function PodiumCard({
   fisio,
   rank,
   delay,
+  onSelectTherapist,
 }: {
   fisio: FisioStats
   rank: number
   delay: number
+  onSelectTherapist: (therapist: FisioStats) => void
 }) {
   const isFirst = rank === 1
   const heights = { 1: 'mt-0', 2: 'mt-8', 3: 'mt-12' } as Record<number, string>
@@ -107,13 +110,21 @@ function PodiumCard({
         <p className="text-sm font-semibold text-foreground leading-tight mb-0.5 line-clamp-1">
           {fisio.name.split(' ')[0]}
         </p>
-        <p
-          className="text-xl font-bold mb-3"
-          style={{ color: rc.text }}
-        >
-          {fisio.total.toLocaleString('id-ID')}
-          <span className="text-xs font-normal text-muted-foreground ml-1">kunjungan</span>
-        </p>
+        {fisio.total > 0 ? (
+          <button
+            onClick={() => onSelectTherapist(fisio)}
+            className="text-xl font-bold mb-3 hover:underline underline-offset-2 cursor-pointer"
+            style={{ color: rc.text }}
+          >
+            {fisio.total.toLocaleString('id-ID')}
+            <span className="text-xs font-normal text-muted-foreground ml-1">kunjungan</span>
+          </button>
+        ) : (
+          <p className="text-xl font-bold mb-3" style={{ color: rc.text }}>
+            {fisio.total.toLocaleString('id-ID')}
+            <span className="text-xs font-normal text-muted-foreground ml-1">kunjungan</span>
+          </p>
+        )}
 
         <div className="flex justify-center gap-3 border-t border-border/40 pt-2">
           <StatPill label="TA"    value={fisio.ta}    color="var(--primary)"    />
@@ -125,7 +136,7 @@ function PodiumCard({
   )
 }
 
-export function LeaderboardPodium({ top3 }: LeaderboardPodiumProps) {
+export function LeaderboardPodium({ top3, onSelectTherapist }: LeaderboardPodiumProps) {
   if (!top3.length) {
     return (
       <div className="glass-card p-8 text-center text-sm text-muted-foreground">
@@ -150,7 +161,7 @@ export function LeaderboardPodium({ top3 }: LeaderboardPodiumProps) {
             : 3
           return (
             <div key={f.staff_id} className="flex-1 max-w-[160px]">
-              <PodiumCard fisio={f} rank={rank} delay={delays[i]} />
+              <PodiumCard fisio={f} rank={rank} delay={delays[i]} onSelectTherapist={onSelectTherapist} />
             </div>
           )
         })}

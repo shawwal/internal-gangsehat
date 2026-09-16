@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchConfirmedVisitIds } from '@/lib/internal/paymentGating'
 import { LeaderboardPodium } from './LeaderboardPodium'
 import { LeaderboardTable } from './LeaderboardTable'
+import { TherapistPatientsModal } from './TherapistPatientsModal'
 import { PodiumSkeleton, TableSkeleton } from './Skeletons'
 import {
   MONTHS, CURRENT_MONTH, CURRENT_YEAR, YEARS,
@@ -27,6 +28,7 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
   const [loading, setLoading] = useState(true)
   const [ranked, setRanked]   = useState<FisioStats[]>([])
   const [targets, setTargets] = useState<StaffTargetRow[]>([])
+  const [selected, setSelected] = useState<FisioStats | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -126,10 +128,20 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
         </>
       ) : (
         <>
-          <LeaderboardPodium top3={ranked.slice(0, 3)} />
-          <LeaderboardTable  data={ranked} targets={targets} />
+          <LeaderboardPodium top3={ranked.slice(0, 3)} onSelectTherapist={setSelected} />
+          <LeaderboardTable  data={ranked} targets={targets} onSelectTherapist={setSelected} />
         </>
       )}
+
+      <TherapistPatientsModal
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        staffId={selected?.staff_id ?? null}
+        staffName={selected?.name ?? ''}
+        start={getMonthRange(month, year).start}
+        end={getMonthRange(month, year).end}
+        branchFilter={branchFilter}
+      />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import type { FisioStats, StaffTargetRow } from './types'
 interface LeaderboardTableProps {
   data: FisioStats[]
   targets: StaffTargetRow[]
+  onSelectTherapist: (therapist: FisioStats) => void
 }
 
 function AvatarSmall({ name, avatarUrl }: { name: string; avatarUrl: string | null }) {
@@ -41,7 +42,7 @@ function CapaianBadge({ pct }: { pct: string }) {
   )
 }
 
-export function LeaderboardTable({ data, targets }: LeaderboardTableProps) {
+export function LeaderboardTable({ data, targets, onSelectTherapist }: LeaderboardTableProps) {
   const targetMap = new Map(targets.map(t => [t.staff_id, t.target_kunjungan]))
 
   if (!data.length) {
@@ -108,9 +109,16 @@ export function LeaderboardTable({ data, targets }: LeaderboardTableProps) {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-sm font-bold ${isFirst ? 'text-primary' : 'text-foreground'}`}>
-                      {f.total.toLocaleString('id-ID')}
-                    </span>
+                    {f.total > 0 ? (
+                      <button
+                        onClick={() => onSelectTherapist(f)}
+                        className={`text-sm font-bold underline-offset-2 hover:underline cursor-pointer ${isFirst ? 'text-primary' : 'text-foreground'}`}
+                      >
+                        {f.total.toLocaleString('id-ID')}
+                      </button>
+                    ) : (
+                      <span className="text-sm font-bold text-muted-foreground">0</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{f.ta}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{f.paket}</td>
