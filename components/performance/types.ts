@@ -20,6 +20,7 @@ export interface StaffTargetRow {
 
 export interface VisitRow {
   id: string
+  patient_id: string
   service_type: string | null
   attending_staff_id: string | null
   visit_date: string

@@ -5,6 +5,7 @@ import { decryptPatientPII } from '@/lib/encryption'
 
 export interface GriyaTherapistVisitRow {
   id: string
+  patientId: string
   patientName: string
   visitDate: string
   visitTime: string | null
@@ -50,6 +51,7 @@ export async function fetchGriyaTherapistVisits(
     const name = encName ? decryptPatientPII({ encrypted_name: encName, encrypted_phone: '' }).name : '—'
     return {
       id: row.id,
+      patientId: row.patient_id,
       patientName: name || '—',
       visitDate: row.visit_date,
       visitTime: row.visit_time,

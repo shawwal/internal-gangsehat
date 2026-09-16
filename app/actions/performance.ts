@@ -6,6 +6,7 @@ import { VISIT_STATUS_FILTER, isAttended } from '@/components/performance/utils'
 
 export interface TerapisPatientVisitRow {
   id: string
+  patientId: string
   patientName: string
   visitDate: string
   serviceType: string | null
@@ -53,9 +54,29 @@ export async function fetchTerapisTerbaikPatients(
     const name = encName ? decryptPatientPII({ encrypted_name: encName, encrypted_phone: '' }).name : '—'
     return {
       id: row.id,
+      patientId: row.patient_id,
       patientName: name || '—',
       visitDate: row.visit_date,
       serviceType: row.service_type,
     }
   })
+}
+
+/** Decrypted display names for a batch of patient ids — used to fill in
+ *  search-by-name on drill-down lists that already have patient ids client-side
+ *  (e.g. the Kontrol Target KPI cards, whose visit rows are already loaded). */
+export async function fetchPatientNamesByIds(patientIds: string[]): Promise<Record<string, string>> {
+  if (!patientIds.length) return {}
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('patients')
+    .select('id, encrypted_name')
+    .in('id', [...new Set(patientIds)])
+
+  const result: Record<string, string> = {}
+  for (const p of data ?? []) {
+    const encName = p.encrypted_name ?? ''
+    result[p.id] = encName ? (decryptPatientPII({ encrypted_name: encName, encrypted_phone: '' }).name || '—') : '—'
+  }
+  return result
 }

@@ -2,47 +2,61 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { X, Loader2, Search } from 'lucide-react'
-import { fetchTerapisTerbaikPatients, type TerapisPatientVisitRow } from '@/app/actions/performance'
+import { fetchPatientNamesByIds } from '@/app/actions/performance'
+import { formatDateShort } from './utils'
+
+export interface KpiDetailRow {
+  id: string
+  patientId: string
+  visitDate: string
+  serviceType: string | null
+}
 
 interface Props {
   open: boolean
   onClose: () => void
-  staffId: string | null
-  staffName: string
-  start: string
-  end: string
-  branchFilter: string
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+  /** Identifies which KPI category is open (e.g. 'ta' | 'paket' | 'kunjungan' | 'visit') —
+   *  used to know when to refetch, since `rows` is recomputed fresh on every render. */
+  resetKey: string
+  title: string
+  periodLabel: string
+  rows: KpiDetailRow[]
 }
 
 function openPatientVisits(patientId: string) {
   window.open(`/patients/${patientId}/visits`, '_blank', 'noopener,noreferrer')
 }
 
-export function TherapistPatientsModal({ open, onClose, staffId, staffName, start, end, branchFilter }: Props) {
-  const [rows, setRows] = useState<TerapisPatientVisitRow[]>([])
+export function KpiDetailModal({ open, onClose, resetKey, title, periodLabel, rows }: Props) {
+  const [names, setNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
 
   // Standard fetch-on-open pattern (matches components/targetProgress/DetailModal.tsx).
   useEffect(() => {
-    if (!open || !staffId) return
+    if (!open) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     setSearch('')
-    fetchTerapisTerbaikPatients(staffId, start, end, branchFilter)
-      .then(setRows)
+    const patientIds = [...new Set(rows.map((r) => r.patientId))]
+    fetchPatientNamesByIds(patientIds)
+      .then(setNames)
       .finally(() => setLoading(false))
-  }, [open, staffId, start, end, branchFilter])
+    // `rows` is a freshly-derived array on every render of the parent tab —
+    // key off `open` + `resetKey` (which category is showing) instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, resetKey])
+
+  const displayRows = useMemo(
+    () => rows.map((r) => ({ ...r, patientName: names[r.patientId] ?? '' })),
+    [rows, names],
+  )
 
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase()
-    if (!term) return rows
-    return rows.filter((r) => r.patientName.toLowerCase().includes(term))
-  }, [rows, search])
+    if (!term) return displayRows
+    return displayRows.filter((r) => r.patientName.toLowerCase().includes(term))
+  }, [displayRows, search])
 
   if (!open) return null
 
@@ -52,8 +66,8 @@ export function TherapistPatientsModal({ open, onClose, staffId, staffName, star
       <div className="relative w-full sm:max-w-2xl flex flex-col max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl bg-popover border border-border">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Detail Kunjungan — {staffName}</h2>
-            <p className="text-xs text-muted-foreground">{formatDate(start)} – {formatDate(end)}</p>
+            <h2 className="text-sm font-semibold text-foreground">Detail {title}</h2>
+            <p className="text-xs text-muted-foreground">{periodLabel}</p>
           </div>
           <button
             onClick={onClose}
@@ -86,7 +100,7 @@ export function TherapistPatientsModal({ open, onClose, staffId, staffName, star
             </div>
           ) : filteredRows.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              {rows.length === 0 ? 'Tidak ada kunjungan pada periode ini' : 'Tidak ada pasien yang cocok'}
+              {rows.length === 0 ? 'Tidak ada data pada periode ini' : 'Tidak ada pasien yang cocok'}
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -108,11 +122,11 @@ export function TherapistPatientsModal({ open, onClose, staffId, staffName, star
                         onClick={() => openPatientVisits(r.patientId)}
                         className="text-foreground hover:text-primary hover:underline underline-offset-2 cursor-pointer text-left"
                       >
-                        {r.patientName}
+                        {r.patientName || '—'}
                       </button>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.serviceType ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{formatDate(r.visitDate)}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{formatDateShort(r.visitDate)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -123,7 +137,7 @@ export function TherapistPatientsModal({ open, onClose, staffId, staffName, star
         {!loading && rows.length > 0 && (
           <div className="px-5 py-3 border-t border-border shrink-0 text-center">
             <p className="text-xs text-muted-foreground">
-              {filteredRows.length === rows.length ? `${rows.length} kunjungan` : `${filteredRows.length} dari ${rows.length} kunjungan`}
+              {filteredRows.length === rows.length ? `${rows.length} data` : `${filteredRows.length} dari ${rows.length} data`}
             </p>
           </div>
         )}

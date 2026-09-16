@@ -6,6 +6,7 @@ import { fetchConfirmedVisitIds } from '@/lib/internal/paymentGating'
 import { TargetKpiCard } from './TargetKpiCard'
 import { FisioBarChart } from './FisioBarChart'
 import { RecentVisitsTable } from './RecentVisitsTable'
+import { KpiDetailModal, type KpiDetailRow } from './KpiDetailModal'
 import { KpiSkeleton, ChartSkeleton, TableSkeleton } from './Skeletons'
 import {
   MONTHS, CURRENT_MONTH, YEARS, VISIT_STATUS_FILTER, TODAY_ISO,
@@ -36,6 +37,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
   const [visits, setVisits]     = useState<VisitRow[]>([])
   const [targets, setTargets]   = useState<StaffTargetRow[]>([])
   const [paidVisitIds, setPaidVisitIds] = useState<Set<string>>(new Set())
+  const [openKpi, setOpenKpi] = useState<'ta' | 'paket' | 'kunjungan' | 'visit' | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -109,10 +111,18 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
   const paidAttended = attended.filter(v => paidVisitIds.has(v.id))
   const paketAttended = paidAttended.filter(v => (PAKET_TYPES as readonly string[]).includes(v.service_type ?? ''))
 
-  const actualTA     = paidAttended.filter(v => (TA_TYPES as readonly string[]).includes(v.service_type ?? '')).length
-  const actualPaket  = firstPackageVisits(paketAttended).length
+  const taVisits      = paidAttended.filter(v => (TA_TYPES as readonly string[]).includes(v.service_type ?? ''))
+  const paketVisits   = firstPackageVisits(paketAttended)
+  const visitVisits   = firstPackageVisits(paketAttended.filter(v => v.service_type === 'PAKET VISIT'))
+
+  const actualTA     = taVisits.length
+  const actualPaket  = paketVisits.length
   const actualKunjungan = attended.length
-  const actualVisit  = firstPackageVisits(paketAttended.filter(v => v.service_type === 'PAKET VISIT')).length
+  const actualVisit  = visitVisits.length
+
+  const toKpiRow = (v: VisitRow): KpiDetailRow => ({
+    id: v.id, patientId: v.patient_id, visitDate: v.visit_date, serviceType: v.service_type,
+  })
 
   const targetTA         = targets.reduce((s, t) => s + (t.target_ta ?? 0), 0)
   const targetPaket      = targets.reduce((s, t) => s + (t.target_paket_klinik ?? 0), 0)
@@ -229,10 +239,10 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <TargetKpiCard label="Terapi Awal"       actual={actualTA}        target={targetTA}        color="var(--primary)"    delay={0} />
-          <TargetKpiCard label="Paket Masuk"       actual={actualPaket}     target={targetPaket}     color="var(--chart-4)"   delay={80} />
-          <TargetKpiCard label="Jumlah Kunjungan"  actual={actualKunjungan} target={targetKunjungan} color="var(--secondary)"  delay={160} />
-          <TargetKpiCard label="Paket Visit"       actual={actualVisit}     target={targetVisit}     color="var(--destructive)" delay={240} />
+          <TargetKpiCard label="Terapi Awal"       actual={actualTA}        target={targetTA}        color="var(--primary)"    delay={0}   onClick={() => setOpenKpi('ta')} />
+          <TargetKpiCard label="Paket Masuk"       actual={actualPaket}     target={targetPaket}     color="var(--chart-4)"   delay={80}  onClick={() => setOpenKpi('paket')} />
+          <TargetKpiCard label="Jumlah Kunjungan"  actual={actualKunjungan} target={targetKunjungan} color="var(--secondary)"  delay={160} onClick={() => setOpenKpi('kunjungan')} />
+          <TargetKpiCard label="Paket Visit"       actual={actualVisit}     target={targetVisit}     color="var(--destructive)" delay={240} onClick={() => setOpenKpi('visit')} />
         </div>
       )}
 
@@ -245,6 +255,24 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
       {loading ? <TableSkeleton /> : (
         <RecentVisitsTable visits={visits} />
       )}
+
+      <KpiDetailModal
+        open={!!openKpi}
+        onClose={() => setOpenKpi(null)}
+        resetKey={openKpi ?? ''}
+        title={
+          openKpi === 'ta' ? 'Terapi Awal' :
+          openKpi === 'paket' ? 'Paket Masuk' :
+          openKpi === 'visit' ? 'Paket Visit' : 'Jumlah Kunjungan'
+        }
+        periodLabel={periodLabel}
+        rows={
+          openKpi === 'ta' ? taVisits.map(toKpiRow) :
+          openKpi === 'paket' ? paketVisits.map(toKpiRow) :
+          openKpi === 'visit' ? visitVisits.map(toKpiRow) :
+          openKpi === 'kunjungan' ? attended.map(toKpiRow) : []
+        }
+      />
     </div>
   )
 }

@@ -10,9 +10,10 @@ interface TargetKpiCardProps {
   target: number
   color: string
   delay?: number
+  onClick?: () => void
 }
 
-export function TargetKpiCard({ label, actual, target, color, delay = 0 }: TargetKpiCardProps) {
+export function TargetKpiCard({ label, actual, target, color, delay = 0, onClick }: TargetKpiCardProps) {
   const pct = pctValue(actual, target)
   const clamped = pct !== null ? Math.min(pct, 100) : 0
   const barColor = progressColor(pct)
@@ -34,9 +35,19 @@ export function TargetKpiCard({ label, actual, target, color, delay = 0 }: Targe
       </p>
 
       <div className="flex items-baseline gap-1.5 mb-3">
-        <span className="text-2xl font-bold leading-none" style={{ color }}>
-          {actual.toLocaleString('id-ID')}
-        </span>
+        {onClick && actual > 0 ? (
+          <button
+            onClick={onClick}
+            className="text-2xl font-bold leading-none hover:underline underline-offset-2 cursor-pointer"
+            style={{ color }}
+          >
+            {actual.toLocaleString('id-ID')}
+          </button>
+        ) : (
+          <span className="text-2xl font-bold leading-none" style={{ color }}>
+            {actual.toLocaleString('id-ID')}
+          </span>
+        )}
         <span className="text-xs text-muted-foreground">
           / {target.toLocaleString('id-ID')}
         </span>
