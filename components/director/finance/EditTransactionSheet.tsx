@@ -239,10 +239,10 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
           <div>
-            <h2 className="text-base font-semibold text-foreground">Edit Transaksi</h2>
-            <p className="text-xs text-muted-foreground mt-0.5 font-mono">{transaction.id.slice(0, 8)}…</p>
+            <h2 className="text-base font-semibold text-white">Edit Transaksi</h2>
+            <p className="text-xs text-gray-400 mt-0.5 font-mono">{transaction.id.slice(0, 8)}…</p>
           </div>
-          <button onClick={close} className="p-1.5 rounded-lg hover:bg-white/8 text-muted-foreground transition-colors">
+          <button onClick={close} className="p-1.5 rounded-lg hover:bg-white/8 text-gray-400 transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -252,7 +252,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
 
           {/* Type toggle */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Jenis</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Jenis</label>
             <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-white/5 border border-white/10">
               {(['expense', 'income'] as const).map(t => (
                 <button
@@ -264,7 +264,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
                       ? t === 'expense'
                         ? 'bg-destructive text-white shadow'
                         : 'bg-[#34C759] text-white shadow'
-                      : 'text-muted-foreground hover:text-foreground'
+                      : 'text-gray-400 hover:text-white'
                   }`}
                 >
                   {t === 'expense' ? '⬆️ Pengeluaran' : '⬇️ Pemasukan'}
@@ -275,30 +275,30 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
 
           {/* Date */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Tanggal</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Tanggal</label>
             <input
               type="date"
               value={txDate}
               onChange={e => setTxDate(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           {/* Category */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Kategori</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Kategori</label>
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              {categories.map(c => <option key={c} value={c} className="bg-gray-900 text-white">{c}</option>)}
             </select>
           </div>
 
           {/* Patient assignment */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
               Pasien
               {isClinicalIncome && !patientId && (
                 <span className="ml-2 text-[10px] text-[#FFB35C] font-semibold normal-case">Wajib untuk kategori ini</span>
@@ -308,13 +308,13 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
             {patientId ? (
               <div className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-[#34C759]/30 bg-[#34C759]/8">
                 <div>
-                  <p className="text-sm font-medium text-foreground">{patientName}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{patientId.slice(0, 8)}…</p>
+                  <p className="text-sm font-medium text-white">{patientName}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{patientId.slice(0, 8)}…</p>
                 </div>
                 <button
                   type="button"
                   onClick={clearPatient}
-                  className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-destructive transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-destructive transition-colors"
                   title="Hapus pasien"
                 >
                   <UserMinus size={14} />
@@ -323,9 +323,9 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
             ) : (
               <div ref={searchRef} className="relative">
                 <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   {searching && (
-                    <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground animate-spin" />
+                    <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
                   )}
                   <input
                     type="text"
@@ -333,7 +333,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
                     onChange={e => handlePatientQueryChange(e.target.value)}
                     onFocus={() => patientResults.length > 0 && setShowResults(true)}
                     placeholder="Cari nama pasien…"
-                    className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 {showResults && patientResults.length > 0 && (
@@ -345,15 +345,15 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
                         onClick={() => selectPatient(p)}
                         className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-white/8 transition-colors text-left"
                       >
-                        <span className="text-sm text-foreground">{p.name}</span>
-                        {p.no_rm && <span className="text-[10px] text-muted-foreground font-mono">{p.no_rm}</span>}
+                        <span className="text-sm text-white">{p.name}</span>
+                        {p.no_rm && <span className="text-[10px] text-gray-400 font-mono">{p.no_rm}</span>}
                       </button>
                     ))}
                   </div>
                 )}
                 {showResults && patientQuery.length >= 2 && patientResults.length === 0 && !searching && (
                   <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-white/10 bg-gray-900/95 px-3 py-2.5">
-                    <p className="text-xs text-muted-foreground">Tidak ada pasien ditemukan</p>
+                    <p className="text-xs text-gray-400">Tidak ada pasien ditemukan</p>
                   </div>
                 )}
               </div>
@@ -362,11 +362,11 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
 
           {/* Harga */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
               {isIncome ? 'Harga' : 'Nominal'}
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">Rp</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-mono">Rp</span>
               <input
                 type="text" inputMode="numeric"
                 value={isIncome ? harga : amount}
@@ -376,7 +376,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
                   else { setAmount(raw); setHarga(raw) }
                 }}
                 placeholder="0"
-                className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-border bg-input text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 font-mono focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -386,28 +386,28 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Jumlah Bayar</label>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Jumlah Bayar</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">Rp</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-mono">Rp</span>
                     <input
                       type="text" inputMode="numeric"
                       value={amount}
                       onChange={e => setAmount(formatRp(parseRp(e.target.value)))}
                       placeholder="0"
-                      className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-border bg-input text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 font-mono focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Diskon</label>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Diskon</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">Rp</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-mono">Rp</span>
                     <input
                       type="text" inputMode="numeric"
                       value={discount}
                       onChange={e => setDiscount(formatRp(parseRp(e.target.value)))}
                       placeholder="0"
-                      className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-border bg-input text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 font-mono focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
                 </div>
@@ -416,14 +416,14 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
               <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${
                 sisa === 0 ? 'border-[#34C759]/30 bg-[#34C759]/8' : 'border-[#FFB35C]/30 bg-[#FFB35C]/8'
               }`}>
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sisa</span>
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Sisa</span>
                 <span className={`font-mono text-sm font-bold ${sisa === 0 ? 'text-[#34C759]' : 'text-[#FFB35C]'}`}>
                   Rp {sisa.toLocaleString('id-ID')}
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Status Pembayaran</label>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Status Pembayaran</label>
                 <div className="grid grid-cols-3 gap-2">
                   {PAYMENT_STATUSES.map(s => (
                     <button
@@ -435,7 +435,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
                           ? s === 'LUNAS'
                             ? 'bg-[#34C759]/20 border-[#34C759]/50 text-[#34C759]'
                             : 'bg-[#FFB35C]/20 border-[#FFB35C]/50 text-[#FFB35C]'
-                          : 'border-border text-muted-foreground hover:bg-white/5'
+                          : 'border-white/10 text-gray-400 hover:bg-white/5'
                       }`}
                     >
                       {s}
@@ -448,7 +448,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
 
           {/* Payment method */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Metode Bayar</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Metode Bayar</label>
             <div className="grid grid-cols-3 gap-2">
               {PAYMENT_METHODS.map(m => (
                 <button
@@ -458,7 +458,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
                   className={`py-2 rounded-xl text-xs font-semibold border transition-all ${
                     payMethod === m
                       ? 'bg-primary/20 border-primary/50 text-primary'
-                      : 'border-border text-muted-foreground hover:bg-white/5'
+                      : 'border-white/10 text-gray-400 hover:bg-white/5'
                   }`}
                 >
                   {m}
@@ -469,13 +469,13 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Keterangan</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Keterangan</label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={2}
               placeholder="Catatan tambahan…"
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              className="w-full px-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
 
@@ -538,7 +538,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
         <button
           onClick={() => setOpen(true)}
           title="Edit transaksi"
-          className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground/50 hover:text-foreground transition-colors"
+          className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400/50 hover:text-white transition-colors"
         >
           <Pencil size={13} />
         </button>

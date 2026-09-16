@@ -3,11 +3,11 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { Plus, Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw } from 'lucide-react'
+import { Plus, Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw, Stethoscope } from 'lucide-react'
 import type { ResolvedCell } from './resolve'
 
 export type CellAction =
-  | 'assign' | 'substitute' | 'attendance' | 'markPresent' | 'unmarkAttendance' | 'move' | 'end' | 'pay' | 'open' | 'editVisit'
+  | 'assign' | 'substitute' | 'attendance' | 'markPresent' | 'unmarkAttendance' | 'move' | 'end' | 'pay' | 'open' | 'editVisit' | 'examine'
 
 interface Props {
   cellKey: string
@@ -104,6 +104,9 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
             )}
             {cell.slot && cell.state === 'hadir' && canEdit && (
               <>
+                {cell.visit?.id && (
+                  <MenuBtn icon={<Stethoscope size={14} />} label="Periksa" onClick={() => { setMenu(null); onAction('examine', cell) }} />
+                )}
                 <MenuBtn icon={<UserX size={14} />} label="Tandai Tidak Hadir" onClick={() => { setMenu(null); onAction('attendance', cell) }} />
                 <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda Hadir" onClick={() => { setMenu(null); onAction('unmarkAttendance', cell) }} />
               </>

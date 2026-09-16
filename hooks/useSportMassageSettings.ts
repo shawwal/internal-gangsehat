@@ -43,6 +43,7 @@ export function useSportMassageSettings(branchIds: string[]) {
     if (error) {
       console.error('[useSportMassageSettings] toggle error:', error)
       setEnabledMap(prev => ({ ...prev, [branchId]: prevValue }))
+      alert('Gagal menyimpan pengaturan Sport Massage: ' + error.message)
     }
   }, [enabledMap])
 

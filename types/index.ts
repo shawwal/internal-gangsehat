@@ -241,6 +241,111 @@ export interface SessionNote {
   next_plan: string | null
 }
 
+// Griya Anak's own Terapi Awal intake — one row per Griya Anak TERAPI AWAL
+// patient_visits row (migration 074). Separate from TerapiAwalAssessment (adult
+// MSK) — mirrors the paper "REKAM MEDIS SENSORI INTEGRASI" form instead.
+export interface GriyaTerapiAwal {
+  id: string
+  visit_id: string
+  patient_id: string
+  branch_id: string
+  status: AssessmentStatus
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  // Riwayat Keluarga
+  riwayat_keluarga: string | null
+  // Riwayat Kehamilan
+  usia_ibu_hamil: string | null
+  keluhan_ibu_hamil: string | null
+  // Riwayat Kelahiran
+  usia_kehamilan_lahir: string | null
+  jumlah_hamil: string | null
+  jumlah_melahirkan: string | null
+  cara_lahir: 'CESAR' | 'NORMAL' | null
+  tempat_lahir: string | null
+  induksi: string | null
+  nicu: string | null
+  inkubator: string | null
+  berat_badan_lahir: string | null
+  panjang_badan_lahir: string | null
+  kondisi_khusus_lahir: string | null
+  langsung_menangis: string | null
+  // Masa Pertumbuhan dan Perkembangan
+  berat_badan: string | null
+  tinggi_badan: string | null
+  lingkar_kepala: string | null
+  usia_merayap: string | null
+  usia_merangkak: string | null
+  usia_duduk_mandiri: string | null
+  usia_merambat: string | null
+  usia_berjalan: string | null
+  usia_menunjuk: string | null
+  usia_babbling: string | null
+  usia_mengucap_kata: string | null
+  toilet_training: string | null
+  pertumbuhan_lainnya: string | null
+  // Riwayat Sakit/Keluhan
+  riwayat_sakit: string | null
+  // Interaksi Antar Personal
+  aktivitas_dirumah: string | null
+  aktivitas_diluar_rumah: string | null
+  kepribadian_anak: string | null
+  tipe_sosialisasi: string | null
+  hobi_anak: string | null
+  // Masalah Wicara / Oral Motor
+  kemampuan_menyedot: string | null
+  kemampuan_sikat_gigi: string | null
+  kemampuan_menghisap_pipet: string | null
+  kemampuan_meniup_lilin: string | null
+  kemampuan_kontrol_liur: string | null
+  kemampuan_mengunyah: string | null
+  kemampuan_makan: string | null
+  bentuk_tekstur_makanan: string | null
+  wicara_lainnya: string | null
+  // Pemeriksaan Objektif/Penunjang
+  kontak_mata: string | null
+  kemampuan_duduk_tenang: string | null
+  // Diagnosa
+  diagnosa: string | null
+  // Program Rencana Terapi
+  fisioterapi_motorik: string | null
+  fisioterapi_sensorik: string | null
+  terapi_wicara: string | null
+  terapi_okupasi: string | null
+  terapi_perilaku: string | null
+  // Target & Program Terapi
+  target_program_terapi: string | null
+  // Jadwal Terapi
+  jadwal_hari: string | null
+  jadwal_pukul: string | null
+  // Assessor sign-off
+  assessor_si_id: string | null
+  assessor_si_tanggal: string | null
+  assessor_wicara_id: string | null
+  assessor_wicara_tanggal: string | null
+}
+
+// Griya Anak's own per-meeting SOAP note ("Periksa Pertemuan Ke-N") — one row
+// per Griya Anak follow-up patient_visits row (migration 074). Separate from
+// SessionNote (adult MSK).
+export interface GriyaSessionNote {
+  id: string
+  visit_id: string
+  patient_id: string
+  branch_id: string
+  status: AssessmentStatus
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  sudah_diperiksa: boolean
+  subjective: string | null
+  objective: string | null
+  assessment: string | null
+  plan: string | null
+  keterangan_periksa: string | null
+}
+
 export type TransactionType = 'income' | 'expense'
 export type TransactionStatus = 'pending' | 'confirmed' | 'rejected'
 

@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, ExternalLink, GraduationCap, RotateCcw, Phone, MapPin, Users, CalendarClock, Pencil } from 'lucide-react'
+import { ChevronLeft, ExternalLink, GraduationCap, RotateCcw, Phone, MapPin, Users, CalendarClock, Pencil, Stethoscope } from 'lucide-react'
 import { StudentEditForm } from '@/components/griya/StudentEditForm'
 import { EditVisitDialog } from '@/components/griya/EditVisitDialog'
 import { EditPackageDialog } from '@/components/griya/EditPackageDialog'
 import { GriyaBuyPackageDialog } from '@/components/griya/GriyaBuyPackageDialog'
+import { SessionNoteModal } from '@/components/griya/SessionNoteModal'
+import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
 import { fetchPatient, type PatientPlain } from '@/app/actions/patients'
 import { fetchPatientPackages, fetchPackageSessions } from '@/app/actions/packages'
 import { deleteVisit } from '@/app/actions/jadwal'
@@ -38,6 +40,7 @@ function kehadiranBadge(v: { status: string; kehadiran: string | null }) {
 
 export default function GriyaSiswaDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const { showToast } = useToast()
   const [patient, setPatient] = useState<PatientPlain | null>(null)
   const [detail, setDetail] = useState<GriyaStudentDetail | null>(null)
@@ -46,6 +49,7 @@ export default function GriyaSiswaDetailPage() {
   const [role, setRole] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [editVisitId, setEditVisitId] = useState<string | null>(null)
+  const [examineVisitId, setExamineVisitId] = useState<string | null>(null)
   const [buyingPkg, setBuyingPkg] = useState(false)
 
   async function load() {
@@ -73,6 +77,12 @@ export default function GriyaSiswaDetailPage() {
 
   const activeSlots = detail?.slots.filter((s) => s.status === 'active') ?? []
   const pastSlots = detail?.slots.filter((s) => s.status !== 'active') ?? []
+
+  function handleExamine(v: NonNullable<typeof detail>['visits'][number]) {
+    const route = getGriyaVisitFormRoute(v.service_type)
+    if (route === 'terapi-awal') router.push(`/griya-anak/siswa/${id}/terapi-awal/${v.id}`)
+    else if (route === 'session-note') setExamineVisitId(v.id)
+  }
 
   async function setStatus(s: 'active' | 'graduated') {
     const { error } = await setGriyaStudentStatus(id, s)
@@ -262,7 +272,13 @@ export default function GriyaSiswaDetailPage() {
                       <td className="px-4 py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${b.c}`}>{b.t}</span></td>
                       <td className="px-4 py-2 text-muted-foreground hidden lg:table-cell max-w-xs truncate">{v.notes ?? ''}</td>
                       {canEdit && (
-                        <td className="px-4 py-2 text-right">
+                        <td className="px-4 py-2 text-right whitespace-nowrap">
+                          {getGriyaVisitFormRoute(v.service_type) && (
+                            <button onClick={() => handleExamine(v)}
+                              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground cursor-pointer" title="Periksa">
+                              <Stethoscope size={13} />
+                            </button>
+                          )}
                           <button onClick={() => setEditVisitId(v.id)}
                             className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground cursor-pointer" title="Ubah kunjungan">
                             <Pencil size={13} />
@@ -287,6 +303,24 @@ export default function GriyaSiswaDetailPage() {
             branchId={detail.branchId}
             onClose={() => setEditVisitId(null)}
             onSaved={() => { setEditVisitId(null); showToast('Kunjungan diperbarui', 'success'); load() }}
+          />
+        )
+      })()}
+
+      {examineVisitId && detail?.branchId && (() => {
+        const v = detail.visits.find((x) => x.id === examineVisitId)
+        if (!v) return null
+        return (
+          <SessionNoteModal
+            target={{
+              visitId: v.id,
+              patientId: id,
+              patientName: patient.name,
+              branchId: detail.branchId,
+              griyaSlotId: v.griya_slot_id,
+            }}
+            onClose={() => setExamineVisitId(null)}
+            onSaved={() => { setExamineVisitId(null); showToast('Rekam periksa disimpan', 'success'); load() }}
           />
         )
       })()}

@@ -16,8 +16,10 @@ import { MoveScopeDialog, type MoveDest } from '@/components/griya/MoveScopeDial
 import { ManageTherapistsDialog } from '@/components/griya/ManageTherapistsDialog'
 import { AddStudentButton } from '@/components/griya/AddStudentButton'
 import { EditVisitDialog } from '@/components/griya/EditVisitDialog'
+import { SessionNoteModal } from '@/components/griya/SessionNoteModal'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { markAttendance, resetAttendance } from '@/app/actions/griyaJadwal'
+import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
 import type { CellAction } from '@/components/griya/SlotCell'
 import type { ResolvedCell } from '@/components/griya/resolve'
 import type { CellTarget } from '@/components/griya/types'
@@ -37,6 +39,7 @@ export default function GriyaJadwalPage() {
   const [moveDialog, setMoveDialog] = useState<{ slot: GriyaSlot; dest: MoveDest } | null>(null)
   const [payVisit, setPayVisit] = useState<ResolvedCell | null>(null)
   const [editVisit, setEditVisit] = useState<ResolvedCell | null>(null)
+  const [examineVisit, setExamineVisit] = useState<ResolvedCell | null>(null)
   const [manageOpen, setManageOpen] = useState(false)
 
   function targetFor(cellKey: string, cell?: ResolvedCell): CellTarget | null {
@@ -93,6 +96,16 @@ export default function GriyaJadwalPage() {
       case 'editVisit':
         if (cell?.visit?.id) setEditVisit(cell)
         break
+      case 'examine':
+        if (cell?.visit?.id) {
+          const route = getGriyaVisitFormRoute(cell.visit.service_type)
+          if (route === 'terapi-awal') {
+            window.open(`/griya-anak/siswa/${cell.visit.patient_id}/terapi-awal/${cell.visit.id}`, '_blank', 'noopener,noreferrer')
+          } else {
+            setExamineVisit(cell)
+          }
+        }
+        break
       case 'open': {
         const pid = cell?.slot?.patient_id ?? cell?.visit?.patient_id
         if (pid) window.open(`/griya-anak/siswa/${pid}`, '_blank', 'noopener,noreferrer')
@@ -102,7 +115,7 @@ export default function GriyaJadwalPage() {
   }
 
   function afterMutation() {
-    setAssign(null); setAttendance(null); setEndTarget(null); setMoveDialog(null); setPayVisit(null); setEditVisit(null)
+    setAssign(null); setAttendance(null); setEndTarget(null); setMoveDialog(null); setPayVisit(null); setEditVisit(null); setExamineVisit(null)
     reload({ silent: true })
   }
 
@@ -199,6 +212,19 @@ export default function GriyaJadwalPage() {
           branchId={branchId}
           onClose={() => setEditVisit(null)}
           onSaved={afterMutation}
+        />
+      )}
+      {examineVisit?.visit && branchId && (
+        <SessionNoteModal
+          target={{
+            visitId: examineVisit.visit.id,
+            patientId: examineVisit.visit.patient_id,
+            patientName: examineVisit.studentName,
+            branchId,
+            griyaSlotId: examineVisit.visit.griya_slot_id,
+          }}
+          onClose={() => setExamineVisit(null)}
+          onSaved={() => { setExamineVisit(null); showToast('Rekam periksa disimpan', 'success'); reload({ silent: true }) }}
         />
       )}
       {manageOpen && branchId && (
