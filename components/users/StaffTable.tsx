@@ -76,7 +76,12 @@ export function StaffTable({ users, branches, currentUserId, savingId, search, o
                       <select
                         value={u.role}
                         disabled={isSaving}
-                        onChange={(e) => onUpdateField(u.id, { role: e.target.value as UserRole })}
+                        onChange={(e) => {
+                          const role = e.target.value as UserRole
+                          // director is cross-branch by convention (branch_id = NULL
+                          // is the RLS signal) — clear any stale branch on promotion.
+                          onUpdateField(u.id, role === 'director' ? { role, branch_id: null } : { role })
+                        }}
                         className="text-xs border border-border rounded-lg px-2 py-1 bg-input focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {(Object.keys(ROLE_LABELS) as UserRole[]).map((r) => (
@@ -93,6 +98,8 @@ export function StaffTable({ users, branches, currentUserId, savingId, search, o
                         <Building2 size={11} />
                         {u.branches?.name ?? '—'}
                       </span>
+                    ) : u.role === 'director' ? (
+                      <span className="text-xs text-muted-foreground italic">Lintas cabang</span>
                     ) : (
                       <select
                         value={u.branch_id ?? ''}
