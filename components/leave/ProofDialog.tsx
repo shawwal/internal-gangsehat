@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Eye, FileText, X } from 'lucide-react'
 
 interface Props {
@@ -44,7 +45,7 @@ export function ProofDialog({ url }: Props) {
         </button>
       </div>
 
-      {open && (
+      {open && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
           onClick={() => setOpen(false)}
@@ -78,7 +79,8 @@ export function ProofDialog({ url }: Props) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )
