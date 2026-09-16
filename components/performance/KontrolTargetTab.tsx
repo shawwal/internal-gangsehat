@@ -10,7 +10,7 @@ import { KpiSkeleton, ChartSkeleton, TableSkeleton } from './Skeletons'
 import {
   MONTHS, CURRENT_MONTH, YEARS, VISIT_STATUS_FILTER, TODAY_ISO,
   TA_TYPES, PAKET_TYPES, classifyServiceType, isAttended, firstPackageVisits,
-  getMonthRange, getWeekRangeInMonth,
+  getMonthRange, getWeekRangeInMonth, getMonthsInRange, addDaysISO, formatDateShort,
 } from './utils'
 import type {
   StaffTargetRow, VisitRow, FisioBarData, PeriodMode,
@@ -29,6 +29,8 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
   const [periodMode, setPeriodMode] = useState<PeriodMode>('bulan')
   const [month, setMonth]         = useState(CURRENT_MONTH)
   const [week, setWeek]           = useState<1 | 2 | 3 | 4>(1)
+  const [customStart, setCustomStart] = useState(() => addDaysISO(TODAY_ISO, -30))
+  const [customEnd, setCustomEnd]     = useState(TODAY_ISO)
 
   const [loading, setLoading]   = useState(true)
   const [visits, setVisits]     = useState<VisitRow[]>([])
@@ -42,7 +44,9 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
     const range =
       periodMode === 'bulan'
         ? getMonthRange(month, year)
-        : getWeekRangeInMonth(week, month, year)
+        : periodMode === 'minggu'
+          ? getWeekRangeInMonth(week, month, year)
+          : { start: customStart, end: customEnd }
 
     // Parallel: visits + targets
     const [visitsRes, targetsRes] = await Promise.all([
@@ -67,9 +71,13 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
             'staff_id, target_ta, target_paket_klinik, target_kunjungan, target_visit, ' +
             'internal_profiles!staff_id(full_name)',
           )
-          .eq('bulan', month)
-          .eq('tahun', year)
           .eq('status', 'approved')
+        if (periodMode === 'custom') {
+          const months = getMonthsInRange(customStart, customEnd)
+          q = q.or(months.map(({ bulan, tahun }) => `and(bulan.eq.${bulan},tahun.eq.${tahun})`).join(','))
+        } else {
+          q = q.eq('bulan', month).eq('tahun', year)
+        }
         if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
         return q
       })(),
@@ -89,7 +97,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
     setTargets((targetsRes.data ?? []) as unknown as StaffTargetRow[])
     setPaidVisitIds(await fetchConfirmedVisitIds(supabase, rawVisits.map(v => v.id)))
     setLoading(false)
-  }, [year, branchFilter, periodMode, month, week])
+  }, [year, branchFilter, periodMode, month, week, customStart, customEnd])
 
   useEffect(() => { load() }, [load])
 
@@ -133,7 +141,9 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
   const periodLabel =
     periodMode === 'bulan'
       ? `${MONTHS[month - 1]} ${year}`
-      : getWeekRangeInMonth(week, month, year).label
+      : periodMode === 'minggu'
+        ? getWeekRangeInMonth(week, month, year).label
+        : `${formatDateShort(customStart)} – ${formatDateShort(customEnd)}`
 
   return (
     <div className="space-y-5">
@@ -142,7 +152,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
         <div className="flex flex-wrap items-center gap-3">
           {/* Periode toggle */}
           <div className="flex rounded-xl border border-border bg-card overflow-hidden">
-            {(['bulan', 'minggu'] as PeriodMode[]).map(m => (
+            {(['bulan', 'minggu', 'custom'] as PeriodMode[]).map(m => (
               <button
                 key={m}
                 onClick={() => setPeriodMode(m)}
@@ -152,21 +162,23 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
                     : 'text-foreground/60 hover:text-foreground hover:bg-muted'
                 }`}
               >
-                {m === 'bulan' ? 'Bulanan' : 'Mingguan'}
+                {m === 'bulan' ? 'Bulanan' : m === 'minggu' ? 'Mingguan' : 'Custom'}
               </button>
             ))}
           </div>
 
-          {/* Month picker */}
-          <select
-            value={month}
-            onChange={e => setMonth(Number(e.target.value))}
-            className={selectCls}
-          >
-            {MONTHS.map((m, i) => (
-              <option key={i} value={i + 1}>{m}</option>
-            ))}
-          </select>
+          {/* Month picker (bulan / minggu modes) */}
+          {periodMode !== 'custom' && (
+            <select
+              value={month}
+              onChange={e => setMonth(Number(e.target.value))}
+              className={selectCls}
+            >
+              {MONTHS.map((m, i) => (
+                <option key={i} value={i + 1}>{m}</option>
+              ))}
+            </select>
+          )}
 
           {/* Week picker (only in minggu mode) */}
           {periodMode === 'minggu' && (
@@ -181,6 +193,27 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
                 </option>
               ))}
             </select>
+          )}
+
+          {/* Custom date range (only in custom mode) */}
+          {periodMode === 'custom' && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={customStart}
+                max={customEnd}
+                onChange={e => setCustomStart(e.target.value)}
+                className={selectCls}
+              />
+              <span className="text-xs text-muted-foreground">s/d</span>
+              <input
+                type="date"
+                value={customEnd}
+                min={customStart}
+                onChange={e => setCustomEnd(e.target.value)}
+                className={selectCls}
+              />
+            </div>
           )}
 
           <span className="text-xs text-muted-foreground ml-auto hidden sm:block">

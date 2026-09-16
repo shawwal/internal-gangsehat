@@ -76,6 +76,6 @@ export interface MonthlyData {
   total: number
 }
 
-export type PeriodMode = 'bulan' | 'minggu'
+export type PeriodMode = 'bulan' | 'minggu' | 'custom'
 export type ViewMode = 'individual' | 'tim'
 export type PerformanceTab = 'kontrol' | 'performa' | 'terbaik'

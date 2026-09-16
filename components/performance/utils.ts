@@ -52,6 +52,27 @@ export function getMonthRange(month: number, year: number): { start: string; end
   }
 }
 
+export function addDaysISO(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+// staff_targets is stored per (bulan, tahun) — a custom range can span more
+// than one month, so list every month it touches to sum the right target rows.
+export function getMonthsInRange(start: string, end: string): { bulan: number; tahun: number }[] {
+  const [sy, sm] = start.split('-').map(Number)
+  const [ey, em] = end.split('-').map(Number)
+  const months: { bulan: number; tahun: number }[] = []
+  let y = sy, m = sm
+  while (y < ey || (y === ey && m <= em)) {
+    months.push({ bulan: m, tahun: y })
+    m++
+    if (m > 12) { m = 1; y++ }
+  }
+  return months
+}
+
 export function pctValue(actual: number, target: number): number | null {
   if (!target) return null
   return (actual / target) * 100

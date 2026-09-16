@@ -512,6 +512,14 @@ export const navigation: NavItem[] = [
     group: 'griya',
   },
   {
+    key: 'griya-performa',
+    label: 'Performa Terapis Griya Anak',
+    href: '/griya-anak/performa',
+    icon: 'Trophy',
+    roles: ['director', 'manager', 'admin'],
+    group: 'griya',
+  },
+  {
     key: 'notifications',
     label: 'Notifikasi',
     href: '/notifications',
