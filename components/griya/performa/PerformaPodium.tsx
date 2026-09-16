@@ -6,6 +6,7 @@ import type { TherapistPerforma } from './types'
 
 interface Props {
   top3: TherapistPerforma[]
+  onSelectTherapist: (therapist: TherapistPerforma) => void
 }
 
 function AvatarCircle({
@@ -34,7 +35,17 @@ function AvatarCircle({
   )
 }
 
-function PodiumCard({ therapist, rank, delay }: { therapist: TherapistPerforma; rank: number; delay: number }) {
+function PodiumCard({
+  therapist,
+  rank,
+  delay,
+  onSelectTherapist,
+}: {
+  therapist: TherapistPerforma
+  rank: number
+  delay: number
+  onSelectTherapist: (therapist: TherapistPerforma) => void
+}) {
   const isFirst = rank === 1
   const heights = { 1: 'mt-0', 2: 'mt-8', 3: 'mt-12' } as Record<number, string>
   const rankColors = {
@@ -72,16 +83,27 @@ function PodiumCard({ therapist, rank, delay }: { therapist: TherapistPerforma; 
         <p className="text-sm font-semibold text-foreground leading-tight mb-0.5 line-clamp-1">
           {displayName.split(' ')[0]}
         </p>
-        <p className="text-xl font-bold" style={{ color: rc.text }}>
-          {therapist.total.toLocaleString('id-ID')}
-          <span className="text-xs font-normal text-muted-foreground ml-1">sesi</span>
-        </p>
+        {therapist.total > 0 ? (
+          <button
+            onClick={() => onSelectTherapist(therapist)}
+            className="text-xl font-bold hover:underline underline-offset-2 cursor-pointer"
+            style={{ color: rc.text }}
+          >
+            {therapist.total.toLocaleString('id-ID')}
+            <span className="text-xs font-normal text-muted-foreground ml-1">sesi</span>
+          </button>
+        ) : (
+          <p className="text-xl font-bold" style={{ color: rc.text }}>
+            {therapist.total.toLocaleString('id-ID')}
+            <span className="text-xs font-normal text-muted-foreground ml-1">sesi</span>
+          </p>
+        )}
       </div>
     </div>
   )
 }
 
-export function PerformaPodium({ top3 }: Props) {
+export function PerformaPodium({ top3, onSelectTherapist }: Props) {
   const withSessions = top3.filter((t) => t.total > 0)
   if (!withSessions.length) {
     return (
@@ -102,7 +124,7 @@ export function PerformaPodium({ top3 }: Props) {
           const rank = t.therapist_id === top3[0].therapist_id ? 1 : t.therapist_id === top3[1]?.therapist_id ? 2 : 3
           return (
             <div key={t.therapist_id} className="flex-1 max-w-[160px]">
-              <PodiumCard therapist={t} rank={rank} delay={delays[i]} />
+              <PodiumCard therapist={t} rank={rank} delay={delays[i]} onSelectTherapist={onSelectTherapist} />
             </div>
           )
         })}

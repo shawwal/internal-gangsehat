@@ -5,6 +5,7 @@ import type { TherapistPerforma } from './types'
 
 interface Props {
   rows: TherapistPerforma[]
+  onSelectTherapist: (therapist: TherapistPerforma) => void
 }
 
 function AvatarSmall({ name, avatarUrl }: { name: string; avatarUrl: string | null }) {
@@ -24,7 +25,7 @@ function AvatarSmall({ name, avatarUrl }: { name: string; avatarUrl: string | nu
   )
 }
 
-export function PerformaLeaderboardTable({ rows }: Props) {
+export function PerformaLeaderboardTable({ rows, onSelectTherapist }: Props) {
   if (!rows.length) {
     return (
       <div className="glass-card p-6 text-center text-sm text-muted-foreground">
@@ -87,9 +88,16 @@ export function PerformaLeaderboardTable({ rows }: Props) {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-sm font-bold ${isFirst ? 'text-primary' : 'text-foreground'}`}>
-                      {r.total.toLocaleString('id-ID')}
-                    </span>
+                    {r.total > 0 ? (
+                      <button
+                        onClick={() => onSelectTherapist(r)}
+                        className={`text-sm font-bold underline-offset-2 hover:underline cursor-pointer ${isFirst ? 'text-primary' : 'text-foreground'}`}
+                      >
+                        {r.total.toLocaleString('id-ID')}
+                      </button>
+                    ) : (
+                      <span className="text-sm font-bold text-muted-foreground">0</span>
+                    )}
                   </td>
                 </tr>
               )

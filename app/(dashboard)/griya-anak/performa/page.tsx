@@ -12,6 +12,7 @@ import { PodiumSkeleton, TableSkeleton } from '@/components/performance/Skeleton
 import { PerformaPodium } from '@/components/griya/performa/PerformaPodium'
 import { PerformaBarChart } from '@/components/griya/performa/PerformaBarChart'
 import { PerformaLeaderboardTable } from '@/components/griya/performa/PerformaLeaderboardTable'
+import { TherapistVisitsModal } from '@/components/griya/performa/TherapistVisitsModal'
 import { defaultThisMonth, defaultLastMonth } from '@/components/griya/performa/utils'
 import type { TherapistPerforma, DateRangeState } from '@/components/griya/performa/types'
 
@@ -32,6 +33,7 @@ export default function GriyaPerformaPage() {
   const [rows, setRows] = useState<TherapistPerforma[]>([])
   const [dataLoading, setDataLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedTherapist, setSelectedTherapist] = useState<TherapistPerforma | null>(null)
 
   useEffect(() => {
     if (!branchId) return
@@ -255,10 +257,22 @@ export default function GriyaPerformaPage() {
         </>
       ) : (
         <>
-          <PerformaPodium top3={rows.slice(0, 3)} />
+          <PerformaPodium top3={rows.slice(0, 3)} onSelectTherapist={setSelectedTherapist} />
           <PerformaBarChart data={rows} />
-          <PerformaLeaderboardTable rows={rows} />
+          <PerformaLeaderboardTable rows={rows} onSelectTherapist={setSelectedTherapist} />
         </>
+      )}
+
+      {branchId && (
+        <TherapistVisitsModal
+          open={!!selectedTherapist}
+          onClose={() => setSelectedTherapist(null)}
+          branchId={branchId}
+          therapistId={selectedTherapist?.therapist_id ?? null}
+          therapistName={selectedTherapist ? (selectedTherapist.nickname || selectedTherapist.name) : ''}
+          from={range.from}
+          to={range.to}
+        />
       )}
     </div>
   )
