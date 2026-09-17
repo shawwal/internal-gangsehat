@@ -83,10 +83,7 @@ export async function POST(request: NextRequest) {
       try {
         controller.enqueue(sseEvent({ phase: 'checking', message: 'Memeriksa duplikat...' }))
 
-        const [existingHashes, existingRms] = await Promise.all([
-          fetchAllColumn(supabase, 'phone_hash'),
-          fetchAllColumn(supabase, 'no_rm'),
-        ])
+        const existingRms = await fetchAllColumn(supabase, 'no_rm')
 
         const seenHashes = new Set<string>()
         const seenRms = new Set<string>()
@@ -100,7 +97,10 @@ export async function POST(request: NextRequest) {
           if (!name || !phone || !/\d/.test(phone)) { skipped++; continue }
 
           const hash = hashPhone(phone)
-          if (seenHashes.has(hash) || existingHashes.has(hash)) { skipped++; continue }
+          // Only dedupe within this file — family members legitimately share a
+          // phone number, so the preview's per-row "include" choice (already
+          // filtered client-side) is trusted over the existing-in-DB match.
+          if (seenHashes.has(hash)) { skipped++; continue }
           seenHashes.add(hash)
 
           let no_rm = row.no_rm?.trim() || null
