@@ -68,12 +68,12 @@ export default function GriyaJadwalPage() {
     }
 
     const target = targetFor(cellKey, cell)
-    if (!target) return
+    if (!target) { showToast('Sel ini tidak valid — muat ulang halaman dan coba lagi.', 'error'); return }
 
     // move-destination pick
     if (moveSlot && action === 'move') {
       const col = week.therapists.find((t) => t.therapist_id === target.therapistId)
-      if (!col) return
+      if (!col) { showToast('Kolom terapis tujuan tidak ditemukan.', 'error'); return }
       setMoveDialog({
         slot: moveSlot,
         dest: { therapistId: target.therapistId, therapistName: target.therapistName, discipline: col.discipline, hari, hour: target.hour, dateIso },
@@ -87,7 +87,10 @@ export default function GriyaJadwalPage() {
       case 'substitute': setAssign(target); break
       case 'attendance': setAttendance(target); break
       case 'end': setEndTarget(target); break
-      case 'move': if (cell?.slot) setMoveSlot(cell.slot); break
+      case 'move':
+        if (cell?.slot) setMoveSlot(cell.slot)
+        else showToast('Jadwal ini belum punya slot tetap, tidak bisa dipindahkan.', 'error')
+        break
       case 'markPresent': {
         if (!cell?.slot && !cell?.visit?.id) break
         const patientId = cell.slot?.patient_id ?? cell.visit?.patient_id

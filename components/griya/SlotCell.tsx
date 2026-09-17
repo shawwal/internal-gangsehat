@@ -12,6 +12,11 @@ export type CellAction =
 
 interface Props {
   cellKey: string
+  /** Disambiguates drag/drop registration ids when two bookings collide on the
+   *  same therapist+hour (see resolve.ts) and get stacked in the same cell —
+   *  `cellKey` itself (used in the drop payload for move-target lookup) stays
+   *  shared so dropping onto either card still targets the same logical cell. */
+  stackIndex?: number
   cell: ResolvedCell | undefined
   therapistOn: boolean
   canEdit: boolean
@@ -28,15 +33,16 @@ const STATE_CLS: Record<string, string> = {
   adhoc: 'bg-purple-500/20 border-purple-500/70 text-foreground',
 }
 
-export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onAction }: Props) {
+export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, moveMode, onAction }: Props) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
 
-  const draggableId = `drag:${cellKey}`
+  const dndId = stackIndex != null ? `${cellKey}#${stackIndex}` : cellKey
+  const draggableId = `drag:${dndId}`
   const canDrag = canEdit && !!cell?.slot && (cell.state === 'scheduled' || cell.state === 'moved-out')
   const { attributes, listeners, setNodeRef: dragRef, isDragging } = useDraggable({
     id: draggableId, data: { cell }, disabled: !canDrag,
   })
-  const { setNodeRef: dropRef, isOver } = useDroppable({ id: `drop:${cellKey}`, data: { cellKey } })
+  const { setNodeRef: dropRef, isOver } = useDroppable({ id: `drop:${dndId}`, data: { cellKey } })
 
   function setRefs(el: HTMLDivElement | null) { dragRef(el); dropRef(el) }
 

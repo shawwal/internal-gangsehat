@@ -62,6 +62,7 @@ export interface GriyaScheduleRow {
   hari: string
   jam_mulai: string          // 'HH:MM'
   jam_selesai: string        // 'HH:MM'
+  status: string             // 'AKTIF' | 'OFF'
 }
 
 export interface GriyaWeek {
@@ -158,8 +159,7 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
     supabase
       .from('schedules')
       .select('staff_id, hari, jam_mulai, jam_selesai, status')
-      .eq('branch_id', branchId)
-      .eq('status', 'AKTIF'),
+      .eq('branch_id', branchId),
   ])
 
   const slots = (slotsRes.data ?? []) as Record<string, unknown>[]
@@ -246,8 +246,55 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
       hari: r.hari as string,
       jam_mulai: hhmm(r.jam_mulai as string) ?? '08:00',
       jam_selesai: hhmm(r.jam_selesai as string) ?? '17:00',
+      status: r.status as string,
     })),
   }
+}
+
+// ── Detect a recurring double-booking before it happens: two active slots at the
+// same discipline+hari+slot_time that would resolve (via pin or rotation) to the
+// very same therapist — the exact scenario that used to make one of them silently
+// disappear from jadwal harian (see components/griya/DayGrid.tsx). ─────────────
+
+async function findSlotCollision(
+  supabase: SupaClient, branchId: string, discipline: Discipline, hari: Hari, slotTime: string,
+  therapistIdPin: string | null | undefined, excludeSlotId?: string,
+): Promise<string | null> {
+  const [{ data: existingSlots }, { data: therapistRows }, { data: scheduleRows }] = await Promise.all([
+    supabase.from('griya_schedule_slots')
+      .select('id, patient_id, therapist_id')
+      .eq('branch_id', branchId).eq('discipline', discipline).eq('hari', hari).eq('slot_time', slotTime).eq('status', 'active'),
+    supabase.from('griya_therapists')
+      .select('therapist_id, discipline, display_order, is_active')
+      .eq('branch_id', branchId).eq('is_active', true),
+    supabase.from('schedules')
+      .select('staff_id, hari, jam_mulai, jam_selesai')
+      .eq('branch_id', branchId).eq('status', 'AKTIF').eq('hari', hari as string),
+  ])
+
+  const therapists = (therapistRows ?? []) as { therapist_id: string; discipline: Discipline; display_order: number; is_active: boolean }[]
+  const schedules = ((scheduleRows ?? []) as { staff_id: string; hari: string; jam_mulai: string; jam_selesai: string }[])
+    .map((r) => ({ ...r, status: 'AKTIF' }))
+
+  const newResolved = resolveTherapistForSlot({ discipline, hari, slot_time: slotTime, therapist_id: therapistIdPin ?? null }, therapists, schedules)
+  if (!newResolved) return null // nobody on duty — surfaces as "Unassigned", not a collision
+
+  for (const s of existingSlots ?? []) {
+    if (s.id === excludeSlotId) continue
+    const existingResolved = resolveTherapistForSlot(
+      { discipline, hari, slot_time: slotTime, therapist_id: s.therapist_id as string | null }, therapists, schedules,
+    )
+    if (existingResolved === newResolved) {
+      const { data: patient } = await supabase.from('patients').select('encrypted_name').eq('id', s.patient_id as string).single()
+      let name = 'anak lain'
+      if (patient?.encrypted_name) {
+        try { name = decryptPatientPII({ encrypted_name: patient.encrypted_name, encrypted_phone: '' }).name || name }
+        catch { /* keep fallback */ }
+      }
+      return name
+    }
+  }
+  return null
 }
 
 // ── Assign a recurring MASTER slot — Day + Time + Patient + Service only, no
@@ -270,6 +317,13 @@ export async function assignRecurringSlot(input: AssignSlotInput): Promise<{ err
   const a = await requireWrite()
   if ('error' in a) return { error: a.error }
   const { supabase, userId } = a
+
+  const collidingWith = await findSlotCollision(
+    supabase, input.branch_id, input.discipline, input.hari, input.slot_time, input.therapist_id,
+  )
+  if (collidingWith) {
+    return { error: `Jam ini sudah dipakai ${collidingWith} — terapis yang akan menangani (mengikuti rotasi/pin) sama. Pilih jam lain, disiplin lain, atau pin ke terapis lain yang bertugas.` }
+  }
 
   await ensureEnrolled(a, input.patient_id, input.branch_id, 'jadwal')
 
@@ -317,8 +371,16 @@ export async function updateMasterSlot(input: UpdateMasterSlotInput): Promise<{ 
   const { supabase, userId } = a
 
   const { data: slot } = await supabase
-    .from('griya_schedule_slots').select('branch_id, hari, slot_time').eq('id', input.slotId).single()
+    .from('griya_schedule_slots').select('branch_id, hari, slot_time, therapist_id').eq('id', input.slotId).single()
   if (!slot) return { error: 'Slot tidak ditemukan' }
+
+  const collidingWith = await findSlotCollision(
+    supabase, slot.branch_id as string, input.discipline, input.hari, input.slot_time,
+    slot.therapist_id as string | null, input.slotId,
+  )
+  if (collidingWith) {
+    return { error: `Jam ini sudah dipakai ${collidingWith} — terapis yang akan menangani (mengikuti rotasi/pin) sama. Pilih jam lain, disiplin lain, atau pin ke terapis lain yang bertugas.` }
+  }
 
   const { error } = await supabase
     .from('griya_schedule_slots')
@@ -480,7 +542,8 @@ export async function markAttendance(
     resolvedTherapistId = resolveTherapistForSlot(
       { discipline: slot.discipline as Discipline, hari: slot.hari as string, slot_time: hhmm(slot.slot_time as string) ?? '' },
       (therapists ?? []) as { therapist_id: string; discipline: Discipline; display_order: number; is_active: boolean }[],
-      (schedules ?? []) as { staff_id: string; hari: string; jam_mulai: string; jam_selesai: string }[],
+      ((schedules ?? []) as { staff_id: string; hari: string; jam_mulai: string; jam_selesai: string }[])
+        .map((r) => ({ ...r, status: 'AKTIF' })),
     )
   }
 

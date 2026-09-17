@@ -131,20 +131,41 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
               </div>
               {cols.map((c) => {
                 const key = `${c.therapist_id}|${hour}`
+                const stacked = cells.get(key) ?? []
+                const therapistOn = isTherapistOn(week, c.therapist_id, hari, hour)
                 return (
-                  <div key={c.id} style={{ width: colWidth }} className="p-1 border-l border-border/40">
-                    <SlotCell
-                      cellKey={key}
-                      // DayGrid is one-column-per-therapist, so it can only show one card
-                      // per therapist+hour. When two patients collide on the same slot (see
-                      // resolve.ts), show the last-resolved one — matching pre-fix behavior.
-                      // Multi-patient-per-column display is a follow-up, not covered here.
-                      cell={cells.get(key)?.at(-1)}
-                      therapistOn={isTherapistOn(week, c.therapist_id, hari, hour)}
-                      canEdit={canEdit}
-                      moveMode={moveMode}
-                      onAction={(a, cell) => onCellAction(a, cell, key)}
-                    />
+                  <div key={c.id} style={{ width: colWidth }} className="p-1 border-l border-border/40 space-y-1">
+                    {stacked.length > 0 ? (
+                      // Two bookings can resolve to the same therapist+hour (a genuine
+                      // double-booking upstream — see resolve.ts's push()); show every one
+                      // instead of silently dropping all but the last, which used to make
+                      // a booking that's visible on jadwal mingguan vanish from jadwal harian.
+                      stacked.map((cell, i) => (
+                        <SlotCell
+                          // Position in the resolved array, not slot/visit id — a "moved-out"
+                          // ghost and its placed cell can share the same slot.id, and using
+                          // that as the key made React reuse one DOM node for both, rendering
+                          // a corrupted overlap of the two cards instead of two clean ones.
+                          key={`${key}-${i}`}
+                          cellKey={key}
+                          stackIndex={stacked.length > 1 ? i : undefined}
+                          cell={cell}
+                          therapistOn={therapistOn}
+                          canEdit={canEdit}
+                          moveMode={moveMode}
+                          onAction={(a, actedCell) => onCellAction(a, actedCell, key)}
+                        />
+                      ))
+                    ) : (
+                      <SlotCell
+                        cellKey={key}
+                        cell={undefined}
+                        therapistOn={therapistOn}
+                        canEdit={canEdit}
+                        moveMode={moveMode}
+                        onAction={(a, actedCell) => onCellAction(a, actedCell, key)}
+                      />
+                    )}
                   </div>
                 )
               })}

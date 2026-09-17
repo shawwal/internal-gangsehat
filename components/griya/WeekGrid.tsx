@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw, Plus } from 'lucide-react'
+import { Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw, Plus, Ban, Trash2 } from 'lucide-react'
 import type { GriyaWeek, Discipline, Hari } from '@/app/actions/griyaJadwal'
 import { GRIYA_HOURS, DISCIPLINE_LABEL, DISCIPLINE_COLOR, HARI_LABEL, JS_DAY_TO_HARI, hariOf } from './constants'
 import { resolveDay, type ResolvedCell } from './resolve'
@@ -222,18 +222,26 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
                 <MenuBtn icon={<UserX size={14} />} label="Tandai Tidak Hadir" onClick={() => act('attendance')} />
                 <MenuBtn icon={<Move size={14} />} label="Pindahkan" onClick={() => act('move')} />
                 <MenuBtn icon={<GraduationCap size={14} />} label="Akhiri Jadwal" onClick={() => act('end')} />
+                <MenuBtn icon={<Ban size={14} />} label="Batalkan Hari Ini" danger separated onClick={() => act('cancel')} />
               </>
             )}
             {m.cell.slot && m.cell.state === 'hadir' && canEdit && (
               <>
                 <MenuBtn icon={<UserX size={14} />} label="Tandai Tidak Hadir" onClick={() => act('attendance')} />
                 <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda Hadir" onClick={() => act('unmarkAttendance')} />
+                <MenuBtn icon={<Ban size={14} />} label="Batalkan" danger separated onClick={() => act('cancel')} />
+                {m.cell.visit?.id && (
+                  <MenuBtn icon={<Trash2 size={14} />} label="Hapus" danger onClick={() => act('deleteVisit')} />
+                )}
               </>
             )}
             {m.cell.slot && (m.cell.state === 'izin' || m.cell.state === 'alpa') && canEdit && (
               <>
                 <MenuBtn icon={<Check size={14} />} label="Ubah jadi Hadir" onClick={() => act('markPresent')} />
                 <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda" onClick={() => act('unmarkAttendance')} />
+                {m.cell.visit?.id && (
+                  <MenuBtn icon={<Trash2 size={14} />} label="Hapus" danger separated onClick={() => act('deleteVisit')} />
+                )}
               </>
             )}
             {!m.cell.slot && m.cell.state === 'adhoc' && canEdit && (
@@ -242,6 +250,9 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
               ) : (
                 <MenuBtn icon={<Check size={14} />} label="Tandai Hadir" onClick={() => act('markPresent')} />
               )
+            )}
+            {!m.cell.slot && m.cell.state === 'adhoc' && canEdit && m.cell.visit?.id && (
+              <MenuBtn icon={<Trash2 size={14} />} label="Hapus" danger separated onClick={() => act('deleteVisit')} />
             )}
             {freed && canEdit && (
               <MenuBtn icon={<UserPlus2 size={14} />} label="Cari Pengganti" onClick={() => act('substitute')} />
@@ -259,9 +270,12 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
   )
 }
 
-function MenuBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+function MenuBtn({ icon, label, onClick, danger, separated }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean; separated?: boolean }) {
   return (
-    <button onClick={onClick} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-white/10 text-left cursor-pointer">
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-white/10 text-left cursor-pointer ${danger ? 'text-destructive' : ''} ${separated ? 'mt-1 pt-2 border-t border-white/10' : ''}`}
+    >
       {icon}{label}
     </button>
   )

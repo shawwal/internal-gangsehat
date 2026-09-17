@@ -18,6 +18,7 @@ export interface RotationSchedule {
   hari: string
   jam_mulai: string   // 'HH:MM' or 'HH:MM:SS'
   jam_selesai: string
+  status: string       // 'AKTIF' | 'OFF'
 }
 
 function toMinutes(hhmm: string): number {
@@ -25,14 +26,16 @@ function toMinutes(hhmm: string): number {
   return h * 60 + (m || 0)
 }
 
-/** Is a therapist working (per their rolling `schedules` rows) at `hari` covering `hour`? */
+/** Is a therapist working (per their rolling `schedules` rows) at `hari` covering `hour`?
+ *  Used to grey out grid columns. An explicit OFF row for that day blocks; no row at all
+ *  (nothing configured either way) is unknown and doesn't block. */
 export function isTherapistOn(
   schedules: RotationSchedule[], therapistId: string, hari: string, hour: string,
 ): boolean {
   const rows = schedules.filter((r) => r.staff_id === therapistId && r.hari === hari)
-  if (rows.length === 0) return true // no schedule row → don't block (unknown)
+  if (rows.length === 0) return true // no schedule row at all → don't block (unknown)
   const target = toMinutes(hour)
-  return rows.some((r) => toMinutes(r.jam_mulai) <= target && target < toMinutes(r.jam_selesai))
+  return rows.some((r) => r.status === 'AKTIF' && toMinutes(r.jam_mulai) <= target && target < toMinutes(r.jam_selesai))
 }
 
 /**
@@ -70,7 +73,7 @@ export function resolveTherapistForSlot(
 // NOT auto-assign someone with an unknown schedule. Require an explicit AKTIF row
 // that covers the time.
 function isTherapistOnDuty(schedules: RotationSchedule[], therapistId: string, hari: string, hour: string): boolean {
-  const rows = schedules.filter((r) => r.staff_id === therapistId && r.hari === hari)
+  const rows = schedules.filter((r) => r.staff_id === therapistId && r.hari === hari && r.status === 'AKTIF')
   const target = toMinutes(hour)
   return rows.some((r) => toMinutes(r.jam_mulai) <= target && target < toMinutes(r.jam_selesai))
 }
