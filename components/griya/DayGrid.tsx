@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { UserX } from 'lucide-react'
 import type { GriyaWeek, GriyaTherapist, Hari } from '@/app/actions/griyaJadwal'
 import { GRIYA_HOURS, DISCIPLINE_LABEL, DISCIPLINE_COLOR, HARI_LABEL } from './constants'
 import { TherapistAvatar } from './TherapistAvatar'
@@ -22,7 +23,7 @@ interface Props {
 
 export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, onDrop }: Props) {
   const cols = therapistColumns(week.therapists)
-  const cells = resolveDay(week, dateIso)
+  const { cells, unassigned } = resolveDay(week, dateIso)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [detailTherapist, setDetailTherapist] = useState<GriyaTherapist | null>(null)
 
@@ -63,6 +64,24 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
 
   return (
     <>
+    {unassigned.length > 0 && (
+      <div className="glass-card p-3 space-y-2 border border-amber-400/30 bg-amber-500/5 mb-3">
+        <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+          <UserX size={13} /> Belum ada terapis bertugas ({unassigned.length})
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {unassigned.map((u) => (
+            <button
+              key={u.key}
+              onClick={() => onCellAction('coverUnassigned', u, u.key)}
+              className="px-2.5 py-1.5 rounded-lg border border-amber-400/40 bg-background text-xs hover:bg-amber-500/10 cursor-pointer"
+            >
+              {u.studentName} · {u.hour}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="glass-card overflow-auto" style={{ maxHeight: 'calc(100vh - 16rem)' }}>
         <div style={{ minWidth: 64 + cols.length * colWidth }}>

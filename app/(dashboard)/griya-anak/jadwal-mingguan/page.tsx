@@ -14,6 +14,9 @@ import { AssignStudentDialog } from '@/components/griya/AssignStudentDialog'
 import { AttendanceDialog } from '@/components/griya/AttendanceDialog'
 import { EndEnrollmentDialog } from '@/components/griya/EndEnrollmentDialog'
 import { EditVisitDialog } from '@/components/griya/EditVisitDialog'
+import { CoverUnassignedDialog } from '@/components/griya/CoverUnassignedDialog'
+import { AddMasterScheduleDialog } from '@/components/griya/master/AddMasterScheduleDialog'
+import { AddStudentButton } from '@/components/griya/AddStudentButton'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { DISCIPLINE_LABEL, DISCIPLINES } from '@/components/griya/constants'
 import { markAttendance, resetAttendance } from '@/app/actions/griyaJadwal'
@@ -27,12 +30,14 @@ export default function GriyaJadwalMingguanPage() {
   const { showToast } = useToast()
   const [discipline, setDiscipline] = useState<Discipline | 'ALL'>('ALL')
 
-  const [assign, setAssign] = useState<{ target: CellTarget; mode: 'assign' | 'substitute' } | null>(null)
+  const [assign, setAssign] = useState<CellTarget | null>(null)
   const [attendance, setAttendance] = useState<CellTarget | null>(null)
   const [endTarget, setEndTarget] = useState<CellTarget | null>(null)
   const [moveTarget, setMoveTarget] = useState<{ slot: GriyaSlot; hari: Hari } | null>(null)
   const [payVisit, setPayVisit] = useState<ResolvedCell | null>(null)
   const [editVisit, setEditVisit] = useState<ResolvedCell | null>(null)
+  const [coverTarget, setCoverTarget] = useState<{ slot: GriyaSlot; dateIso: string } | null>(null)
+  const [addMaster, setAddMaster] = useState<{ hari: Hari; hour: string } | null>(null)
 
   const weekMonday = getMondayOf(selectedDate)
   const weekEnd = new Date(weekMonday)
@@ -60,11 +65,16 @@ export default function GriyaJadwalMingguanPage() {
   }
 
   async function handleCellAction(action: CellAction, entry: WeekEntry) {
+    if (action === 'coverUnassigned') {
+      if (entry.cell.slot) setCoverTarget({ slot: entry.cell.slot, dateIso: entry.dateIso })
+      return
+    }
+
     const target = targetForEntry(entry)
     if (!target) return
 
     switch (action) {
-      case 'substitute': setAssign({ target, mode: 'substitute' }); break
+      case 'substitute': setAssign(target); break
       case 'attendance': setAttendance(target); break
       case 'end': setEndTarget(target); break
       case 'move': if (entry.cell.slot) setMoveTarget({ slot: entry.cell.slot, hari: entry.hari }); break
@@ -98,7 +108,7 @@ export default function GriyaJadwalMingguanPage() {
   }
 
   function afterMutation() {
-    setAssign(null); setAttendance(null); setEndTarget(null); setMoveTarget(null); setPayVisit(null); setEditVisit(null)
+    setAssign(null); setAttendance(null); setEndTarget(null); setMoveTarget(null); setPayVisit(null); setEditVisit(null); setCoverTarget(null); setAddMaster(null)
     reload({ silent: true })
   }
 
@@ -133,6 +143,7 @@ export default function GriyaJadwalMingguanPage() {
           >
             <RefreshCw size={14} />
           </button>
+          <AddStudentButton branchId={branchId} canEdit={canEdit} variant="outline" onAdded={() => reload({ silent: true })} />
         </div>
       </div>
 
@@ -148,13 +159,33 @@ export default function GriyaJadwalMingguanPage() {
           disciplineFilter={discipline}
           canEdit={canEdit}
           onCellAction={handleCellAction}
+          onAddClick={(_dateIso, hari, hour) => setAddMaster({ hari, hour })}
         />
       )}
 
       <Legend />
 
       {assign && (
-        <AssignStudentDialog target={assign.target} mode={assign.mode} onClose={() => setAssign(null)} onSaved={afterMutation} />
+        <AssignStudentDialog target={assign} onClose={() => setAssign(null)} onSaved={afterMutation} />
+      )}
+      {addMaster && branchId && (
+        <AddMasterScheduleDialog
+          branchId={branchId}
+          initialHari={addMaster.hari}
+          initialHour={addMaster.hour}
+          initialDiscipline={discipline === 'ALL' ? undefined : discipline}
+          onClose={() => setAddMaster(null)}
+          onSaved={afterMutation}
+        />
+      )}
+      {coverTarget && (
+        <CoverUnassignedDialog
+          slot={coverTarget.slot}
+          dateIso={coverTarget.dateIso}
+          therapists={week.therapists}
+          onClose={() => setCoverTarget(null)}
+          onSaved={afterMutation}
+        />
       )}
       {attendance && (
         <AttendanceDialog target={attendance} onClose={() => setAttendance(null)} onSaved={afterMutation} />

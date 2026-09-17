@@ -7,7 +7,7 @@ import { Plus, Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, User
 import type { ResolvedCell } from './resolve'
 
 export type CellAction =
-  | 'assign' | 'substitute' | 'attendance' | 'markPresent' | 'unmarkAttendance' | 'move' | 'end' | 'pay' | 'open' | 'editVisit' | 'examine'
+  | 'assign' | 'substitute' | 'attendance' | 'markPresent' | 'unmarkAttendance' | 'move' | 'end' | 'pay' | 'open' | 'editVisit' | 'examine' | 'coverUnassigned'
 
 interface Props {
   cellKey: string
@@ -48,13 +48,15 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
     )
   }
 
-  // Empty / freed cell
+  // Empty / freed cell — a truly empty cell adds a new recurring booking
+  // (Jadwal Master); a "moved-out" ghost (someone's home cell, away today)
+  // offers a one-off substitute for today only.
   const freed = !cell || cell.state === 'moved-out' || cell.state === 'izin' || cell.state === 'alpa'
   if (!cell || cell.state === 'moved-out') {
     return (
       <div
         ref={setRefs}
-        onClick={() => canEdit && onAction(moveMode ? 'move' : 'assign', cell)}
+        onClick={() => canEdit && onAction(moveMode ? 'move' : (cell ? 'substitute' : 'assign'), cell)}
         className={`group h-full min-h-[44px] rounded-lg border flex items-center justify-center cursor-pointer transition-colors ${
           moveMode ? 'border-primary/70 bg-primary/5 hover:bg-primary/15' : isOver ? 'border-primary bg-primary/10'
             : 'border-dashed border-[#34C759]/70 bg-[#34C759]/5 hover:bg-[#34C759]/15'

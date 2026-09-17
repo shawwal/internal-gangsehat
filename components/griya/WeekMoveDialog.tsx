@@ -23,13 +23,13 @@ export function WeekMoveDialog({ week, weekMonday, slot, initialHari, onClose, o
   const cols = therapistColumns(week.therapists)
   const [hari, setHari] = useState<Hari>(initialHari)
   const [hour, setHour] = useState(slot.slot_time)
-  const [therapistId, setTherapistId] = useState(slot.therapist_id)
+  const [therapistId, setTherapistId] = useState(slot.therapist_id ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const therapist = cols.find((c) => c.therapist_id === therapistId)
 
-  async function run(scope: 'permanent' | 'this_week') {
+  async function run() {
     if (!therapist) { setError('Pilih terapis tujuan.'); return }
     setSaving(true); setError(null)
     const dayIndex = HARI_ORDER.indexOf(hari)
@@ -37,11 +37,8 @@ export function WeekMoveDialog({ week, weekMonday, slot, initialHari, onClose, o
     const { error } = await moveSlot({
       slotId: slot.id,
       therapist_id: therapist.therapist_id,
-      discipline: therapist.discipline,
-      hari,
       slot_time: hour,
-      scope,
-      date: scope === 'this_week' ? dateIso : undefined,
+      date: dateIso,
     })
     setSaving(false)
     if (error) { setError(error); return }
@@ -94,20 +91,21 @@ export function WeekMoveDialog({ week, weekMonday, slot, initialHari, onClose, o
           </select>
         </div>
 
-        <div className="space-y-2 pt-1">
-          <button
-            onClick={() => run('permanent')}
-            disabled={saving}
-            className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 cursor-pointer"
-          >
-            Ubah permanen (setiap minggu)
+        <p className="text-xs text-muted-foreground">
+          Perubahan ini hanya berlaku untuk tanggal ini. Jadwal tetap anak (Jadwal Master) tidak berubah.
+        </p>
+
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} disabled={saving}
+            className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted disabled:opacity-60 cursor-pointer">
+            Batal
           </button>
           <button
-            onClick={() => run('this_week')}
+            onClick={run}
             disabled={saving}
-            className="w-full py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted disabled:opacity-60 cursor-pointer"
+            className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 cursor-pointer"
           >
-            Minggu ini saja
+            {saving ? 'Menyimpan...' : 'Pindahkan'}
           </button>
         </div>
 

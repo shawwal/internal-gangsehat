@@ -4,30 +4,34 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Search, UserPlus } from 'lucide-react'
 import { addPatient } from '@/app/actions/patients'
 import { searchGriyaStudents, type GriyaStudentOption } from '@/app/actions/griyaStudents'
-import { addSubstitute } from '@/app/actions/griyaJadwal'
+import { assignRecurringSlot, type Discipline, type Hari } from '@/app/actions/griyaJadwal'
 import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
 import { fetchPatientPackages } from '@/app/actions/packages'
 import type { PatientPackage } from '@/types'
 import { PackageSelector } from '@/components/jadwal/assign/PackageSelector'
-import { GriyaBuyPackageDialog } from './GriyaBuyPackageDialog'
+import { GriyaBuyPackageDialog } from '../GriyaBuyPackageDialog'
 import { CATEGORY_TO_SERVICE_TYPE } from '@/lib/serviceType'
-import { HARI_LABEL } from './constants'
-import { GRIYA_SERVICE_TYPES, type CellTarget } from './types'
+import { GRIYA_HOURS, HARI_ORDER, HARI_LABEL, DISCIPLINES, DISCIPLINE_LABEL, toIso } from '../constants'
+import { GRIYA_SERVICE_TYPES } from '../types'
 
 function rp(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 }
 
-// One-off fill-in for a single date (e.g. a freed cell, or "Belum ada terapis
-// bertugas"). Recurring bookings are created on the Jadwal Master page instead —
-// this dialog never writes to griya_schedule_slots.
 interface Props {
-  target: CellTarget
+  branchId: string
+  initialHari?: Hari
+  initialHour?: string
+  initialDiscipline?: Discipline
   onClose: () => void
   onSaved: () => void
 }
 
-export function AssignStudentDialog({ target, onClose, onSaved }: Props) {
+// Weekly Schedule (MASTER): Day + Time + Patient + Service only — no therapist.
+// The therapist is resolved daily by rotation (lib/griyaRotation.ts). Can be opened
+// pre-filled from a grid cell (Jadwal Griya Anak / Jadwal Mingguan) or blank from
+// the Jadwal Master page itself.
+export function AddMasterScheduleDialog({ branchId, initialHari, initialHour, initialDiscipline, onClose, onSaved }: Props) {
   const [tab, setTab] = useState<'search' | 'new'>('search')
   const [q, setQ] = useState('')
   const [results, setResults] = useState<GriyaStudentOption[]>([])
@@ -35,30 +39,29 @@ export function AssignStudentDialog({ target, onClose, onSaved }: Props) {
   const [picked, setPicked] = useState<GriyaStudentOption | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  // new-child form
   const [nName, setNName] = useState('')
   const [nPhone, setNPhone] = useState('')
   const [nGender, setNGender] = useState<'male' | 'female'>('male')
 
-  // slot options
+  const [discipline, setDiscipline] = useState<Discipline>(initialDiscipline ?? 'FISIOTERAPI')
+  const [hari, setHari] = useState<Hari>(initialHari ?? 'SENIN')
+  const [hour, setHour] = useState(initialHour ?? GRIYA_HOURS[0])
+  const [startDate, setStartDate] = useState(toIso(new Date()))
+
   const [serviceType, setServiceType] = useState<string>('SESI TERAPI')
   const [layanan, setLayanan] = useState<LayananRow[]>([])
   const [layananId, setLayananId] = useState<string>('')
 
-  // packages
   const [packages, setPackages] = useState<PatientPackage[]>([])
   const [selectedPkgId, setSelectedPkgId] = useState<string | null>(null)
   const [pkgLoading, setPkgLoading] = useState(false)
+  const [buyingPackage, setBuyingPackage] = useState(false)
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [buyingPackage, setBuyingPackage] = useState(false)
 
   useEffect(() => { setTimeout(() => searchRef.current?.focus(), 80) }, [])
-
-  useEffect(() => {
-    fetchLayananByBranch(target.branchId).then((rows) => setLayanan(rows.filter((r) => r.is_active)))
-  }, [target.branchId])
+  useEffect(() => { fetchLayananByBranch(branchId).then((rows) => setLayanan(rows.filter((r) => r.is_active))) }, [branchId])
 
   function loadPackages(patientId: string, autoSelect?: string) {
     setPkgLoading(true)
@@ -92,51 +95,43 @@ export function AssignStudentDialog({ target, onClose, onSaved }: Props) {
     if (term.length < 2) { setResults([]); return }
     setSearching(true)
     const t = setTimeout(() => {
-      searchGriyaStudents(term, target.branchId).then((r) => { setResults(r); setSearching(false) })
+      searchGriyaStudents(term, branchId).then((r) => { setResults(r); setSearching(false) })
     }, 300)
     return () => clearTimeout(t)
-  }, [q, target.branchId])
+  }, [q, branchId])
 
   async function save() {
     setSaving(true); setError(null)
 
     let patientId = picked?.id ?? null
-    let patientName = picked?.name ?? ''
     if (tab === 'new') {
       if (!nName.trim() || !nPhone.trim()) { setError('Nama dan No. WA wajib diisi.'); setSaving(false); return }
       const { id, error: e } = await addPatient({ name: nName.trim(), phone: nPhone.trim(), gender: nGender })
       if (e || !id) { setError(e ?? 'Gagal menambah anak.'); setSaving(false); return }
       patientId = id
-      patientName = nName.trim()
     }
     if (!patientId) { setError('Pilih anak dulu.'); setSaving(false); return }
 
-    const { error: e } = await addSubstitute({
-      branch_id: target.branchId,
+    const { error: e } = await assignRecurringSlot({
+      branch_id: branchId,
       patient_id: patientId,
-      therapist_id: target.therapistId,
-      date: target.dateIso,
-      slot_time: target.hour,
+      discipline,
+      hari,
+      slot_time: hour,
       service_type: serviceType,
       package_id: selectedPkgId,
-      coveringName: target.slot?.patient_name ?? null,
+      start_date: startDate,
     })
     setSaving(false)
     if (e) { setError(e); return }
     onSaved()
-    void patientName
   }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="glass-card w-full max-w-2xl max-h-[88vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between p-5 border-b border-border/30">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Cari Pengganti</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {target.therapistName} · {HARI_LABEL[target.hari]} {target.hour}
-            </p>
-          </div>
+          <h2 className="text-base font-semibold text-foreground">Tambah Jadwal Master</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"><X size={16} /></button>
         </div>
 
@@ -212,8 +207,38 @@ export function AssignStudentDialog({ target, onClose, onSaved }: Props) {
           )}
 
           <div className="space-y-3 pt-3 border-t border-border/30">
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Hari</label>
+                <select value={hari} onChange={(e) => setHari(e.target.value as Hari)}
+                  className="w-full px-2.5 py-2 border border-border rounded-xl text-sm bg-input">
+                  {HARI_ORDER.map((h) => <option key={h} value={h}>{HARI_LABEL[h]}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Jam</label>
+                <select value={hour} onChange={(e) => setHour(e.target.value)}
+                  className="w-full px-2.5 py-2 border border-border rounded-xl text-sm bg-input">
+                  {GRIYA_HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Layanan</label>
+                <select value={discipline} onChange={(e) => setDiscipline(e.target.value as Discipline)}
+                  className="w-full px-2.5 py-2 border border-border rounded-xl text-sm bg-input">
+                  {DISCIPLINES.map((d) => <option key={d} value={d}>{DISCIPLINE_LABEL[d]}</option>)}
+                </select>
+              </div>
+            </div>
+
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Layanan</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Berlaku mulai</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Kategori Kunjungan</label>
               {layanan.length > 0 ? (
                 <select
                   value={layananId}
@@ -277,7 +302,7 @@ export function AssignStudentDialog({ target, onClose, onSaved }: Props) {
         <GriyaBuyPackageDialog
           patientId={picked.id}
           patientName={picked.name}
-          branchId={target.branchId}
+          branchId={branchId}
           onClose={() => setBuyingPackage(false)}
           onDone={(pkgId) => { setBuyingPackage(false); loadPackages(picked.id, pkgId) }}
         />

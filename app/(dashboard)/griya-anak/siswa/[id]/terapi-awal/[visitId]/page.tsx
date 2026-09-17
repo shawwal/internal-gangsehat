@@ -10,9 +10,9 @@ import type { GriyaTerapiAwal, UserRole } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
 
-const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
+const inputCls = 'w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 const taCls = `${inputCls} resize-none`
-const labelCls = 'block text-xs font-medium text-muted-foreground mb-1'
+const labelCls = 'block text-xs font-medium text-muted-foreground mb-2'
 
 const FIELD_KEYS = [
   'keluhan_utama',
@@ -68,9 +68,9 @@ function Field({ label, k, value, onChange, textarea, required }: {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="glass-card p-4 sm:p-5 space-y-3">
+    <div className="glass-card p-5 sm:p-6 space-y-4">
       <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-      <div className="grid gap-3 sm:grid-cols-2">{children}</div>
+      <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">{children}</div>
     </div>
   )
 }
@@ -167,7 +167,7 @@ export default function GriyaTerapiAwalPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-3xl j-fade-in">
+    <div className="space-y-5 max-w-3xl j-fade-in">
       <div className="flex items-center gap-3 min-w-0">
         <Link href={`/griya-anak/siswa/${id}`} className="p-2 rounded-xl border border-border hover:bg-muted transition-colors shrink-0">
           <ChevronLeft size={16} />
@@ -187,7 +187,7 @@ export default function GriyaTerapiAwalPage() {
         </div>
       )}
 
-      <fieldset disabled={locked} className="contents border-0 m-0 p-0 min-w-0">
+      <fieldset disabled={locked} className="contents border-0 m-0 p-2 min-w-0">
         <Section title="Keluhan Utama">
           <div className="sm:col-span-2">
             <Field label="Keluhan utama" k="keluhan_utama" value={form.keluhan_utama} onChange={set} textarea />
@@ -268,33 +268,30 @@ export default function GriyaTerapiAwalPage() {
           <Field label="Pukul" k="jadwal_pukul" value={form.jadwal_pukul} onChange={set} />
         </Section>
 
-        <div className="glass-card p-4 sm:p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Asesor</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className={labelCls}>Asesor Sensori Integrasi</label>
-              <select value={assessorSiId} onChange={(e) => setAssessorSiId(e.target.value)} className={inputCls}>
-                <option value="">— pilih —</option>
-                {staff.map((s) => <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Tanggal</label>
-              <input type="date" value={assessorSiTanggal} onChange={(e) => setAssessorSiTanggal(e.target.value)} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Asesor Terapi Wicara</label>
-              <select value={assessorWicaraId} onChange={(e) => setAssessorWicaraId(e.target.value)} className={inputCls}>
-                <option value="">— pilih —</option>
-                {staff.map((s) => <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Tanggal</label>
-              <input type="date" value={assessorWicaraTanggal} onChange={(e) => setAssessorWicaraTanggal(e.target.value)} className={inputCls} />
-            </div>
+        <Section title="Asesor">
+          <div>
+            <label className={labelCls}>Asesor Sensori Integrasi</label>
+            <select value={assessorSiId} onChange={(e) => setAssessorSiId(e.target.value)} className={inputCls}>
+              <option value="">— pilih —</option>
+              {staff.map((s) => <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>)}
+            </select>
           </div>
-        </div>
+          <div>
+            <label className={labelCls}>Tanggal</label>
+            <input type="date" value={assessorSiTanggal} onChange={(e) => setAssessorSiTanggal(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Asesor Terapi Wicara</label>
+            <select value={assessorWicaraId} onChange={(e) => setAssessorWicaraId(e.target.value)} className={inputCls}>
+              <option value="">— pilih —</option>
+              {staff.map((s) => <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Tanggal</label>
+            <input type="date" value={assessorWicaraTanggal} onChange={(e) => setAssessorWicaraTanggal(e.target.value)} className={inputCls} />
+          </div>
+        </Section>
 
         {error && (
           <p className="text-xs text-destructive flex items-center gap-1.5">

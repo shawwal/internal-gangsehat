@@ -1,5 +1,6 @@
 import type { GriyaWeek, GriyaSlot, GriyaWeekVisit, GriyaTherapist, Hari } from '@/app/actions/griyaJadwal'
 import { hariOf, DISCIPLINES } from './constants'
+import { resolveTherapistForSlot, isTherapistOn as isTherapistOnDuty } from '@/lib/griyaRotation'
 
 export type CellState = 'scheduled' | 'hadir' | 'izin' | 'alpa' | 'moved-out' | 'adhoc'
 
@@ -21,41 +22,63 @@ function deriveState(v: GriyaWeekVisit): CellState {
   return 'scheduled'
 }
 
-/** Builds the cell map for one calendar day of the loaded week. */
-export function resolveDay(week: GriyaWeek, dateIso: string): Map<string, ResolvedCell> {
+/** Builds the cell map for one calendar day of the loaded week, plus any master
+ *  slots that couldn't be placed because nobody of that discipline is on duty. */
+export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<string, ResolvedCell>; unassigned: ResolvedCell[] } {
   const hari: Hari = hariOf(new Date(dateIso + 'T00:00:00'))
   const cells = new Map<string, ResolvedCell>()
+  const unassigned: ResolvedCell[] = []
 
   const visitsToday = week.visits.filter((v) => v.visit_date === dateIso)
   const bySlot = new Map<string, GriyaWeekVisit>()
   for (const v of visitsToday) if (v.griya_slot_id) bySlot.set(v.griya_slot_id, v)
 
-  // 1. recurring slots for this weekday
+  // 1. recurring slots for this weekday — therapist is resolved per-day from
+  // whoever's rolling schedule covers this discipline+time, not stored on the slot.
   for (const s of week.slots) {
     if (s.hari !== hari) continue
     const v = bySlot.get(s.id) ?? null
-    const homeKey = `${s.therapist_id}|${s.slot_time}`
-    const placedKey = v && v.attending_staff_id
-      ? `${v.attending_staff_id}|${v.visit_time ?? s.slot_time}`
-      : homeKey
+    const resolvedTherapistId = resolveTherapistForSlot(
+      { discipline: s.discipline, hari: s.hari, slot_time: s.slot_time },
+      week.therapists, week.schedules,
+    )
 
-    cells.set(placedKey, {
-      key: placedKey,
-      therapistId: v?.attending_staff_id ?? s.therapist_id,
-      hour: v?.visit_time ?? s.slot_time,
-      state: v ? deriveState(v) : 'scheduled',
-      slot: s,
-      visit: v,
-      studentName: s.patient_name,
+    if (v && v.attending_staff_id) {
+      // An explicit override exists for this date (this-week move/attendance) — it wins.
+      const placedKey = `${v.attending_staff_id}|${v.visit_time ?? s.slot_time}`
+      cells.set(placedKey, {
+        key: placedKey, therapistId: v.attending_staff_id, hour: v.visit_time ?? s.slot_time,
+        state: deriveState(v), slot: s, visit: v, studentName: s.patient_name,
+        reason: v.status === 'cancelled' ? (v.notes ?? null) : null,
+      })
+      // Ghost the "home" cell (where rotation would've put it today) if the override moved it elsewhere.
+      if (resolvedTherapistId) {
+        const homeKey = `${resolvedTherapistId}|${s.slot_time}`
+        if (homeKey !== placedKey) {
+          cells.set(homeKey, {
+            key: homeKey, therapistId: resolvedTherapistId, hour: s.slot_time,
+            state: 'moved-out', slot: s, visit: null, studentName: s.patient_name, reason: null,
+          })
+        }
+      }
+      continue
+    }
+
+    if (!resolvedTherapistId) {
+      // Nobody of this discipline is on duty today — surface it, don't place in a column.
+      unassigned.push({
+        key: `unassigned:${s.id}`, therapistId: '', hour: s.slot_time,
+        state: 'scheduled', slot: s, visit: v, studentName: s.patient_name, reason: null,
+      })
+      continue
+    }
+
+    const homeKey = `${resolvedTherapistId}|${s.slot_time}`
+    cells.set(homeKey, {
+      key: homeKey, therapistId: resolvedTherapistId, hour: s.slot_time,
+      state: v ? deriveState(v) : 'scheduled', slot: s, visit: v, studentName: s.patient_name,
       reason: v && v.status === 'cancelled' ? (v.notes ?? null) : null,
     })
-
-    if (placedKey !== homeKey) {
-      cells.set(homeKey, {
-        key: homeKey, therapistId: s.therapist_id, hour: s.slot_time,
-        state: 'moved-out', slot: s, visit: null, studentName: s.patient_name, reason: null,
-      })
-    }
   }
 
   // 2. substitutes / ad-hoc (visits with no recurring slot)
@@ -71,17 +94,15 @@ export function resolveDay(week: GriyaWeek, dateIso: string): Map<string, Resolv
     }
   }
 
-  return cells
+  return { cells, unassigned }
 }
 
-/** Is a therapist working (per `schedules`) at `hari` covering `hour`? */
+/** Is a therapist working (per `schedules`) at `hari` covering `hour`? Used to grey
+ *  out grid columns — unlike rotation resolution, an unknown schedule doesn't block. */
 export function isTherapistOn(
   week: GriyaWeek, therapistId: string, hari: Hari, hour: string,
 ): boolean {
-  const rows = week.schedules.filter((r) => r.staff_id === therapistId && r.hari === hari)
-  if (rows.length === 0) return true // no schedule row → don't block (unknown)
-  const h = parseInt(hour.slice(0, 2), 10)
-  return rows.some((r) => parseInt(r.jam_mulai.slice(0, 2), 10) <= h && h < parseInt(r.jam_selesai.slice(0, 2), 10))
+  return isTherapistOnDuty(week.schedules, therapistId, hari, hour)
 }
 
 export function therapistColumns(therapists: GriyaTherapist[]) {

@@ -474,6 +474,14 @@ export const navigation: NavItem[] = [
   // Griya Anak — branch-scoped feature set (nav-hidden unless
   // branch_griya_settings.enabled for the caller's branch; see Sidebar.tsx)
   {
+    key: 'griya-jadwal-master',
+    label: 'Jadwal Master Griya Anak',
+    href: '/griya-anak/jadwal-master',
+    icon: 'ClipboardList',
+    roles: ['director', 'manager', 'admin', 'therapist'],
+    group: 'griya',
+  },
+  {
     key: 'griya-jadwal',
     label: 'Jadwal Griya Anak',
     href: '/griya-anak/jadwal',

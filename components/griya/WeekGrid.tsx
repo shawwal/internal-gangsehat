@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw } from 'lucide-react'
+import { Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw, Plus } from 'lucide-react'
 import type { GriyaWeek, Discipline, Hari } from '@/app/actions/griyaJadwal'
-import { GRIYA_HOURS, DISCIPLINE_SHORT, DISCIPLINE_COLOR, HARI_LABEL, JS_DAY_TO_HARI, hariOf } from './constants'
+import { GRIYA_HOURS, DISCIPLINE_LABEL, DISCIPLINE_COLOR, HARI_LABEL, JS_DAY_TO_HARI, hariOf } from './constants'
 import { resolveDay, type ResolvedCell } from './resolve'
 import { addDays, toIso, isSameDay } from '@/components/jadwal/utils'
 import type { CellAction } from './SlotCell'
@@ -35,9 +35,10 @@ interface Props {
   disciplineFilter: Discipline | 'ALL'
   canEdit: boolean
   onCellAction: (action: CellAction, entry: WeekEntry) => void
+  onAddClick: (dateIso: string, hari: Hari, hour: string) => void
 }
 
-export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, onCellAction }: Props) {
+export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, onCellAction, onAddClick }: Props) {
   const [menu, setMenu] = useState<{ x: number; y: number; entry: WeekEntry } | null>(null)
 
   const nickById = useMemo(() => {
@@ -55,8 +56,8 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
 
     days.forEach((d, di) => {
       const iso = toIso(d)
-      const cells = resolveDay(week, iso)
-      for (const cell of cells.values()) {
+      const { cells, unassigned } = resolveDay(week, iso)
+      for (const cell of [...cells.values(), ...unassigned]) {
         if (cell.state === 'moved-out') continue
         const meta = nickById.get(cell.therapistId)
         const discipline = meta?.discipline ?? (cell.slot?.discipline as Discipline) ?? 'FISIOTERAPI'
@@ -145,11 +146,12 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
               {days.map((d, di) => {
                 const entries = row[di] ?? []
                 const isTod = isSameDay(d, today)
+                const iso = toIso(d)
                 return (
                   <div
                     key={di}
                     style={{ width: dayColWidth }}
-                    className={`p-1.5 border-l border-border/40 space-y-1 ${isTod ? 'bg-primary/[0.04]' : ''}`}
+                    className={`group/cell p-1.5 border-l border-border/40 space-y-1 ${isTod ? 'bg-primary/[0.04]' : ''}`}
                   >
                     {entries.map((e) => {
                       const cls = STATE_CLS[e.cell.state] ?? STATE_CLS.scheduled
@@ -158,7 +160,7 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
                           <span className="block truncate font-medium">{e.studentName}</span>
                           <span className="flex items-center gap-1 truncate text-[9px] opacity-80">
                             <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${DISCIPLINE_COLOR[e.discipline]?.dot ?? 'bg-muted-foreground'}`} />
-                            <span className="truncate">{e.therapistNick} · {DISCIPLINE_SHORT[e.discipline]}</span>
+                            <span className="truncate">{DISCIPLINE_LABEL[e.discipline]}</span>
                           </span>
                         </>
                       )
@@ -183,6 +185,15 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
                         </div>
                       )
                     })}
+                    {canEdit && (
+                      <button
+                        onClick={() => onAddClick(iso, JS_DAY_TO_HARI[d.getDay()], hour)}
+                        className="w-full flex items-center justify-center py-1 rounded-lg border border-dashed border-[#34C759]/50 text-[#34C759] opacity-0 group-hover/cell:opacity-100 transition-opacity cursor-pointer"
+                        title="Tambah jadwal"
+                      >
+                        <Plus size={12} />
+                      </button>
+                    )}
                   </div>
                 )
               })}
@@ -198,7 +209,10 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
             className="fixed z-[61] glass-card p-1.5 w-52 text-sm shadow-2xl"
             style={{ top: Math.min(menu.y, window.innerHeight - 320), left: Math.min(menu.x, window.innerWidth - 220) }}
           >
-            {m.cell.slot && m.cell.state === 'scheduled' && canEdit && (
+            {m.cell.slot && m.cell.state === 'scheduled' && !m.cell.therapistId && canEdit && (
+              <MenuBtn icon={<UserPlus2 size={14} />} label="Isi Terapis" onClick={() => act('coverUnassigned')} />
+            )}
+            {m.cell.slot && m.cell.state === 'scheduled' && m.cell.therapistId && canEdit && (
               <>
                 <MenuBtn icon={<Check size={14} />} label="Tandai Hadir" onClick={() => act('markPresent')} />
                 <MenuBtn icon={<UserX size={14} />} label="Tandai Tidak Hadir" onClick={() => act('attendance')} />

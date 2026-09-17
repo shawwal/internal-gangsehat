@@ -17,6 +17,8 @@ import { ManageTherapistsDialog } from '@/components/griya/ManageTherapistsDialo
 import { AddStudentButton } from '@/components/griya/AddStudentButton'
 import { EditVisitDialog } from '@/components/griya/EditVisitDialog'
 import { SessionNoteModal } from '@/components/griya/SessionNoteModal'
+import { CoverUnassignedDialog } from '@/components/griya/CoverUnassignedDialog'
+import { AddMasterScheduleDialog } from '@/components/griya/master/AddMasterScheduleDialog'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { markAttendance, resetAttendance } from '@/app/actions/griyaJadwal'
 import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
@@ -32,11 +34,13 @@ export default function GriyaJadwalPage() {
   const dateIso = toIso(selectedDate)
   const hari = hariOf(selectedDate)
 
-  const [assign, setAssign] = useState<{ target: CellTarget; mode: 'assign' | 'substitute' } | null>(null)
+  const [assign, setAssign] = useState<CellTarget | null>(null)
   const [attendance, setAttendance] = useState<CellTarget | null>(null)
   const [endTarget, setEndTarget] = useState<CellTarget | null>(null)
   const [moveSlot, setMoveSlot] = useState<GriyaSlot | null>(null)
   const [moveDialog, setMoveDialog] = useState<{ slot: GriyaSlot; dest: MoveDest } | null>(null)
+  const [coverSlot, setCoverSlot] = useState<GriyaSlot | null>(null)
+  const [addMaster, setAddMaster] = useState<CellTarget | null>(null)
   const [payVisit, setPayVisit] = useState<ResolvedCell | null>(null)
   const [editVisit, setEditVisit] = useState<ResolvedCell | null>(null)
   const [examineVisit, setExamineVisit] = useState<ResolvedCell | null>(null)
@@ -54,6 +58,11 @@ export default function GriyaJadwalPage() {
   }
 
   async function handleCellAction(action: CellAction, cell: ResolvedCell | undefined, cellKey: string) {
+    if (action === 'coverUnassigned') {
+      if (cell?.slot) setCoverSlot(cell.slot)
+      return
+    }
+
     const target = targetFor(cellKey, cell)
     if (!target) return
 
@@ -70,8 +79,8 @@ export default function GriyaJadwalPage() {
     }
 
     switch (action) {
-      case 'assign': setAssign({ target, mode: 'assign' }); break
-      case 'substitute': setAssign({ target, mode: 'substitute' }); break
+      case 'assign': setAddMaster(target); break
+      case 'substitute': setAssign(target); break
       case 'attendance': setAttendance(target); break
       case 'end': setEndTarget(target); break
       case 'move': if (cell?.slot) setMoveSlot(cell.slot); break
@@ -115,7 +124,7 @@ export default function GriyaJadwalPage() {
   }
 
   function afterMutation() {
-    setAssign(null); setAttendance(null); setEndTarget(null); setMoveDialog(null); setPayVisit(null); setEditVisit(null); setExamineVisit(null)
+    setAssign(null); setAttendance(null); setEndTarget(null); setMoveDialog(null); setPayVisit(null); setEditVisit(null); setExamineVisit(null); setCoverSlot(null); setAddMaster(null)
     reload({ silent: true })
   }
 
@@ -171,7 +180,20 @@ export default function GriyaJadwalPage() {
       <Legend />
 
       {assign && (
-        <AssignStudentDialog target={assign.target} mode={assign.mode} onClose={() => setAssign(null)} onSaved={afterMutation} />
+        <AssignStudentDialog target={assign} onClose={() => setAssign(null)} onSaved={afterMutation} />
+      )}
+      {coverSlot && (
+        <CoverUnassignedDialog slot={coverSlot} dateIso={dateIso} therapists={week.therapists} onClose={() => setCoverSlot(null)} onSaved={afterMutation} />
+      )}
+      {addMaster && branchId && (
+        <AddMasterScheduleDialog
+          branchId={branchId}
+          initialHari={addMaster.hari}
+          initialHour={addMaster.hour}
+          initialDiscipline={addMaster.discipline}
+          onClose={() => setAddMaster(null)}
+          onSaved={afterMutation}
+        />
       )}
       {attendance && (
         <AttendanceDialog target={attendance} onClose={() => setAttendance(null)} onSaved={afterMutation} />
