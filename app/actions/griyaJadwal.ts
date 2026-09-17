@@ -567,6 +567,70 @@ export async function resetAttendance(slotId: string, date: string): Promise<{ e
   return { error: null }
 }
 
+// ── Cancel a single day's occurrence of a recurring slot — quick "batalkan",
+// distinct from marking an absence (no reason picker, always records 'cancelled') ─
+
+export async function cancelOccurrence(slotId: string, date: string): Promise<{ error: string | null }> {
+  const a = await requireWrite()
+  if ('error' in a) return { error: a.error }
+  const { supabase, userId } = a
+
+  const { data: slot } = await supabase
+    .from('griya_schedule_slots')
+    .select('branch_id, patient_id, discipline, hari, service_type, slot_time, package_id')
+    .eq('id', slotId)
+    .single()
+  if (!slot) return { error: 'Slot tidak ditemukan' }
+
+  const { data: existing } = await supabase
+    .from('patient_visits')
+    .select('id')
+    .eq('griya_slot_id', slotId)
+    .eq('visit_date', date)
+    .maybeSingle()
+
+  const patch = { kehadiran: 'TIDAK HADIR', status: 'cancelled', notes: 'Dibatalkan' }
+
+  if (existing) {
+    const { count: paidCount } = await supabase
+      .from('transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('visit_id', existing.id)
+      .eq('status', 'confirmed')
+    if ((paidCount ?? 0) > 0) {
+      return { error: 'Kunjungan ini sudah punya pembayaran terkonfirmasi — batalkan pembayarannya dulu sebelum membatalkan jadwal.' }
+    }
+    const { error } = await supabase
+      .from('patient_visits')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', existing.id)
+    if (error) return { error: error.message }
+  } else {
+    const orderId = await generateOrderId(supabase)
+    const { error } = await supabase.from('patient_visits').insert({
+      griya_slot_id: slotId,
+      patient_id: slot.patient_id as string,
+      branch_id: slot.branch_id as string,
+      attending_staff_id: null,
+      visit_date: date,
+      visit_time: hhmm(slot.slot_time as string),
+      service_type: (slot.service_type as string) ?? 'SESI TERAPI',
+      package_id: (slot.package_id as string) ?? null,
+      order_id: orderId,
+      updated_at: new Date().toISOString(),
+      ...patch,
+    })
+    if (error) return { error: error.message }
+  }
+
+  await logActivity({
+    supabase, userId, action: 'update', resourceType: 'griya_slot', resourceId: slotId,
+    branchId: slot.branch_id as string,
+    newValues: { date, status: 'cancelled' },
+  })
+  return { error: null }
+}
+
 // ── Mark / undo attendance for an ad-hoc (substitute) visit — no recurring
 // griya_schedule_slots row behind it, so these are keyed by visit id directly ──
 

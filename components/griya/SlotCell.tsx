@@ -3,11 +3,12 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { Plus, Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw, Stethoscope } from 'lucide-react'
+import { Plus, Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw, Stethoscope, Ban, Trash2 } from 'lucide-react'
 import type { ResolvedCell } from './resolve'
 
 export type CellAction =
   | 'assign' | 'substitute' | 'attendance' | 'markPresent' | 'unmarkAttendance' | 'move' | 'end' | 'pay' | 'open' | 'editVisit' | 'examine' | 'coverUnassigned'
+  | 'cancel' | 'deleteVisit'
 
 interface Props {
   cellKey: string
@@ -69,7 +70,10 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
     )
   }
 
-  const cls = STATE_CLS[cell.state] ?? STATE_CLS.scheduled
+  // A pengganti/ad-hoc cell keeps state 'adhoc' (for its own menu/label logic) even
+  // after being marked hadir — but it should still turn green like any other hadir cell.
+  const isAdhocHadir = cell.state === 'adhoc' && cell.visit?.kehadiran === 'HADIR'
+  const cls = isAdhocHadir ? STATE_CLS.hadir : (STATE_CLS[cell.state] ?? STATE_CLS.scheduled)
 
   return (
     <>
@@ -102,6 +106,7 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
                 <MenuBtn icon={<UserX size={14} />} label="Tandai Tidak Hadir" onClick={() => { setMenu(null); onAction('attendance', cell) }} />
                 <MenuBtn icon={<Move size={14} />} label="Pindahkan" onClick={() => { setMenu(null); onAction('move', cell) }} />
                 <MenuBtn icon={<GraduationCap size={14} />} label="Akhiri Jadwal" onClick={() => { setMenu(null); onAction('end', cell) }} />
+                <MenuBtn icon={<Ban size={14} />} label="Batalkan Hari Ini" danger separated onClick={() => { setMenu(null); onAction('cancel', cell) }} />
               </>
             )}
             {cell.slot && cell.state === 'hadir' && canEdit && (
@@ -111,12 +116,19 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
                 )}
                 <MenuBtn icon={<UserX size={14} />} label="Tandai Tidak Hadir" onClick={() => { setMenu(null); onAction('attendance', cell) }} />
                 <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda Hadir" onClick={() => { setMenu(null); onAction('unmarkAttendance', cell) }} />
+                <MenuBtn icon={<Ban size={14} />} label="Batalkan" danger separated onClick={() => { setMenu(null); onAction('cancel', cell) }} />
+                {cell.visit?.id && (
+                  <MenuBtn icon={<Trash2 size={14} />} label="Hapus" danger onClick={() => { setMenu(null); onAction('deleteVisit', cell) }} />
+                )}
               </>
             )}
             {cell.slot && (cell.state === 'izin' || cell.state === 'alpa') && canEdit && (
               <>
                 <MenuBtn icon={<Check size={14} />} label="Ubah jadi Hadir" onClick={() => { setMenu(null); onAction('markPresent', cell) }} />
                 <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda" onClick={() => { setMenu(null); onAction('unmarkAttendance', cell) }} />
+                {cell.visit?.id && (
+                  <MenuBtn icon={<Trash2 size={14} />} label="Hapus" danger separated onClick={() => { setMenu(null); onAction('deleteVisit', cell) }} />
+                )}
               </>
             )}
             {!cell.slot && cell.state === 'adhoc' && canEdit && (
@@ -130,6 +142,9 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
               ) : (
                 <MenuBtn icon={<Check size={14} />} label="Tandai Hadir" onClick={() => { setMenu(null); onAction('markPresent', cell) }} />
               )
+            )}
+            {!cell.slot && cell.state === 'adhoc' && canEdit && cell.visit?.id && (
+              <MenuBtn icon={<Trash2 size={14} />} label="Hapus" danger separated onClick={() => { setMenu(null); onAction('deleteVisit', cell) }} />
             )}
             {freed && canEdit && (
               <MenuBtn icon={<UserPlus2 size={14} />} label="Cari Pengganti" onClick={() => { setMenu(null); onAction('substitute', cell) }} />
@@ -147,9 +162,12 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
   )
 }
 
-function MenuBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+function MenuBtn({ icon, label, onClick, danger, separated }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean; separated?: boolean }) {
   return (
-    <button onClick={onClick} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-white/10 text-left cursor-pointer">
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-white/10 text-left cursor-pointer ${danger ? 'text-destructive' : ''} ${separated ? 'mt-1 pt-2 border-t border-white/10' : ''}`}
+    >
       {icon}{label}
     </button>
   )

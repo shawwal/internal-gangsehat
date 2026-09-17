@@ -155,7 +155,10 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
                     className={`group/cell p-1.5 border-l border-border/40 space-y-1 ${isTod ? 'bg-primary/[0.04]' : ''}`}
                   >
                     {entries.map((e) => {
-                      const cls = STATE_CLS[e.cell.state] ?? STATE_CLS.scheduled
+                      // A pengganti/ad-hoc entry keeps cell.state 'adhoc' after being marked
+                      // hadir (its menu logic relies on that) — but should still turn green.
+                      const isAdhocHadir = e.cell.state === 'adhoc' && e.cell.visit?.kehadiran === 'HADIR'
+                      const cls = isAdhocHadir ? STATE_CLS.hadir : (STATE_CLS[e.cell.state] ?? STATE_CLS.scheduled)
                       const inner = (
                         <>
                           <span className="block truncate font-medium">{e.studentName}</span>

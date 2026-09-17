@@ -18,15 +18,17 @@ import { CoverUnassignedDialog } from '@/components/griya/CoverUnassignedDialog'
 import { AddMasterScheduleDialog } from '@/components/griya/master/AddMasterScheduleDialog'
 import { AddStudentButton } from '@/components/griya/AddStudentButton'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
+import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { DISCIPLINE_LABEL, DISCIPLINES } from '@/components/griya/constants'
-import { markAttendance, resetAttendance, markVisitAttendance, resetVisitAttendance } from '@/app/actions/griyaJadwal'
+import { markAttendance, resetAttendance, markVisitAttendance, resetVisitAttendance, cancelOccurrence } from '@/app/actions/griyaJadwal'
+import { updateVisitStatus, deleteVisit } from '@/app/actions/jadwal'
 import type { CellAction } from '@/components/griya/SlotCell'
 import type { ResolvedCell } from '@/components/griya/resolve'
 import type { CellTarget } from '@/components/griya/types'
 import type { Discipline, GriyaSlot, Hari } from '@/app/actions/griyaJadwal'
 
 export default function GriyaJadwalMingguanPage() {
-  const { today, selectedDate, setSelectedDate, week, loading, enabled, canEdit, branchId, reload } = useGriyaJadwal()
+  const { today, selectedDate, setSelectedDate, week, loading, enabled, canEdit, branchId, reload, markPresentOptimistic } = useGriyaJadwal()
   const { showToast } = useToast()
   const [discipline, setDiscipline] = useState<Discipline | 'ALL'>('ALL')
 
@@ -38,6 +40,8 @@ export default function GriyaJadwalMingguanPage() {
   const [editVisit, setEditVisit] = useState<ResolvedCell | null>(null)
   const [coverTarget, setCoverTarget] = useState<{ slot: GriyaSlot; dateIso: string } | null>(null)
   const [addMaster, setAddMaster] = useState<{ hari: Hari; hour: string } | null>(null)
+  const [confirmTarget, setConfirmTarget] = useState<{ kind: 'cancel' | 'delete'; cell: ResolvedCell; dateIso: string } | null>(null)
+  const [confirming, setConfirming] = useState(false)
 
   const weekMonday = getMondayOf(selectedDate)
   const weekEnd = new Date(weekMonday)
@@ -80,10 +84,20 @@ export default function GriyaJadwalMingguanPage() {
       case 'move': if (entry.cell.slot) setMoveTarget({ slot: entry.cell.slot, hari: entry.hari }); break
       case 'markPresent': {
         if (!entry.cell.slot && !entry.cell.visit?.id) break
+        const patientId = entry.cell.slot?.patient_id ?? entry.cell.visit?.patient_id
+        if (patientId) {
+          markPresentOptimistic({
+            visitId: entry.cell.visit?.id ?? null,
+            slotId: entry.cell.slot?.id ?? null,
+            dateIso: entry.dateIso,
+            patientId,
+            patientName: entry.cell.studentName,
+          })
+        }
         const { error } = entry.cell.slot
           ? await markAttendance(entry.cell.slot.id, entry.dateIso, { present: true })
           : await markVisitAttendance(entry.cell.visit!.id, { present: true })
-        if (error) showToast(error, 'error')
+        if (error) { showToast(error, 'error'); reload({ silent: true }) }
         else { showToast('Ditandai hadir', 'success'); reload({ silent: true }) }
         break
       }
@@ -108,11 +122,33 @@ export default function GriyaJadwalMingguanPage() {
         if (pid) window.open(`/griya-anak/siswa/${pid}`, '_blank', 'noopener,noreferrer')
         break
       }
+      case 'cancel':
+        setConfirmTarget({ kind: 'cancel', cell: entry.cell, dateIso: entry.dateIso })
+        break
+      case 'deleteVisit':
+        if (entry.cell.visit?.id) setConfirmTarget({ kind: 'delete', cell: entry.cell, dateIso: entry.dateIso })
+        break
     }
   }
 
+  async function runConfirmedAction() {
+    if (!confirmTarget) return
+    const { kind, cell, dateIso } = confirmTarget
+    setConfirming(true)
+    const { error } = kind === 'cancel'
+      ? cell.slot
+        ? await cancelOccurrence(cell.slot.id, dateIso)
+        : await updateVisitStatus(cell.visit!.id, 'cancelled')
+      : await deleteVisit(cell.visit!.id)
+    setConfirming(false)
+    if (error) { showToast(error, 'error'); return }
+    showToast(kind === 'cancel' ? 'Jadwal dibatalkan' : 'Kunjungan dihapus', 'success')
+    setConfirmTarget(null)
+    reload({ silent: true })
+  }
+
   function afterMutation() {
-    setAssign(null); setAttendance(null); setEndTarget(null); setMoveTarget(null); setPayVisit(null); setEditVisit(null); setCoverTarget(null); setAddMaster(null)
+    setAssign(null); setAttendance(null); setEndTarget(null); setMoveTarget(null); setPayVisit(null); setEditVisit(null); setCoverTarget(null); setAddMaster(null); setConfirmTarget(null)
     reload({ silent: true })
   }
 
@@ -237,6 +273,21 @@ export default function GriyaJadwalMingguanPage() {
           branchId={branchId}
           onClose={() => setEditVisit(null)}
           onSaved={afterMutation}
+        />
+      )}
+      {confirmTarget && (
+        <ConfirmDialog
+          title={confirmTarget.kind === 'cancel' ? 'Batalkan Jadwal' : 'Hapus Kunjungan'}
+          description={
+            confirmTarget.kind === 'cancel'
+              ? `Batalkan jadwal ${confirmTarget.cell.studentName} untuk tanggal ${new Date(confirmTarget.dateIso + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}?`
+              : `Hapus kunjungan ${confirmTarget.cell.studentName} secara permanen? Tindakan ini tidak bisa dibatalkan.`
+          }
+          confirmLabel={confirmTarget.kind === 'cancel' ? 'Batalkan' : 'Hapus'}
+          danger={confirmTarget.kind === 'delete'}
+          loading={confirming}
+          onConfirm={runConfirmedAction}
+          onCancel={() => setConfirmTarget(null)}
         />
       )}
     </div>

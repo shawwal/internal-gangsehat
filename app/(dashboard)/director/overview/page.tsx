@@ -15,10 +15,12 @@ export default async function DirectorOverviewPage({
 }) {
   const params   = await searchParams
   const branchId = params.branch ?? ''
-  const month    = params.month  ?? ''
-  const year     = params.year   ?? String(new Date().getFullYear())
+  // No `month` param at all → first load, default to the current month.
+  // `month=all` → user explicitly picked "Semua Bulan" (whole year).
+  const month    = params.month ?? String(new Date().getMonth() + 1)
+  const year     = params.year  ?? String(new Date().getFullYear())
   const numYear  = Number(year)
-  const numMonth = month ? Number(month) : null
+  const numMonth = month === 'all' ? null : Number(month)
 
   const dateFrom = numMonth
     ? `${numYear}-${String(numMonth).padStart(2, '0')}-01`
@@ -29,14 +31,19 @@ export default async function DirectorOverviewPage({
 
   const supabase = await createClient()
 
-  // ── Patients (no branch_id — always global) ──────────────────────────────
-  const patientQ = supabase.from('patients').select('id', { count: 'exact', head: true })
+  // ── Patients seen in period — distinct patient_id from visits (patients has no branch_id) ──
+  let patientQ = supabase.from('patient_visits')
+    .select('patient_id')
+    .gte('visit_date', dateFrom)
+    .lt('visit_date', dateTo)
+  if (branchId) patientQ = patientQ.eq('branch_id', branchId)
 
-  // ── Staff (branch-aware) ─────────────────────────────────────────────────
+  // ── Staff active as of the period (branch-aware) ──────────────────────────
   let staffQ = supabase.from('internal_profiles')
     .select('id', { count: 'exact', head: true })
     .eq('is_active', true)
     .neq('role', 'non-staff')
+    .lt('created_at', dateTo)
   if (branchId) staffQ = staffQ.eq('branch_id', branchId)
 
   // ── Visits for period (branch-aware via patient_visits.branch_id) ─────────
@@ -46,10 +53,11 @@ export default async function DirectorOverviewPage({
     .lt('visit_date', dateTo)
   if (branchId) visitQ = visitQ.eq('branch_id', branchId)
 
-  // ── Active packages (branch-aware via patient_packages.branch_id) ─────────
+  // ── Active packages as of the period (branch-aware via patient_packages.branch_id) ──
   let packageQ = supabase.from('patient_packages')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'active')
+    .lt('created_at', dateTo)
   if (branchId) packageQ = packageQ.eq('branch_id', branchId)
 
   // ── Income for period — use harga-discount (net billed) not amount (collected) ──
@@ -106,7 +114,7 @@ export default async function DirectorOverviewPage({
   // ── Execute all in parallel ───────────────────────────────────────────────
   const [
     { data: branchList },
-    { count: totalPatients },
+    { data: patientVisitRows },
     { count: totalStaff },
     { count: visits },
     { count: activePackages },
@@ -130,11 +138,13 @@ export default async function DirectorOverviewPage({
     pendingTargetsQ,
   ])
 
+  const totalPatients = new Set((patientVisitRows ?? []).map(r => r.patient_id)).size
+
   const totalIncome  = (incomeData  ?? []).reduce((s, r) => s + Number(r.harga ?? 0) - Number(r.discount ?? 0), 0)
   const totalExpense = (expenseData ?? []).reduce((s, r) => s + Number(r.amount), 0)
 
   const trendData  = buildTrendFromTransactions(trendTx)
-  const branchData = branchId ? [] : buildBranchChartFromTransactions(branchTx)
+  const branchData = branchId ? [] : buildBranchChartFromTransactions(branchTx, branchList)
 
   const MONTH_LABELS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des']
   const periodLabel = numMonth

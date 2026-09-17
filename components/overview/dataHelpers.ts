@@ -35,8 +35,15 @@ export function buildTrendFromTransactions(
 export function buildBranchChartFromTransactions(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   transactions: any[] | null,
+  // Active branches to seed the chart with, so a branch with no transactions
+  // this period still shows up (as Rp 0) instead of silently disappearing.
+  branches?: { id: string; name: string }[] | null,
 ): BranchRevenueData[] {
   const byBranch: Record<string, { name: string; pemasukan: number; pengeluaran: number }> = {}
+
+  for (const b of branches ?? []) {
+    byBranch[b.id] = { name: b.name.slice(0, 16), pemasukan: 0, pengeluaran: 0 }
+  }
 
   for (const tx of transactions ?? []) {
     const bid = tx.branch_id as string

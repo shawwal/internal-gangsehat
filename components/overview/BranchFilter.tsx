@@ -47,8 +47,8 @@ export function BranchFilter({ branches, branchId, month, year }: Props) {
         ))}
       </select>
 
-      <select className={cls} value={month} onChange={e => navigate({ month: e.target.value })}>
-        <option value="">Semua Bulan</option>
+      <select className={cls} value={month || 'all'} onChange={e => navigate({ month: e.target.value })}>
+        <option value="all">Semua Bulan</option>
         {MONTHS.map((name, i) => (
           <option key={i + 1} value={String(i + 1)}>{name}</option>
         ))}
