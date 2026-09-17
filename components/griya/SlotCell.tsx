@@ -119,6 +119,18 @@ export function SlotCell({ cellKey, cell, therapistOn, canEdit, moveMode, onActi
                 <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda" onClick={() => { setMenu(null); onAction('unmarkAttendance', cell) }} />
               </>
             )}
+            {!cell.slot && cell.state === 'adhoc' && canEdit && (
+              cell.visit?.kehadiran === 'HADIR' ? (
+                <>
+                  {cell.visit?.id && (
+                    <MenuBtn icon={<Stethoscope size={14} />} label="Periksa" onClick={() => { setMenu(null); onAction('examine', cell) }} />
+                  )}
+                  <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda Hadir" onClick={() => { setMenu(null); onAction('unmarkAttendance', cell) }} />
+                </>
+              ) : (
+                <MenuBtn icon={<Check size={14} />} label="Tandai Hadir" onClick={() => { setMenu(null); onAction('markPresent', cell) }} />
+              )
+            )}
             {freed && canEdit && (
               <MenuBtn icon={<UserPlus2 size={14} />} label="Cari Pengganti" onClick={() => { setMenu(null); onAction('substitute', cell) }} />
             )}

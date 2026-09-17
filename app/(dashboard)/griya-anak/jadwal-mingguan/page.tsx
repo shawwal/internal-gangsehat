@@ -19,7 +19,7 @@ import { AddMasterScheduleDialog } from '@/components/griya/master/AddMasterSche
 import { AddStudentButton } from '@/components/griya/AddStudentButton'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { DISCIPLINE_LABEL, DISCIPLINES } from '@/components/griya/constants'
-import { markAttendance, resetAttendance } from '@/app/actions/griyaJadwal'
+import { markAttendance, resetAttendance, markVisitAttendance, resetVisitAttendance } from '@/app/actions/griyaJadwal'
 import type { CellAction } from '@/components/griya/SlotCell'
 import type { ResolvedCell } from '@/components/griya/resolve'
 import type { CellTarget } from '@/components/griya/types'
@@ -78,20 +78,24 @@ export default function GriyaJadwalMingguanPage() {
       case 'attendance': setAttendance(target); break
       case 'end': setEndTarget(target); break
       case 'move': if (entry.cell.slot) setMoveTarget({ slot: entry.cell.slot, hari: entry.hari }); break
-      case 'markPresent':
-        if (entry.cell.slot) {
-          const { error } = await markAttendance(entry.cell.slot.id, entry.dateIso, { present: true })
-          if (error) showToast(error, 'error')
-          else { showToast('Ditandai hadir', 'success'); reload({ silent: true }) }
-        }
+      case 'markPresent': {
+        if (!entry.cell.slot && !entry.cell.visit?.id) break
+        const { error } = entry.cell.slot
+          ? await markAttendance(entry.cell.slot.id, entry.dateIso, { present: true })
+          : await markVisitAttendance(entry.cell.visit!.id, { present: true })
+        if (error) showToast(error, 'error')
+        else { showToast('Ditandai hadir', 'success'); reload({ silent: true }) }
         break
-      case 'unmarkAttendance':
-        if (entry.cell.slot) {
-          const { error } = await resetAttendance(entry.cell.slot.id, entry.dateIso)
-          if (error) showToast(error, 'error')
-          else { showToast('Tanda kehadiran dibatalkan', 'success'); reload({ silent: true }) }
-        }
+      }
+      case 'unmarkAttendance': {
+        if (!entry.cell.slot && !entry.cell.visit?.id) break
+        const { error } = entry.cell.slot
+          ? await resetAttendance(entry.cell.slot.id, entry.dateIso)
+          : await resetVisitAttendance(entry.cell.visit!.id)
+        if (error) showToast(error, 'error')
+        else { showToast('Tanda kehadiran dibatalkan', 'success'); reload({ silent: true }) }
         break
+      }
       case 'pay':
         if (entry.cell.visit?.id) setPayVisit(entry.cell)
         else showToast('Tandai hadir dulu sebelum mencatat pembayaran.', 'info')

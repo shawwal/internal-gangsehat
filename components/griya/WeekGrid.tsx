@@ -232,6 +232,13 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
                 <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda" onClick={() => act('unmarkAttendance')} />
               </>
             )}
+            {!m.cell.slot && m.cell.state === 'adhoc' && canEdit && (
+              m.cell.visit?.kehadiran === 'HADIR' ? (
+                <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda Hadir" onClick={() => act('unmarkAttendance')} />
+              ) : (
+                <MenuBtn icon={<Check size={14} />} label="Tandai Hadir" onClick={() => act('markPresent')} />
+              )
+            )}
             {freed && canEdit && (
               <MenuBtn icon={<UserPlus2 size={14} />} label="Cari Pengganti" onClick={() => act('substitute')} />
             )}

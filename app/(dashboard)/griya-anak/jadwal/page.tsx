@@ -20,7 +20,7 @@ import { SessionNoteModal } from '@/components/griya/SessionNoteModal'
 import { CoverUnassignedDialog } from '@/components/griya/CoverUnassignedDialog'
 import { AddMasterScheduleDialog } from '@/components/griya/master/AddMasterScheduleDialog'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
-import { markAttendance, resetAttendance } from '@/app/actions/griyaJadwal'
+import { markAttendance, resetAttendance, markVisitAttendance, resetVisitAttendance } from '@/app/actions/griyaJadwal'
 import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
 import type { CellAction } from '@/components/griya/SlotCell'
 import type { ResolvedCell } from '@/components/griya/resolve'
@@ -84,20 +84,24 @@ export default function GriyaJadwalPage() {
       case 'attendance': setAttendance(target); break
       case 'end': setEndTarget(target); break
       case 'move': if (cell?.slot) setMoveSlot(cell.slot); break
-      case 'markPresent':
-        if (cell?.slot) {
-          const { error } = await markAttendance(cell.slot.id, dateIso, { present: true })
-          if (error) showToast(error, 'error')
-          else { showToast('Ditandai hadir', 'success'); reload({ silent: true }) }
-        }
+      case 'markPresent': {
+        if (!cell?.slot && !cell?.visit?.id) break
+        const { error } = cell?.slot
+          ? await markAttendance(cell.slot.id, dateIso, { present: true })
+          : await markVisitAttendance(cell!.visit!.id, { present: true })
+        if (error) showToast(error, 'error')
+        else { showToast('Ditandai hadir', 'success'); reload({ silent: true }) }
         break
-      case 'unmarkAttendance':
-        if (cell?.slot) {
-          const { error } = await resetAttendance(cell.slot.id, dateIso)
-          if (error) showToast(error, 'error')
-          else { showToast('Tanda kehadiran dibatalkan', 'success'); reload({ silent: true }) }
-        }
+      }
+      case 'unmarkAttendance': {
+        if (!cell?.slot && !cell?.visit?.id) break
+        const { error } = cell?.slot
+          ? await resetAttendance(cell.slot.id, dateIso)
+          : await resetVisitAttendance(cell!.visit!.id)
+        if (error) showToast(error, 'error')
+        else { showToast('Tanda kehadiran dibatalkan', 'success'); reload({ silent: true }) }
         break
+      }
       case 'pay':
         if (cell?.visit?.id) setPayVisit(cell)
         else showToast('Tandai hadir dulu sebelum mencatat pembayaran.', 'info')

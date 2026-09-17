@@ -567,6 +567,68 @@ export async function resetAttendance(slotId: string, date: string): Promise<{ e
   return { error: null }
 }
 
+// ── Mark / undo attendance for an ad-hoc (substitute) visit — no recurring
+// griya_schedule_slots row behind it, so these are keyed by visit id directly ──
+
+export async function markVisitAttendance(visitId: string, input: { present: boolean }): Promise<{ error: string | null }> {
+  const a = await requireWrite()
+  if ('error' in a) return { error: a.error }
+  const { supabase, userId } = a
+
+  const { data: visit } = await supabase
+    .from('patient_visits').select('branch_id').eq('id', visitId).single()
+  if (!visit) return { error: 'Kunjungan tidak ditemukan' }
+
+  const patch = input.present
+    ? { kehadiran: 'HADIR', status: 'completed' }
+    : { kehadiran: 'TIDAK HADIR', status: 'cancelled' }
+
+  const { error } = await supabase
+    .from('patient_visits')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', visitId)
+  if (error) return { error: error.message }
+
+  await logActivity({
+    supabase, userId, action: 'update', resourceType: 'patient_visit', resourceId: visitId,
+    branchId: visit.branch_id as string,
+    newValues: { kehadiran: patch.kehadiran },
+  })
+  return { error: null }
+}
+
+export async function resetVisitAttendance(visitId: string): Promise<{ error: string | null }> {
+  const a = await requireWrite()
+  if ('error' in a) return { error: a.error }
+  const { supabase, userId } = a
+
+  const { data: visit } = await supabase
+    .from('patient_visits').select('branch_id').eq('id', visitId).single()
+  if (!visit) return { error: 'Kunjungan tidak ditemukan' }
+
+  const { count: paidCount } = await supabase
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('visit_id', visitId)
+    .eq('status', 'confirmed')
+  if ((paidCount ?? 0) > 0) {
+    return { error: 'Kunjungan ini sudah punya pembayaran terkonfirmasi — batalkan pembayarannya dulu sebelum membatalkan kehadiran.' }
+  }
+
+  const { error } = await supabase
+    .from('patient_visits')
+    .update({ kehadiran: null, status: 'scheduled', updated_at: new Date().toISOString() })
+    .eq('id', visitId)
+  if (error) return { error: error.message }
+
+  await logActivity({
+    supabase, userId, action: 'update', resourceType: 'patient_visit', resourceId: visitId,
+    branchId: visit.branch_id as string,
+    newValues: { kehadiran: null, reset: true },
+  })
+  return { error: null }
+}
+
 // ── Add a substitute into a freed cell for one week ──────────────────────────
 
 export interface AddSubstituteInput {
