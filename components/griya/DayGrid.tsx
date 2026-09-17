@@ -135,7 +135,11 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
                   <div key={c.id} style={{ width: colWidth }} className="p-1 border-l border-border/40">
                     <SlotCell
                       cellKey={key}
-                      cell={cells.get(key)}
+                      // DayGrid is one-column-per-therapist, so it can only show one card
+                      // per therapist+hour. When two patients collide on the same slot (see
+                      // resolve.ts), show the last-resolved one — matching pre-fix behavior.
+                      // Multi-patient-per-column display is a follow-up, not covered here.
+                      cell={cells.get(key)?.at(-1)}
                       therapistOn={isTherapistOn(week, c.therapist_id, hari, hour)}
                       canEdit={canEdit}
                       moveMode={moveMode}

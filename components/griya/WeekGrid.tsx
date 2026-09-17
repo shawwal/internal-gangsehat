@@ -57,7 +57,8 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
     days.forEach((d, di) => {
       const iso = toIso(d)
       const { cells, unassigned } = resolveDay(week, iso)
-      for (const cell of [...cells.values(), ...unassigned]) {
+      const allCells = [...cells.values()].flat()
+      for (const cell of [...allCells, ...unassigned]) {
         if (cell.state === 'moved-out') continue
         const meta = nickById.get(cell.therapistId)
         const discipline = meta?.discipline ?? (cell.slot?.discipline as Discipline) ?? 'FISIOTERAPI'
@@ -65,7 +66,7 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
         const row = g.get(cell.hour)
         if (!row) continue
         row[di].push({
-          key: cell.key + '|' + iso,
+          key: cell.key + '|' + iso + '|' + (cell.slot?.id ?? cell.visit?.id ?? cell.studentName),
           dateIso: iso,
           hari: hariOf(d),
           cell,

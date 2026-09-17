@@ -24,10 +24,16 @@ function deriveState(v: GriyaWeekVisit): CellState {
 
 /** Builds the cell map for one calendar day of the loaded week, plus any master
  *  slots that couldn't be placed because nobody of that discipline is on duty. */
-export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<string, ResolvedCell>; unassigned: ResolvedCell[] } {
+export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<string, ResolvedCell[]>; unassigned: ResolvedCell[] } {
   const hari: Hari = hariOf(new Date(dateIso + 'T00:00:00'))
-  const cells = new Map<string, ResolvedCell>()
+  const cells = new Map<string, ResolvedCell[]>()
   const unassigned: ResolvedCell[] = []
+
+  function push(key: string, cell: ResolvedCell) {
+    const arr = cells.get(key)
+    if (arr) arr.push(cell)
+    else cells.set(key, [cell])
+  }
 
   const visitsToday = week.visits.filter((v) => v.visit_date === dateIso)
   const bySlot = new Map<string, GriyaWeekVisit>()
@@ -46,7 +52,7 @@ export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<strin
     if (v && v.attending_staff_id) {
       // An explicit override exists for this date (this-week move/attendance) — it wins.
       const placedKey = `${v.attending_staff_id}|${v.visit_time ?? s.slot_time}`
-      cells.set(placedKey, {
+      push(placedKey, {
         key: placedKey, therapistId: v.attending_staff_id, hour: v.visit_time ?? s.slot_time,
         state: deriveState(v), slot: s, visit: v, studentName: s.patient_name,
         reason: v.status === 'cancelled' ? (v.notes ?? null) : null,
@@ -55,7 +61,7 @@ export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<strin
       if (resolvedTherapistId) {
         const homeKey = `${resolvedTherapistId}|${s.slot_time}`
         if (homeKey !== placedKey) {
-          cells.set(homeKey, {
+          push(homeKey, {
             key: homeKey, therapistId: resolvedTherapistId, hour: s.slot_time,
             state: 'moved-out', slot: s, visit: null, studentName: s.patient_name, reason: null,
           })
@@ -74,23 +80,26 @@ export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<strin
     }
 
     const homeKey = `${resolvedTherapistId}|${s.slot_time}`
-    cells.set(homeKey, {
+    push(homeKey, {
       key: homeKey, therapistId: resolvedTherapistId, hour: s.slot_time,
       state: v ? deriveState(v) : 'scheduled', slot: s, visit: v, studentName: s.patient_name,
       reason: v && v.status === 'cancelled' ? (v.notes ?? null) : null,
     })
   }
 
-  // 2. substitutes / ad-hoc (visits with no recurring slot)
+  // 2. substitutes / ad-hoc (visits with no recurring slot). A real therapist can only
+  // see one child at a given hour, so this stays a single-slot replace, guarded against
+  // clobbering a genuinely active (non-freed) cell already at that key.
   for (const v of visitsToday) {
     if (v.griya_slot_id || !v.attending_staff_id) continue
     const key = `${v.attending_staff_id}|${v.visit_time ?? ''}`
     const existing = cells.get(key)
-    if (!existing || existing.state === 'moved-out' || existing.state === 'izin' || existing.state === 'alpa') {
-      cells.set(key, {
+    const blocked = existing?.some((c) => c.state !== 'moved-out' && c.state !== 'izin' && c.state !== 'alpa')
+    if (!blocked) {
+      cells.set(key, [{
         key, therapistId: v.attending_staff_id, hour: v.visit_time ?? '',
         state: 'adhoc', slot: null, visit: v, studentName: v.patient_name, reason: v.notes ?? null,
-      })
+      }])
     }
   }
 
