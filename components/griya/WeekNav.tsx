@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { addDays, toIso, getMondayOf } from '@/components/jadwal/utils'
 
@@ -18,6 +18,13 @@ export function WeekNav({ selectedDate, today, onSelect }: Props) {
   const weekMonday   = getMondayOf(selectedDate)
   const weekEnd      = addDays(weekMonday, 6)
   const isCurrentWeek = getMondayOf(today).getTime() === weekMonday.getTime()
+
+  // `today` is a fresh `new Date()` on every render (see useGriyaJadwal), so the
+  // server's clock and the browser's can disagree on `isCurrentWeek` — gate this
+  // button behind mount so the very first client render matches the server's
+  // (no button), instead of causing a hydration mismatch.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   return (
     <div className="glass-card p-3 flex items-center gap-2">
@@ -65,7 +72,7 @@ export function WeekNav({ selectedDate, today, onSelect }: Props) {
         />
       </div>
 
-      {!isCurrentWeek && (
+      {mounted && !isCurrentWeek && (
         <button
           onClick={() => onSelect(new Date())}
           aria-label="Kembali ke minggu ini"

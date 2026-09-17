@@ -6,6 +6,7 @@ import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
 import { SERVICE_TYPES } from '@/lib/serviceType'
 import { resolveTherapistForSlot } from '@/lib/griyaRotation'
+import { hariOf } from '@/components/griya/constants'
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -99,6 +100,29 @@ async function auth(): Promise<AuthResult> {
     .single()
   if (!profile) return { error: 'Profil tidak ditemukan' }
   return { supabase, userId: user.id, role: profile.role as string, branchId: profile.branch_id as string | null }
+}
+
+// A concurrent double-click/double-submit on "Pindahkan"/"Tandai Hadir" etc. can
+// race the classic check-then-insert pattern below and leave two patient_visits
+// rows for the same (griya_slot_id, visit_date) — after which `.maybeSingle()`
+// errors out (silently, since callers only destructure `data`), that error is
+// swallowed, `existing` reads back as null, and every future action for that
+// occurrence takes the "insert new" branch instead of "update" — creating yet
+// another duplicate each time, which is exactly what showed up as the same
+// student's name appearing twice on jadwal mingguan. This looks up defensively:
+// if it ever finds more than one row, it keeps the oldest and deletes the rest.
+async function findVisitForSlotDate(supabase: SupaClient, slotId: string, date: string): Promise<{ id: string } | null> {
+  const { data: rows } = await supabase
+    .from('patient_visits')
+    .select('id')
+    .eq('griya_slot_id', slotId)
+    .eq('visit_date', date)
+    .order('created_at', { ascending: true })
+  if (!rows || rows.length === 0) return null
+  if (rows.length > 1) {
+    await supabase.from('patient_visits').delete().in('id', rows.slice(1).map((r) => r.id as string))
+  }
+  return { id: rows[0].id as string }
 }
 
 async function requireWrite(): Promise<AuthResult> {
@@ -354,7 +378,7 @@ export async function assignRecurringSlot(input: AssignSlotInput): Promise<{ err
   return { error: null, id: data?.id }
 }
 
-// ── Edit a MASTER slot's day/time/service (never the therapist — there isn't one) ─
+// ── Edit a MASTER slot's day/time/service, and optionally its therapist pin ─────
 
 export interface UpdateMasterSlotInput {
   slotId: string
@@ -363,6 +387,8 @@ export interface UpdateMasterSlotInput {
   discipline: Discipline
   service_type?: string | null
   package_id?: string | null
+  /** Omit to leave the current pin untouched; pass null to clear it back to auto-rotation. */
+  therapist_id?: string | null
 }
 
 export async function updateMasterSlot(input: UpdateMasterSlotInput): Promise<{ error: string | null }> {
@@ -374,9 +400,10 @@ export async function updateMasterSlot(input: UpdateMasterSlotInput): Promise<{ 
     .from('griya_schedule_slots').select('branch_id, hari, slot_time, therapist_id').eq('id', input.slotId).single()
   if (!slot) return { error: 'Slot tidak ditemukan' }
 
+  const nextTherapistId = input.therapist_id !== undefined ? input.therapist_id : (slot.therapist_id as string | null)
   const collidingWith = await findSlotCollision(
     supabase, slot.branch_id as string, input.discipline, input.hari, input.slot_time,
-    slot.therapist_id as string | null, input.slotId,
+    nextTherapistId, input.slotId,
   )
   if (collidingWith) {
     return { error: `Jam ini sudah dipakai ${collidingWith} — terapis yang akan menangani (mengikuti rotasi/pin) sama. Pilih jam lain, disiplin lain, atau pin ke terapis lain yang bertugas.` }
@@ -390,6 +417,7 @@ export async function updateMasterSlot(input: UpdateMasterSlotInput): Promise<{ 
       discipline: input.discipline,
       service_type: input.service_type ?? null,
       package_id: input.package_id ?? null,
+      ...(input.therapist_id !== undefined ? { therapist_id: input.therapist_id } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', input.slotId)
@@ -470,12 +498,13 @@ export async function moveSlot(input: MoveSlotInput): Promise<{ error: string | 
     .single()
   if (!slot) return { error: 'Slot tidak ditemukan' }
 
-  const { data: existing } = await supabase
-    .from('patient_visits')
-    .select('id')
-    .eq('griya_slot_id', input.slotId)
-    .eq('visit_date', input.date)
-    .maybeSingle()
+  const existing = await findVisitForSlotDate(supabase, input.slotId, input.date)
+
+  if (await isCellOccupied(supabase, slot.branch_id as string, input.therapist_id, input.date, input.slot_time, {
+    excludeSlotId: input.slotId, excludeVisitId: existing?.id,
+  })) {
+    return { error: 'Jam ini untuk terapis tersebut sudah terisi anak lain hari ini — pilih jam atau terapis lain.' }
+  }
 
   if (existing) {
     const { error } = await supabase
@@ -506,6 +535,45 @@ export async function moveSlot(input: MoveSlotInput): Promise<{ error: string | 
   return { error: error?.message ?? null }
 }
 
+// ── Reassign an ad-hoc/substitute visit (no griya_schedule_slots row behind it)
+// to a different therapist/time — same one-off semantics as moveSlot above, just
+// keyed by visit id directly since there's no master slot to look up from. ─────
+
+export interface MoveVisitInput {
+  visitId: string
+  therapist_id: string
+  slot_time: string
+}
+
+export async function moveVisit(input: MoveVisitInput): Promise<{ error: string | null }> {
+  const a = await requireWrite()
+  if ('error' in a) return { error: a.error }
+  const { supabase, userId } = a
+
+  const { data: visit } = await supabase
+    .from('patient_visits').select('branch_id, visit_date').eq('id', input.visitId).single()
+  if (!visit) return { error: 'Kunjungan tidak ditemukan' }
+
+  if (await isCellOccupied(supabase, visit.branch_id as string, input.therapist_id, visit.visit_date as string, input.slot_time, {
+    excludeVisitId: input.visitId,
+  })) {
+    return { error: 'Jam ini untuk terapis tersebut sudah terisi anak lain hari ini — pilih jam atau terapis lain.' }
+  }
+
+  const { error } = await supabase
+    .from('patient_visits')
+    .update({ attending_staff_id: input.therapist_id, visit_time: input.slot_time, updated_at: new Date().toISOString() })
+    .eq('id', input.visitId)
+  if (error) return { error: error.message }
+
+  await logActivity({
+    supabase, userId, action: 'update', resourceType: 'patient_visit', resourceId: input.visitId,
+    branchId: visit.branch_id as string,
+    newValues: { moved: true, therapist_id: input.therapist_id, slot_time: input.slot_time },
+  })
+  return { error: null }
+}
+
 // ── Mark attendance for one occurrence ───────────────────────────────────────
 
 export async function markAttendance(
@@ -524,12 +592,7 @@ export async function markAttendance(
     .single()
   if (!slot) return { error: 'Slot tidak ditemukan' }
 
-  const { data: existing } = await supabase
-    .from('patient_visits')
-    .select('id, visit_time')
-    .eq('griya_slot_id', slotId)
-    .eq('visit_date', date)
-    .maybeSingle()
+  const existing = await findVisitForSlotDate(supabase, slotId, date)
 
   // Resolving who's actually on duty is only needed the first time this occurrence
   // is materialized (an existing row already has attending_staff_id set).
@@ -601,12 +664,7 @@ export async function resetAttendance(slotId: string, date: string): Promise<{ e
     .from('griya_schedule_slots').select('branch_id').eq('id', slotId).single()
   if (!slot) return { error: 'Slot tidak ditemukan' }
 
-  const { data: existing } = await supabase
-    .from('patient_visits')
-    .select('id')
-    .eq('griya_slot_id', slotId)
-    .eq('visit_date', date)
-    .maybeSingle()
+  const existing = await findVisitForSlotDate(supabase, slotId, date)
   if (!existing) return { error: null } // nothing marked yet — nothing to undo
 
   const { count: paidCount } = await supabase
@@ -647,12 +705,7 @@ export async function cancelOccurrence(slotId: string, date: string): Promise<{ 
     .single()
   if (!slot) return { error: 'Slot tidak ditemukan' }
 
-  const { data: existing } = await supabase
-    .from('patient_visits')
-    .select('id')
-    .eq('griya_slot_id', slotId)
-    .eq('visit_date', date)
-    .maybeSingle()
+  const existing = await findVisitForSlotDate(supabase, slotId, date)
 
   const patch = { kehadiran: 'TIDAK HADIR', status: 'cancelled', notes: 'Dibatalkan' }
 
@@ -758,6 +811,58 @@ export async function resetVisitAttendance(visitId: string): Promise<{ error: st
   return { error: null }
 }
 
+// ── Detect whether a specific therapist+date+hour is already occupied by a real
+// booking (not just a freed/moved-out ghost) — used to reject a substitute that
+// would otherwise be inserted into the database but never render anywhere on the
+// grid (resolve.ts only shows one occupant per cell), which looked like the
+// action silently doing nothing. ──────────────────────────────────────────────
+
+async function isCellOccupied(
+  supabase: SupaClient, branchId: string, therapistId: string, dateIso: string, hour: string,
+  opts?: { excludeSlotId?: string; excludeVisitId?: string },
+): Promise<boolean> {
+  let directQuery = supabase
+    .from('patient_visits')
+    .select('id', { count: 'exact', head: true })
+    .eq('branch_id', branchId).eq('attending_staff_id', therapistId)
+    .eq('visit_date', dateIso).eq('visit_time', hour)
+    .not('status', 'in', '(cancelled,no_show)')
+  if (opts?.excludeVisitId) directQuery = directQuery.neq('id', opts.excludeVisitId)
+  const { count: directCount } = await directQuery
+  if ((directCount ?? 0) > 0) return true
+
+  const hari = hariOf(new Date(dateIso + 'T00:00:00'))
+  const [{ data: slotRows }, { data: therapistRows }, { data: scheduleRows }] = await Promise.all([
+    supabase.from('griya_schedule_slots')
+      .select('id, discipline, therapist_id').eq('branch_id', branchId).eq('hari', hari).eq('slot_time', hour).eq('status', 'active'),
+    supabase.from('griya_therapists')
+      .select('therapist_id, discipline, display_order, is_active').eq('branch_id', branchId).eq('is_active', true),
+    supabase.from('schedules')
+      .select('staff_id, hari, jam_mulai, jam_selesai').eq('branch_id', branchId).eq('status', 'AKTIF').eq('hari', hari as string),
+  ])
+  const therapists = (therapistRows ?? []) as { therapist_id: string; discipline: Discipline; display_order: number; is_active: boolean }[]
+  const schedules = ((scheduleRows ?? []) as { staff_id: string; hari: string; jam_mulai: string; jam_selesai: string }[])
+    .map((r) => ({ ...r, status: 'AKTIF' }))
+
+  for (const s of slotRows ?? []) {
+    if (s.id === opts?.excludeSlotId) continue
+    const resolved = resolveTherapistForSlot(
+      { discipline: s.discipline as Discipline, hari, slot_time: hour, therapist_id: s.therapist_id as string | null },
+      therapists, schedules,
+    )
+    if (resolved !== therapistId) continue
+    const { data: vRows } = await supabase
+      .from('patient_visits').select('attending_staff_id, status')
+      .eq('griya_slot_id', s.id as string).eq('visit_date', dateIso)
+      .order('created_at', { ascending: true })
+    const v = vRows?.[0] // .maybeSingle() would error (silently, if ignored) on a pre-existing duplicate row
+    if (!v) return true // plain scheduled occurrence, nothing overriding it — occupies this cell
+    if (v.attending_staff_id && v.attending_staff_id !== therapistId) continue // moved elsewhere — just a ghost here
+    if (!['cancelled', 'no_show'].includes(v.status as string)) return true
+  }
+  return false
+}
+
 // ── Add a substitute into a freed cell for one week ──────────────────────────
 
 export interface AddSubstituteInput {
@@ -775,6 +880,10 @@ export async function addSubstitute(input: AddSubstituteInput): Promise<{ error:
   const a = await requireWrite()
   if ('error' in a) return { error: a.error }
   const { supabase, userId } = a
+
+  if (await isCellOccupied(supabase, input.branch_id, input.therapist_id, input.date, input.slot_time)) {
+    return { error: 'Jam ini untuk terapis tersebut sudah terisi anak lain hari ini — pilih jam atau terapis lain.' }
+  }
 
   await ensureEnrolled(a, input.patient_id, input.branch_id, 'jadwal')
 

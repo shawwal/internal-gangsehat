@@ -125,7 +125,7 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
           </div>
           {/* hour rows */}
           {GRIYA_HOURS.map((hour) => (
-            <div key={hour} className="flex border-b border-border/40">
+            <div key={hour} className="flex items-start border-b border-border/40">
               <div className="w-16 shrink-0 flex items-start justify-end pr-2 pt-1.5 text-[12px] font-mono text-muted-foreground">
                 {hour}
               </div>

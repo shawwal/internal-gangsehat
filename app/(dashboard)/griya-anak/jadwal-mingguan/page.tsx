@@ -25,6 +25,7 @@ import { updateVisitStatus, deleteVisit } from '@/app/actions/jadwal'
 import type { CellAction } from '@/components/griya/SlotCell'
 import type { ResolvedCell } from '@/components/griya/resolve'
 import type { CellTarget } from '@/components/griya/types'
+import type { MoveTarget } from '@/components/griya/MoveScopeDialog'
 import type { Discipline, GriyaSlot, Hari } from '@/app/actions/griyaJadwal'
 
 export default function GriyaJadwalMingguanPage() {
@@ -35,7 +36,7 @@ export default function GriyaJadwalMingguanPage() {
   const [assign, setAssign] = useState<CellTarget | null>(null)
   const [attendance, setAttendance] = useState<CellTarget | null>(null)
   const [endTarget, setEndTarget] = useState<CellTarget | null>(null)
-  const [moveTarget, setMoveTarget] = useState<{ slot: GriyaSlot; hari: Hari } | null>(null)
+  const [moveTarget, setMoveTarget] = useState<{ target: MoveTarget; hari: Hari } | null>(null)
   const [payVisit, setPayVisit] = useState<ResolvedCell | null>(null)
   const [editVisit, setEditVisit] = useState<ResolvedCell | null>(null)
   const [coverTarget, setCoverTarget] = useState<{ slot: GriyaSlot; dateIso: string } | null>(null)
@@ -75,13 +76,17 @@ export default function GriyaJadwalMingguanPage() {
     }
 
     const target = targetForEntry(entry)
-    if (!target) return
+    if (!target) { showToast('Sel ini tidak valid — muat ulang halaman dan coba lagi.', 'error'); return }
 
     switch (action) {
       case 'substitute': setAssign(target); break
       case 'attendance': setAttendance(target); break
       case 'end': setEndTarget(target); break
-      case 'move': if (entry.cell.slot) setMoveTarget({ slot: entry.cell.slot, hari: entry.hari }); break
+      case 'move':
+        if (entry.cell.slot) setMoveTarget({ target: { kind: 'slot', slot: entry.cell.slot }, hari: entry.hari })
+        else if (entry.cell.visit?.id) setMoveTarget({ target: { kind: 'visit', visitId: entry.cell.visit.id, patientName: entry.cell.studentName }, hari: entry.hari })
+        else showToast('Tidak ada jadwal untuk dipindahkan di sel ini.', 'error')
+        break
       case 'markPresent': {
         if (!entry.cell.slot && !entry.cell.visit?.id) break
         const patientId = entry.cell.slot?.patient_id ?? entry.cell.visit?.patient_id
@@ -116,10 +121,12 @@ export default function GriyaJadwalMingguanPage() {
         break
       case 'editVisit':
         if (entry.cell.visit?.id) setEditVisit(entry.cell)
+        else showToast('Belum ada data kunjungan untuk diubah — tandai hadir/tidak hadir dulu.', 'error')
         break
       case 'open': {
         const pid = entry.cell.slot?.patient_id ?? entry.cell.visit?.patient_id
         if (pid) window.open(`/griya-anak/siswa/${pid}`, '_blank', 'noopener,noreferrer')
+        else showToast('Data anak tidak ditemukan untuk sel ini.', 'error')
         break
       }
       case 'cancel':
@@ -127,6 +134,7 @@ export default function GriyaJadwalMingguanPage() {
         break
       case 'deleteVisit':
         if (entry.cell.visit?.id) setConfirmTarget({ kind: 'delete', cell: entry.cell, dateIso: entry.dateIso })
+        else showToast('Belum ada data kunjungan untuk dihapus.', 'error')
         break
     }
   }
@@ -237,7 +245,7 @@ export default function GriyaJadwalMingguanPage() {
         <WeekMoveDialog
           week={week}
           weekMonday={weekMonday}
-          slot={moveTarget.slot}
+          target={moveTarget.target}
           initialHari={moveTarget.hari}
           onClose={() => setMoveTarget(null)}
           onSaved={afterMutation}

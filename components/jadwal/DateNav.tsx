@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { addDays, isSameDay, toIso, HARI_LABEL, JS_DAY_TO_HARI, getMondayOf } from './utils'
 
@@ -15,6 +15,12 @@ export function DateNav({ selectedDate, today, onSelect }: DateNavProps) {
   const weekMonday   = getMondayOf(selectedDate)
   const dateChips    = [0, 1, 2, 3, 4, 5, 6].map((n) => addDays(weekMonday, n))
 
+  // `today` is a fresh `new Date()` every render (see useGriyaJadwal) — the server's
+  // clock and the browser's can disagree on which chip is "today", so defer any
+  // rendering that depends on it until after mount to avoid a hydration mismatch.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   return (
     <div className="glass-card p-3 flex items-center gap-2">
       <button
@@ -28,7 +34,7 @@ export function DateNav({ selectedDate, today, onSelect }: DateNavProps) {
       <div className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
         {dateChips.map((d, i) => {
           const isSel   = isSameDay(d, selectedDate)
-          const isTod   = isSameDay(d, today)
+          const isTod   = mounted && isSameDay(d, today)
           const dayName = HARI_LABEL[JS_DAY_TO_HARI[d.getDay()]]
           return (
             <button
@@ -81,7 +87,7 @@ export function DateNav({ selectedDate, today, onSelect }: DateNavProps) {
         />
       </div>
 
-      {!isSameDay(selectedDate, today) && (
+      {mounted && !isSameDay(selectedDate, today) && (
         <button
           onClick={() => onSelect(new Date())}
           aria-label="Kembali ke hari ini"

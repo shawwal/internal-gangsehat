@@ -12,7 +12,7 @@ import { Legend } from '@/components/griya/Legend'
 import { AssignStudentDialog } from '@/components/griya/AssignStudentDialog'
 import { AttendanceDialog } from '@/components/griya/AttendanceDialog'
 import { EndEnrollmentDialog } from '@/components/griya/EndEnrollmentDialog'
-import { MoveScopeDialog, type MoveDest } from '@/components/griya/MoveScopeDialog'
+import { MoveScopeDialog, type MoveDest, type MoveTarget } from '@/components/griya/MoveScopeDialog'
 import { ManageTherapistsDialog } from '@/components/griya/ManageTherapistsDialog'
 import { AddStudentButton } from '@/components/griya/AddStudentButton'
 import { EditVisitDialog } from '@/components/griya/EditVisitDialog'
@@ -39,8 +39,8 @@ export default function GriyaJadwalPage() {
   const [assign, setAssign] = useState<CellTarget | null>(null)
   const [attendance, setAttendance] = useState<CellTarget | null>(null)
   const [endTarget, setEndTarget] = useState<CellTarget | null>(null)
-  const [moveSlot, setMoveSlot] = useState<GriyaSlot | null>(null)
-  const [moveDialog, setMoveDialog] = useState<{ slot: GriyaSlot; dest: MoveDest } | null>(null)
+  const [moveSrc, setMoveSrc] = useState<MoveTarget | null>(null)
+  const [moveDialog, setMoveDialog] = useState<{ target: MoveTarget; dest: MoveDest } | null>(null)
   const [coverSlot, setCoverSlot] = useState<GriyaSlot | null>(null)
   const [addMaster, setAddMaster] = useState<CellTarget | null>(null)
   const [payVisit, setPayVisit] = useState<ResolvedCell | null>(null)
@@ -71,14 +71,14 @@ export default function GriyaJadwalPage() {
     if (!target) { showToast('Sel ini tidak valid — muat ulang halaman dan coba lagi.', 'error'); return }
 
     // move-destination pick
-    if (moveSlot && action === 'move') {
+    if (moveSrc && action === 'move') {
       const col = week.therapists.find((t) => t.therapist_id === target.therapistId)
       if (!col) { showToast('Kolom terapis tujuan tidak ditemukan.', 'error'); return }
       setMoveDialog({
-        slot: moveSlot,
+        target: moveSrc,
         dest: { therapistId: target.therapistId, therapistName: target.therapistName, discipline: col.discipline, hari, hour: target.hour, dateIso },
       })
-      setMoveSlot(null)
+      setMoveSrc(null)
       return
     }
 
@@ -88,8 +88,9 @@ export default function GriyaJadwalPage() {
       case 'attendance': setAttendance(target); break
       case 'end': setEndTarget(target); break
       case 'move':
-        if (cell?.slot) setMoveSlot(cell.slot)
-        else showToast('Jadwal ini belum punya slot tetap, tidak bisa dipindahkan.', 'error')
+        if (cell?.slot) setMoveSrc({ kind: 'slot', slot: cell.slot })
+        else if (cell?.visit?.id) setMoveSrc({ kind: 'visit', visitId: cell.visit.id, patientName: cell.studentName })
+        else showToast('Tidak ada jadwal untuk dipindahkan di sel ini.', 'error')
         break
       case 'markPresent': {
         if (!cell?.slot && !cell?.visit?.id) break
@@ -125,6 +126,7 @@ export default function GriyaJadwalPage() {
         break
       case 'editVisit':
         if (cell?.visit?.id) setEditVisit(cell)
+        else showToast('Belum ada data kunjungan untuk diubah — tandai hadir/tidak hadir dulu.', 'error')
         break
       case 'examine':
         if (cell?.visit?.id) {
@@ -134,18 +136,23 @@ export default function GriyaJadwalPage() {
           } else {
             setExamineVisit(cell)
           }
+        } else {
+          showToast('Belum ada data kunjungan untuk diperiksa.', 'error')
         }
         break
       case 'open': {
         const pid = cell?.slot?.patient_id ?? cell?.visit?.patient_id
         if (pid) window.open(`/griya-anak/siswa/${pid}`, '_blank', 'noopener,noreferrer')
+        else showToast('Data anak tidak ditemukan untuk sel ini.', 'error')
         break
       }
       case 'cancel':
         if (cell) setConfirmTarget({ kind: 'cancel', cell })
+        else showToast('Tidak ada jadwal untuk dibatalkan di sel ini.', 'error')
         break
       case 'deleteVisit':
         if (cell?.visit?.id) setConfirmTarget({ kind: 'delete', cell })
+        else showToast('Belum ada data kunjungan untuk dihapus.', 'error')
         break
     }
   }
@@ -167,7 +174,7 @@ export default function GriyaJadwalPage() {
   }
 
   function afterMutation() {
-    setAssign(null); setAttendance(null); setEndTarget(null); setMoveDialog(null); setPayVisit(null); setEditVisit(null); setExamineVisit(null); setCoverSlot(null); setAddMaster(null); setConfirmTarget(null)
+    setAssign(null); setAttendance(null); setEndTarget(null); setMoveSrc(null); setMoveDialog(null); setPayVisit(null); setEditVisit(null); setExamineVisit(null); setCoverSlot(null); setAddMaster(null); setConfirmTarget(null)
     reload({ silent: true })
   }
 
@@ -198,10 +205,10 @@ export default function GriyaJadwalPage() {
 
       <DateNav selectedDate={selectedDate} today={today} onSelect={setSelectedDate} />
 
-      {moveSlot && (
+      {moveSrc && (
         <div className="flex items-center justify-between px-4 py-2.5 rounded-2xl border border-primary/30 bg-primary/10 text-primary text-sm">
-          <span>Pilih sel tujuan untuk memindahkan <b>{moveSlot.patient_name}</b></span>
-          <button onClick={() => setMoveSlot(null)} className="text-xs font-semibold cursor-pointer">Batal</button>
+          <span>Pilih sel tujuan untuk memindahkan <b>{moveSrc.kind === 'slot' ? moveSrc.slot.patient_name : moveSrc.patientName}</b></span>
+          <button onClick={() => setMoveSrc(null)} className="text-xs font-semibold cursor-pointer">Batal</button>
         </div>
       )}
 
@@ -211,11 +218,11 @@ export default function GriyaJadwalPage() {
           dateIso={dateIso}
           hari={hari}
           canEdit={canEdit}
-          moveMode={!!moveSlot}
+          moveMode={!!moveSrc}
           onCellAction={handleCellAction}
           onDrop={(slotId, dest) => {
             const slot = week.slots.find((s) => s.id === slotId)
-            if (slot) setMoveDialog({ slot, dest })
+            if (slot) setMoveDialog({ target: { kind: 'slot', slot }, dest })
           }}
         />
       )}
@@ -249,7 +256,7 @@ export default function GriyaJadwalPage() {
         <EndEnrollmentDialog target={endTarget} onClose={() => setEndTarget(null)} onSaved={afterMutation} />
       )}
       {moveDialog && (
-        <MoveScopeDialog slot={moveDialog.slot} dest={moveDialog.dest} onClose={() => setMoveDialog(null)} onSaved={afterMutation} />
+        <MoveScopeDialog target={moveDialog.target} dest={moveDialog.dest} onClose={() => setMoveDialog(null)} onSaved={afterMutation} />
       )}
       {payVisit?.visit && (
         <PaymentDialog

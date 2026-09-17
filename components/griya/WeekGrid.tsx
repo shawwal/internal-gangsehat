@@ -246,9 +246,15 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
             )}
             {!m.cell.slot && m.cell.state === 'adhoc' && canEdit && (
               m.cell.visit?.kehadiran === 'HADIR' ? (
-                <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda Hadir" onClick={() => act('unmarkAttendance')} />
+                <>
+                  <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda Hadir" onClick={() => act('unmarkAttendance')} />
+                  <MenuBtn icon={<Move size={14} />} label="Pindahkan" onClick={() => act('move')} />
+                </>
               ) : (
-                <MenuBtn icon={<Check size={14} />} label="Tandai Hadir" onClick={() => act('markPresent')} />
+                <>
+                  <MenuBtn icon={<Check size={14} />} label="Tandai Hadir" onClick={() => act('markPresent')} />
+                  <MenuBtn icon={<Move size={14} />} label="Pindahkan" onClick={() => act('move')} />
+                </>
               )
             )}
             {!m.cell.slot && m.cell.state === 'adhoc' && canEdit && m.cell.visit?.id && (

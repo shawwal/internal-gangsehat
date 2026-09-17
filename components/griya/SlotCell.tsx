@@ -49,7 +49,7 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
   if (!therapistOn && !cell) {
     return (
       <div
-        className="h-full min-h-[44px] rounded-lg border border-muted-foreground/30 bg-muted"
+        className="min-h-[44px] rounded-lg border border-muted-foreground/30 bg-muted"
         style={{ backgroundImage: 'repeating-linear-gradient(-45deg,transparent,transparent 5px,color-mix(in srgb,var(--muted-foreground) 55%,transparent) 5px,color-mix(in srgb,var(--muted-foreground) 55%,transparent) 7px)' }}
       />
     )
@@ -64,7 +64,7 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
       <div
         ref={setRefs}
         onClick={() => canEdit && onAction(moveMode ? 'move' : (cell ? 'substitute' : 'assign'), cell)}
-        className={`group h-full min-h-[44px] rounded-lg border flex items-center justify-center cursor-pointer transition-colors ${
+        className={`group min-h-[44px] rounded-lg border flex items-center justify-center cursor-pointer transition-colors ${
           moveMode ? 'border-primary/70 bg-primary/5 hover:bg-primary/15' : isOver ? 'border-primary bg-primary/10'
             : 'border-dashed border-[#34C759]/70 bg-[#34C759]/5 hover:bg-[#34C759]/15'
         }`}
@@ -90,7 +90,7 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
           if (moveMode) { onAction('move', cell); return }
           setMenu({ x: e.clientX, y: e.clientY })
         }}
-        className={`h-full min-h-[44px] rounded-lg border px-1.5 py-1 text-[11px] leading-tight font-medium cursor-pointer overflow-hidden ${cls} ${
+        className={`min-h-[44px] rounded-lg border px-1.5 py-1 text-[11px] leading-tight font-medium cursor-pointer overflow-hidden ${cls} ${
           isDragging ? 'opacity-40' : ''
         } ${isOver ? 'ring-2 ring-primary' : ''}`}
       >
@@ -144,9 +144,13 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
                     <MenuBtn icon={<Stethoscope size={14} />} label="Periksa" onClick={() => { setMenu(null); onAction('examine', cell) }} />
                   )}
                   <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda Hadir" onClick={() => { setMenu(null); onAction('unmarkAttendance', cell) }} />
+                  <MenuBtn icon={<Move size={14} />} label="Pindahkan" onClick={() => { setMenu(null); onAction('move', cell) }} />
                 </>
               ) : (
-                <MenuBtn icon={<Check size={14} />} label="Tandai Hadir" onClick={() => { setMenu(null); onAction('markPresent', cell) }} />
+                <>
+                  <MenuBtn icon={<Check size={14} />} label="Tandai Hadir" onClick={() => { setMenu(null); onAction('markPresent', cell) }} />
+                  <MenuBtn icon={<Move size={14} />} label="Pindahkan" onClick={() => { setMenu(null); onAction('move', cell) }} />
+                </>
               )
             )}
             {!cell.slot && cell.state === 'adhoc' && canEdit && cell.visit?.id && (
