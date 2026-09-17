@@ -41,12 +41,23 @@ export function isTherapistOn(
  * active therapists of that discipline. Ties break by `display_order` (the same
  * ordering admins control via "Kelola Kolom Terapis") — lowest wins. Returns
  * null when nobody of that discipline is on duty ("Unassigned").
+ *
+ * If `slot.therapist_id` is set (a pin made from jadwal harian, see
+ * AddMasterScheduleDialog), it wins over rotation as long as that therapist is
+ * still active, of the right discipline, and on duty at that time — otherwise
+ * it silently falls back to rotation instead of stranding the slot.
  */
 export function resolveTherapistForSlot(
-  slot: { discipline: RotationDiscipline; hari: string; slot_time: string },
+  slot: { discipline: RotationDiscipline; hari: string; slot_time: string; therapist_id?: string | null },
   therapists: RotationTherapist[],
   schedules: RotationSchedule[],
 ): string | null {
+  if (slot.therapist_id) {
+    const pinned = therapists.find((t) => t.therapist_id === slot.therapist_id && t.is_active && t.discipline === slot.discipline)
+    if (pinned && isTherapistOnDuty(schedules, pinned.therapist_id, slot.hari, slot.slot_time)) {
+      return pinned.therapist_id
+    }
+  }
   const candidates = therapists
     .filter((t) => t.is_active && t.discipline === slot.discipline)
     .filter((t) => isTherapistOnDuty(schedules, t.therapist_id, slot.hari, slot.slot_time))

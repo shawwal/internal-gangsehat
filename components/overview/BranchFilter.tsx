@@ -54,7 +54,13 @@ export function BranchFilter({ branches, branchId, month, year }: Props) {
         ))}
       </select>
 
-      <select className={cls} value={year} onChange={e => navigate({ year: e.target.value })}>
+      <select
+        className={`${cls} ${month === 'all' ? 'opacity-50 cursor-not-allowed' : ''}`}
+        value={year}
+        disabled={month === 'all'}
+        title={month === 'all' ? 'Semua Bulan menampilkan data sepanjang waktu, tidak dibatasi tahun' : undefined}
+        onChange={e => navigate({ year: e.target.value })}
+      >
         {[currentYear, currentYear - 1, currentYear - 2].map(y => (
           <option key={y} value={String(y)}>{y}</option>
         ))}

@@ -231,6 +231,10 @@ export default function GriyaJadwalPage() {
           initialHari={addMaster.hari}
           initialHour={addMaster.hour}
           initialDiscipline={addMaster.discipline}
+          allowTherapistPin
+          therapists={week.therapists}
+          initialTherapistId={addMaster.therapistId}
+          initialDateIso={addMaster.dateIso}
           onClose={() => setAddMaster(null)}
           onSaved={afterMutation}
         />

@@ -29,7 +29,7 @@ export interface GriyaSlot {
   id: string
   patient_id: string
   patient_name: string
-  therapist_id: string | null   // legacy — informational only, never authoritative (see lib/griyaRotation.ts)
+  therapist_id: string | null   // optional pin (set from jadwal harian) — overrides daily rotation when still valid (see lib/griyaRotation.ts)
   discipline: Discipline
   hari: Hari
   slot_time: string          // 'HH:MM'
@@ -263,9 +263,10 @@ export interface AssignSlotInput {
   package_id?: string | null
   start_date: string         // ISO
   notes?: string | null
+  therapist_id?: string | null  // pin a specific therapist instead of daily rotation (jadwal harian only)
 }
 
-export async function assignRecurringSlot(input: AssignSlotInput): Promise<{ error: string | null }> {
+export async function assignRecurringSlot(input: AssignSlotInput): Promise<{ error: string | null; id?: string }> {
   const a = await requireWrite()
   if ('error' in a) return { error: a.error }
   const { supabase, userId } = a
@@ -282,6 +283,7 @@ export async function assignRecurringSlot(input: AssignSlotInput): Promise<{ err
     package_id: input.package_id ?? null,
     start_date: input.start_date,
     notes: input.notes ?? null,
+    therapist_id: input.therapist_id ?? null,
     created_by: userId,
   }).select('id').single()
 
@@ -295,7 +297,7 @@ export async function assignRecurringSlot(input: AssignSlotInput): Promise<{ err
     resourceId: data?.id, branchId: input.branch_id,
     newValues: { hari: input.hari, slot_time: input.slot_time, discipline: input.discipline },
   })
-  return { error: null }
+  return { error: null, id: data?.id }
 }
 
 // ── Edit a MASTER slot's day/time/service (never the therapist — there isn't one) ─

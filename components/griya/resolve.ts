@@ -40,12 +40,13 @@ export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<strin
   for (const v of visitsToday) if (v.griya_slot_id) bySlot.set(v.griya_slot_id, v)
 
   // 1. recurring slots for this weekday — therapist is resolved per-day from
-  // whoever's rolling schedule covers this discipline+time, not stored on the slot.
+  // whoever's rolling schedule covers this discipline+time, unless the slot pins
+  // a specific therapist_id (set from jadwal harian), which wins when still valid.
   for (const s of week.slots) {
     if (s.hari !== hari) continue
     const v = bySlot.get(s.id) ?? null
     const resolvedTherapistId = resolveTherapistForSlot(
-      { discipline: s.discipline, hari: s.hari, slot_time: s.slot_time },
+      { discipline: s.discipline, hari: s.hari, slot_time: s.slot_time, therapist_id: s.therapist_id },
       week.therapists, week.schedules,
     )
 

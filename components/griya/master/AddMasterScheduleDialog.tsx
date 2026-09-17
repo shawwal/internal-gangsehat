@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Search, UserPlus } from 'lucide-react'
 import { addPatient } from '@/app/actions/patients'
 import { searchGriyaStudents, type GriyaStudentOption } from '@/app/actions/griyaStudents'
-import { assignRecurringSlot, type Discipline, type Hari } from '@/app/actions/griyaJadwal'
+import { assignRecurringSlot, moveSlot, type Discipline, type Hari, type GriyaTherapist } from '@/app/actions/griyaJadwal'
 import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
 import { fetchPatientPackages } from '@/app/actions/packages'
 import type { PatientPackage } from '@/types'
@@ -25,13 +25,23 @@ interface Props {
   initialDiscipline?: Discipline
   onClose: () => void
   onSaved: () => void
+  /** Only meaningful together with `therapists` — lets jadwal harian pin a specific
+   *  therapist for this recurring slot instead of leaving it to daily rotation. */
+  allowTherapistPin?: boolean
+  therapists?: GriyaTherapist[]
+  initialTherapistId?: string | null
+  /** The date currently being viewed on jadwal harian — enables "hari ini saja". */
+  initialDateIso?: string
 }
 
-// Weekly Schedule (MASTER): Day + Time + Patient + Service only — no therapist.
-// The therapist is resolved daily by rotation (lib/griyaRotation.ts). Can be opened
-// pre-filled from a grid cell (Jadwal Griya Anak / Jadwal Mingguan) or blank from
-// the Jadwal Master page itself.
-export function AddMasterScheduleDialog({ branchId, initialHari, initialHour, initialDiscipline, onClose, onSaved }: Props) {
+// Weekly Schedule (MASTER): Day + Time + Patient + Service, plus therapist ONLY
+// when opened from jadwal harian (allowTherapistPin) — otherwise the therapist is
+// resolved daily by rotation (lib/griyaRotation.ts). Can be opened pre-filled from
+// a grid cell (Jadwal Griya Anak / Jadwal Mingguan) or blank from the Jadwal Master page.
+export function AddMasterScheduleDialog({
+  branchId, initialHari, initialHour, initialDiscipline, onClose, onSaved,
+  allowTherapistPin = false, therapists = [], initialTherapistId = null, initialDateIso,
+}: Props) {
   const [tab, setTab] = useState<'search' | 'new'>('search')
   const [q, setQ] = useState('')
   const [results, setResults] = useState<GriyaStudentOption[]>([])
@@ -47,6 +57,22 @@ export function AddMasterScheduleDialog({ branchId, initialHari, initialHour, in
   const [hari, setHari] = useState<Hari>(initialHari ?? 'SENIN')
   const [hour, setHour] = useState(initialHour ?? GRIYA_HOURS[0])
   const [startDate, setStartDate] = useState(toIso(new Date()))
+  const [therapistId, setTherapistId] = useState<string>(initialTherapistId ?? '')
+  const [pinScope, setPinScope] = useState<'recurring' | 'once'>('recurring')
+
+  const therapistOptions = therapists.filter((t) => t.discipline === discipline && t.is_active)
+  useEffect(() => {
+    if (therapistId && !therapistOptions.some((t) => t.therapist_id === therapistId)) setTherapistId('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [discipline])
+
+  // "Hari ini saja" only makes sense while the day dropdown still matches the day
+  // being viewed — a pin for e.g. Wednesday can't be scoped to "today" if today's Monday.
+  const canPinOnce = !!initialDateIso && hari === (initialHari ?? hari)
+  useEffect(() => {
+    if (!canPinOnce && pinScope === 'once') setPinScope('recurring')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canPinOnce])
 
   const [serviceType, setServiceType] = useState<string>('SESI TERAPI')
   const [layanan, setLayanan] = useState<LayananRow[]>([])
@@ -112,7 +138,10 @@ export function AddMasterScheduleDialog({ branchId, initialHari, initialHour, in
     }
     if (!patientId) { setError('Pilih anak dulu.'); setSaving(false); return }
 
-    const { error: e } = await assignRecurringSlot({
+    const pinRecurring = allowTherapistPin && therapistId && pinScope === 'recurring'
+    const pinOnce = allowTherapistPin && therapistId && pinScope === 'once' && canPinOnce
+
+    const { error: e, id } = await assignRecurringSlot({
       branch_id: branchId,
       patient_id: patientId,
       discipline,
@@ -121,9 +150,17 @@ export function AddMasterScheduleDialog({ branchId, initialHari, initialHour, in
       service_type: serviceType,
       package_id: selectedPkgId,
       start_date: startDate,
+      therapist_id: pinRecurring ? therapistId : null,
     })
-    setSaving(false)
-    if (e) { setError(e); return }
+    if (e) { setSaving(false); setError(e); return }
+
+    if (pinOnce && id) {
+      const { error: moveError } = await moveSlot({ slotId: id, therapist_id: therapistId, slot_time: hour, date: initialDateIso! })
+      setSaving(false)
+      if (moveError) { setError(moveError); return }
+    } else {
+      setSaving(false)
+    }
     onSaved()
   }
 
@@ -230,6 +267,41 @@ export function AddMasterScheduleDialog({ branchId, initialHari, initialHour, in
                 </select>
               </div>
             </div>
+
+            {allowTherapistPin && (
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Terapis</label>
+                <select value={therapistId} onChange={(e) => setTherapistId(e.target.value)}
+                  className="w-full px-2.5 py-2 border border-border rounded-xl text-sm bg-input">
+                  <option value="">Auto (ikuti rotasi)</option>
+                  {therapistOptions.map((t) => (
+                    <option key={t.therapist_id} value={t.therapist_id}>{t.nickname || t.full_name}</option>
+                  ))}
+                </select>
+
+                {therapistId && (
+                  <div className="mt-2">
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Berlaku untuk</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => setPinScope('recurring')}
+                        className={`py-2 rounded-xl text-sm font-medium border cursor-pointer ${pinScope === 'recurring' ? 'bg-primary/10 text-primary border-primary/40' : 'border-border text-foreground hover:bg-muted'}`}>
+                        Rutin (semua minggu)
+                      </button>
+                      <button type="button" disabled={!canPinOnce} onClick={() => setPinScope('once')}
+                        title={canPinOnce ? undefined : 'Hanya tersedia jika Hari yang dipilih sama dengan hari yang sedang dibuka'}
+                        className={`py-2 rounded-xl text-sm font-medium border cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${pinScope === 'once' ? 'bg-primary/10 text-primary border-primary/40' : 'border-border text-foreground hover:bg-muted'}`}>
+                        Hari ini saja
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      {pinScope === 'recurring'
+                        ? 'Terapis ini akan menangani jadwal ini setiap minggu, kecuali rotasi harian menandainya cuti/tidak aktif.'
+                        : 'Jadwal tetap dibuat mengikuti rotasi harian mulai minggu berikutnya — hanya untuk hari ini yang ditangani terapis ini.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Berlaku mulai</label>
