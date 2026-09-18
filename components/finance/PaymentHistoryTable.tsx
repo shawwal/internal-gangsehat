@@ -1,13 +1,19 @@
+import { Pencil } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import type { OrderPaymentHistoryEntry } from '@/lib/internal/orderPayments'
 
 interface Props {
   history: OrderPaymentHistoryEntry[]
+  /** Admins can correct a data-entry mistake (wrong date/amount) in place —
+   *  omit to keep the read-only ledger view (e.g. for roles without payment access). */
+  onEdit?: (row: OrderPaymentHistoryEntry) => void
 }
 
-// Riwayat Pembayaran — each row is a past payment, never overwritten. Shows
-// the running balance ("sisa") after each payment, per the SALDO model.
-export function PaymentHistoryTable({ history }: Props) {
+// Riwayat Pembayaran — normally each row is a past payment, added to rather
+// than overwritten, per the SALDO model. onEdit is an escape hatch for
+// correcting a genuine data-entry mistake (wrong date/amount typed in),
+// not for recording a new payment — use addPaymentToOrder for that.
+export function PaymentHistoryTable({ history, onEdit }: Props) {
   if (history.length === 0) {
     return (
       <p className="text-xs text-muted-foreground px-1">Belum ada pembayaran tercatat.</p>
@@ -23,6 +29,7 @@ export function PaymentHistoryTable({ history }: Props) {
             <th className="text-left px-3 py-2 font-medium text-muted-foreground">Keterangan</th>
             <th className="text-right px-3 py-2 font-medium text-muted-foreground">Nominal</th>
             <th className="text-right px-3 py-2 font-medium text-muted-foreground">Sisa</th>
+            {onEdit && <th className="w-8" />}
           </tr>
         </thead>
         <tbody>
@@ -38,6 +45,18 @@ export function PaymentHistoryTable({ history }: Props) {
               <td className="px-3 py-2 text-right font-mono font-semibold text-foreground">
                 {formatCurrency(row.sisaAfter)}
               </td>
+              {onEdit && (
+                <td className="px-2 py-2 text-right">
+                  <button
+                    onClick={() => onEdit(row)}
+                    className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    title="Edit pembayaran"
+                    aria-label="Edit pembayaran"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

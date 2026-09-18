@@ -10,6 +10,7 @@ import type { PatientPackageWithPayment } from '@/app/actions/packages'
 import type { OrderPaymentHistoryEntry } from '@/lib/internal/orderPayments'
 import { SessionList } from './SessionList'
 import { PaymentHistoryTable } from '@/components/finance/PaymentHistoryTable'
+import { EditPackageTransactionDialog, type EditableTransaction } from '@/components/visits/EditPackageTransactionDialog'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import {
   OP_STATUS_BADGE, STATUS_BADGE, STATUS_LABEL, COMPLETION_BADGE, COMPLETION_LABEL, INPUT_CLS, LABEL_CLS,
@@ -74,8 +75,25 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
   const [deleteSessionError, setDeleteSessionError]   = useState<string | null>(null)
 
   const [resolvingOrder, setResolvingOrder] = useState(false)
+  const [editPaymentTarget, setEditPaymentTarget] = useState<EditableTransaction | null>(null)
 
   const canDeleteSession = !!userRole && !['therapist', 'staff', 'sport_massage_therapist'].includes(userRole)
+  const canEditPayment   = !!userRole && ['finance', 'manager', 'director', 'admin'].includes(userRole)
+
+  function openEditPayment(row: OrderPaymentHistoryEntry) {
+    setEditPaymentTarget({
+      id:                row.id,
+      category:          pkg.category,
+      harga:             row.harga,
+      discount:          row.discount,
+      amount:            row.nominal,
+      payment_method:    row.method,
+      payment_status:    row.paymentStatus,
+      penjamin:          row.penjamin,
+      description:       row.keterangan,
+      transaction_date:  row.date,
+    })
+  }
   const kodeTransaksi = extractKodeTransaksi(pkg.notes)
 
   async function handleOpenOrder() {
@@ -327,7 +345,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
           {paymentExpanded && (
             loadingPayments
               ? <p className="text-xs text-muted-foreground px-1">Memuat...</p>
-              : <PaymentHistoryTable history={paymentHistory ?? []} />
+              : <PaymentHistoryTable history={paymentHistory ?? []} onEdit={canEditPayment ? openEditPayment : undefined} />
           )}
         </>
       )}
@@ -459,6 +477,24 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
           loading={deleteSessionSaving}
           onConfirm={handleDeleteSession}
           onCancel={() => { setDeleteSessionTarget(null); setDeleteSessionError(null) }}
+        />
+      )}
+
+      {/* Edit a past payment — corrects a data-entry mistake, not a new payment */}
+      {editPaymentTarget && (
+        <EditPackageTransactionDialog
+          transaction={editPaymentTarget}
+          onClose={() => setEditPaymentTarget(null)}
+          onSuccess={async () => {
+            setEditPaymentTarget(null)
+            if (pkg.order_id) {
+              setLoadingPayments(true)
+              const summary = await fetchOrderPaymentHistory(pkg.order_id)
+              setPaymentHistory(summary.history)
+              setLoadingPayments(false)
+            }
+            onSessionChange()
+          }}
         />
       )}
     </div>

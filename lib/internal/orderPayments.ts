@@ -9,6 +9,8 @@ export interface OrderPaymentRow {
   harga: number
   discount: number
   payment_method: string | null
+  payment_status: string | null
+  penjamin: string | null
   description: string | null
 }
 
@@ -19,6 +21,10 @@ export interface OrderPaymentHistoryEntry {
   method: string | null
   keterangan: string | null
   sisaAfter: number
+  harga: number
+  discount: number
+  paymentStatus: string | null
+  penjamin: string | null
 }
 
 export type OrderPaymentStatusLabel = 'Belum Bayar' | 'DP' | 'Cicilan' | 'Lunas'
@@ -56,6 +62,10 @@ export function computeOrderPaymentSummary(rows: OrderPaymentRow[]): OrderPaymen
       method: r.payment_method,
       keterangan: r.description || (i === 0 ? 'DP' : sisaAfter === 0 ? 'Pelunasan' : 'Cicilan'),
       sisaAfter,
+      harga: r.harga,
+      discount: r.discount,
+      paymentStatus: r.payment_status,
+      penjamin: r.penjamin,
     }
   })
 

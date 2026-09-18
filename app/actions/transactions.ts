@@ -104,7 +104,7 @@ export async function getPatientOutstanding(patientId: string): Promise<Outstand
   const supabase = await createClient()
   const { data } = await supabase
     .from('transactions')
-    .select('id, transaction_date, category, harga, amount, discount, outstanding, payment_status, order_id, payment_method, description')
+    .select('id, transaction_date, category, harga, amount, discount, outstanding, payment_status, order_id, payment_method, penjamin, description')
     .eq('patient_id', patientId)
     .eq('type', 'income')
     .neq('status', 'rejected')
@@ -248,7 +248,7 @@ export async function fetchOrderPaymentHistory(orderId: string): Promise<OrderPa
   const supabase = await createClient()
   const { data } = await supabase
     .from('transactions')
-    .select('id, transaction_date, amount, harga, discount, payment_method, description')
+    .select('id, transaction_date, amount, harga, discount, payment_method, payment_status, penjamin, description')
     .eq('order_id', orderId)
     .neq('status', 'rejected')
 
