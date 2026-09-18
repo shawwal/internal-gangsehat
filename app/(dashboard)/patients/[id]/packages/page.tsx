@@ -12,6 +12,7 @@ import { usePackages }   from '@/components/packages/usePackages'
 import { ExportButton }         from '@/components/ui/ExportButton'
 import { exportToExcel }        from '@/lib/excel-export'
 import { PackageSessionWizard } from '@/components/packages/PackageSessionWizard'
+import { PaketPaymentStep }     from '@/components/jadwal/assign/paket/PaketPaymentStep'
 import type { PatientPackage }  from '@/components/packages/types'
 
 export default function PatientPackagesPage() {
@@ -23,6 +24,7 @@ export default function PatientPackagesPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [stopTarget, setStopTarget]     = useState<string | null>(null)
   const [scheduleTarget, setScheduleTarget] = useState<PatientPackage | null>(null)
+  const [paymentTarget, setPaymentTarget]   = useState<PatientPackage | null>(null)
 
   function handleExportPackages() {
     exportToExcel(packages, [
@@ -123,6 +125,7 @@ export default function PatientPackagesPage() {
               onStop={(pkgId) => setStopTarget(pkgId)}
               onSchedule={(p) => setScheduleTarget(p)}
               onSessionChange={load}
+              onRecordPayment={(p) => setPaymentTarget(p)}
             />
           ))}
         </div>
@@ -164,6 +167,20 @@ export default function PatientPackagesPage() {
           branchId={branchId}
           onClose={() => setScheduleTarget(null)}
           onSuccess={() => { setScheduleTarget(null); load() }}
+        />
+      )}
+
+      {paymentTarget && (
+        <PaketPaymentStep
+          patientId={id}
+          patientName={patientName}
+          packageId={paymentTarget.id}
+          packageName={paymentTarget.package_name}
+          jumlahSesi={paymentTarget.total_sessions}
+          hargaDefault={0}
+          category={paymentTarget.category === 'PAKET VISIT' ? 'PAKET VISIT' : 'PAKET KLINIK'}
+          branchId={paymentTarget.branch_id}
+          onDone={() => { setPaymentTarget(null); load() }}
         />
       )}
     </div>

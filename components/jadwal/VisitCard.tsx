@@ -56,7 +56,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const canManageVisit   = !!userRole && !['therapist', 'staff', 'sport_massage_therapist'].includes(userRole)
   const canRecordPayment = !!userRole && PAYMENT_ROLES.includes(userRole)
   const showPaymentItem  = canRecordPayment && visit.status === 'completed'
-  const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && !visit.package_id
+  const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && (!visit.package_id || visit.package_payment_ok === false)
   const isIncomplete     = visit.status === 'completed' && (!visit.diagnosis || !visit.treatment || (isRegioRequired(visit.service_type) && !visit.regio))
   const canRemind        = !!userRole && REMIND_ROLES.includes(userRole) && isIncomplete && !!onRemind
   const canSendWhatsApp             = !!visit.patient_phone && !!onWhatsApp

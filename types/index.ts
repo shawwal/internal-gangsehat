@@ -405,6 +405,7 @@ export interface PatientPackage {
   used_sessions: number       // computed via view: legacy + attended (kehadiran='HADIR') sessions
   remaining_sessions: number  // computed: total_sessions - used_sessions
   scheduled_sessions: number  // linked visits booked ahead but not yet attended — display only, not deducted from remaining
+  payment_ok: boolean         // legacy (order_id IS NULL) or has a confirmed transaction — gates used_sessions
   notes: string | null
   status: PackageStatus
   jenis_paket: JenisPaket | null

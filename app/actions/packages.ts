@@ -30,6 +30,7 @@ export async function fetchPatientPackages(
     used_sessions:      Number(p.used_sessions ?? 0),
     remaining_sessions: Number(p.remaining_sessions ?? p.total_sessions),
     scheduled_sessions: Number(p.scheduled_sessions ?? 0),
+    payment_ok:         p.payment_ok ?? p.order_id == null,
     notes:              p.notes ?? null,
     status:             p.status as PatientPackage['status'],
     jenis_paket:        (p.jenis_paket ?? null) as PatientPackage['jenis_paket'],

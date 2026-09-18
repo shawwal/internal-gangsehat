@@ -41,7 +41,7 @@ export interface DailyVisit {
   visit_date: string
   visit_time: string | null    // HH:MM or null
   service_type: string | null
-  package_id: string | null    // set → visit is part of a package, payment already covered
+  package_id: string | null    // set → visit is part of a package
   order_id: string | null
   chief_complaint: string | null
   diagnosis: string | null
@@ -57,6 +57,10 @@ export interface DailyVisit {
   visit_package_price: number | null
   visit_package_outstanding: number | null
   visit_transaction: VisitTransaction | null
+  // Whether the linked package's payment gate is satisfied (legacy-exempt or has
+  // a confirmed transaction) — null when package_id is null. See
+  // patient_packages_with_stats.payment_ok.
+  package_payment_ok: boolean | null
 }
 
 const PACKAGE_CATEGORIES = new Set(['PAKET VISIT', 'PAKET KLINIK'])
@@ -173,6 +177,19 @@ export async function fetchDailyVisits(
     })
   }
 
+  // Batch-fetch whether each linked package's payment gate is satisfied —
+  // legacy-exempt (migrated, no order_id) or has a confirmed transaction.
+  // See patient_packages_with_stats.payment_ok (supabase/079-...).
+  const packageIds = [...new Set(visits.map((v) => v.package_id).filter((id): id is string => !!id))]
+  const packagePaymentOkMap = new Map<string, boolean>()
+  if (packageIds.length > 0) {
+    const { data: pkgs } = await supabase
+      .from('patient_packages_with_stats')
+      .select('id, payment_ok')
+      .in('id', packageIds)
+    for (const p of pkgs ?? []) packagePaymentOkMap.set(p.id, !!p.payment_ok)
+  }
+
   return visits.map((v) => {
     const pay = payMap.get(v.id)
     const pkg = packageMap.get(v.id)
@@ -200,6 +217,7 @@ export async function fetchDailyVisits(
       visit_package_price:       pkg?.harga ?? null,
       visit_package_outstanding: pkg?.outstanding ?? null,
       visit_transaction:    latestTxnMap.get(v.id) ?? null,
+      package_payment_ok:  v.package_id ? (packagePaymentOkMap.get(v.package_id) ?? false) : null,
     }
   })
 }

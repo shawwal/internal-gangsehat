@@ -51,9 +51,10 @@ interface PackageCardProps {
   onStop:     (id: string) => void
   onSchedule?: (pkg: PatientPackage) => void
   onSessionChange: () => void
+  onRecordPayment?: (pkg: PatientPackage) => void
 }
 
-export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedule, onSessionChange }: PackageCardProps) {
+export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedule, onSessionChange, onRecordPayment }: PackageCardProps) {
   const pct = pkg.total_sessions > 0 ? (pkg.used_sessions / pkg.total_sessions) * 100 : 0
   const [expanded, setExpanded]             = useState(false)
   const [sessions, setSessions]             = useState<PackageSession[] | null>(null)
@@ -251,10 +252,25 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
             {pkg.payment.paymentStatus === 'LUNAS' ? 'Lunas' : `Sisa ${formatCurrency(pkg.payment.outstanding)}`}
           </span>
         </div>
-      ) : (
-        <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-destructive/10 text-xs text-destructive">
+      ) : pkg.payment_ok ? (
+        <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-muted/40 text-xs text-muted-foreground">
           <Wallet size={12} />
-          Belum ada pembayaran tercatat untuk paket ini
+          Paket migrasi — tidak perlu bayar ulang di sistem ini
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-destructive/10 text-xs text-destructive">
+          <span className="flex items-center gap-1.5">
+            <Wallet size={12} />
+            Belum ada pembayaran tercatat untuk paket ini
+          </span>
+          {onRecordPayment && (
+            <button
+              onClick={() => onRecordPayment(pkg)}
+              className="shrink-0 font-medium px-2 py-1 rounded-lg bg-destructive/15 hover:bg-destructive/25 transition-colors"
+            >
+              Catat Pembayaran
+            </button>
+          )}
         </div>
       )}
 
