@@ -358,7 +358,7 @@ export const navigation: NavItem[] = [
     label: 'Target',
     href: '/my-targets',
     icon: 'Target',
-    roles: ['finance', 'hr', 'marketing', 'staff', 'therapist', 'manager'],
+    roles: ['finance', 'hr', 'marketing', 'staff', 'manager'],
     group: 'hr',
   },
   {
@@ -511,6 +511,14 @@ export const navigation: NavItem[] = [
     href: '/griya-anak/jadwal-mingguan',
     icon: 'CalendarRange',
     roles: ['director', 'manager', 'admin', 'therapist'],
+    group: 'griya',
+  },
+  {
+    key: 'griya-siswa-saya',
+    label: 'Siswa Saya',
+    href: '/griya-anak/siswa-saya',
+    icon: 'Users',
+    roles: ['therapist'],
     group: 'griya',
   },
   {
