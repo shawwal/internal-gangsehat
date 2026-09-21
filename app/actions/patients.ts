@@ -542,6 +542,9 @@ export async function updatePatient(
     .select('gender, blood_type, allergies, medical_notes, no_rm, pekerjaan, agama, hobi, kelurahan, kecamatan, kabupaten_kota, provinsi, nama_ibu, pekerjaan_ibu, nama_ayah, pekerjaan_ayah, sumber')
     .eq('id', id)
     .single()
+  // Optional fields arrive as '' from the form; the DB has CHECK/UNIQUE constraints
+  // (blood_type, no_rm, ...) that reject '' — store missing values as NULL.
+  const nz = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null)
   const enc = encryptPatientPII({
     name:             input.name,
     phone:            input.phone,
@@ -562,24 +565,24 @@ export async function updatePatient(
     phone_hash:                  hashPhone(input.phone),
     name_normalized:             input.name.trim().toLowerCase(),
     gender:        input.gender        ?? null,
-    blood_type:    input.blood_type    ?? null,
+    blood_type:    nz(input.blood_type),
     // allergies is text[] in DB — store as single-element array
-    allergies:     input.allergies ? [input.allergies] : null,
-    medical_notes: input.medical_notes ?? null,
-    no_rm:         input.no_rm          ?? null,
-    pekerjaan:     input.pekerjaan      ?? null,
-    agama:         input.agama          ?? null,
-    hobi:          input.hobi           ?? null,
-    kelurahan:     input.kelurahan      ?? null,
-    kecamatan:     input.kecamatan      ?? null,
-    kabupaten_kota: input.kabupaten_kota ?? null,
-    provinsi:      input.provinsi       ?? null,
-    keluhan:       input.keluhan        ?? null,
-    nama_ibu:      input.nama_ibu       ?? null,
-    pekerjaan_ibu: input.pekerjaan_ibu  ?? null,
-    nama_ayah:     input.nama_ayah      ?? null,
-    pekerjaan_ayah: input.pekerjaan_ayah ?? null,
-    sumber:        input.sumber         ?? null,
+    allergies:     nz(input.allergies) ? [nz(input.allergies) as string] : null,
+    medical_notes: nz(input.medical_notes),
+    no_rm:         nz(input.no_rm),
+    pekerjaan:     nz(input.pekerjaan),
+    agama:         nz(input.agama),
+    hobi:          nz(input.hobi),
+    kelurahan:     nz(input.kelurahan),
+    kecamatan:     nz(input.kecamatan),
+    kabupaten_kota: nz(input.kabupaten_kota),
+    provinsi:      nz(input.provinsi),
+    keluhan:       nz(input.keluhan),
+    nama_ibu:      nz(input.nama_ibu),
+    pekerjaan_ibu: nz(input.pekerjaan_ibu),
+    nama_ayah:     nz(input.nama_ayah),
+    pekerjaan_ayah: nz(input.pekerjaan_ayah),
+    sumber:        nz(input.sumber),
   }).eq('id', id).select('id')
 
   if (!error && (!updated || updated.length === 0)) {
