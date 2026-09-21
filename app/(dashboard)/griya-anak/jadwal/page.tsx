@@ -189,7 +189,7 @@ export default function GriyaJadwalPage() {
           <h1 className="text-xl font-semibold text-foreground">Jadwal Griya Anak</h1>
           <p className="text-sm text-muted-foreground">{HARI_LABEL[hari]}, {selectedDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => reload()} className="p-2 rounded-xl border border-border hover:bg-muted cursor-pointer text-muted-foreground">
             <RefreshCw size={14} />
           </button>

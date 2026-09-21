@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
@@ -164,7 +165,7 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
   const [therapistsRes, slotsRes, visitsRes, schedulesRes] = await Promise.all([
     supabase
       .from('griya_therapists')
-      .select('id, therapist_id, discipline, display_order, is_active, internal_profiles!therapist_id(full_name, nickname, avatar_url)')
+      .select('id, therapist_id, discipline, display_order, is_active')
       .eq('branch_id', branchId)
       .order('display_order', { ascending: true }),
     supabase
@@ -218,8 +219,23 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
     }
   }
 
-  const therapists: GriyaTherapist[] = ((therapistsRes.data ?? []) as Record<string, unknown>[]).map((t) => {
-    const p = t.internal_profiles as { full_name?: string; nickname?: string | null; avatar_url?: string | null } | null
+  // Therapist/staff roles can only SELECT their own internal_profiles row (RLS), so an
+  // embedded join showed every other column as a blank "Terapis". The roster itself was
+  // already scoped by RLS on griya_therapists, so read just these display fields with the
+  // admin client for exactly those ids.
+  const therapistRows = (therapistsRes.data ?? []) as Record<string, unknown>[]
+  type ProfileLite = { full_name?: string; nickname?: string | null; avatar_url?: string | null }
+  const profileMap = new Map<string, ProfileLite>()
+  if (therapistRows.length > 0) {
+    const { data: profs } = await createAdminClient()
+      .from('internal_profiles')
+      .select('id, full_name, nickname, avatar_url')
+      .in('id', therapistRows.map((t) => t.therapist_id as string))
+    for (const pr of profs ?? []) profileMap.set(pr.id, pr)
+  }
+
+  const therapists: GriyaTherapist[] = therapistRows.map((t) => {
+    const p = profileMap.get(t.therapist_id as string) ?? null
     return {
       id: t.id as string,
       therapist_id: t.therapist_id as string,

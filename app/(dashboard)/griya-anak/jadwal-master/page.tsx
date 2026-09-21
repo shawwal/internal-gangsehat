@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Plus, Pencil, GraduationCap, Trash2 } from 'lucide-react'
+import { Plus, Pencil, GraduationCap, Trash2, Search, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveGriyaBranchId, fetchGriyaMasterSchedule, removeSlot, type GriyaSlot } from '@/app/actions/griyaJadwal'
 import { HARI_ORDER, HARI_LABEL, DISCIPLINE_LABEL, toIso } from '@/components/griya/constants'
@@ -22,6 +22,11 @@ export default function GriyaJadwalMasterPage() {
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<GriyaSlot | null>(null)
   const [ending, setEnding] = useState<GriyaSlot | null>(null)
+
+  const [search, setSearch] = useState('')
+  const [hariFilter, setHariFilter] = useState('')
+  const [layananFilter, setLayananFilter] = useState('')
+  const [kategoriFilter, setKategoriFilter] = useState('')
 
   useEffect(() => {
     (async () => {
@@ -61,7 +66,18 @@ export default function GriyaJadwalMasterPage() {
   if (branchId === undefined || enabled === null) return <div className="text-sm text-muted-foreground">Memuat...</div>
   if (!branchId || !enabled) return <div className="glass-card p-8 text-sm text-muted-foreground">Fitur Griya Anak belum aktif untuk cabang ini.</div>
 
-  const grouped = HARI_ORDER.map((h) => ({ hari: h, rows: rows.filter((r) => r.hari === h).sort((a, b) => a.slot_time.localeCompare(b.slot_time)) }))
+  const term = search.trim().toLowerCase()
+  const kategoriOptions = Array.from(new Set(rows.map((r) => r.service_type).filter((v): v is string => !!v))).sort()
+  const filtered = rows.filter((r) =>
+    (!term || r.patient_name.toLowerCase().includes(term)) &&
+    (!hariFilter || r.hari === hariFilter) &&
+    (!layananFilter || r.discipline === layananFilter) &&
+    (!kategoriFilter || r.service_type === kategoriFilter))
+  const hasFilter = !!(term || hariFilter || layananFilter || kategoriFilter)
+  function resetFilters() { setSearch(''); setHariFilter(''); setLayananFilter(''); setKategoriFilter('') }
+  const selectCls = 'px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground cursor-pointer'
+
+  const grouped = HARI_ORDER.map((h) => ({ hari: h, rows: filtered.filter((r) => r.hari === h).sort((a, b) => a.slot_time.localeCompare(b.slot_time)) }))
 
   return (
     <div className="space-y-4">
@@ -78,10 +94,38 @@ export default function GriyaJadwalMasterPage() {
         )}
       </div>
 
+      <div className="glass-card p-3 flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama siswa..."
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground" />
+        </div>
+        <select value={hariFilter} onChange={(e) => setHariFilter(e.target.value)} className={selectCls}>
+          <option value="">Semua hari</option>
+          {HARI_ORDER.map((h) => <option key={h} value={h}>{HARI_LABEL[h]}</option>)}
+        </select>
+        <select value={layananFilter} onChange={(e) => setLayananFilter(e.target.value)} className={selectCls}>
+          <option value="">Semua layanan</option>
+          {Object.entries(DISCIPLINE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <select value={kategoriFilter} onChange={(e) => setKategoriFilter(e.target.value)} className={selectCls}>
+          <option value="">Semua kategori</option>
+          {kategoriOptions.map((k) => <option key={k} value={k}>{k}</option>)}
+        </select>
+        {hasFilter && (
+          <button onClick={resetFilters} className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-muted cursor-pointer">
+            <X size={14} /> Reset
+          </button>
+        )}
+        {!loading && <span className="text-xs text-muted-foreground ml-auto">{filtered.length} dari {rows.length} jadwal</span>}
+      </div>
+
       {loading ? (
         <div className="glass-card p-8 text-center text-sm text-muted-foreground">Memuat...</div>
       ) : rows.length === 0 ? (
         <div className="glass-card p-8 text-center text-sm text-muted-foreground">Belum ada jadwal master.</div>
+      ) : filtered.length === 0 ? (
+        <div className="glass-card p-8 text-center text-sm text-muted-foreground">Tidak ada jadwal yang cocok dengan pencarian/filter.</div>
       ) : (
         <div className="space-y-4">
           {grouped.filter((g) => g.rows.length > 0).map((g) => (

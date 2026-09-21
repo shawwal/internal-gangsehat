@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { UserX } from 'lucide-react'
 import type { GriyaWeek, GriyaTherapist, Hari } from '@/app/actions/griyaJadwal'
@@ -26,6 +26,14 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
   const { cells, unassigned } = resolveDay(week, dateIso)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [detailTherapist, setDetailTherapist] = useState<GriyaTherapist | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    const apply = () => setIsMobile(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
 
   // group columns by discipline (in column order)
   const groups: { discipline: string; cols: typeof cols }[] = []
@@ -60,7 +68,9 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
     )
   }
 
-  const colWidth = 120
+  // Narrower columns on phones so more therapists fit; scrolls horizontally either way.
+  const colWidth = isMobile ? 96 : 120
+  const gutter = isMobile ? 44 : 64
 
   return (
     <>
@@ -83,11 +93,11 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
       </div>
     )}
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="glass-card overflow-auto" style={{ maxHeight: 'calc(100vh - 16rem)' }}>
-        <div style={{ minWidth: 64 + cols.length * colWidth }}>
+      <div className="glass-card overflow-auto" style={{ maxHeight: 'calc(100dvh - 14rem)' }}>
+        <div style={{ minWidth: gutter + cols.length * colWidth }}>
           {/* discipline band */}
           <div className="flex sticky top-0 z-20 bg-background">
-            <div className="w-16 shrink-0" />
+            <div style={{ width: gutter }} className="shrink-0 sticky left-0 z-10 bg-background" />
             {groups.map((g, gi) => {
               const dc = DISCIPLINE_COLOR[g.discipline as keyof typeof DISCIPLINE_COLOR]
               return (
@@ -100,7 +110,7 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
           </div>
           {/* therapist names */}
           <div className="flex sticky top-[26px] z-20 bg-background border-b border-border">
-            <div className="w-16 shrink-0 flex items-center justify-center text-[10px] font-mono text-muted-foreground">
+            <div style={{ width: gutter }} className="shrink-0 sticky left-0 z-10 bg-background flex items-center justify-center text-[10px] font-mono text-muted-foreground">
               {HARI_LABEL[hari].slice(0, 3)}
             </div>
             {cols.map((c) => {
@@ -114,9 +124,9 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
                     aria-label={`Lihat detail ${c.nickname || c.full_name}`}
                     className="cursor-pointer rounded-full transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
                   >
-                    <TherapistAvatar name={c.nickname || c.full_name} url={c.avatar_url} discipline={c.discipline} size={28} />
+                    <TherapistAvatar name={c.nickname || c.full_name} url={c.avatar_url} discipline={c.discipline} size={isMobile ? 32 : 28} />
                   </button>
-                  <span className="text-center text-[11px] font-semibold text-foreground leading-tight truncate max-w-full">
+                  <span className="text-center text-[11px] font-semibold text-foreground leading-tight line-clamp-2 break-words max-w-full">
                     {c.nickname || c.full_name}
                   </span>
                 </div>
@@ -126,7 +136,7 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
           {/* hour rows */}
           {GRIYA_HOURS.map((hour) => (
             <div key={hour} className="flex items-start border-b border-border/40">
-              <div className="w-16 shrink-0 flex items-start justify-end pr-2 pt-1.5 text-[12px] font-mono text-muted-foreground">
+              <div style={{ width: gutter }} className="shrink-0 sticky left-0 z-10 bg-background flex items-start justify-end pr-1.5 sm:pr-2 pt-1.5 text-[11px] sm:text-[12px] font-mono text-muted-foreground">
                 {hour}
               </div>
               {cols.map((c) => {
