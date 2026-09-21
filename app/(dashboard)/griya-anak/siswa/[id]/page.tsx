@@ -71,6 +71,7 @@ export default function GriyaSiswaDetailPage() {
   }, [id])
 
   const canEdit = !!role && ['director', 'manager', 'admin'].includes(role)
+  const canExamine = canEdit || role === 'therapist'
 
   if (loading) return <div className="text-sm text-muted-foreground">Memuat...</div>
   if (!patient) return <div className="glass-card p-8 text-sm text-muted-foreground">Pasien tidak ditemukan.</div>
@@ -287,7 +288,7 @@ export default function GriyaSiswaDetailPage() {
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Terapis</th>
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground">Kehadiran</th>
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell">Catatan</th>
-                  {canEdit && <th className="px-4 py-2" />}
+                  {canExamine && <th className="px-4 py-2" />}
                 </tr>
               </thead>
               <tbody>
@@ -300,18 +301,20 @@ export default function GriyaSiswaDetailPage() {
                       <td className="px-4 py-2 text-muted-foreground hidden md:table-cell">{v.therapist_name ?? '—'}</td>
                       <td className="px-4 py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${b.c}`}>{b.t}</span></td>
                       <td className="px-4 py-2 text-muted-foreground hidden lg:table-cell max-w-xs truncate">{v.notes ?? ''}</td>
-                      {canEdit && (
+                      {canExamine && (
                         <td className="px-4 py-2 text-right whitespace-nowrap">
                           {getGriyaVisitFormRoute(v.service_type) && (
                             <button onClick={() => handleExamine(v)}
-                              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground cursor-pointer" title="Periksa">
-                              <Stethoscope size={13} />
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-muted text-muted-foreground text-xs cursor-pointer" title="Rekam Medis">
+                              <Stethoscope size={13} /> Rekam Medis
                             </button>
                           )}
-                          <button onClick={() => setEditVisitId(v.id)}
-                            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground cursor-pointer" title="Ubah kunjungan">
-                            <Pencil size={13} />
-                          </button>
+                          {canEdit && (
+                            <button onClick={() => setEditVisitId(v.id)}
+                              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground cursor-pointer" title="Ubah kunjungan">
+                              <Pencil size={13} />
+                            </button>
+                          )}
                         </td>
                       )}
                     </tr>
