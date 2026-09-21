@@ -1,12 +1,13 @@
 import type { NavItem } from '@/config/navigation'
 import type { UserRole } from '@/types'
 
-export const GRIYA_THERAPIST_HOME = '/griya-anak/jadwal'
+export const GRIYA_THERAPIST_HOME = '/griya-anak/dashboard'
 
 // Nav keys a therapist of a Griya Anak-enabled branch may see/reach. Everything
 // else (clinic patients, home visit, rekam medis, jadwal harian, ...) is unrelated
 // to their work and is hidden and blocked.
 const GRIYA_THERAPIST_NAV_KEYS = new Set([
+  'griya-dashboard',
   'griya-jadwal',
   'griya-jadwal-master',
   'griya-jadwal-mingguan',
