@@ -36,11 +36,16 @@ export function Header({ fullName, email, avatarUrl, onToggleSidebar }: Props) {
   }, [])
 
   useEffect(() => {
-    createClient()
-      .from('user_notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_read', false)
-      .then(({ count }) => setUnreadCount(count ?? 0))
+    function loadUnread() {
+      createClient()
+        .from('user_notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_read', false)
+        .then(({ count }) => setUnreadCount(count ?? 0))
+    }
+    loadUnread()
+    window.addEventListener('notifications-changed', loadUnread)
+    return () => window.removeEventListener('notifications-changed', loadUnread)
   }, [])
 
   function handleRefresh() {

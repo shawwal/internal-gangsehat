@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Bell, BellOff } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Bell, BellOff, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { UserNotification } from '@/types'
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<UserNotification[]>([])
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   async function load() {
     const { data } = await createClient()
@@ -24,11 +26,18 @@ export default function NotificationsPage() {
   async function markRead(id: string) {
     await createClient().from('user_notifications').update({ is_read: true }).eq('id', id)
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n))
+    window.dispatchEvent(new Event('notifications-changed'))
+  }
+
+  async function open(n: UserNotification) {
+    if (!n.is_read) await markRead(n.id)
+    if (n.link) router.push(n.link)
   }
 
   async function markAllRead() {
     await createClient().from('user_notifications').update({ is_read: true }).eq('is_read', false)
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+    window.dispatchEvent(new Event('notifications-changed'))
   }
 
   const unread = notifications.filter((n) => !n.is_read).length
@@ -71,7 +80,7 @@ export default function NotificationsPage() {
           {notifications.map((n) => (
             <button
               key={n.id}
-              onClick={() => !n.is_read && markRead(n.id)}
+              onClick={() => open(n)}
               className={`w-full text-left bg-card rounded-2xl border p-4 transition-colors hover:bg-muted/40 ${
                 n.is_read ? 'border-border opacity-70' : 'border-primary/30'
               }`}
@@ -88,8 +97,9 @@ export default function NotificationsPage() {
                       {n.title}
                     </p>
                     {!n.is_read && <span className="w-2 h-2 bg-primary rounded-full shrink-0" />}
+                    {n.link && <ChevronRight size={14} className="text-muted-foreground shrink-0" />}
                   </div>
-                  {n.message && <p className="text-xs text-muted-foreground mt-0.5 truncate">{n.message}</p>}
+                  {n.message && <p className="text-xs text-muted-foreground mt-0.5">{n.message.replace(/^\[[0-9a-f-]{36}\]\s*/i, '')}</p>}
                   <p className="text-xs text-muted-foreground mt-1">{timeAgo(n.created_at)}</p>
                 </div>
               </div>

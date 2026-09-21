@@ -139,13 +139,31 @@ export async function sendGriyaRecordReminders(
     const rm = items.length - ta
     const parts = [ta > 0 ? `${ta} Terapi Awal` : '', rm > 0 ? `${rm} rekam medis` : ''].filter(Boolean).join(' dan ')
     const names = [...new Set(items.map((i) => i.patientName))].slice(0, 4).join(', ')
+    // One item → open it directly; several → the therapist dashboard's "Belum Diisi" list.
+    const only = items.length === 1 ? items[0] : null
+    const link = only
+      ? (only.kind === 'terapi-awal'
+          ? `/griya-anak/siswa/${only.patientId}/terapi-awal/${only.visitId}`
+          : `/griya-anak/siswa/${only.patientId}/rekam-medis`)
+      : '/griya-anak/dashboard#belum-diisi'
     await admin.from('user_notifications').insert({
       user_id: uid,
       title: REMINDER_TITLE,
       message: `Anda memiliki ${parts} yang belum diselesaikan: ${names}${items.length > 4 ? ', dll.' : ''}`,
-      link: '/griya-anak/dashboard',
+      link,
     })
     sent++
   }
   return { sent, skipped, error: null }
+}
+
+/** The logged-in therapist's own unfinished Terapi Awal / rekam medis (today + prior 7 days). */
+export async function fetchMyGriyaPendingRecords(dateIso: string): Promise<PendingRecord[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const branchId = await resolveGriyaBranchId()
+  if (!branchId) return []
+  const { pending } = await collect(supabase, branchId, addDaysIso(dateIso, -BACKLOG_DAYS), dateIso)
+  return pending.filter((p) => p.staffId === user.id)
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarCheck, CheckCircle2, Clock, ExternalLink, RefreshCw, Stethoscope, Users, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useGriyaJadwal } from '@/hooks/useGriyaJadwal'
@@ -10,6 +10,8 @@ import { DISCIPLINE_COLOR, DISCIPLINE_LABEL, HARI_LABEL, hariOf, toIso } from '@
 import { resolveDay, type CellState, type ResolvedCell } from '@/components/griya/resolve'
 import { SessionNoteModal } from '@/components/griya/SessionNoteModal'
 import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
+import { fetchMyGriyaPendingRecords, type PendingRecord } from '@/app/actions/griyaAdminDashboard'
+import Link from 'next/link'
 
 const STATE_BADGE: Record<CellState, { label: string; cls: string }> = {
   scheduled:    { label: 'Terjadwal',   cls: 'bg-blue-500/15 text-blue-400 border-blue-500/25' },
@@ -25,6 +27,7 @@ export default function GriyaTherapistDashboardPage() {
   const { showToast } = useToast()
   const [userId, setUserId] = useState<string | null>(null)
   const [note, setNote] = useState<ResolvedCell | null>(null)
+  const [pending, setPending] = useState<PendingRecord[]>([])
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null))
@@ -32,6 +35,17 @@ export default function GriyaTherapistDashboardPage() {
 
   const dateIso = toIso(selectedDate)
   const hari = hariOf(selectedDate)
+  const todayIso = toIso(new Date())
+
+  const loadPending = useCallback(async () => {
+    setPending(await fetchMyGriyaPendingRecords(todayIso))
+  }, [todayIso])
+  useEffect(() => { loadPending() }, [loadPending])
+  useEffect(() => {
+    if (pending.length > 0 && window.location.hash === '#belum-diisi') {
+      document.getElementById('belum-diisi')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [pending.length])
 
   const me = useMemo(() => week.therapists.find((t) => t.therapist_id === userId) ?? null, [week.therapists, userId])
 
@@ -91,6 +105,34 @@ export default function GriyaTherapistDashboardPage() {
           <RefreshCw size={14} />
         </button>
       </div>
+
+      {pending.length > 0 && (
+        <div id="belum-diisi" className="glass-card border border-destructive/30 overflow-hidden scroll-mt-20">
+          <div className="px-4 py-3 border-b border-border bg-destructive/5">
+            <h2 className="text-sm font-semibold text-destructive">{pending.length} rekam medis / Terapi Awal belum diselesaikan</h2>
+            <p className="text-xs text-muted-foreground">Anak yang sudah hadir (7 hari terakhir) — mohon segera dilengkapi.</p>
+          </div>
+          <div className="divide-y divide-border">
+            {pending.map((p) => (
+              <div key={p.visitId} className="px-4 py-2.5 flex items-center gap-3 flex-wrap text-sm">
+                <span className="w-16 text-xs text-muted-foreground shrink-0">
+                  {new Date(p.visitDate + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
+                </span>
+                <span className="font-medium text-foreground flex-1 min-w-[140px] truncate">{p.patientName}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground">
+                  {p.kind === 'terapi-awal' ? 'Terapi Awal' : 'Rekam Medis'} · {p.state === 'draft' ? 'Draf' : 'Belum diisi'}
+                </span>
+                <Link
+                  href={p.kind === 'terapi-awal' ? `/griya-anak/siswa/${p.patientId}/terapi-awal/${p.visitId}` : `/griya-anak/siswa/${p.patientId}/rekam-medis`}
+                  className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90"
+                >
+                  Isi Sekarang
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <DateNav selectedDate={selectedDate} today={today} onSelect={setSelectedDate} />
 
@@ -174,7 +216,7 @@ export default function GriyaTherapistDashboardPage() {
             griyaSlotId: note.visit.griya_slot_id,
           }}
           onClose={() => setNote(null)}
-          onSaved={() => { setNote(null); showToast('Rekam periksa disimpan', 'success'); reload({ silent: true }) }}
+          onSaved={() => { setNote(null); showToast('Rekam periksa disimpan', 'success'); reload({ silent: true }); loadPending() }}
         />
       )}
     </div>
