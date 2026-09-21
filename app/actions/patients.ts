@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII, encryptPatientPII, hashPhone } from '@/lib/encryption'
 import { normalizeBirthDate } from '@/lib/dates'
 import { logActivity } from '@/lib/activityLog'
@@ -503,11 +504,17 @@ export interface UpdatePatientInput {
   sumber?: string
 }
 
+const PATIENT_EDIT_ROLES = ['director', 'manager', 'admin', 'hr']
+
 export async function updatePatient(
   id: string,
   input: UpdatePatientInput,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
+  const { data: { user: authUser } } = await supabase.auth.getUser()
+  if (!authUser) return { error: 'Tidak terautentikasi' }
+  const { data: me } = await supabase.from('internal_profiles').select('role').eq('id', authUser.id).single()
+  if (!me || !PATIENT_EDIT_ROLES.includes(me.role)) return { error: 'Tidak memiliki akses untuk mengubah data pasien.' }
   const { data: oldRow } = await supabase
     .from('patients')
     .select('gender, blood_type, allergies, medical_notes, no_rm, pekerjaan, agama, hobi, kelurahan, kecamatan, kabupaten_kota, provinsi, nama_ibu, pekerjaan_ibu, nama_ayah, pekerjaan_ayah, sumber')
@@ -521,7 +528,9 @@ export async function updatePatient(
     idNumber:         input.idNumber,
     emergencyContact: input.emergencyContact,
   })
-  const { data: updated, error } = await supabase.from('patients').update({
+  // Role is verified above; write with the service client so the edit doesn't
+  // silently no-op when the patients UPDATE RLS policy (migration 072) is missing.
+  const { data: updated, error } = await createAdminClient().from('patients').update({
     encrypted_name:              enc.encrypted_name,
     encrypted_phone:             enc.encrypted_phone,
     encrypted_address:           enc.encrypted_address           ?? null,
