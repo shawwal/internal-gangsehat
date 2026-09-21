@@ -474,6 +474,14 @@ export const navigation: NavItem[] = [
   // Griya Anak — branch-scoped feature set (nav-hidden unless
   // branch_griya_settings.enabled for the caller's branch; see Sidebar.tsx)
   {
+    key: 'griya-ringkasan',
+    label: 'Dashboard Griya Anak',
+    href: '/griya-anak/ringkasan',
+    icon: 'LayoutDashboard',
+    roles: ['director', 'manager', 'admin'],
+    group: 'griya',
+  },
+  {
     key: 'griya-dashboard',
     label: 'Dashboard Terapis',
     href: '/griya-anak/dashboard',
