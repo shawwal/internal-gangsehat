@@ -127,6 +127,28 @@ export async function searchPatients(term: string): Promise<PatientPlain[]> {
   return (data ?? []).map((row) => toPlain(row as unknown as Record<string, unknown>))
 }
 
+export async function fetchPatientNames(ids: string[]): Promise<Record<string, string>> {
+  const unique = [...new Set(ids.filter(Boolean))]
+  if (!unique.length) return {}
+  const supabase = await createClient()
+  const out: Record<string, string> = {}
+  const CHUNK = 100
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const { data } = await supabase
+      .from('patients')
+      .select('id, encrypted_name, encrypted_phone')
+      .in('id', unique.slice(i, i + CHUNK))
+    for (const row of data ?? []) {
+      const { name } = decryptPatientPII({
+        encrypted_name: row.encrypted_name,
+        encrypted_phone: row.encrypted_phone ?? '',
+      })
+      if (name) out[row.id] = name
+    }
+  }
+  return out
+}
+
 export interface PatientsPageParams {
   page: number
   pageSize: number

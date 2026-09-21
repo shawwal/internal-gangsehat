@@ -5,7 +5,7 @@ import { Plus, CheckCircle, XCircle, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionType, PaymentMethod, PaymentDetailStatus } from '@/types'
 import { createTransactionManual } from '@/app/actions/transactions'
-import { searchPatients, type PatientPlain } from '@/app/actions/patients'
+import { searchPatients, fetchPatientNames, type PatientPlain } from '@/app/actions/patients'
 import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
 import { fetchExpenseCategories, fetchBranchAdmins, type ExpenseCategoryRow, type AdminOption } from '@/app/actions/accounting'
 import { todayJakartaISO } from '@/lib/utils'
@@ -58,6 +58,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
 
   const [patientQuery, setPatientQuery] = useState('')
   const [patientResults, setPatientResults] = useState<PatientPlain[]>([])
+  const [patientNames, setPatientNames] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -72,8 +73,11 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
       .order('transaction_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(500)
-    setRows((data ?? []) as Transaction[])
+    const list = (data ?? []) as Transaction[]
+    setRows(list)
     setLoading(false)
+    const ids = list.map((t) => t.patient_id).filter((id): id is string => !!id)
+    if (ids.length) fetchPatientNames(ids).then((names) => setPatientNames((prev) => ({ ...prev, ...names })))
   }, [branchId, type, dateFrom, dateToExclusive])
 
   useEffect(() => { load() }, [load])
@@ -176,6 +180,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
 
   const COLS: ExportColumn<Transaction>[] = [
     { header: 'Tanggal', value: (r) => r.transaction_date },
+    ...(isIncome ? [{ header: 'Pasien', value: (r: Transaction) => (r.patient_id && patientNames[r.patient_id]) || '' }] : []),
     { header: 'Kategori', value: (r) => r.category },
     { header: 'Harga', value: (r) => r.harga ?? 0 },
     { header: 'Diskon', value: (r) => r.discount ?? 0 },
@@ -201,12 +206,13 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
       ],
       columns: [
         { header: 'Tanggal', value: (r: Transaction) => r.transaction_date },
+        ...(isIncome ? [{ header: 'Pasien', value: (r: Transaction) => (r.patient_id && patientNames[r.patient_id]) || '—' }] : []),
         { header: 'Kategori', value: (r: Transaction) => r.category },
         { header: 'Total', align: 'right', value: (r: Transaction) => formatRp(r.amount) },
         { header: 'Status', align: 'center', value: (r: Transaction) => r.status },
       ],
       rows,
-      totalsRow: ['', 'Total', formatRp(rows.reduce((s, r) => s + Number(r.amount), 0)), ''],
+      totalsRow: [...(isIncome ? ['', ''] : ['']), 'Total', formatRp(rows.reduce((s, r) => s + Number(r.amount), 0)), ''],
     })
   }
 
@@ -230,6 +236,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tanggal</th>
+                {isIncome && <th className="text-left px-4 py-3 font-medium text-muted-foreground">Pasien</th>}
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">{isIncome ? 'Layanan' : 'Kategori'}</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Bayar Via</th>
@@ -241,6 +248,11 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
                   <td className="px-4 py-3 text-muted-foreground">{r.transaction_date}</td>
+                  {isIncome && (
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {r.patient_id ? (patientNames[r.patient_id] ?? <span className="text-muted-foreground font-normal">...</span>) : <span className="text-muted-foreground font-normal">—</span>}
+                    </td>
+                  )}
                   <td className="px-4 py-3">
                     <p className="font-medium text-foreground">{isIncome && r.description ? r.description : r.category}</p>
                     {isIncome && r.description && <p className="text-xs text-muted-foreground">{r.category}</p>}
