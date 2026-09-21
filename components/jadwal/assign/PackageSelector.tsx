@@ -60,20 +60,6 @@ export function PackageSelector({ packages, pkgLoading, selectedPkgId, setSelect
           </div>
         </div>
       )}
-
-      {/* Unpaid package warning */}
-      {selectedPkg && !selectedPkg.payment_ok && (
-        <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-destructive/10 border border-destructive/30 animate-in fade-in duration-200">
-          <AlertTriangle size={13} className="text-destructive shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-semibold text-destructive">Belum ada pembayaran tercatat</p>
-            <p className="text-xs text-destructive/80 mt-0.5">
-              Paket &quot;{selectedPkg.package_name}&quot; belum punya pembayaran tercatat — sesi baru tetap bisa dijadwalkan,
-              tapi catat pembayarannya di halaman Paket Terapi pasien agar sesi terhitung terpakai.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
