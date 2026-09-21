@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { navigation } from '@/config/navigation'
 import { buildOverrideMap, isPathAllowed } from '@/lib/pagePermissions'
+import { GRIYA_THERAPIST_HOME, isGriyaTherapist, isPathAllowedForGriyaTherapist } from '@/lib/griyaTherapist'
 import type { UserRole } from '@/types'
 
 export async function proxy(request: NextRequest) {
@@ -48,9 +49,17 @@ export async function proxy(request: NextRequest) {
   if (user && (pathname === '/login' || pathname === '/register' || pathname === '/' || pathname === '/dashboard')) {
     const { data: profile } = await supabase
       .from('internal_profiles')
-      .select('role')
+      .select('role, branch_id')
       .eq('id', user.id)
       .single()
+
+    if (profile?.role === 'therapist' && profile.branch_id) {
+      const { data: griya } = await supabase
+        .from('branch_griya_settings').select('enabled').eq('branch_id', profile.branch_id).maybeSingle()
+      if (isGriyaTherapist(profile.role, griya?.enabled ?? false)) {
+        return NextResponse.redirect(new URL(GRIYA_THERAPIST_HOME, request.url))
+      }
+    }
 
     const roleHome: Record<string, string> = {
       director:   '/director/overview',
@@ -72,7 +81,7 @@ export async function proxy(request: NextRequest) {
   if (user && !isPublic) {
     const { data: profile } = await supabase
       .from('internal_profiles')
-      .select('role')
+      .select('role, branch_id')
       .eq('id', user.id)
       .single()
 
@@ -87,6 +96,16 @@ export async function proxy(request: NextRequest) {
     // missing profile row is left alone here (handled by the dashboard
     // layout's transient fallback) rather than redirected, matching prior
     // behavior.
+    // Therapists of a Griya Anak branch only get the Griya Anak workspace.
+    if (profile?.role === 'therapist' && profile.branch_id) {
+      const { data: griya } = await supabase
+        .from('branch_griya_settings').select('enabled').eq('branch_id', profile.branch_id).maybeSingle()
+      if (isGriyaTherapist(profile.role, griya?.enabled ?? false) &&
+          !isPathAllowedForGriyaTherapist(pathname, navigation)) {
+        return NextResponse.redirect(new URL(GRIYA_THERAPIST_HOME, request.url))
+      }
+    }
+
     if (profile && profile.role !== 'non-staff') {
       const { data: overrideRows } = await supabase
         .from('role_page_permissions')

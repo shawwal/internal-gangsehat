@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { navigation } from '@/config/navigation'
 import { allowedNavKeysForRole, buildOverrideMap } from '@/lib/pagePermissions'
+import { filterNavKeysForGriyaTherapist, isGriyaTherapist } from '@/lib/griyaTherapist'
 import type { UserRole } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -37,7 +38,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .from('role_page_permissions')
     .select('page_key, role, allowed')
   const overrides = buildOverrideMap(overrideRows ?? [])
-  const allowedNavKeys = allowedNavKeysForRole(resolved.role as UserRole, navigation, overrides)
+  let allowedNavKeys = allowedNavKeysForRole(resolved.role as UserRole, navigation, overrides)
+
+  if (resolved.role === 'therapist' && resolved.branch_id) {
+    const { data: griya } = await supabase
+      .from('branch_griya_settings').select('enabled').eq('branch_id', resolved.branch_id).maybeSingle()
+    if (isGriyaTherapist(resolved.role, griya?.enabled ?? false)) {
+      allowedNavKeys = filterNavKeysForGriyaTherapist(allowedNavKeys)
+    }
+  }
 
   return (
     <DashboardShell
