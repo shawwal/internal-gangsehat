@@ -167,3 +167,14 @@ export async function fetchMyGriyaPendingRecords(dateIso: string): Promise<Pendi
   const { pending } = await collect(supabase, branchId, addDaysIso(dateIso, -BACKLOG_DAYS), dateIso)
   return pending.filter((p) => p.staffId === user.id)
 }
+
+/** Record state (done / draft / missing) of the logged-in therapist's attended visits on one day. */
+export async function fetchMyGriyaRecordStates(dateIso: string): Promise<Record<string, RecordState>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return {}
+  const branchId = await resolveGriyaBranchId()
+  if (!branchId) return {}
+  const { stateByVisit } = await collect(supabase, branchId, dateIso, dateIso)
+  return stateByVisit
+}
