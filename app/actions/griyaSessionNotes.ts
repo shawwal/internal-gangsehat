@@ -97,3 +97,48 @@ export async function saveGriyaSessionNote(
 
   return { error: null }
 }
+
+// ── Most recent earlier note for the same child, used to pre-fill a new one ────
+export interface PreviousGriyaSessionNote {
+  visit_date: string
+  subjective: string | null
+  objective: string | null
+  assessment: string | null
+  plan: string | null
+  keterangan_periksa: string | null
+}
+
+export async function fetchPreviousGriyaSessionNote(
+  visitId: string,
+  patientId: string,
+): Promise<PreviousGriyaSessionNote | null> {
+  const supabase = await createClient()
+  const { data: current } = await supabase
+    .from('patient_visits').select('visit_date, visit_time').eq('id', visitId).single()
+  if (!current) return null
+  const cur = `${current.visit_date} ${current.visit_time ?? '00:00'}`
+
+  const { data } = await supabase
+    .from('griya_session_notes')
+    .select('visit_id, subjective, objective, assessment, plan, keterangan_periksa, patient_visits!inner(visit_date, visit_time)')
+    .eq('patient_id', patientId)
+    .neq('visit_id', visitId)
+
+  const rows = ((data ?? []) as unknown as {
+    subjective: string | null; objective: string | null; assessment: string | null
+    plan: string | null; keterangan_periksa: string | null
+    patient_visits: { visit_date: string; visit_time: string | null } | { visit_date: string; visit_time: string | null }[]
+  }[])
+    .map((r) => {
+      const v = Array.isArray(r.patient_visits) ? r.patient_visits[0] : r.patient_visits
+      return { ...r, visit_date: v.visit_date, key: `${v.visit_date} ${v.visit_time ?? '00:00'}` }
+    })
+    .filter((r) => r.key < cur && (r.subjective || r.objective || r.assessment || r.plan || r.keterangan_periksa))
+    .sort((a, b) => b.key.localeCompare(a.key))
+
+  const r = rows[0]
+  return r ? {
+    visit_date: r.visit_date, subjective: r.subjective, objective: r.objective,
+    assessment: r.assessment, plan: r.plan, keterangan_periksa: r.keterangan_periksa,
+  } : null
+}

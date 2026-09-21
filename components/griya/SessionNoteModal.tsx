@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
-import { fetchGriyaSessionNote, fetchGriyaPertemuanKe, saveGriyaSessionNote } from '@/app/actions/griyaSessionNotes'
+import { Copy, X } from 'lucide-react'
+import { fetchGriyaSessionNote, fetchGriyaPertemuanKe, saveGriyaSessionNote, fetchPreviousGriyaSessionNote } from '@/app/actions/griyaSessionNotes'
 import type { GriyaSessionNote } from '@/types'
 
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary resize-none'
@@ -70,6 +70,24 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target.visitId])
 
+  const [copying, setCopying] = useState(false)
+  const [copiedFrom, setCopiedFrom] = useState<string | null>(null)
+
+  async function copyPrevious() {
+    const hasContent = form.subjective || form.objective || form.assessment || form.plan || form.keterangan_periksa
+    if (hasContent && !confirm('Isi yang sudah ada akan diganti dengan catatan pertemuan sebelumnya. Lanjutkan?')) return
+    setCopying(true); setError(null)
+    const prev = await fetchPreviousGriyaSessionNote(target.visitId, target.patientId)
+    setCopying(false)
+    if (!prev) { setError('Belum ada catatan pertemuan sebelumnya untuk disalin.'); return }
+    setForm((f) => ({
+      ...f,
+      subjective: prev.subjective ?? '', objective: prev.objective ?? '', assessment: prev.assessment ?? '',
+      plan: prev.plan ?? '', keterangan_periksa: prev.keterangan_periksa ?? '',
+    }))
+    setCopiedFrom(new Date(prev.visit_date + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }))
+  }
+
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }))
 
   const requiredMissing = form.sudah_diperiksa && (
@@ -110,6 +128,14 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
               />
               Sudah diperiksa
             </label>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button type="button" onClick={copyPrevious} disabled={copying}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted disabled:opacity-60 cursor-pointer">
+                <Copy size={12} /> {copying ? 'Menyalin...' : 'Salin dari pertemuan sebelumnya'}
+              </button>
+              {copiedFrom && <span className="text-[11px] text-muted-foreground">Disalin dari {copiedFrom} — sesuaikan sebelum menyimpan</span>}
+            </div>
 
             <div>
               <label className={labelCls}>Subjective *</label>

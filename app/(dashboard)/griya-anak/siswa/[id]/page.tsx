@@ -275,7 +275,13 @@ export default function GriyaSiswaDetailPage() {
 
       {/* visit history */}
       <div className="glass-card overflow-hidden">
-        <div className="px-4 py-3 border-b border-border"><h2 className="text-sm font-semibold text-foreground">Riwayat Kunjungan</h2></div>
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-foreground">Riwayat Kunjungan</h2>
+          <Link href={`/griya-anak/siswa/${id}/rekam-medis`}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90">
+            <Stethoscope size={13} /> Lihat Semua Rekam Medis
+          </Link>
+        </div>
         {(detail?.visits.length ?? 0) === 0 ? (
           <p className="px-4 py-5 text-sm text-muted-foreground text-center">Belum ada kunjungan tercatat.</p>
         ) : (
