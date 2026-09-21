@@ -427,6 +427,19 @@ export async function fetchPatient(id: string): Promise<PatientPlain | null> {
   return data ? toPlain(data as unknown as Record<string, unknown>) : null
 }
 
+/**
+ * phone_hash has a UNIQUE index, but siblings (e.g. Griya Anak children) share a
+ * parent's number. Return the hash only when no other patient owns it; otherwise
+ * null so the row still saves (the real phone stays in encrypted_phone).
+ */
+async function phoneHashIfFree(phone: string, excludeId?: string): Promise<string | null> {
+  const hash = hashPhone(phone)
+  let q = createAdminClient().from('patients').select('id').eq('phone_hash', hash).limit(1)
+  if (excludeId) q = q.neq('id', excludeId)
+  const { data } = await q
+  return data && data.length > 0 ? null : hash
+}
+
 export async function addPatient(input: {
   name: string
   phone: string
@@ -457,13 +470,14 @@ export async function addPatient(input: {
     address:   input.address,
     birthDate: input.birthDate,
   })
+  const phoneHash = await phoneHashIfFree(input.phone)
   const { data, error } = await supabase.from('patients').insert({
     encrypted_name:       enc.encrypted_name,
     encrypted_phone:      enc.encrypted_phone,
     encrypted_address:    enc.encrypted_address   ?? null,
     encrypted_birth_date: enc.encrypted_birth_date ?? null,
     gender:               input.gender,
-    phone_hash:           hashPhone(input.phone),
+    phone_hash:           phoneHash,
     name_normalized:      input.name.trim().toLowerCase(),
     no_rm:                input.no_rm          ?? null,
     pekerjaan:            input.pekerjaan      ?? null,
@@ -555,6 +569,7 @@ export async function updatePatient(
   })
   // Role is verified above; write with the service client so the edit doesn't
   // silently no-op when the patients UPDATE RLS policy (migration 072) is missing.
+  const phoneHash = await phoneHashIfFree(input.phone, id)
   const { data: updated, error } = await createAdminClient().from('patients').update({
     encrypted_name:              enc.encrypted_name,
     encrypted_phone:             enc.encrypted_phone,
@@ -562,7 +577,7 @@ export async function updatePatient(
     encrypted_birth_date:        enc.encrypted_birth_date        ?? null,
     encrypted_id_number:         enc.encrypted_id_number         ?? null,
     encrypted_emergency_contact: enc.encrypted_emergency_contact ?? null,
-    phone_hash:                  hashPhone(input.phone),
+    phone_hash:                  phoneHash,
     name_normalized:             input.name.trim().toLowerCase(),
     gender:        input.gender        ?? null,
     blood_type:    nz(input.blood_type),
