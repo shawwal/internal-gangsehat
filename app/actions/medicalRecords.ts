@@ -3,10 +3,42 @@
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { isRegioRequired } from '@/lib/visitRouting'
+import { getEffectivePackageServiceType } from '@/lib/serviceType'
 import type { UserRole } from '@/types'
 
 // service_types where regio is compulsory, formatted for PostgREST in.() lists
 const REGIO_REQUIRED_IN = '("TERAPI AWAL","TA VISIT")'
+
+// Package sessions can be stored with the literal 'SESI TERAPI'/'SESI VISIT'
+// service_type even once tied to a package (package_id set) — see
+// getEffectivePackageServiceType's own comment. /visits and the package detail
+// page both display the *effective* PAKET variant for those rows, so this filter
+// (and the row's displayed service_type below) need to match: filtering by
+// 'PAKET TERAPI' must also catch package-linked 'SESI TERAPI' rows, and
+// filtering by 'SESI TERAPI' must exclude them.
+const PACKAGE_VARIANT_OF: Record<string, string> = {
+  'SESI TERAPI': 'PAKET TERAPI',
+  'SESI VISIT':  'PAKET VISIT',
+}
+const SESI_EQUIVALENT_OF: Record<string, string> = Object.fromEntries(
+  Object.entries(PACKAGE_VARIANT_OF).map(([sesi, paket]) => [paket, sesi]),
+)
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyServiceTypeFilter(query: any, serviceType: string) {
+  const sesiEquivalent = SESI_EQUIVALENT_OF[serviceType]
+  if (sesiEquivalent) {
+    // e.g. serviceType === 'PAKET TERAPI' → literal PAKET TERAPI rows, or
+    // SESI TERAPI rows that turned out to be package-linked.
+    return query.or(`service_type.eq."${serviceType}",and(service_type.eq."${sesiEquivalent}",package_id.not.is.null)`)
+  }
+  if (PACKAGE_VARIANT_OF[serviceType]) {
+    // e.g. serviceType === 'SESI TERAPI' → literal SESI TERAPI rows with no
+    // package attached (package-linked ones display/filter as PAKET TERAPI).
+    return query.eq('service_type', serviceType).is('package_id', null)
+  }
+  return query.eq('service_type', serviceType)
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export type RecordCompleteness = 'all' | 'incomplete' | 'complete'
@@ -143,7 +175,7 @@ function applyScopedFilters(query: any, viewer: ViewerContext, params: MedicalRe
     if (params.staffId && params.staffId !== 'all') query = query.eq('attending_staff_id', params.staffId)
   }
 
-  if (params.serviceType && params.serviceType !== 'all') query = query.eq('service_type', params.serviceType)
+  if (params.serviceType && params.serviceType !== 'all') query = applyServiceTypeFilter(query, params.serviceType)
 
   if (params.date) {
     query = query.eq('visit_date', params.date)
@@ -183,7 +215,7 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
   let query = supabase
     .from('patient_visits')
     .select(`
-      id, patient_id, branch_id, visit_date, visit_time, service_type,
+      id, patient_id, branch_id, visit_date, visit_time, service_type, package_id,
       attending_staff_id, diagnosis, treatment, regio,
       internal_profiles!attending_staff_id(full_name, nickname),
       branches!branch_id(name)
@@ -238,7 +270,7 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     branch_name:           v.branches?.name ?? '',
     visit_date:            v.visit_date,
     visit_time:            v.visit_time ? String(v.visit_time).slice(0, 5) : null,
-    service_type:          v.service_type,
+    service_type:          getEffectivePackageServiceType(v.service_type, v.package_id) ?? v.service_type,
     attending_staff_id:    v.attending_staff_id,
     attending_staff_name:  v.internal_profiles?.nickname || v.internal_profiles?.full_name || '—',
     diagnosis:             v.diagnosis,
