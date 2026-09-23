@@ -43,6 +43,7 @@ export interface MedicalRecordsParams {
   groupBy?: RecordGroupBy  // 'date' (default, DB-level pagination) or 'patient' (in-memory)
   staffId?: string   // 'all' or uuid — only honored for team-scope viewers
   branchId?: string  // 'all' or uuid — only honored for director
+  serviceType?: string  // 'all' or a ServiceType value (e.g. 'TERAPI AWAL')
 }
 
 export interface MedicalRecordsResult {
@@ -141,6 +142,8 @@ function applyScopedFilters(query: any, viewer: ViewerContext, params: MedicalRe
     if (params.branchId && params.branchId !== 'all') query = query.eq('branch_id', params.branchId)
     if (params.staffId && params.staffId !== 'all') query = query.eq('attending_staff_id', params.staffId)
   }
+
+  if (params.serviceType && params.serviceType !== 'all') query = query.eq('service_type', params.serviceType)
 
   if (params.date) {
     query = query.eq('visit_date', params.date)

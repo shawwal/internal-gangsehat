@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { ArrowDownAZ, ArrowUpAZ, Search, Calendar, User } from 'lucide-react'
+import { ArrowDownAZ, ArrowUpAZ, Search, Calendar, User, Stethoscope } from 'lucide-react'
 import type { BranchOption, StaffOption } from '@/app/actions/medicalRecords'
-import { COMPLETENESS_TABS, PERIOD_OPTIONS, type RecordFiltersState } from './types'
+import { COMPLETENESS_TABS, PERIOD_OPTIONS, SERVICE_TYPE_OPTIONS, type RecordFiltersState } from './types'
 
 interface Props {
   filters: RecordFiltersState
@@ -62,6 +62,18 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
           />
+        </div>
+
+        <div className="relative">
+          <Stethoscope size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <select
+            value={filters.serviceType}
+            onChange={(e) => onChange({ ...filters, serviceType: e.target.value })}
+            title="Filter berdasarkan jenis layanan"
+            className={`${selectCls} pl-7 ${filters.serviceType !== 'all' ? 'border-primary/50 text-primary bg-primary/5' : ''}`}
+          >
+            {SERVICE_TYPE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
         </div>
 
         {isTeamView && isDirector && (

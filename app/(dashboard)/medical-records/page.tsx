@@ -33,6 +33,7 @@ export default function MedicalRecordsPage() {
     const date = searchParams.get('date')
     const sortOrder = searchParams.get('sortOrder')
     const groupBy = searchParams.get('groupBy')
+    const serviceType = searchParams.get('serviceType')
     return {
       ...DEFAULT_RECORD_FILTERS,
       search,
@@ -45,6 +46,7 @@ export default function MedicalRecordsPage() {
       ...(date ? { date } : {}),
       ...(sortOrder === 'asc' || sortOrder === 'desc' ? { sortOrder } : {}),
       ...(groupBy === 'date' || groupBy === 'patient' ? { groupBy } : {}),
+      ...(serviceType ? { serviceType } : {}),
     }
   })
   const [page, setPage] = useState(() => Math.max(1, Number(searchParams.get('page')) || 1))
@@ -86,6 +88,7 @@ export default function MedicalRecordsPage() {
       groupBy: currentFilters.groupBy,
       staffId: currentFilters.staffId,
       branchId: currentFilters.branchId,
+      serviceType: currentFilters.serviceType,
     })
     setRows(result.rows)
     setTotal(result.total)
@@ -100,6 +103,7 @@ export default function MedicalRecordsPage() {
       date: currentFilters.date,
       staffId: currentFilters.staffId,
       branchId: currentFilters.branchId,
+      serviceType: currentFilters.serviceType,
     })
     setStats(result)
     setHasAnyRecords((result.complete + result.incomplete) > 0 || currentFilters.search !== '' || currentFilters.completeness !== 'all')
@@ -131,6 +135,7 @@ export default function MedicalRecordsPage() {
     if (filters.groupBy !== 'date')            params.set('groupBy', filters.groupBy)
     if (filters.staffId !== 'all')             params.set('staffId', filters.staffId)
     if (filters.branchId !== 'all')            params.set('branchId', filters.branchId)
+    if (filters.serviceType !== 'all')         params.set('serviceType', filters.serviceType)
     if (page !== 1)                            params.set('page', String(page))
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
@@ -168,6 +173,7 @@ export default function MedicalRecordsPage() {
         page: 1, pageSize: 500,
         search: filters.search, period: filters.period, date: filters.date,
         sortOrder: filters.sortOrder, staffId: filters.staffId, branchId: filters.branchId,
+        serviceType: filters.serviceType,
         completeness: 'incomplete',
       })
       const ids = incompleteRows.map((r) => r.id)

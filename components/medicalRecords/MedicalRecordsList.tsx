@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { ClipboardCheck } from 'lucide-react'
 import { MedicalRecordCard } from './MedicalRecordCard'
 import type { MedicalRecordRow } from '@/app/actions/medicalRecords'
@@ -53,9 +54,12 @@ export function MedicalRecordsList({
         return (
           <div key={record.id}>
             {showDivider && (
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-2 pb-1.5 first:pt-0">
+              <Link
+                href={`/patients/${record.patient_id}/visits`}
+                className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-2 pb-1.5 first:pt-0 hover:text-primary transition-colors w-fit"
+              >
                 {record.patient_name}
-              </p>
+              </Link>
             )}
             <MedicalRecordCard
               record={record}

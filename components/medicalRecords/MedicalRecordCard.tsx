@@ -57,16 +57,25 @@ export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemin
       record.is_complete ? 'border-l-[#34C759]' : 'border-l-amber-400'
     }`}>
       <div className="flex items-start gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-          record.is_complete ? 'bg-[#34C759]/15' : 'bg-amber-500/15'
-        }`}>
+        <Link
+          href={`/patients/${record.patient_id}/visits`}
+          title={`Lihat riwayat kunjungan ${record.patient_name}`}
+          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors hover:brightness-95 ${
+            record.is_complete ? 'bg-[#34C759]/15' : 'bg-amber-500/15'
+          }`}
+        >
           <User size={18} className={record.is_complete ? 'text-[#34C759]' : 'text-amber-500'} />
-        </div>
+        </Link>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div>
-              <p className="text-sm font-semibold text-foreground leading-tight">{record.patient_name}</p>
+              <Link
+                href={`/patients/${record.patient_id}/visits`}
+                className="text-sm font-semibold text-foreground leading-tight hover:text-primary hover:underline underline-offset-2 transition-colors"
+              >
+                {record.patient_name}
+              </Link>
               {record.service_type && (
                 <p className="text-xs text-muted-foreground">{record.service_type}</p>
               )}
