@@ -47,12 +47,20 @@ export function SessionList({ sessions, loading, onEdit, onDelete, canDelete }: 
             </span>
           </div>
           <div className="flex items-center justify-between mt-0.5">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground/60 text-[10px]">
-                {s.therapist_name ?? 'Terapis tidak tercatat'}
+            {/* `sessions` is already ordered oldest-first (fetchPackageSessions
+                sorts by visit_date ascending), so the row index doubles as the
+                session's sequence number within this package — no separate
+                "Ke-N"/session_number column to track like the unrelated
+                booking_sessions system has. */}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-muted-foreground/60 text-[10px] font-medium shrink-0">
+                Pertemuan {i + 1}
+              </span>
+              <span className="text-muted-foreground/60 text-[10px] truncate">
+                · {s.therapist_name ?? 'Terapis tidak tercatat'}
               </span>
               {s.shift && (
-                <span className="text-[10px] text-muted-foreground/60">· {s.shift}</span>
+                <span className="text-[10px] text-muted-foreground/60 shrink-0">· {s.shift}</span>
               )}
             </div>
             <div className="flex items-center gap-0.5">

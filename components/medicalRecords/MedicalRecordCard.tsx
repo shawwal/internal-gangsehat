@@ -77,7 +77,10 @@ export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemin
                 {record.patient_name}
               </Link>
               {record.service_type && (
-                <p className="text-xs text-muted-foreground">{record.service_type}</p>
+                <p className="text-xs text-muted-foreground">
+                  {record.service_type}
+                  {record.pertemuan_number != null && ` · Pertemuan ${record.pertemuan_number}`}
+                </p>
               )}
             </div>
             <span className={`flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full shrink-0 ${

@@ -62,6 +62,10 @@ export interface MedicalRecordRow {
   treatment: string | null
   regio: string | null
   is_complete: boolean
+  // 1-based position of this visit within its package's session history
+  // (oldest first), matching the "Pertemuan N" numbering shown on the
+  // patient packages page. Null when the visit isn't tied to a package.
+  pertemuan_number: number | null
 }
 
 export interface MedicalRecordsParams {
@@ -261,6 +265,33 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     }
   }
 
+  // "Pertemuan N" — 1-based position of each visit within its package's full
+  // session history (oldest first), same numbering as "Riwayat Sesi" on the
+  // patient packages page (SessionList.tsx). Needs a second query because a
+  // package's other sessions can fall outside this page's date/staff/branch
+  // filters or pagination window, so they wouldn't otherwise be in `data`.
+  const packageIds = [...new Set(
+    (data as { package_id: string | null }[]).map((v) => v.package_id).filter((id): id is string => !!id),
+  )]
+  const pertemuanMap = new Map<string, number>()
+  if (packageIds.length > 0) {
+    const { data: packageVisits } = await supabase
+      .from('patient_visits')
+      .select('id, package_id, visit_date, visit_time')
+      .in('package_id', packageIds)
+      .neq('status', 'cancelled')
+      .order('visit_date', { ascending: true })
+      .order('visit_time', { ascending: true, nullsFirst: false })
+      .order('id', { ascending: true })
+
+    const counters = new Map<string, number>()
+    for (const pv of packageVisits ?? []) {
+      const n = (counters.get(pv.package_id as string) ?? 0) + 1
+      counters.set(pv.package_id as string, n)
+      pertemuanMap.set(pv.id, n)
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let rows: MedicalRecordRow[] = (data as any[]).map((v) => ({
     id:                    v.id,
@@ -277,6 +308,7 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     treatment:             v.treatment,
     regio:                 v.regio,
     is_complete:           !!(v.diagnosis && v.treatment && (!isRegioRequired(v.service_type) || v.regio)),
+    pertemuan_number:      v.package_id ? pertemuanMap.get(v.id) ?? null : null,
   }))
 
   let total = count ?? 0
