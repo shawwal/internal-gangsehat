@@ -15,7 +15,12 @@ interface Props {
   onChange: (filters: RecordFiltersState) => void
 }
 
-const selectCls = 'px-3 py-2 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer'
+const selectCls = 'shrink-0 px-3 py-2 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer'
+const activeSelectCls = 'border-primary/50 text-primary bg-primary/5'
+// Single row on mobile that scrolls sideways instead of wrapping into a ragged,
+// hard-to-scan grid (Safari especially renders wrapped selects/inputs unevenly).
+// From `sm:` up there's room, so it reverts to a normal wrapping row.
+const scrollRowCls = 'flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap'
 
 export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branches, staff, incompleteCount, onChange }: Props) {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -30,12 +35,12 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
   return (
     <div className="space-y-3">
       {/* Completeness tabs */}
-      <div className="flex flex-wrap gap-2">
+      <div className={scrollRowCls}>
         {COMPLETENESS_TABS.map((tab) => (
           <button
             key={tab.value}
             onClick={() => onChange({ ...filters, completeness: tab.value })}
-            className={`relative px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+            className={`relative shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
               filters.completeness === tab.value
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -51,26 +56,27 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
         ))}
       </div>
 
-      {/* Search + dropdowns */}
-      <div className="flex flex-wrap gap-2">
-        <div className="relative flex-1 min-w-48">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Cari nama pasien..."
-            defaultValue={filters.search}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
+      {/* Search — its own full-width row so it's never squeezed by the filters below */}
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Cari nama pasien..."
+          defaultValue={filters.search}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="w-full pl-8 pr-3 py-2.5 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
 
-        <div className="relative">
-          <Stethoscope size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+      {/* Filter chips — service type leads, since it's the one staff reach for most */}
+      <div className={scrollRowCls}>
+        <div className="relative shrink-0">
+          <Stethoscope size={13} className={`absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none ${filters.serviceType !== 'all' ? 'text-primary' : 'text-muted-foreground'}`} />
           <select
             value={filters.serviceType}
             onChange={(e) => onChange({ ...filters, serviceType: e.target.value })}
             title="Filter berdasarkan jenis layanan"
-            className={`${selectCls} pl-7 ${filters.serviceType !== 'all' ? 'border-primary/50 text-primary bg-primary/5' : ''}`}
+            className={`${selectCls} pl-7 ${filters.serviceType !== 'all' ? activeSelectCls : ''}`}
           >
             {SERVICE_TYPE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
@@ -80,7 +86,7 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
           <select
             value={filters.branchId}
             onChange={(e) => onChange({ ...filters, branchId: e.target.value })}
-            className={selectCls}
+            className={`${selectCls} ${filters.branchId !== 'all' ? activeSelectCls : ''}`}
           >
             <option value="all">Semua Cabang</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -91,7 +97,7 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
           <select
             value={filters.staffId}
             onChange={(e) => onChange({ ...filters, staffId: e.target.value })}
-            className={selectCls}
+            className={`${selectCls} ${filters.staffId !== 'all' ? activeSelectCls : ''}`}
           >
             <option value="all">Semua Terapis</option>
             {staff.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -107,20 +113,30 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
           {PERIOD_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
         </select>
 
-        <div className="relative flex items-center">
+        {/* Native <input type="date"> renders with no visible text when empty
+            (most visibly on iOS Safari — no "dd/mm/yyyy" ghost text like desktop
+            Chrome), which reads as a broken, blank box. Overlay our own label
+            in that state; it's pointer-events-none so taps still reach the
+            input underneath and open the native picker. */}
+        <div className="relative shrink-0 flex items-center">
           <input
             type="date"
             value={filters.date}
             onChange={(e) => onChange({ ...filters, date: e.target.value })}
             title="Pilih tanggal kunjungan spesifik"
-            className={`${selectCls} pr-7`}
+            className={`${selectCls} w-[132px] pr-7 ${filters.date ? activeSelectCls : 'text-transparent'}`}
           />
+          {!filters.date && (
+            <span className="absolute left-3 flex items-center gap-1.5 text-sm text-muted-foreground pointer-events-none">
+              <Calendar size={13} /> Tanggal
+            </span>
+          )}
           {filters.date && (
             <button
               type="button"
               onClick={() => onChange({ ...filters, date: '' })}
               title="Hapus filter tanggal"
-              className="absolute right-1.5 text-muted-foreground hover:text-foreground text-xs leading-none cursor-pointer"
+              className="absolute right-1.5 w-5 h-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted text-xs leading-none cursor-pointer"
             >
               ✕
             </button>
@@ -131,7 +147,7 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
           type="button"
           onClick={() => onChange({ ...filters, sortOrder: filters.sortOrder === 'asc' ? 'desc' : 'asc' })}
           title={filters.sortOrder === 'asc' ? 'Terlama lebih dulu' : 'Terbaru lebih dulu'}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-background text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+          className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-background text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
         >
           {filters.sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownAZ size={14} />}
           {filters.sortOrder === 'asc' ? 'Terlama' : 'Terbaru'}
@@ -140,7 +156,7 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
         {/* Group/sort by patient — clusters a patient's incomplete entries
             together instead of interleaving them by date, so nothing gets
             missed and their last program is easy to find. */}
-        <div className="flex items-center gap-1 p-0.5 rounded-xl bg-muted border border-border">
+        <div className="shrink-0 flex items-center gap-1 p-0.5 rounded-xl bg-muted border border-border">
           <button
             type="button"
             onClick={() => onChange({ ...filters, groupBy: 'date' })}

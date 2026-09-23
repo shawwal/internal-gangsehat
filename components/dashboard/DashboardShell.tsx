@@ -42,8 +42,12 @@ export function DashboardShell({ profile, allowedNavKeys, children }: Props) {
           avatarUrl={profile.avatar_url}
           onToggleSidebar={() => setCollapsed((c) => !c)}
         />
-        {/* Extra bottom padding on mobile so content isn't hidden under the tab bar */}
-        <main className="flex-1 overflow-y-auto p-6 pb-28 md:pb-6 bg-background">
+        {/* Extra bottom padding on mobile so content isn't hidden under the floating
+            tab bar — the pill is ~66px tall plus mb-4 plus iOS's safe-area-inset-bottom
+            (up to ~34px on Face ID devices), so pb-28 (112px) ran a few px short on
+            Safari and let the last card peek out from behind it. pb-36 (144px) clears
+            that with margin. */}
+        <main className="flex-1 overflow-y-auto p-6 pb-36 md:pb-6 bg-background">
           {children}
         </main>
       </div>
