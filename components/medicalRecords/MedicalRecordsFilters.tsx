@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { ArrowDownAZ, ArrowUpAZ, Search, Calendar, User, Stethoscope } from 'lucide-react'
+import { ArrowDownAZ, ArrowUpAZ, Search, Calendar, User, Stethoscope, ChevronDown } from 'lucide-react'
 import type { BranchOption, StaffOption } from '@/app/actions/medicalRecords'
 import { COMPLETENESS_TABS, PERIOD_OPTIONS, SERVICE_TYPE_OPTIONS, type RecordFiltersState } from './types'
 
@@ -15,8 +15,13 @@ interface Props {
   onChange: (filters: RecordFiltersState) => void
 }
 
-const selectCls = 'shrink-0 px-3 py-2 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer'
+// `appearance-none` strips each <select>'s native chrome — without it, iOS
+// Safari keeps its own glossy background + affordance icon layered underneath
+// our border/bg classes, which is what showed up as a stray icon "behind" the
+// dropdown text. We draw our own chevron below to replace the one this removes.
+const selectCls = 'shrink-0 appearance-none px-3 py-2 pr-8 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer'
 const activeSelectCls = 'border-primary/50 text-primary bg-primary/5'
+const chevronCls = 'absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none'
 // Single row on mobile that scrolls sideways instead of wrapping into a ragged,
 // hard-to-scan grid (Safari especially renders wrapped selects/inputs unevenly).
 // From `sm:` up there's room, so it reverts to a normal wrapping row.
@@ -80,38 +85,48 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
           >
             {SERVICE_TYPE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
+          <ChevronDown size={13} className={chevronCls} />
         </div>
 
         {isTeamView && isDirector && (
-          <select
-            value={filters.branchId}
-            onChange={(e) => onChange({ ...filters, branchId: e.target.value })}
-            className={`${selectCls} ${filters.branchId !== 'all' ? activeSelectCls : ''}`}
-          >
-            <option value="all">Semua Cabang</option>
-            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
+          <div className="relative shrink-0">
+            <select
+              value={filters.branchId}
+              onChange={(e) => onChange({ ...filters, branchId: e.target.value })}
+              className={`${selectCls} ${filters.branchId !== 'all' ? activeSelectCls : ''}`}
+            >
+              <option value="all">Semua Cabang</option>
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+            <ChevronDown size={13} className={chevronCls} />
+          </div>
         )}
 
         {isTeamView && (
-          <select
-            value={filters.staffId}
-            onChange={(e) => onChange({ ...filters, staffId: e.target.value })}
-            className={`${selectCls} ${filters.staffId !== 'all' ? activeSelectCls : ''}`}
-          >
-            <option value="all">Semua Terapis</option>
-            {staff.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-          </select>
+          <div className="relative shrink-0">
+            <select
+              value={filters.staffId}
+              onChange={(e) => onChange({ ...filters, staffId: e.target.value })}
+              className={`${selectCls} ${filters.staffId !== 'all' ? activeSelectCls : ''}`}
+            >
+              <option value="all">Semua Terapis</option>
+              {staff.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+            <ChevronDown size={13} className={chevronCls} />
+          </div>
         )}
 
-        <select
-          value={filters.period}
-          disabled={!!filters.date}
-          onChange={(e) => onChange({ ...filters, period: e.target.value as RecordFiltersState['period'] })}
-          className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          {PERIOD_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-        </select>
+        <div className="relative shrink-0">
+          <select
+            value={filters.period}
+            disabled={!!filters.date}
+            onChange={(e) => onChange({ ...filters, period: e.target.value as RecordFiltersState['period'] })}
+            className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {PERIOD_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </select>
+          <ChevronDown size={13} className={`${chevronCls} ${filters.date ? 'opacity-50' : ''}`} />
+        </div>
 
         {/* Native <input type="date"> renders with no visible text when empty
             (most visibly on iOS Safari — no "dd/mm/yyyy" ghost text like desktop
