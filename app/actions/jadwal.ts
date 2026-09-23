@@ -240,6 +240,7 @@ export async function createVisit(input: CreateVisitInput): Promise<{ error: str
     status:              input.status,
     notes:               input.notes ?? null,
     package_id:          resolvePackageId(input.service_type, input.package_id),
+    kehadiran:           input.kehadiran ?? null,
     order_id:            orderId,
     updated_at:          new Date().toISOString(),
   }).select('id').single()

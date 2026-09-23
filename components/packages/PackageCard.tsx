@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil, Trash2, ChevronDown, ChevronUp, CalendarDays, Wallet, OctagonMinus } from 'lucide-react'
+import { Pencil, Trash2, Plus, ChevronDown, ChevronUp, CalendarDays, Wallet, OctagonMinus } from 'lucide-react'
 import { fetchPackageSessions } from '@/app/actions/packages'
 import { fetchOrderPaymentHistory } from '@/app/actions/transactions'
-import { fetchBranchStaff, fetchVisitWithPatient, updateVisit, deleteVisit, type BranchStaffMember, type VisitWithPatient } from '@/app/actions/jadwal'
+import { fetchBranchStaff, fetchVisitWithPatient, updateVisit, deleteVisit, createVisit, type BranchStaffMember, type VisitWithPatient } from '@/app/actions/jadwal'
 import { fetchBookingIdByKode } from '@/app/actions/orders'
 import type { PatientPackageWithPayment } from '@/app/actions/packages'
 import type { OrderPaymentHistoryEntry } from '@/lib/internal/orderPayments'
@@ -44,6 +44,15 @@ function toEditSessionForm(v: VisitWithPatient): EditSessionForm {
   }
 }
 
+const DEFAULT_ADD_SESSION_FORM: EditSessionForm = {
+  visit_date:         '',
+  attending_staff_id: '',
+  service_type:       'PAKET TERAPI',
+  shift:              '',
+  kehadiran:          'HADIR',
+  sumber_pasien:       '',
+}
+
 interface PackageCardProps {
   pkg:        PatientPackageWithPayment
   userRole:   UserRole | null
@@ -73,6 +82,11 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
   const [deleteSessionTarget, setDeleteSessionTarget] = useState<PackageSession | null>(null)
   const [deleteSessionSaving, setDeleteSessionSaving] = useState(false)
   const [deleteSessionError, setDeleteSessionError]   = useState<string | null>(null)
+
+  const [addSessionOpen, setAddSessionOpen]     = useState(false)
+  const [addSessionForm, setAddSessionForm]     = useState<EditSessionForm>(DEFAULT_ADD_SESSION_FORM)
+  const [addSessionSaving, setAddSessionSaving] = useState(false)
+  const [addSessionError, setAddSessionError]   = useState<string | null>(null)
 
   const [resolvingOrder, setResolvingOrder] = useState(false)
   const [editPaymentTarget, setEditPaymentTarget] = useState<EditableTransaction | null>(null)
@@ -157,6 +171,43 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
     if (error) { alert(error); return }
     setEditSessionTarget(null)
     setEditSessionForm(null)
+    await refreshSessions()
+  }
+
+  function openAddSession() {
+    setAddSessionForm({
+      ...DEFAULT_ADD_SESSION_FORM,
+      service_type: pkg.category === 'PAKET VISIT' ? 'PAKET VISIT' : 'PAKET TERAPI',
+    })
+    setAddSessionError(null)
+    setAddSessionOpen(true)
+    if (branchStaff.length === 0 && pkg.branch_id) {
+      fetchBranchStaff(pkg.branch_id).then(setBranchStaff)
+    }
+  }
+
+  async function handleAddSessionSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!pkg.branch_id) return
+    setAddSessionSaving(true)
+    setAddSessionError(null)
+    const { error } = await createVisit({
+      patient_id:          pkg.patient_id,
+      branch_id:           pkg.branch_id,
+      attending_staff_id:  addSessionForm.attending_staff_id || null,
+      visit_date:          addSessionForm.visit_date,
+      visit_time:          null,
+      service_type:        addSessionForm.service_type || null,
+      shift:               addSessionForm.shift || null,
+      chief_complaint:     null,
+      status:              'completed',
+      notes:               null,
+      package_id:          pkg.id,
+      kehadiran:           addSessionForm.kehadiran || null,
+    })
+    setAddSessionSaving(false)
+    if (error) { setAddSessionError(error); return }
+    setAddSessionOpen(false)
     await refreshSessions()
   }
 
@@ -312,13 +363,24 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
       </div>
 
       {/* Session drill-down toggle */}
-      <button
-        onClick={toggleSessions}
-        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors text-xs text-muted-foreground"
-      >
-        <span>Riwayat Sesi</span>
-        {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-      </button>
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={toggleSessions}
+          className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors text-xs text-muted-foreground"
+        >
+          <span>Riwayat Sesi</span>
+          {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </button>
+        {canDeleteSession && (
+          <button
+            onClick={openAddSession}
+            className="shrink-0 p-2 rounded-xl bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground transition-colors"
+            title="Tambah sesi"
+          >
+            <Plus size={13} />
+          </button>
+        )}
+      </div>
 
       {expanded && (
         <div className="rounded-xl border border-border overflow-hidden">
@@ -458,6 +520,98 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
               <button type="submit" form="edit-session-form" disabled={editSessionSaving}
                 className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
                 {editSessionSaving ? 'Menyimpan...' : 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add session modal — manual entry for sessions missed by (or predating) automated import/sync */}
+      {addSessionOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setAddSessionOpen(false)}>
+          <div
+            className="bg-card rounded-2xl border border-border w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+              <h2 className="text-sm font-semibold text-foreground">Tambah Sesi</h2>
+              <button onClick={() => setAddSessionOpen(false)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors text-lg leading-none">×</button>
+            </div>
+
+            <form id="add-session-form" onSubmit={handleAddSessionSave} className="flex-1 overflow-y-auto p-5 space-y-3">
+              {addSessionError && (
+                <p className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">{addSessionError}</p>
+              )}
+
+              {branchStaff.length > 0 && (
+                <div>
+                  <label className={LABEL_CLS}>Terapis / Staff</label>
+                  <select
+                    value={addSessionForm.attending_staff_id}
+                    onChange={(e) => setAddSessionForm((f) => ({ ...f, attending_staff_id: e.target.value }))}
+                    className={INPUT_CLS}
+                  >
+                    <option value="">— Belum ditentukan —</option>
+                    {branchStaff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL_CLS}>Tanggal</label>
+                  <input required type="date" value={addSessionForm.visit_date}
+                    onChange={(e) => setAddSessionForm((f) => ({ ...f, visit_date: e.target.value }))}
+                    className={INPUT_CLS} />
+                </div>
+                <div>
+                  <label className={LABEL_CLS}>Shift</label>
+                  <select
+                    value={addSessionForm.shift}
+                    onChange={(e) => setAddSessionForm((f) => ({ ...f, shift: e.target.value as EditSessionForm['shift'] }))}
+                    className={INPUT_CLS}
+                  >
+                    <option value="">— Pilih —</option>
+                    <option value="PAGI">PAGI</option>
+                    <option value="SORE">SORE</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL_CLS}>Layanan</label>
+                  <select value={addSessionForm.service_type} onChange={(e) => setAddSessionForm((f) => ({ ...f, service_type: e.target.value as ServiceType | '' }))} className={INPUT_CLS}>
+                    <option value="">— Pilih —</option>
+                    {SESSION_SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={LABEL_CLS}>Kehadiran</label>
+                  <select value={addSessionForm.kehadiran} onChange={(e) => setAddSessionForm((f) => ({ ...f, kehadiran: e.target.value as EditSessionForm['kehadiran'] }))} className={INPUT_CLS}>
+                    <option value="">— Pilih —</option>
+                    <option value="HADIR">HADIR</option>
+                    <option value="TIDAK HADIR">TIDAK HADIR</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className={LABEL_CLS}>Sumber Pasien</label>
+                <input value={addSessionForm.sumber_pasien} onChange={(e) => setAddSessionForm((f) => ({ ...f, sumber_pasien: e.target.value }))}
+                  placeholder="mis. Rekomendasi, sosial media"
+                  className={INPUT_CLS} />
+              </div>
+            </form>
+
+            <div className="flex gap-2 px-5 py-4 border-t border-border shrink-0">
+              <button type="button" onClick={() => setAddSessionOpen(false)}
+                className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
+                Batal
+              </button>
+              <button type="submit" form="add-session-form" disabled={addSessionSaving}
+                className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
+                {addSessionSaving ? 'Menyimpan...' : 'Tambah'}
               </button>
             </div>
           </div>

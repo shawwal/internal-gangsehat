@@ -102,7 +102,7 @@ export function renderPatientResumeBody(data: PublicResumeData, includePrintButt
 
   <div class="resume-section">
     <h3>1. Apa yang Terjadi Pada Tubuh Anda?</h3>
-    <p class="resume-content" style="margin-bottom: 10px;">Berdasarkan pemeriksaan hari ini, keluhan utama Anda adalah:</p>
+    <p class="resume-content" style="margin-bottom: 10px;">Berdasarkan pemeriksaan hari ini, permasalahan yang ditemukan adalah:</p>
     ${box(data.chiefComplaint)}
     <p class="resume-content" style="margin: 15px 0 10px;">Kesimpulan diagnosis gangguan gerak dan fungsi tubuh Anda:</p>
     ${box(data.diagnosis)}
