@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import {
@@ -237,6 +237,16 @@ export default function PatientVisitsPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<PatientVisit | null>(null)
   const [deleting, setDeleting]         = useState(false)
+
+  // package_id → package_name/jenis_paket, so the Layanan column can show which
+  // specific package a visit's session was drawn from (a patient can have several
+  // packages of the same service_type at once — e.g. two "PAKET TERAPI" packages
+  // bought months apart — and the badge alone doesn't disambiguate them).
+  const packageById = useMemo(() => {
+    const map = new Map<string, { package_name: string; jenis_paket: string | null }>()
+    for (const p of packages) map.set(p.id, { package_name: p.package_name, jenis_paket: p.jenis_paket })
+    return map
+  }, [packages])
   const [deleteError, setDeleteError]   = useState<string | null>(null)
 
   const [editTarget, setEditTarget] = useState<PatientVisit | null>(null)
@@ -407,6 +417,10 @@ export default function PatientVisitsPage() {
       { header: 'Tanggal',      value: (v) => v.visit_date },
       { header: 'Shift',        value: (v) => v.shift ?? '' },
       { header: 'Layanan',      value: (v) => getDisplayServiceType(v) ?? '' },
+      { header: 'Paket',        value: (v) => {
+        const packageId = (v as unknown as { package_id: string | null }).package_id
+        return packageId ? (packageById.get(packageId)?.package_name ?? '') : ''
+      } },
       { header: 'Terapis',      value: therapistName },
       { header: 'Regio',        value: (v) => v.regio ?? '' },
       { header: 'Sumber',       value: (v) => v.sumber_pasien ?? '' },
@@ -645,11 +659,22 @@ export default function PatientVisitsPage() {
                     <td className="px-4 py-3">
                       {(() => {
                         const displayServiceType = getDisplayServiceType(v)
-                        return displayServiceType ? (
-                          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${SERVICE_BADGE[displayServiceType]}`}>
-                            {displayServiceType}
-                          </span>
-                        ) : <span className="text-muted-foreground/40 text-xs">—</span>
+                        const packageId = (v as unknown as { package_id: string | null }).package_id
+                        const pkg = packageId ? packageById.get(packageId) : undefined
+                        return (
+                          <div className="flex flex-col gap-0.5 items-start">
+                            {displayServiceType ? (
+                              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${SERVICE_BADGE[displayServiceType]}`}>
+                                {displayServiceType}
+                              </span>
+                            ) : <span className="text-muted-foreground/40 text-xs">—</span>}
+                            {pkg && (
+                              <span className="text-[10px] text-muted-foreground truncate max-w-32" title={pkg.package_name}>
+                                {pkg.jenis_paket ? `${pkg.jenis_paket} · ` : ''}{pkg.package_name}
+                              </span>
+                            )}
+                          </div>
+                        )
                       })()}
                     </td>
 

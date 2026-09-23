@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { PatientPackage, PackageSession } from '@/types'
 import { generateOrderId } from '@/lib/internal/orderId'
+import { getEffectivePackageServiceType } from '@/lib/serviceType'
 
 // ── Fetch all packages for a patient with computed session counts ───────────────
 // Reads from the patient_packages_with_stats view which joins patient_visits.
@@ -154,10 +155,15 @@ export async function fetchPackageSessions(
 
   if (error || !data?.length) return []
 
+  // Every row here is scoped to this exact package (query filters on package_id),
+  // but package sessions can still carry the literal 'SESI TERAPI'/'SESI VISIT'
+  // service_type depending on which flow created the visit (see
+  // getEffectivePackageServiceType's own comment) — normalize to the PAKET
+  // variant so "Riwayat Sesi" matches what /visits shows for the same rows.
   return data.map((v) => ({
     id:             v.id,
     visit_date:     v.visit_date,
-    service_type:   v.service_type,
+    service_type:   getEffectivePackageServiceType(v.service_type, packageId) ?? v.service_type,
     shift:          v.shift as PackageSession['shift'],
     kehadiran:      v.kehadiran as PackageSession['kehadiran'],
     status:         v.status,
