@@ -14,12 +14,18 @@ interface Props {
   scheduledDate: string | null
   therapists: TherapistOption[]
   canEdit: boolean
+  // Hides the Nominal/Pembayaran columns when false (e.g. a therapist viewer)
+  // — previously these rendered unconditionally to anyone who could load the
+  // page, unlike the Pembayaran card/PaymentsTable which were already
+  // isAdmin-gated. Defaults to canEdit so existing callers keep today's
+  // behavior unless they explicitly pass this.
+  canSeePricing?: boolean
   onRefresh: () => void
 }
 
 const SESSION_STATUSES = ['Belum Ditangani', 'Hadir', 'Tidak Hadir', 'Batal']
 
-export function SessionsTable({ sessions, bookingId, scheduledDate, therapists, canEdit, onRefresh }: Props) {
+export function SessionsTable({ sessions, bookingId, scheduledDate, therapists, canEdit, canSeePricing = canEdit, onRefresh }: Props) {
   const [editingSession, setEditingSession] = useState<BookingSession | null>(null)
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -71,7 +77,7 @@ export function SessionsTable({ sessions, bookingId, scheduledDate, therapists, 
     onRefresh()
   }
 
-  const colCount = canEdit ? 13 : 12
+  const colCount = (canSeePricing ? 12 : 10) + (canEdit ? 1 : 0)
 
   return (
     <div>
@@ -92,7 +98,11 @@ export function SessionsTable({ sessions, bookingId, scheduledDate, therapists, 
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-gray-100 dark:border-border bg-gray-50 dark:bg-muted/30 text-left">
-                {['Ke', 'Tanggal', 'Jam', 'Fisio', 'Kehadiran', 'Status', 'Nominal', 'Pembayaran', 'Keterangan', 'Catatan Admin', 'WA Order', 'WA Reminder'].map((h) => (
+                {[
+                  'Ke', 'Tanggal', 'Jam', 'Fisio', 'Kehadiran', 'Status',
+                  ...(canSeePricing ? ['Nominal', 'Pembayaran'] : []),
+                  'Keterangan', 'Catatan Admin', 'WA Order', 'WA Reminder',
+                ].map((h) => (
                   <th key={h} className="px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
                 {canEdit && <th className="px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wide text-center">Opsi</th>}
@@ -120,10 +130,14 @@ export function SessionsTable({ sessions, bookingId, scheduledDate, therapists, 
                     <td className="px-3 py-2.5">
                       <StatusBadge value={s.status} />
                     </td>
-                    <td className="px-3 py-2.5 text-right text-gray-700 dark:text-gray-200 whitespace-nowrap font-medium">
-                      {s.nominal_bayar > 0 ? formatCurrency(s.nominal_bayar) : 'Rp0'}
-                    </td>
-                    <td className="px-3 py-2.5 text-gray-600 dark:text-gray-300 whitespace-nowrap">{s.metode_pembayaran ?? '—'}</td>
+                    {canSeePricing && (
+                      <>
+                        <td className="px-3 py-2.5 text-right text-gray-700 dark:text-gray-200 whitespace-nowrap font-medium">
+                          {s.nominal_bayar > 0 ? formatCurrency(s.nominal_bayar) : 'Rp0'}
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-600 dark:text-gray-300 whitespace-nowrap">{s.metode_pembayaran ?? '—'}</td>
+                      </>
+                    )}
                     <td className="px-3 py-2.5 text-gray-600 dark:text-gray-300 max-w-[120px] truncate">{s.keterangan ?? '—'}</td>
                     <td className="px-3 py-2.5 text-gray-600 dark:text-gray-300 max-w-[120px] truncate">{s.catatan_admin ?? '—'}</td>
                     <td className="px-3 py-2.5 text-center">

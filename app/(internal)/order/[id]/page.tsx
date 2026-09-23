@@ -306,6 +306,7 @@ export default function OrderDetailPage() {
         scheduledDate={booking.scheduled_date}
         therapists={therapists}
         canEdit={canEdit}
+        canSeePricing={isAdmin}
         onRefresh={load}
       />
 

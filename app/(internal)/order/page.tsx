@@ -22,6 +22,7 @@ export default function OrderPage() {
   const {
     rows, total, stats, loading, statsLoading,
     page, totalPages, fromIdx, toIdx,
+    scope, canSeePricing,
     handlePage, refresh,
   } = useOrdersData(search, statusFilter, paymentFilter, month, year)
 
@@ -31,12 +32,14 @@ export default function OrderPage() {
         title={t('page.order.list_title')}
         breadcrumb={t('nav.order')}
         actions={
-          <Link
-            href="/order/new"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            <Plus size={15} /> {t('page.order.add_title')}
-          </Link>
+          scope !== 'branch' ? (
+            <Link
+              href="/order/new"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              <Plus size={15} /> {t('page.order.add_title')}
+            </Link>
+          ) : undefined
         }
       />
 
@@ -60,6 +63,7 @@ export default function OrderPage() {
         toIdx={toIdx}
         totalPages={totalPages}
         onPage={handlePage}
+        canSeePricing={canSeePricing}
       />
     </div>
   )

@@ -104,7 +104,10 @@ export const navigation: NavItem[] = [
     label: 'Semua Order',
     href: '/director/orders',
     icon: 'ClipboardList',
-    roles: ['director'],
+    // therapist gets this too, scoped server-side to their own branch (and no
+    // pricing) by fetchOrdersList/fetchOrdersStats in app/actions/orders.ts —
+    // see resolveOrdersViewerScope there.
+    roles: ['director', 'therapist'],
     group: 'operations',
   },
   {

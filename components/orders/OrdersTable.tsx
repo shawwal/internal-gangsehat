@@ -1,10 +1,14 @@
 'use client'
 
+import { Fragment, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ClipboardList, ExternalLink } from 'lucide-react'
+import { ClipboardList, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
 import { StatusBadge } from '@/components/internal/StatusBadge'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { fetchOrderSessionsPreview } from '@/app/actions/orders'
+import type { OrderSessionsPreviewResult } from '@/app/actions/orders'
+import { OrderSessionsPreview } from './OrderSessionsPreview'
 import { getPatientName, getTrxCode, getPaymentStatus, getTherapistName, getMatchingPackage, calcRemainingSessions } from './helpers'
 import type { OrderRow } from './types'
 
@@ -17,12 +21,28 @@ interface OrdersTableProps {
   toIdx: number
   totalPages: number
   onPage: (p: number) => void
+  // Whether Bayar/Total (and the inline session preview's Nominal) render at
+  // all — false for a therapist viewer, resolved server-side by useOrdersData.
+  canSeePricing?: boolean
 }
 
 export function OrdersTable({
-  rows, loading, total, page, fromIdx, toIdx, totalPages, onPage,
+  rows, loading, total, page, fromIdx, toIdx, totalPages, onPage, canSeePricing = true,
 }: OrdersTableProps) {
   const router = useRouter()
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [previews, setPreviews] = useState<Record<string, OrderSessionsPreviewResult & { loading: boolean }>>({})
+
+  async function toggleExpand(id: string) {
+    if (expandedId === id) { setExpandedId(null); return }
+    setExpandedId(id)
+    if (previews[id]) return
+    setPreviews((p) => ({ ...p, [id]: { loading: true, error: null, sessions: [], canSeePricing } }))
+    const result = await fetchOrderSessionsPreview(id)
+    setPreviews((p) => ({ ...p, [id]: { ...result, loading: false } }))
+  }
+
+  const colCount = canSeePricing ? 12 : 10
 
   return (
     <div className="glass-card overflow-hidden">
@@ -30,6 +50,7 @@ export function OrdersTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
+              <th className="px-2 py-3 w-8" aria-hidden />
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide w-10">No</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kode</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pasien</th>
@@ -38,8 +59,12 @@ export function OrdersTable({
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fisio</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Jadwal</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Bayar</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Total</th>
+              {canSeePricing && (
+                <>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Bayar</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Total</th>
+                </>
+              )}
               <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">Aksi</th>
             </tr>
           </thead>
@@ -47,7 +72,7 @@ export function OrdersTable({
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-border/50">
-                  {Array.from({ length: 11 }).map((_, j) => (
+                  {Array.from({ length: colCount }).map((_, j) => (
                     <td key={j} className="px-4 py-3">
                       <div className="h-4 bg-muted animate-pulse rounded-lg" />
                     </td>
@@ -56,7 +81,7 @@ export function OrdersTable({
               ))
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-4 py-16 text-center">
+                <td colSpan={colCount} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                       <ClipboardList size={22} className="text-primary" />
@@ -71,85 +96,115 @@ export function OrdersTable({
                 const trx     = getTrxCode(row)
                 const payment = getPaymentStatus(row)
                 const rowTotal = row.discounted_price ?? row.estimated_price ?? 0
+                const expanded = expandedId === row.id
+                const preview  = previews[row.id]
 
                 return (
-                  <tr
-                    key={row.id}
-                    onClick={() => router.push(`/order/${row.id}`)}
-                    className="border-b border-border/50 hover:bg-primary/5 transition-colors cursor-pointer"
-                  >
-                    <td className="px-4 py-3 text-muted-foreground text-xs">{fromIdx + i}</td>
+                  <Fragment key={row.id}>
+                    <tr
+                      onClick={() => router.push(`/order/${row.id}`)}
+                      className="border-b border-border/50 hover:bg-primary/5 transition-colors cursor-pointer"
+                    >
+                      <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => toggleExpand(row.id)}
+                          className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title={expanded ? 'Sembunyikan sesi' : 'Lihat sesi'}
+                        >
+                          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+                      </td>
 
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <Link
-                        href={`/order/${row.id}`}
-                        className="font-mono text-xs font-medium text-primary hover:underline decoration-primary/50 underline-offset-2 transition-colors"
-                      >
-                        {trx}
-                      </Link>
-                    </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">{fromIdx + i}</td>
 
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-foreground leading-tight">{getPatientName(row)}</p>
-                    </td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <Link
+                          href={`/order/${row.id}`}
+                          className="font-mono text-xs font-medium text-primary hover:underline decoration-primary/50 underline-offset-2 transition-colors"
+                        >
+                          {trx}
+                        </Link>
+                      </td>
 
-                    <td className="px-4 py-3">
-                      <p className="text-foreground/80 max-w-[140px] truncate text-xs">{row.service_type}</p>
-                    </td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-foreground leading-tight">{getPatientName(row)}</p>
+                      </td>
 
-                    <td className="px-4 py-3 text-center">
-                      {(() => {
-                        if (!row.service_type?.includes('PAKET')) return <span className="text-muted-foreground text-xs">—</span>
-                        const pkg = getMatchingPackage(row)
-                        if (!pkg) return <span className="text-muted-foreground text-xs">—</span>
-                        const remaining = calcRemainingSessions(pkg)
-                        const colorClass = remaining === 0
-                          ? 'text-destructive'
-                          : remaining <= 2
-                          ? 'text-secondary-foreground font-semibold'
-                          : 'text-green-600 dark:text-green-400'
-                        return (
-                          <span className={`text-xs font-medium tabular-nums ${colorClass}`}>
-                            {remaining}<span className="text-muted-foreground font-normal">/{pkg.total_sessions}</span>
-                          </span>
-                        )
-                      })()}
-                    </td>
+                      <td className="px-4 py-3">
+                        <p className="text-foreground/80 max-w-[140px] truncate text-xs">{row.service_type}</p>
+                      </td>
 
-                    <td className="px-4 py-3">
-                      <p className="text-foreground/70 text-xs truncate max-w-[120px]">{getTherapistName(row)}</p>
-                    </td>
+                      <td className="px-4 py-3 text-center">
+                        {(() => {
+                          if (!row.service_type?.includes('PAKET')) return <span className="text-muted-foreground text-xs">—</span>
+                          const pkg = getMatchingPackage(row)
+                          if (!pkg) return <span className="text-muted-foreground text-xs">—</span>
+                          const remaining = calcRemainingSessions(pkg)
+                          const colorClass = remaining === 0
+                            ? 'text-destructive'
+                            : remaining <= 2
+                            ? 'text-secondary-foreground font-semibold'
+                            : 'text-green-600 dark:text-green-400'
+                          return (
+                            <span className={`text-xs font-medium tabular-nums ${colorClass}`}>
+                              {remaining}<span className="text-muted-foreground font-normal">/{pkg.total_sessions}</span>
+                            </span>
+                          )
+                        })()}
+                      </td>
 
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <p className="text-xs text-foreground/80">{formatDate(row.scheduled_date)}</p>
-                      <p className="text-[10px] text-muted-foreground">{row.scheduled_time}</p>
-                    </td>
+                      <td className="px-4 py-3">
+                        <p className="text-foreground/70 text-xs truncate max-w-[120px]">{getTherapistName(row)}</p>
+                      </td>
 
-                    <td className="px-4 py-3">
-                      <StatusBadge value={row.status} />
-                    </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <p className="text-xs text-foreground/80">{formatDate(row.scheduled_date)}</p>
+                        <p className="text-[10px] text-muted-foreground">{row.scheduled_time}</p>
+                      </td>
 
-                    <td className="px-4 py-3">
-                      <StatusBadge value={payment} />
-                    </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge value={row.status} />
+                      </td>
 
-                    <td className="px-4 py-3 text-right">
-                      <span className="font-semibold text-foreground text-xs whitespace-nowrap">
-                        {rowTotal > 0 ? formatCurrency(rowTotal) : '—'}
-                      </span>
-                    </td>
+                      {canSeePricing && (
+                        <>
+                          <td className="px-4 py-3">
+                            <StatusBadge value={payment} />
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className="font-semibold text-foreground text-xs whitespace-nowrap">
+                              {rowTotal > 0 ? formatCurrency(rowTotal) : '—'}
+                            </span>
+                          </td>
+                        </>
+                      )}
 
-                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                      <Link
-                        href={`/order/${row.id}`}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
-                        aria-label={`Lihat detail order ${trx}`}
-                      >
-                        <ExternalLink size={12} />
-                        Detail
-                      </Link>
-                    </td>
-                  </tr>
+                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <Link
+                          href={`/order/${row.id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                          aria-label={`Lihat detail order ${trx}`}
+                        >
+                          <ExternalLink size={12} />
+                          Detail
+                        </Link>
+                      </td>
+                    </tr>
+
+                    {expanded && (
+                      <tr className="border-b border-border/50 bg-muted/20">
+                        <td colSpan={colCount} className="px-4 py-3">
+                          <OrderSessionsPreview
+                            orderId={row.id}
+                            loading={preview?.loading ?? true}
+                            error={preview?.error ?? null}
+                            sessions={preview?.sessions ?? []}
+                            canSeePricing={preview?.canSeePricing ?? canSeePricing}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 )
               })
             )}
