@@ -98,7 +98,7 @@ export async function fetchPublicResume(token: string): Promise<PublicResumeData
 
   const { data: assessment } = await admin
     .from('terapi_awal_assessments')
-    .select('history_moi, diagnosis_primer, treatment_plan_today, short_term_goals, long_term_goals')
+    .select('history_moi, diagnosis_primer, icf_body_functions_notes, icf_activity_notes, short_term_goals, long_term_goals')
     .eq('visit_id', link.visit_id)
     .maybeSingle()
 
@@ -126,13 +126,17 @@ export async function fetchPublicResume(token: string): Promise<PublicResumeData
   }
 
   const plan = assessment
-    ? [assessment.treatment_plan_today, assessment.short_term_goals, assessment.long_term_goals].filter(Boolean).join('') || visit.treatment
+    ? [assessment.short_term_goals, assessment.long_term_goals].filter(Boolean).join('') || visit.treatment
     : [sessionNote?.next_plan, sessionNote?.hep_given].filter(Boolean).join('') || visit.treatment
+
+  const chiefComplaint = assessment
+    ? [assessment.icf_body_functions_notes, assessment.icf_activity_notes].filter(Boolean).join('') || assessment.history_moi || visit.chief_complaint
+    : sessionNote?.subjective_notes || visit.chief_complaint
 
   return {
     patientName,
     visitDate: visit.visit_date,
-    chiefComplaint: assessment?.history_moi || sessionNote?.subjective_notes || visit.chief_complaint,
+    chiefComplaint,
     diagnosis: assessment?.diagnosis_primer || sessionNote?.clinical_impression || visit.diagnosis,
     plan,
   }
