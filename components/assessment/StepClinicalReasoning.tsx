@@ -6,6 +6,7 @@ import type { AssessmentFormState } from './types'
 import type { IcfSeverity } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { DiagnosisCombobox } from './DiagnosisCombobox'
+import { RichTextEditor } from './RichTextEditor'
 
 interface Props {
   value: AssessmentFormState
@@ -14,7 +15,6 @@ interface Props {
 }
 
 const labelCls = 'block text-xs font-medium text-foreground mb-1.5'
-const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 const selectCls = 'w-full px-2 py-1.5 border border-border rounded-lg text-xs bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
 interface IcfDomainProps {
@@ -25,9 +25,10 @@ interface IcfDomainProps {
   onNotesChange: (v: string) => void
   onSeverityChange: (v: IcfSeverity | '') => void
   placeholder: string
+  readOnly?: boolean
 }
 
-function IcfDomain({ title, severityLabel, notes, severity, onNotesChange, onSeverityChange, placeholder }: IcfDomainProps) {
+function IcfDomain({ title, severityLabel, notes, severity, onNotesChange, onSeverityChange, placeholder, readOnly }: IcfDomainProps) {
   return (
     <div className="rounded-2xl border border-border p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
@@ -37,24 +38,24 @@ function IcfDomain({ title, severityLabel, notes, severity, onNotesChange, onSev
             value={severity}
             onChange={(e) => onSeverityChange(e.target.value as IcfSeverity | '')}
             className={selectCls}
+            disabled={readOnly}
           >
             <option value="">{severityLabel}...</option>
             {ICF_SEVERITY_OPTIONS.map((s) => <option key={s} value={s}>{ICF_SEVERITY_LABEL[s]}</option>)}
           </select>
         </div>
       </div>
-      <textarea
+      <RichTextEditor
         value={notes}
-        onChange={(e) => onNotesChange(e.target.value)}
+        onChange={onNotesChange}
         placeholder={placeholder}
-        rows={2}
-        className={inputCls}
+        readOnly={readOnly}
       />
     </div>
   )
 }
 
-export function StepClinicalReasoning({ value, onChange }: Props) {
+export function StepClinicalReasoning({ value, onChange, readOnly }: Props) {
   const [diagnosisOptions, setDiagnosisOptions] = useState<string[]>([])
 
   useEffect(() => {
@@ -90,6 +91,7 @@ export function StepClinicalReasoning({ value, onChange }: Props) {
             options={diagnosisOptions}
             onOptionAdded={handleOptionAdded}
             placeholder="Cari atau ketik diagnosa primer..."
+            disabled={readOnly}
           />
         </div>
         <div>
@@ -100,6 +102,7 @@ export function StepClinicalReasoning({ value, onChange }: Props) {
             options={diagnosisOptions}
             onOptionAdded={handleOptionAdded}
             placeholder="Cari atau ketik diagnosa sekunder (opsional)..."
+            disabled={readOnly}
           />
         </div>
       </div>
@@ -113,6 +116,7 @@ export function StepClinicalReasoning({ value, onChange }: Props) {
           onNotesChange={(v) => onChange({ icf_body_functions_notes: v })}
           onSeverityChange={(v) => onChange({ icf_body_functions_severity: v })}
           placeholder="Klik untuk mulai mengetik poin..."
+          readOnly={readOnly}
         />
         <IcfDomain
           title="Activity Limitations"
@@ -122,6 +126,7 @@ export function StepClinicalReasoning({ value, onChange }: Props) {
           onNotesChange={(v) => onChange({ icf_activity_notes: v })}
           onSeverityChange={(v) => onChange({ icf_activity_severity: v })}
           placeholder="Klik untuk mulai mengetik poin..."
+          readOnly={readOnly}
         />
         <IcfDomain
           title="Participation Restrictions"
@@ -131,6 +136,7 @@ export function StepClinicalReasoning({ value, onChange }: Props) {
           onNotesChange={(v) => onChange({ icf_participation_notes: v })}
           onSeverityChange={(v) => onChange({ icf_participation_severity: v })}
           placeholder="Klik untuk mulai mengetik poin..."
+          readOnly={readOnly}
         />
         <IcfDomain
           title="Contextual Factors"
@@ -140,6 +146,7 @@ export function StepClinicalReasoning({ value, onChange }: Props) {
           onNotesChange={(v) => onChange({ icf_contextual_notes: v })}
           onSeverityChange={(v) => onChange({ icf_contextual_severity: v })}
           placeholder="Klik untuk mulai mengetik poin..."
+          readOnly={readOnly}
         />
       </div>
     </div>
