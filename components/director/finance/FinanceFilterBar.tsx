@@ -35,12 +35,16 @@ export function FinanceFilterBar({ branches, baseParams, branchId, month, year }
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <select className={cls} value={branchId} onChange={e => navigate({ branch: e.target.value })}>
-        <option value="">Semua Cabang</option>
-        {branches.map(b => (
-          <option key={b.id} value={b.id}>{b.name}</option>
-        ))}
-      </select>
+      {/* Only director sees more than one branch here (RLS scopes admin/manager
+          to their own branch) — with a single branch there's nothing to pick. */}
+      {branches.length > 1 && (
+        <select className={cls} value={branchId} onChange={e => navigate({ branch: e.target.value })}>
+          <option value="">Semua Cabang</option>
+          {branches.map(b => (
+            <option key={b.id} value={b.id}>{b.name}</option>
+          ))}
+        </select>
+      )}
 
       <select className={cls} value={month} onChange={e => navigate({ month: e.target.value })}>
         <option value="">Semua Bulan</option>

@@ -221,7 +221,10 @@ export const navigation: NavItem[] = [
     label: 'Laporan Bulanan',
     href: '/finance/reports',
     icon: 'FileText',
-    roles: ['finance'],
+    // admin gets the same page, scoped to their own branch by RLS
+    // (bfr: admin branch, supabase/082-admin-branch-financial-reports.sql) —
+    // the page itself has no role-specific logic, just profile.branch_id.
+    roles: ['finance', 'admin'],
     group: 'finance',
   },
   {
@@ -238,6 +241,19 @@ export const navigation: NavItem[] = [
     href: '/closing',
     icon: 'CheckCircle2',
     roles: ['admin', 'finance', 'manager', 'director'],
+    group: 'finance',
+  },
+  {
+    key: 'admin-finance',
+    label: 'Keuangan Cabang',
+    href: '/director/finance',
+    icon: 'Landmark',
+    // Reuses the director page as-is — no new route needed. For non-director
+    // roles every query in director/finance/data.ts (branches, transactions)
+    // is already scoped to get_my_branch() by RLS (transactions_admin_own_branch,
+    // "branches: staff reads"), so admin sees only their own branch's data
+    // even though the component has no branch filter applied in code.
+    roles: ['admin'],
     group: 'finance',
   },
 

@@ -51,6 +51,12 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
 
   useEffect(() => { setMounted(true) }, [])
 
+  // Single-branch viewers (admin/manager, scoped by RLS) never see a branch
+  // picker — pre-fill the only branch they're allowed to post to.
+  useEffect(() => {
+    if (branches.length === 1) setForm(f => ({ ...f, branch_id: branches[0].id }))
+  }, [branches])
+
   // Reset category when type changes
   useEffect(() => {
     setForm(f => ({
@@ -182,19 +188,21 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
             </div>
           </div>
 
-          {/* Branch */}
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Cabang</label>
-            <select
-              value={form.branch_id}
-              onChange={e => setForm(f => ({ ...f, branch_id: e.target.value }))}
-              required
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">— Pilih cabang —</option>
-              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-          </div>
+          {/* Branch — hidden when the viewer only has one (admin/manager) */}
+          {branches.length > 1 && (
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Cabang</label>
+              <select
+                value={form.branch_id}
+                onChange={e => setForm(f => ({ ...f, branch_id: e.target.value }))}
+                required
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">— Pilih cabang —</option>
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+          )}
 
           {/* Date */}
           <div>

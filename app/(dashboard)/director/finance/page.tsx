@@ -60,15 +60,19 @@ export default async function DirectorFinancePage({
         totalNet={totalNet}
       />
 
-      <BranchSummaryTable
-        branches={branchSummaries}
-        periodLabel={periodLabel}
-        totalIncome={totalIncome}
-        totalCollected={totalCollected}
-        totalOutstanding={totalOutstanding}
-        totalExpense={totalExpense}
-        totalNet={totalNet}
-      />
+      {/* Redundant with the KPI cards above when there's only one branch to show
+          (admin/manager, scoped by RLS) — director sees the real breakdown. */}
+      {branchList.length > 1 && (
+        <BranchSummaryTable
+          branches={branchSummaries}
+          periodLabel={periodLabel}
+          totalIncome={totalIncome}
+          totalCollected={totalCollected}
+          totalOutstanding={totalOutstanding}
+          totalExpense={totalExpense}
+          totalNet={totalNet}
+        />
+      )}
 
       {/* Transactions section: filters + table + pagination */}
       <div className="glass-card overflow-hidden">
@@ -84,7 +88,7 @@ export default async function DirectorFinancePage({
 
         <TransactionsTable
           txns={txns}
-          showBranchColumn={!params.branchId}
+          showBranchColumn={!params.branchId && branchList.length > 1}
           q={params.q}
           baseParams={baseParams}
         />
