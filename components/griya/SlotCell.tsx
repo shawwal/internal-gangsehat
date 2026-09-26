@@ -38,7 +38,7 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
 
   const dndId = stackIndex != null ? `${cellKey}#${stackIndex}` : cellKey
   const draggableId = `drag:${dndId}`
-  const canDrag = canEdit && !!cell?.slot && (cell.state === 'scheduled' || cell.state === 'moved-out')
+  const canDrag = canEdit && !!cell?.slot && (cell.state === 'scheduled' || cell.state === 'moved-out' || cell.state === 'hadir')
   const { attributes, listeners, setNodeRef: dragRef, isDragging } = useDraggable({
     id: draggableId, data: { cell }, disabled: !canDrag,
   })
@@ -122,6 +122,7 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
                 )}
                 <MenuBtn icon={<UserX size={14} />} label="Tandai Tidak Hadir" onClick={() => { setMenu(null); onAction('attendance', cell) }} />
                 <MenuBtn icon={<RotateCcw size={14} />} label="Batalkan Tanda Hadir" onClick={() => { setMenu(null); onAction('unmarkAttendance', cell) }} />
+                <MenuBtn icon={<Move size={14} />} label="Pindahkan" onClick={() => { setMenu(null); onAction('move', cell) }} />
                 <MenuBtn icon={<Ban size={14} />} label="Batalkan" danger separated onClick={() => { setMenu(null); onAction('cancel', cell) }} />
                 {cell.visit?.id && (
                   <MenuBtn icon={<Trash2 size={14} />} label="Hapus" danger onClick={() => { setMenu(null); onAction('deleteVisit', cell) }} />
