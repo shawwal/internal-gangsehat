@@ -565,12 +565,12 @@ export const navigation: NavItem[] = [
     group: 'griya',
   },
   {
-    key: 'griya-akuntansi',
-    label: 'Akuntansi Griya Anak',
-    href: '/griya-anak/akuntansi',
+    key: 'akuntansi',
+    label: 'Akuntansi Cabang',
+    href: '/akuntansi',
     icon: 'BookOpen',
     roles: ['director', 'manager', 'admin'],
-    group: 'griya',
+    group: 'finance',
   },
   {
     key: 'griya-performa',

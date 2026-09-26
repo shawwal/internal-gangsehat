@@ -19,10 +19,14 @@ const TABS: { key: TabKey; label: string; icon: typeof BookOpen }[] = [
   { key: 'pengaturan', label: 'Pengaturan', icon: Settings2 },
 ]
 
-export default function GriyaAkuntansiPage() {
-  const { loading, branchId, enabled, canEdit } = useGriyaBranch()
+export default function AkuntansiPage() {
+  const { loading, branchId: defaultBranchId, role, canEdit } = useGriyaBranch()
+  const isDirector = role === 'director'
   const [userId, setUserId] = useState<string>('')
-  const [branchName, setBranchName] = useState('Griya Anak')
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
+  const branchId = selectedBranchId ?? defaultBranchId
+  const branchName = branches.find((b) => b.id === branchId)?.name ?? ''
   const [tab, setTab] = useState<TabKey>('pemasukan')
 
   const now = useMemo(() => new Date(), [])
@@ -36,12 +40,11 @@ export default function GriyaAkuntansiPage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) setUserId(user.id)
-      if (branchId) {
-        const { data } = await supabase.from('branches').select('name').eq('id', branchId).maybeSingle()
-        if (data?.name) setBranchName(data.name)
-      }
+      // Director sees every active branch; others only their own (RLS-scoped).
+      const { data } = await supabase.from('branches').select('id, name').eq('is_active', true).order('name')
+      setBranches(data ?? [])
     })()
-  }, [branchId])
+  }, [])
 
   if (loading) {
     return (
@@ -52,8 +55,8 @@ export default function GriyaAkuntansiPage() {
       </div>
     )
   }
-  if (!branchId || !enabled) {
-    return <div className="glass-card p-8 text-sm text-muted-foreground">Fitur Griya Anak belum aktif untuk cabang ini.</div>
+  if (!branchId) {
+    return <div className="glass-card p-8 text-sm text-muted-foreground">Cabang tidak ditemukan.</div>
   }
   if (!canEdit) {
     return <div className="glass-card p-8 text-sm text-muted-foreground">Halaman ini hanya untuk admin, manajer, dan direktur.</div>
@@ -61,12 +64,20 @@ export default function GriyaAkuntansiPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-2">
-        <BookOpen size={20} className="text-primary" />
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Akuntansi Griya Anak</h1>
-          <p className="text-sm text-muted-foreground">{branchName} · pembukuan harian &amp; bulanan</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <BookOpen size={20} className="text-primary" />
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Akuntansi</h1>
+            <p className="text-sm text-muted-foreground">{branchName} · pembukuan harian &amp; bulanan</p>
+          </div>
         </div>
+        {isDirector && branches.length > 0 && (
+          <select value={branchId} onChange={(e) => setSelectedBranchId(e.target.value)}
+            className="glass-card px-3 py-2 rounded-xl text-sm bg-transparent text-foreground cursor-pointer">
+            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        )}
       </div>
 
       <div className="glass-card p-1.5 inline-flex flex-wrap gap-1">
@@ -87,6 +98,7 @@ export default function GriyaAkuntansiPage() {
         <MonthPicker range={range} onChange={setRange} />
       )}
 
+      <div key={branchId} className="space-y-5">
       {tab === 'pemasukan' && (
         <LedgerTab type="income" branchId={branchId} branchName={branchName} userId={userId}
           dateFrom={range.from} dateToExclusive={range.toExclusive} periodLabel={range.label} />
@@ -102,6 +114,7 @@ export default function GriyaAkuntansiPage() {
       )}
       {tab === 'aruskas' && <ArusKasTab branchId={branchId} branchName={branchName} />}
       {tab === 'pengaturan' && <PengaturanTab branchId={branchId} />}
+      </div>
     </div>
   )
 }
