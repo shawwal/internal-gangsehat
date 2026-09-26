@@ -108,7 +108,7 @@ export default function UsersPage() {
   }
 
   const staffList    = users.filter((u) => STAFF_ROLES.includes(u.role))
-  const directorList = users.filter((u) => u.role === 'director')
+  const directorList = users.filter((u) => u.role === 'director' && u.is_active)
   const tabList      = tab === 'staff' ? staffList : directorList
 
   const filtered = tabList.filter((u) => {
