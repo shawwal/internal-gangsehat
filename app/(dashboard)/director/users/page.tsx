@@ -6,6 +6,7 @@ import { UserPlus, Loader2, Archive } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activityLog'
 import { deleteInternalUser } from '@/app/actions/delete-user'
+import { downgradeDirector } from '@/app/actions/change-user-role'
 import { getUsersAuthMeta, type UserAuthMeta } from '@/app/actions/users-auth-meta'
 import { UserTabs }    from '@/components/users/UserTabs'
 import { UserFilters } from '@/components/users/UserFilters'
@@ -65,8 +66,10 @@ export default function UsersPage() {
     setSavingId(id)
     const supabase = createClient()
     const row = users.find((u) => u.id === id)
-    const { error } = await supabase.from('internal_profiles').update(patch).eq('id', id)
-    if (!error) {
+    const { data: updated, error } = await supabase.from('internal_profiles').update(patch).eq('id', id).select('id')
+    if (error) alert(error.message)
+    else if (!updated?.length) alert('Perubahan tidak tersimpan (akses ditolak).')
+    else {
       const oldValues = Object.fromEntries(Object.keys(patch).map((k) => [k, row?.[k as keyof UserRow] ?? null]))
       logActivity({
         supabase, userId: currentUserId, action: 'update', resourceType: 'internal_profile',
@@ -76,6 +79,14 @@ export default function UsersPage() {
     }
     setSavingId(null)
     load()
+  }
+
+  async function handleDowngrade(id: string, role: UserRole, branchId: string) {
+    setSavingId(id)
+    const result = await downgradeDirector(id, role, branchId)
+    setSavingId(null)
+    if (result.error) alert(result.error)
+    await load()
   }
 
   function confirmDelete() {
@@ -171,6 +182,7 @@ export default function UsersPage() {
           currentUserId={currentUserId}
           savingId={savingId}
           onUpdateField={updateField}
+          onDowngrade={handleDowngrade}
           onDeleteTarget={setDeleteTarget}
           onEditDetails={setEditTarget}
           onChangePassword={setPwTarget}

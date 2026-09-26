@@ -12,6 +12,7 @@ interface Props {
   currentUserId: string | null
   savingId: string | null
   onUpdateField: (id: string, patch: Partial<Pick<UserRow, 'role' | 'branch_id' | 'is_active'>>) => void
+  onDowngrade: (id: string, role: UserRole, branchId: string) => void
   onDeleteTarget: (user: UserRow) => void
   onEditDetails: (user: UserRow) => void
   onChangePassword: (user: UserRow) => void
@@ -20,7 +21,7 @@ interface Props {
 
 interface DowngradeTarget { id: string; name: string }
 
-export function DirectorCards({ users, branches, currentUserId, savingId, onUpdateField, onDeleteTarget, onEditDetails, onChangePassword, authMeta }: Props) {
+export function DirectorCards({ users, branches, currentUserId, savingId, onUpdateField, onDowngrade, onDeleteTarget, onEditDetails, onChangePassword, authMeta }: Props) {
   const [downgradeTarget, setDowngradeTarget] = useState<DowngradeTarget | null>(null)
   const [newRole, setNewRole]   = useState<UserRole>('staff')
   const [newBranch, setNewBranch] = useState('')
@@ -33,7 +34,7 @@ export function DirectorCards({ users, branches, currentUserId, savingId, onUpda
 
   function confirmDowngrade() {
     if (!downgradeTarget || !newBranch) return
-    onUpdateField(downgradeTarget.id, { role: newRole, branch_id: newBranch })
+    onDowngrade(downgradeTarget.id, newRole, newBranch)
     setDowngradeTarget(null)
   }
 
