@@ -14,11 +14,12 @@ interface Props {
   branches: Branch[]
   baseParams: Record<string, string>
   branchId: string
+  showBranchSelect: boolean
   month: string
   year: string
 }
 
-export function FinanceFilterBar({ branches, baseParams, branchId, month, year }: Props) {
+export function FinanceFilterBar({ branches, baseParams, branchId, showBranchSelect, month, year }: Props) {
   const router = useRouter()
   const currentYear = new Date().getFullYear()
 
@@ -35,9 +36,8 @@ export function FinanceFilterBar({ branches, baseParams, branchId, month, year }
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {/* Only director sees more than one branch here (RLS scopes admin/manager
-          to their own branch) — with a single branch there's nothing to pick. */}
-      {branches.length > 1 && (
+      {/* Director-only: other roles are scoped to their own branch by RLS. */}
+      {showBranchSelect && (
         <select className={cls} value={branchId} onChange={e => navigate({ branch: e.target.value })}>
           <option value="">Semua Cabang</option>
           {branches.map(b => (

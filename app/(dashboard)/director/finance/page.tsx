@@ -6,6 +6,7 @@ import { TransactionsToolbar } from '@/components/director/finance/TransactionsT
 import { TransactionsTable } from '@/components/director/finance/TransactionsTable'
 import { TransactionsPagination } from '@/components/director/finance/TransactionsPagination'
 import { Landmark } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
 import { loadFinanceData, parseFinanceParams } from './data'
 
 export const dynamic = 'force-dynamic'
@@ -17,6 +18,20 @@ export default async function DirectorFinancePage({
 }) {
   const rawParams = await searchParams
   const params = parseFinanceParams(rawParams)
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('internal_profiles')
+    .select('role')
+    .eq('id', user!.id)
+    .single()
+  const role = profile?.role ?? null
+  const isDirector = role === 'director'
+  // Totals (KPI cards + branch summary) are restricted to finance and director.
+  const canSeeTotals = isDirector || role === 'finance'
+  // Only director may filter by branch; everyone else is scoped by RLS.
+  if (!isDirector) params.branchId = ''
 
   const {
     branchList, branchSummaries,
@@ -46,12 +61,14 @@ export default async function DirectorFinancePage({
             branches={branchList}
             baseParams={baseParams}
             branchId={params.branchId}
+            showBranchSelect={isDirector}
             month={params.month}
             year={params.year}
           />
         </div>
       </div>
 
+      {canSeeTotals && (
       <FinanceKpiCards
         totalIncome={totalIncome}
         totalCollected={totalCollected}
@@ -59,10 +76,11 @@ export default async function DirectorFinancePage({
         totalExpense={totalExpense}
         totalNet={totalNet}
       />
+      )}
 
       {/* Redundant with the KPI cards above when there's only one branch to show
           (admin/manager, scoped by RLS) — director sees the real breakdown. */}
-      {branchList.length > 1 && (
+      {canSeeTotals && branchList.length > 1 && (
         <BranchSummaryTable
           branches={branchSummaries}
           periodLabel={periodLabel}
@@ -88,7 +106,7 @@ export default async function DirectorFinancePage({
 
         <TransactionsTable
           txns={txns}
-          showBranchColumn={!params.branchId && branchList.length > 1}
+          showBranchColumn={isDirector && !params.branchId}
           q={params.q}
           baseParams={baseParams}
         />
