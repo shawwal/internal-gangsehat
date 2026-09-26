@@ -102,7 +102,9 @@ export default function TargetProgressPage() {
         .eq('branch_id', selectedBranchId)
         .gte('visit_date', range.start)
         .lte('visit_date', range.end)
-        .in('status', [...VISIT_STATUS_FILTER]),
+        .in('status', [...VISIT_STATUS_FILTER])
+        // Sport massage is tracked separately — not a "kunjungan"
+        .or('service_type.is.null,service_type.neq."SPORT MASSAGE"'),
       supabase
         .from('transactions')
         .select('category, transaction_date')
