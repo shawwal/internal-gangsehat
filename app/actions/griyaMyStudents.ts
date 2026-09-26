@@ -12,6 +12,13 @@ export interface MyStudentSlot {
   discipline: Discipline
 }
 
+/** One of my visits for this child, reduced to what period filters need. */
+export interface MyStudentVisit {
+  date: string            // 'YYYY-MM-DD'
+  attended: boolean
+  missed: boolean
+}
+
 export interface MyStudent {
   patientId: string
   name: string
@@ -35,6 +42,8 @@ export interface MyStudent {
   pendingHref: string | null
   slots: MyStudentSlot[]
   disciplines: Discipline[]
+  /** Attended/missed visits (ascending) — lets the client recount per period. */
+  visits: MyStudentVisit[]
 }
 
 export interface MyStudentsResult {
@@ -196,6 +205,9 @@ export async function fetchMyGriyaStudents(): Promise<MyStudentsResult> {
         : null,
       slots: slots.sort((a, b) => a.time.localeCompare(b.time)),
       disciplines: [...new Set(slots.map((s) => s.discipline))],
+      visits: vs
+        .map((v) => ({ date: v.visit_date, attended: isAttended(v), missed: isMissed(v) }))
+        .filter((v) => v.attended || v.missed),
     })
   }
 
