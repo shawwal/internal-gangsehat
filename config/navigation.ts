@@ -171,7 +171,7 @@ export const navigation: NavItem[] = [
     label: 'Pengaturan Cabang',
     href: '/branch-settings',
     icon: 'Settings2',
-    roles: ['director', 'manager'],
+    roles: ['director', 'manager', 'admin'],
     group: 'management',
   },
   {

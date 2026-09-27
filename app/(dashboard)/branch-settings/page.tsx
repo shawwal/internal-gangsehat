@@ -14,7 +14,7 @@ function fmt(n: number) {
 }
 
 export default function BranchSettingsPage() {
-  const [role, setRole]                 = useState<'director' | 'manager' | null>(null)
+  const [role, setRole]                 = useState<'director' | 'manager' | 'admin' | null>(null)
   const [myBranchId, setMyBranchId]     = useState<string | null>(null)
   const [branches, setBranches]         = useState<BranchOption[]>([])
   const [initLoading, setInitLoading]   = useState(true)
@@ -37,11 +37,12 @@ export default function BranchSettingsPage() {
         .single()
 
       if (!profile) { setInitLoading(false); return }
-      setRole(profile.role as 'director' | 'manager')
+      setRole(profile.role as 'director' | 'manager' | 'admin')
       setMyBranchId(profile.branch_id ?? null)
 
       let branchQuery = supabase.from('branches').select('id, name').eq('is_active', true).order('name')
-      if (profile.role === 'manager' && profile.branch_id) {
+      // manager and admin are branch-scoped — only their own branch
+      if ((profile.role === 'manager' || profile.role === 'admin') && profile.branch_id) {
         branchQuery = branchQuery.eq('id', profile.branch_id)
       }
       const { data: branchData } = await branchQuery
@@ -105,7 +106,7 @@ export default function BranchSettingsPage() {
     return <div className="text-sm text-muted-foreground">Memuat...</div>
   }
 
-  if (role !== 'director' && role !== 'manager') {
+  if (role !== 'director' && role !== 'manager' && role !== 'admin') {
     return <div className="text-sm text-muted-foreground">Anda tidak memiliki akses ke halaman ini.</div>
   }
 
@@ -163,6 +164,8 @@ export default function BranchSettingsPage() {
         </div>
       )}
 
+      {/* Griya Anak toggle stays director/manager only — admin gets Sport Massage settings only */}
+      {role !== 'admin' && (<>
       <div className="pt-2">
         <h2 className="text-base font-semibold text-foreground">Fitur Griya Anak</h2>
         <p className="text-sm text-muted-foreground">Aktifkan jadwal mingguan, paket &amp; tarif, dan toko untuk cabang Griya Anak</p>
@@ -188,6 +191,7 @@ export default function BranchSettingsPage() {
           ))}
         </div>
       )}
+      </>)}
     </div>
   )
 }
