@@ -66,11 +66,51 @@ function Field({ label, k, value, onChange, textarea, required }: {
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, subtitle, children, className = '' }: { title: string; subtitle?: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className="glass-card p-5 sm:p-6 space-y-4">
-      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+    <section className={`glass-card p-5 sm:p-6 space-y-4 ${className}`}>
+      <div>
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+      </div>
       <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">{children}</div>
+    </section>
+  )
+}
+
+const PROGRAM_OPTIONS: { k: FieldKey; label: string }[] = [
+  { k: 'fisioterapi_motorik', label: 'Fisioterapi Motorik' },
+  { k: 'fisioterapi_sensorik', label: 'Fisioterapi Sensorik / Sensori Integrasi' },
+  { k: 'terapi_wicara', label: 'Terapi Wicara' },
+  { k: 'terapi_okupasi', label: 'Terapi Okupasi' },
+  { k: 'terapi_perilaku', label: 'Terapi Perilaku' },
+]
+
+// Checked = non-empty value. 'Ya' marks a plain check; any other text is kept as a note.
+const PROGRAM_CHECKED = 'Ya'
+
+function ProgramCheckbox({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const checked = value.trim() !== '' && value.trim() !== '-'
+  const note = value === PROGRAM_CHECKED ? '' : value
+  return (
+    <div className={`rounded-2xl border p-3.5 transition-colors ${checked ? 'border-primary/40 bg-primary/5' : 'border-border'}`}>
+      <label className="flex items-center gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked ? PROGRAM_CHECKED : '')}
+          className="size-4 accent-primary cursor-pointer shrink-0"
+        />
+        <span className="text-sm font-medium text-foreground">{label}</span>
+      </label>
+      {checked && (
+        <input
+          value={note}
+          onChange={(e) => onChange(e.target.value || PROGRAM_CHECKED)}
+          placeholder="Catatan (opsional)"
+          className={`${inputCls} mt-3`}
+        />
+      )}
     </div>
   )
 }
@@ -167,7 +207,7 @@ export default function GriyaTerapiAwalPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-3xl j-fade-in">
+    <div className="space-y-5 max-w-5xl j-fade-in">
       <div className="flex items-center gap-3 min-w-0">
         <Link href={`/griya-anak/siswa/${id}`} className="p-2 rounded-xl border border-border hover:bg-muted transition-colors shrink-0">
           <ChevronLeft size={16} />
@@ -187,7 +227,8 @@ export default function GriyaTerapiAwalPage() {
         </div>
       )}
 
-      <fieldset disabled={locked} className="contents border-0 m-0 p-2 min-w-0">
+      <fieldset disabled={locked} className="border-0 m-0 p-0 min-w-0 space-y-5">
+        <div className="grid gap-5 lg:grid-cols-2">
         <Section title="Keluhan Utama">
           <div className="sm:col-span-2">
             <Field label="Keluhan utama" k="keluhan_utama" value={form.keluhan_utama} onChange={set} textarea />
@@ -199,6 +240,7 @@ export default function GriyaTerapiAwalPage() {
             <Field label="Keluarga dengan keluhan yang sama (Paman/Bibi/Keponakan)" k="riwayat_keluarga" value={form.riwayat_keluarga} onChange={set} textarea />
           </div>
         </Section>
+        </div>
 
         <Section title="Masa Pertumbuhan dan Perkembangan">
           <Field label="Berat badan" k="berat_badan" value={form.berat_badan} onChange={set} />
@@ -218,7 +260,7 @@ export default function GriyaTerapiAwalPage() {
           </div>
         </Section>
 
-        <Section title="Riwayat Sakit / Keluhan (Rawat Inap/Rawat Jalan/Konsultasi/Terapi)">
+        <Section title="Riwayat Sakit / Keluhan" subtitle="Rawat inap / rawat jalan / konsultasi / terapi">
           <div className="sm:col-span-2">
             <Field label="Riwayat" k="riwayat_sakit" value={form.riwayat_sakit} onChange={set} textarea />
           </div>
@@ -238,6 +280,7 @@ export default function GriyaTerapiAwalPage() {
           </div>
         </Section>
 
+        <div className="grid gap-5 lg:grid-cols-2">
         <Section title="Pemeriksaan Objektif/Penunjang">
           <Field label="Kontak mata" k="kontak_mata" value={form.kontak_mata} onChange={set} />
           <Field label="Kemampuan duduk tenang" k="kemampuan_duduk_tenang" value={form.kemampuan_duduk_tenang} onChange={set} />
@@ -248,13 +291,12 @@ export default function GriyaTerapiAwalPage() {
             <Field label="Diagnosa" k="diagnosa" value={form.diagnosa} onChange={set} textarea required />
           </div>
         </Section>
+        </div>
 
-        <Section title="Program Rencana Terapi">
-          <Field label="Fisioterapi Motorik" k="fisioterapi_motorik" value={form.fisioterapi_motorik} onChange={set} />
-          <Field label="Fisioterapi Sensorik / Sensori Integrasi" k="fisioterapi_sensorik" value={form.fisioterapi_sensorik} onChange={set} />
-          <Field label="Terapi Wicara" k="terapi_wicara" value={form.terapi_wicara} onChange={set} />
-          <Field label="Terapi Okupasi" k="terapi_okupasi" value={form.terapi_okupasi} onChange={set} />
-          <Field label="Terapi Perilaku" k="terapi_perilaku" value={form.terapi_perilaku} onChange={set} />
+        <Section title="Program Rencana Terapi" subtitle="Centang program yang direkomendasikan">
+          {PROGRAM_OPTIONS.map(({ k, label }) => (
+            <ProgramCheckbox key={k} label={label} value={form[k]} onChange={(v) => set(k, v)} />
+          ))}
         </Section>
 
         <Section title="Target & Program Terapi">
@@ -263,7 +305,7 @@ export default function GriyaTerapiAwalPage() {
           </div>
         </Section>
 
-        <Section title="Jadwal Terapi (menyesuaikan orang tua dan jadwal kosong praktik)">
+        <Section title="Jadwal Terapi" subtitle="Menyesuaikan orang tua dan jadwal kosong praktik">
           <Field label="Hari" k="jadwal_hari" value={form.jadwal_hari} onChange={set} />
           <Field label="Pukul" k="jadwal_pukul" value={form.jadwal_pukul} onChange={set} />
         </Section>
@@ -299,7 +341,7 @@ export default function GriyaTerapiAwalPage() {
           </p>
         )}
 
-        <div className="flex items-center justify-end gap-2 pb-6">
+        <div className="sticky bottom-4 z-10 glass-card flex items-center justify-end gap-2 p-3">
           <button type="button" onClick={persistDraft} disabled={saving || completing}
             className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted disabled:opacity-60 cursor-pointer">
             {saving ? 'Menyimpan...' : 'Simpan Draf'}
