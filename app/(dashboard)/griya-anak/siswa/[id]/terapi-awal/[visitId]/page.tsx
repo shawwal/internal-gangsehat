@@ -18,7 +18,7 @@ const FIELD_KEYS = [
   'keluhan_utama',
   'riwayat_keluarga',
   'berat_badan', 'tinggi_badan', 'lingkar_kepala',
-  'usia_merayap', 'usia_merangkak', 'usia_duduk_mandiri', 'usia_merambat', 'usia_berjalan',
+  'usia_angkat_kepala', 'usia_merayap', 'usia_merangkak', 'usia_duduk_mandiri', 'usia_merambat', 'usia_berjalan',
   'usia_menunjuk', 'usia_babbling', 'usia_mengucap_kata', 'toilet_training', 'pertumbuhan_lainnya',
   'riwayat_sakit',
   'kemampuan_menyedot', 'kemampuan_sikat_gigi', 'kemampuan_menghisap_pipet', 'kemampuan_meniup_lilin',
@@ -246,6 +246,7 @@ export default function GriyaTerapiAwalPage() {
           <Field label="Berat badan" k="berat_badan" value={form.berat_badan} onChange={set} />
           <Field label="Tinggi badan" k="tinggi_badan" value={form.tinggi_badan} onChange={set} />
           <Field label="Lingkar kepala" k="lingkar_kepala" value={form.lingkar_kepala} onChange={set} />
+          <Field label="Kemampuan angkat kepala (usia … bulan)" k="usia_angkat_kepala" value={form.usia_angkat_kepala} onChange={set} />
           <Field label="Kemampuan merayap (usia … bulan)" k="usia_merayap" value={form.usia_merayap} onChange={set} />
           <Field label="Kemampuan merangkak (usia … bulan)" k="usia_merangkak" value={form.usia_merangkak} onChange={set} />
           <Field label="Kemampuan duduk mandiri (usia … bulan)" k="usia_duduk_mandiri" value={form.usia_duduk_mandiri} onChange={set} />

@@ -15,7 +15,7 @@ const TA_SECTIONS: { title: string; fields: [keyof GriyaTerapiAwal, string][] }[
   { title: 'Keluhan & Riwayat', fields: [['keluhan_utama', 'Keluhan Utama'], ['riwayat_keluarga', 'Riwayat Keluarga'], ['riwayat_sakit', 'Riwayat Sakit/Keluhan']] },
   { title: 'Pertumbuhan & Perkembangan', fields: [
     ['berat_badan', 'Berat Badan'], ['tinggi_badan', 'Tinggi Badan'], ['lingkar_kepala', 'Lingkar Kepala'],
-    ['usia_merayap', 'Usia Merayap'], ['usia_merangkak', 'Usia Merangkak'], ['usia_duduk_mandiri', 'Usia Duduk Mandiri'],
+    ['usia_angkat_kepala', 'Usia Angkat Kepala'], ['usia_merayap', 'Usia Merayap'], ['usia_merangkak', 'Usia Merangkak'], ['usia_duduk_mandiri', 'Usia Duduk Mandiri'],
     ['usia_merambat', 'Usia Merambat'], ['usia_berjalan', 'Usia Berjalan'], ['usia_menunjuk', 'Usia Menunjuk'],
     ['usia_babbling', 'Usia Babbling'], ['usia_mengucap_kata', 'Usia Mengucap Kata'], ['toilet_training', 'Toilet Training'],
     ['pertumbuhan_lainnya', 'Lainnya'],

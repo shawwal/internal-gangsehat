@@ -263,6 +263,7 @@ export interface GriyaTerapiAwal {
   berat_badan: string | null
   tinggi_badan: string | null
   lingkar_kepala: string | null
+  usia_angkat_kepala: string | null
   usia_merayap: string | null
   usia_merangkak: string | null
   usia_duduk_mandiri: string | null
