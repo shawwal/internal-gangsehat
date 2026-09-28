@@ -9,7 +9,8 @@ import { JadwalListToolbar } from '@/components/jadwalList/JadwalListToolbar'
 import { JadwalListTable } from '@/components/jadwalList/JadwalListTable'
 import { Pagination } from '@/components/leave/Pagination'
 import { DEFAULT_PAGE_SIZE, type JadwalListRow } from '@/components/jadwalList/types'
-import { fetchReminderTemplate, fetchOrderConfirmationTemplate, fetchAdminPhone } from '@/app/actions/reminder-template'
+import { fetchWaConfigAll, type WaConfigAll } from '@/app/actions/reminder-template'
+import { resolveWaConfig } from '@/lib/waConfig'
 import { fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/utils'
 
 export default function JadwalHarianListPage() {
@@ -23,14 +24,10 @@ export default function JadwalHarianListPage() {
   const { showToast } = useToast()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [reminderTemplate, setReminderTemplate]         = useState<string | null>(null)
-  const [confirmationTemplate, setConfirmationTemplate] = useState<string | null>(null)
-  const [adminPhone, setAdminPhone]                     = useState('')
+  const [waConfig, setWaConfig] = useState<WaConfigAll | null>(null)
 
   useEffect(() => {
-    fetchReminderTemplate().then(setReminderTemplate)
-    fetchOrderConfirmationTemplate().then(setConfirmationTemplate)
-    fetchAdminPhone().then(setAdminPhone)
+    fetchWaConfigAll().then(setWaConfig)
   }, [])
 
   useEffect(() => { setPage(1) }, [selectedDate, selectedBranchId, pageSize])
@@ -42,7 +39,7 @@ export default function JadwalHarianListPage() {
   function handleRemind(row: JadwalListRow) {
     if (!row.patient_phone) return
     const branchName = branches.find((b) => b.id === row.branch_id)?.name ?? ''
-    const msg = fillTemplate(reminderTemplate ?? '', {
+    const msg = fillTemplate(resolveWaConfig(waConfig, row.branch_id).reminder, {
       nama:        row.patient_name,
       tanggal:     formatDate(row.visit_date),
       jam:         row.visit_time ?? '',
@@ -50,7 +47,7 @@ export default function JadwalHarianListPage() {
       cabang:      branchName,
       terapis:     row.attending_staff_name ?? '',
       order_id:    row.order_id ?? '',
-      nomor_admin: adminPhone,
+      nomor_admin: resolveWaConfig(waConfig, row.branch_id).phone,
     })
     const num = formatWaNumber(row.patient_phone)
     window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank')
@@ -59,7 +56,7 @@ export default function JadwalHarianListPage() {
   function handleConfirm(row: JadwalListRow) {
     if (!row.patient_phone) return
     const branchName = branches.find((b) => b.id === row.branch_id)?.name ?? ''
-    const msg = fillTemplate(confirmationTemplate ?? '', {
+    const msg = fillTemplate(resolveWaConfig(waConfig, row.branch_id).confirmation, {
       nama:        row.patient_name,
       hari:        formatHari(row.visit_date),
       tanggal:     formatDate(row.visit_date),
@@ -67,7 +64,7 @@ export default function JadwalHarianListPage() {
       layanan:     row.service_type ?? '',
       cabang:      branchName,
       order_id:    row.order_id ?? '',
-      nomor_admin: adminPhone,
+      nomor_admin: resolveWaConfig(waConfig, row.branch_id).phone,
     })
     const num = formatWaNumber(row.patient_phone)
     window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank')

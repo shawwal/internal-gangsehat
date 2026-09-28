@@ -37,7 +37,13 @@ export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemin
   // the bare pathname) so returning here after saving restores this exact
   // filtered/sorted/paginated view instead of resetting to defaults.
   const returnTo = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname
-  const fillHref = formRoute ? `/visits/${record.id}/${formRoute}?from=${encodeURIComponent(returnTo)}` : null
+  // Griya Anak visits open the Griya forms: Terapi Awal intake directly, and
+  // session notes via the child's rekam medis page (where the SOAP modal lives).
+  const fillHref = record.is_griya
+    ? record.griya_route === 'terapi-awal'
+      ? `/griya-anak/siswa/${record.patient_id}/terapi-awal/${record.id}`
+      : `/griya-anak/siswa/${record.patient_id}/rekam-medis`
+    : formRoute ? `/visits/${record.id}/${formRoute}?from=${encodeURIComponent(returnTo)}` : null
 
   async function handleShare() {
     setSharing(true)

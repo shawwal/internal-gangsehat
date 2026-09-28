@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Check, Loader2, CalendarDays } from 'lucide-react'
+import { Check, Loader2, CalendarDays, Building2, RotateCcw } from 'lucide-react'
 import {
-  fetchReminderTemplate, saveReminderTemplate,
-  fetchOrderConfirmationTemplate, saveOrderConfirmationTemplate,
-  fetchAdminPhone, saveAdminPhone,
+  fetchWaConfigAll, saveWaConfig, clearWaConfigOverride,
+  type WaConfigAll, type WaConfigKind, type WaConfigSet,
 } from '@/app/actions/reminder-template'
+import { resolveWaConfig } from '@/lib/waConfig'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/context/ToastContext'
 import { DEFAULT_REMINDER_TEMPLATE, DEFAULT_ORDER_CONFIRMATION_TEMPLATE } from '@/lib/utils'
 import { TemplateEditorCard } from '@/components/reminderTemplate/TemplateEditorCard'
 
@@ -55,69 +57,88 @@ const CONFIRMATION_SAMPLE = {
   nomor_admin: '081234567890',
 }
 
+type Status = { saving: boolean; saved: boolean; error: string | null }
+const IDLE: Status = { saving: false, saved: false, error: null }
+
+// Shown above each editor when a branch is selected: whether the branch uses
+// its own value or follows the global default, plus a way back to the default.
+function OverrideBar({ overridden, onClear, clearing }: { overridden: boolean; onClear: () => void; clearing: boolean }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap text-xs">
+      <span className={`px-2 py-0.5 rounded-full font-medium ${overridden ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+        {overridden ? 'Khusus cabang ini' : 'Mengikuti default (semua cabang)'}
+      </span>
+      {overridden && (
+        <button type="button" onClick={onClear} disabled={clearing}
+          className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-60 cursor-pointer">
+          {clearing ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} Kembalikan ke default
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function ReminderTemplatePage() {
+  const { showToast } = useToast()
   const [loading, setLoading] = useState(true)
+  const [all, setAll] = useState<WaConfigAll | null>(null)
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
+  const [branchId, setBranchId] = useState<string | null>(null)   // null = default for every branch
+  const [draft, setDraft] = useState<WaConfigSet>({ reminder: '', confirmation: '', phone: '' })
+  const [status, setStatus] = useState<Record<WaConfigKind, Status>>({ reminder: IDLE, confirmation: IDLE, phone: IDLE })
+  const [clearing, setClearing] = useState<WaConfigKind | null>(null)
 
-  const [reminderTemplate, setReminderTemplate] = useState('')
-  const [reminderSaving, setReminderSaving]     = useState(false)
-  const [reminderSaved, setReminderSaved]       = useState(false)
-  const [reminderError, setReminderError]       = useState<string | null>(null)
-
-  const [confirmationTemplate, setConfirmationTemplate] = useState('')
-  const [confirmationSaving, setConfirmationSaving]     = useState(false)
-  const [confirmationSaved, setConfirmationSaved]       = useState(false)
-  const [confirmationError, setConfirmationError]       = useState<string | null>(null)
-
-  const [adminPhone, setAdminPhone]       = useState('')
-  const [phoneSaving, setPhoneSaving]     = useState(false)
-  const [phoneSaved, setPhoneSaved]       = useState(false)
-  const [phoneError, setPhoneError]       = useState<string | null>(null)
+  const load = useCallback(async () => {
+    const cfg = await fetchWaConfigAll()
+    setAll(cfg)
+    return cfg
+  }, [])
 
   useEffect(() => {
+    const sb = createClient()
     Promise.all([
-      fetchReminderTemplate(),
-      fetchOrderConfirmationTemplate(),
-      fetchAdminPhone(),
-    ]).then(([reminder, confirmation, phone]) => {
-      setReminderTemplate(reminder)
-      setConfirmationTemplate(confirmation)
-      setAdminPhone(phone)
+      fetchWaConfigAll(),
+      sb.from('branches').select('id, name').eq('is_active', true).order('name'),
+    ]).then(([cfg, { data }]) => {
+      setAll(cfg)
+      setBranches((data ?? []) as { id: string; name: string }[])
+      setDraft(cfg.global)
       setLoading(false)
     })
   }, [])
 
-  async function handleSaveReminder() {
-    setReminderSaving(true)
-    setReminderError(null)
-    setReminderSaved(false)
-    const { error } = await saveReminderTemplate(reminderTemplate)
-    setReminderSaving(false)
-    if (error) { setReminderError(error); return }
-    setReminderSaved(true)
-    setTimeout(() => setReminderSaved(false), 2500)
+  function selectBranch(id: string | null) {
+    setBranchId(id)
+    setDraft(id ? resolveWaConfig(all, id) : all!.global)
+    setStatus({ reminder: IDLE, confirmation: IDLE, phone: IDLE })
   }
 
-  async function handleSaveConfirmation() {
-    setConfirmationSaving(true)
-    setConfirmationError(null)
-    setConfirmationSaved(false)
-    const { error } = await saveOrderConfirmationTemplate(confirmationTemplate)
-    setConfirmationSaving(false)
-    if (error) { setConfirmationError(error); return }
-    setConfirmationSaved(true)
-    setTimeout(() => setConfirmationSaved(false), 2500)
+  const overrides = branchId ? all?.byBranch[branchId] ?? {} : {}
+  const setKind = (k: WaConfigKind, st: Partial<Status>) => setStatus((s) => ({ ...s, [k]: { ...s[k], ...st } }))
+
+  async function handleSave(kind: WaConfigKind) {
+    setKind(kind, { saving: true, saved: false, error: null })
+    const value = kind === 'phone' ? draft.phone.trim() : draft[kind]
+    const { error } = await saveWaConfig(kind, value, branchId)
+    if (error) { setKind(kind, { saving: false, error }); return }
+    await load()
+    setKind(kind, { saving: false, saved: true })
+    setTimeout(() => setKind(kind, { saved: false }), 2500)
   }
 
-  async function handleSavePhone() {
-    setPhoneSaving(true)
-    setPhoneError(null)
-    setPhoneSaved(false)
-    const { error } = await saveAdminPhone(adminPhone.trim())
-    setPhoneSaving(false)
-    if (error) { setPhoneError(error); return }
-    setPhoneSaved(true)
-    setTimeout(() => setPhoneSaved(false), 2500)
+  async function handleClear(kind: WaConfigKind) {
+    if (!branchId) return
+    setClearing(kind)
+    const { error } = await clearWaConfigOverride(kind, branchId)
+    setClearing(null)
+    if (error) { showToast(error, 'error'); return }
+    const cfg = await load()
+    setDraft((d) => ({ ...d, [kind]: cfg.global[kind] }))
+    showToast('Dikembalikan ke template default', 'success')
   }
+
+  const branchName = branches.find((b) => b.id === branchId)?.name
+  const overriddenCount = (id: string) => Object.keys(all?.byBranch[id] ?? {}).length
 
   return (
     <div className="space-y-8 max-w-2xl">
@@ -125,7 +146,7 @@ export default function ReminderTemplatePage() {
       <div>
         <h1 className="text-xl font-semibold text-foreground">Template Pesan WA</h1>
         <p className="text-sm text-muted-foreground">
-          Atur pesan WhatsApp yang dikirim ke pasien dan nomor admin utama
+          Atur pesan WhatsApp yang dikirim ke pasien dan nomor admin utama — bisa berbeda per cabang
         </p>
       </div>
 
@@ -135,6 +156,31 @@ export default function ReminderTemplatePage() {
         </div>
       ) : (
         <>
+          {/* Branch picker */}
+          <div className="glass-card p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Building2 size={15} className="text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Cabang</h2>
+            </div>
+            <select
+              value={branchId ?? ''}
+              onChange={(e) => selectBranch(e.target.value || null)}
+              className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">Default (semua cabang)</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}{overriddenCount(b.id) ? ` · ${overriddenCount(b.id)} pengaturan khusus` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {branchId
+                ? `Perubahan hanya berlaku untuk ${branchName}. Bagian yang tidak diubah tetap mengikuti default.`
+                : 'Dipakai oleh semua cabang yang tidak punya pengaturan khusus.'}
+            </p>
+          </div>
+
           {/* Primary admin phone number */}
           <div className="space-y-3">
             <div>
@@ -143,47 +189,51 @@ export default function ReminderTemplatePage() {
                 Nomor utama yang bisa dihubungi balik oleh pasien, tersedia sebagai placeholder {'{{nomor_admin}}'}
               </p>
             </div>
+            {branchId && <OverrideBar overridden={overrides.phone !== undefined} onClear={() => handleClear('phone')} clearing={clearing === 'phone'} />}
             <div className="glass-card p-5 space-y-4">
               <div>
                 <label className="block text-xs font-medium mb-1.5">Nomor WhatsApp</label>
                 <input
                   type="tel"
-                  value={adminPhone}
-                  onChange={(e) => setAdminPhone(e.target.value)}
+                  value={draft.phone}
+                  onChange={(e) => setDraft((d) => ({ ...d, phone: e.target.value }))}
                   placeholder="Contoh: 081234567890"
                   className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
-              {phoneError && (
-                <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-xl">{phoneError}</p>
+              {status.phone.error && (
+                <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-xl">{status.phone.error}</p>
               )}
 
               <button
-                onClick={handleSavePhone}
-                disabled={phoneSaving || !adminPhone.trim()}
+                onClick={() => handleSave('phone')}
+                disabled={status.phone.saving || !draft.phone.trim()}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors cursor-pointer"
               >
-                {phoneSaving ? <Loader2 size={14} className="animate-spin" /> : phoneSaved ? <Check size={14} /> : null}
-                {phoneSaving ? 'Menyimpan...' : phoneSaved ? 'Tersimpan' : 'Simpan'}
+                {status.phone.saving ? <Loader2 size={14} className="animate-spin" /> : status.phone.saved ? <Check size={14} /> : null}
+                {status.phone.saving ? 'Menyimpan...' : status.phone.saved ? 'Tersimpan' : 'Simpan'}
               </button>
             </div>
           </div>
 
           {/* Reminder template */}
-          <TemplateEditorCard
-            title="Pesan Pengingat"
-            description="Dikirim ke pasien sebagai pengingat jadwal terapi yang akan berlangsung"
-            template={reminderTemplate}
-            onChange={setReminderTemplate}
-            onSave={handleSaveReminder}
-            onReset={() => setReminderTemplate(DEFAULT_REMINDER_TEMPLATE)}
-            saving={reminderSaving}
-            saved={reminderSaved}
-            error={reminderError}
-            placeholders={REMINDER_PLACEHOLDERS}
-            sampleVars={REMINDER_SAMPLE}
-          />
+          <div className="space-y-2">
+            {branchId && <OverrideBar overridden={overrides.reminder !== undefined} onClear={() => handleClear('reminder')} clearing={clearing === 'reminder'} />}
+            <TemplateEditorCard
+              title="Pesan Pengingat"
+              description="Dikirim ke pasien sebagai pengingat jadwal terapi yang akan berlangsung"
+              template={draft.reminder}
+              onChange={(v) => setDraft((d) => ({ ...d, reminder: v }))}
+              onSave={() => handleSave('reminder')}
+              onReset={() => setDraft((d) => ({ ...d, reminder: DEFAULT_REMINDER_TEMPLATE }))}
+              saving={status.reminder.saving}
+              saved={status.reminder.saved}
+              error={status.reminder.error}
+              placeholders={REMINDER_PLACEHOLDERS}
+              sampleVars={{ ...REMINDER_SAMPLE, ...(branchName ? { cabang: branchName } : {}), ...(draft.phone ? { nomor_admin: draft.phone } : {}) }}
+            />
+          </div>
 
           <Link
             href="/jadwal-harian"
@@ -193,19 +243,22 @@ export default function ReminderTemplatePage() {
           </Link>
 
           {/* Order confirmation template */}
-          <TemplateEditorCard
-            title="Konfirmasi Pendaftaran"
-            description="Dikirim ke pasien saat jadwal fisioterapi berhasil didaftarkan"
-            template={confirmationTemplate}
-            onChange={setConfirmationTemplate}
-            onSave={handleSaveConfirmation}
-            onReset={() => setConfirmationTemplate(DEFAULT_ORDER_CONFIRMATION_TEMPLATE)}
-            saving={confirmationSaving}
-            saved={confirmationSaved}
-            error={confirmationError}
-            placeholders={CONFIRMATION_PLACEHOLDERS}
-            sampleVars={CONFIRMATION_SAMPLE}
-          />
+          <div className="space-y-2">
+            {branchId && <OverrideBar overridden={overrides.confirmation !== undefined} onClear={() => handleClear('confirmation')} clearing={clearing === 'confirmation'} />}
+            <TemplateEditorCard
+              title="Konfirmasi Pendaftaran"
+              description="Dikirim ke pasien saat jadwal fisioterapi berhasil didaftarkan"
+              template={draft.confirmation}
+              onChange={(v) => setDraft((d) => ({ ...d, confirmation: v }))}
+              onSave={() => handleSave('confirmation')}
+              onReset={() => setDraft((d) => ({ ...d, confirmation: DEFAULT_ORDER_CONFIRMATION_TEMPLATE }))}
+              saving={status.confirmation.saving}
+              saved={status.confirmation.saved}
+              error={status.confirmation.error}
+              placeholders={CONFIRMATION_PLACEHOLDERS}
+              sampleVars={{ ...CONFIRMATION_SAMPLE, ...(branchName ? { cabang: branchName } : {}), ...(draft.phone ? { nomor_admin: draft.phone } : {}) }}
+            />
+          </div>
         </>
       )}
     </div>

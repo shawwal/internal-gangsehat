@@ -7,44 +7,71 @@ const KEY_REMINDER      = 'patient_reminder_template'
 const KEY_CONFIRMATION  = 'order_confirmation_template'
 const KEY_ADMIN_PHONE   = 'admin_primary_phone'
 
-async function fetchConfig(kunci: string): Promise<string | null> {
+export type WaConfigKind = 'reminder' | 'confirmation' | 'phone'
+
+const KEYS: Record<WaConfigKind, string> = {
+  reminder: KEY_REMINDER,
+  confirmation: KEY_CONFIRMATION,
+  phone: KEY_ADMIN_PHONE,
+}
+
+const DEFAULTS: Record<WaConfigKind, string> = {
+  reminder: DEFAULT_REMINDER_TEMPLATE,
+  confirmation: DEFAULT_ORDER_CONFIRMATION_TEMPLATE,
+  phone: '',
+}
+
+// Per-branch overrides live in the same internal_konfigurasi table under
+// `<key>:<branchId>`. A branch without an override falls back to the global
+// key, then to the built-in default.
+const branchKey = (kunci: string, branchId: string) => `${kunci}:${branchId}`
+
+export interface WaConfigSet { reminder: string; confirmation: string; phone: string }
+
+export interface WaConfigAll {
+  global: WaConfigSet
+  /** only the values a branch actually overrides */
+  byBranch: Record<string, Partial<WaConfigSet>>
+}
+
+/** Every WA template/phone value — global plus all per-branch overrides — in one query. */
+export async function fetchWaConfigAll(): Promise<WaConfigAll> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('internal_konfigurasi')
-    .select('nilai')
-    .eq('kunci', kunci)
-    .maybeSingle()
-  return data?.nilai ?? null
+    .select('kunci, nilai')   // small key-value table — filtered below
+
+  const global: WaConfigSet = { ...DEFAULTS }
+  const byBranch: WaConfigAll['byBranch'] = {}
+  for (const row of data ?? []) {
+    for (const kind of Object.keys(KEYS) as WaConfigKind[]) {
+      const k = KEYS[kind]
+      if (row.kunci === k) global[kind] = row.nilai
+      else if (row.kunci.startsWith(k + ':')) {
+        const b = row.kunci.slice(k.length + 1)
+        ;(byBranch[b] ??= {})[kind] = row.nilai
+      }
+    }
+  }
+  return { global, byBranch }
 }
 
-async function saveConfig(kunci: string, nilai: string): Promise<{ error: string | null }> {
+/** Save a value globally (branchId null) or as a branch override. */
+export async function saveWaConfig(kind: WaConfigKind, nilai: string, branchId: string | null): Promise<{ error: string | null }> {
   const supabase = await createClient()
+  const kunci = branchId ? branchKey(KEYS[kind], branchId) : KEYS[kind]
   const { error } = await supabase
     .from('internal_konfigurasi')
     .upsert({ kunci, nilai, updated_at: new Date().toISOString() }, { onConflict: 'kunci' })
   return { error: error?.message ?? null }
 }
 
-export async function fetchReminderTemplate(): Promise<string> {
-  return (await fetchConfig(KEY_REMINDER)) ?? DEFAULT_REMINDER_TEMPLATE
-}
-
-export async function saveReminderTemplate(nilai: string): Promise<{ error: string | null }> {
-  return saveConfig(KEY_REMINDER, nilai)
-}
-
-export async function fetchOrderConfirmationTemplate(): Promise<string> {
-  return (await fetchConfig(KEY_CONFIRMATION)) ?? DEFAULT_ORDER_CONFIRMATION_TEMPLATE
-}
-
-export async function saveOrderConfirmationTemplate(nilai: string): Promise<{ error: string | null }> {
-  return saveConfig(KEY_CONFIRMATION, nilai)
-}
-
-export async function fetchAdminPhone(): Promise<string> {
-  return (await fetchConfig(KEY_ADMIN_PHONE)) ?? ''
-}
-
-export async function saveAdminPhone(nilai: string): Promise<{ error: string | null }> {
-  return saveConfig(KEY_ADMIN_PHONE, nilai)
+/** Remove a branch override so the branch follows the global value again. */
+export async function clearWaConfigOverride(kind: WaConfigKind, branchId: string): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('internal_konfigurasi')
+    .delete()
+    .eq('kunci', branchKey(KEYS[kind], branchId))
+  return { error: error?.message ?? null }
 }

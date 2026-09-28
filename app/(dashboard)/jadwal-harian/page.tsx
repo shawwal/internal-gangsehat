@@ -24,7 +24,8 @@ import { DetachPackageDialog } from '@/components/jadwal/DetachPackageDialog'
 import { AttachPackageDialog } from '@/components/jadwal/AttachPackageDialog'
 import { BuyPackageButton } from '@/components/jadwal/buy-package/BuyPackageButton'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders, updateVisit } from '@/app/actions/jadwal'
-import { fetchReminderTemplate, fetchOrderConfirmationTemplate, fetchAdminPhone } from '@/app/actions/reminder-template'
+import { fetchWaConfigAll, type WaConfigAll } from '@/app/actions/reminder-template'
+import { resolveWaConfig } from '@/lib/waConfig'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 import { fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/utils'
 import type { AssignTarget, RefreshingCell } from '@/components/jadwal/types'
@@ -93,13 +94,9 @@ export default function JadwalHarianPage() {
   const { showToast } = useToast()
 
   // WhatsApp templates & admin phone — loaded once
-  const [reminderTemplate, setReminderTemplate]         = useState<string | null>(null)
-  const [confirmationTemplate, setConfirmationTemplate] = useState<string | null>(null)
-  const [adminPhone, setAdminPhone]                     = useState('')
+  const [waConfig, setWaConfig] = useState<WaConfigAll | null>(null)
   useEffect(() => {
-    fetchReminderTemplate().then(setReminderTemplate)
-    fetchOrderConfirmationTemplate().then(setConfirmationTemplate)
-    fetchAdminPhone().then(setAdminPhone)
+    fetchWaConfigAll().then(setWaConfig)
   }, [])
 
   // Toolbar state — start with the SSR-safe default; the real localStorage
@@ -204,7 +201,7 @@ export default function JadwalHarianPage() {
     const attendingStaff = staff.find((s) => s.staff_id === visit.attending_staff_id)
     const therapistName = attendingStaff?.nickname || attendingStaff?.full_name || ''
 
-    const msg = fillTemplate(reminderTemplate ?? '', {
+    const msg = fillTemplate(resolveWaConfig(waConfig, visit.branch_id).reminder, {
       nama:        visit.patient_name,
       tanggal:     formatDate(visit.visit_date),
       jam:         visit.visit_time ?? '',
@@ -212,7 +209,7 @@ export default function JadwalHarianPage() {
       cabang:      branchName,
       terapis:     therapistName,
       order_id:    visit.order_id ?? '',
-      nomor_admin: adminPhone,
+      nomor_admin: resolveWaConfig(waConfig, visit.branch_id).phone,
     })
 
     const num = formatWaNumber(visit.patient_phone)
@@ -225,7 +222,7 @@ export default function JadwalHarianPage() {
 
     const branchName = branches.find((b) => b.id === visit.branch_id)?.name ?? ''
 
-    const msg = fillTemplate(confirmationTemplate ?? '', {
+    const msg = fillTemplate(resolveWaConfig(waConfig, visit.branch_id).confirmation, {
       nama:        visit.patient_name,
       hari:        formatHari(visit.visit_date),
       tanggal:     formatDate(visit.visit_date),
@@ -233,7 +230,7 @@ export default function JadwalHarianPage() {
       layanan:     visit.service_type ?? '',
       cabang:      branchName,
       order_id:    visit.order_id ?? '',
-      nomor_admin: adminPhone,
+      nomor_admin: resolveWaConfig(waConfig, visit.branch_id).phone,
     })
 
     const num = formatWaNumber(visit.patient_phone)

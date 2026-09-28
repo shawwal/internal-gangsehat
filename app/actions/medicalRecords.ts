@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { isRegioRequired } from '@/lib/visitRouting'
 import { getEffectivePackageServiceType } from '@/lib/serviceType'
+import { getGriyaVisitFormRoute, type GriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
+import { fetchVisitDisciplines } from '@/lib/griyaDiscipline'
 import type { UserRole } from '@/types'
 
 // service_types where regio is compulsory, formatted for PostgREST in.() lists
@@ -66,6 +68,11 @@ export interface MedicalRecordRow {
   // (oldest first), matching the "Pertemuan N" numbering shown on the
   // patient packages page. Null when the visit isn't tied to a package.
   pertemuan_number: number | null
+  // Griya Anak branch visits use their own forms (not the adult MSK ones).
+  // is_griya is true for any visit in a Griya-enabled branch; griya_route is
+  // the Griya form it opens, or null when that service type has none.
+  is_griya: boolean
+  griya_route: GriyaVisitFormRoute | null
 }
 
 export interface MedicalRecordsParams {
@@ -220,7 +227,7 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     .from('patient_visits')
     .select(`
       id, patient_id, branch_id, visit_date, visit_time, service_type, package_id,
-      attending_staff_id, diagnosis, treatment, regio,
+      attending_staff_id, griya_slot_id, diagnosis, treatment, regio,
       internal_profiles!attending_staff_id(full_name, nickname),
       branches!branch_id(name)
     `, { count: 'exact' })
@@ -292,6 +299,15 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     }
   }
 
+  // Which of these visits belong to a Griya Anak branch — those route to the
+  // Griya intake / rekam medis pages instead of the adult forms.
+  const branchIds = [...new Set(data.map((v) => v.branch_id as string))]
+  const { data: griyaBranches } = await supabase
+    .from('branch_griya_settings').select('branch_id').eq('enabled', true).in('branch_id', branchIds)
+  const griyaBranchIds = new Set((griyaBranches ?? []).map((b) => b.branch_id as string))
+  const griyaVisits = data.filter((v) => griyaBranchIds.has(v.branch_id as string))
+  const disciplines = await fetchVisitDisciplines(supabase, griyaVisits as unknown as { id: string }[])
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let rows: MedicalRecordRow[] = (data as any[]).map((v) => ({
     id:                    v.id,
@@ -309,6 +325,8 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     regio:                 v.regio,
     is_complete:           !!(v.diagnosis && v.treatment && (!isRegioRequired(v.service_type) || v.regio)),
     pertemuan_number:      v.package_id ? pertemuanMap.get(v.id) ?? null : null,
+    is_griya:              griyaBranchIds.has(v.branch_id),
+    griya_route:           griyaBranchIds.has(v.branch_id) ? getGriyaVisitFormRoute(v.service_type, disciplines.get(v.id)) : null,
   }))
 
   let total = count ?? 0
