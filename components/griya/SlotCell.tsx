@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { Plus, Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw, Stethoscope, Ban, Trash2 } from 'lucide-react'
+import { FaWhatsapp } from 'react-icons/fa'
 import type { ResolvedCell } from './resolve'
 
 export type CellAction =
   | 'assign' | 'substitute' | 'attendance' | 'markPresent' | 'unmarkAttendance' | 'move' | 'end' | 'pay' | 'open' | 'editVisit' | 'examine' | 'coverUnassigned'
-  | 'cancel' | 'deleteVisit'
+  | 'cancel' | 'deleteVisit' | 'waReminder' | 'waConfirmation'
 
 interface Props {
   cellKey: string
@@ -45,6 +46,10 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
   const { setNodeRef: dropRef, isOver } = useDroppable({ id: `drop:${dndId}`, data: { cellKey } })
 
   function setRefs(el: HTMLDivElement | null) { dragRef(el); dropRef(el) }
+
+  // WA reminder/confirmation to the parent — same as VisitCard on jadwal harian
+  const hasPhone = !!(cell?.visit?.patient_phone || cell?.slot?.patient_phone)
+  const canWhatsApp = canEdit && hasPhone && cell?.state !== 'moved-out'
 
   if (!therapistOn && !cell) {
     return (
@@ -104,7 +109,7 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
           <div className="fixed inset-0 z-[60]" onClick={() => setMenu(null)} />
           <div
             className="fixed z-[61] glass-card p-1.5 w-52 text-sm shadow-2xl"
-            style={{ top: Math.min(menu.y, window.innerHeight - 320), left: Math.min(menu.x, window.innerWidth - 220) }}
+            style={{ top: Math.max(8, Math.min(menu.y, window.innerHeight - 440)), left: Math.min(menu.x, window.innerWidth - 220) }}
           >
             {cell.slot && cell.state === 'scheduled' && canEdit && (
               <>
@@ -164,6 +169,12 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
               <MenuBtn icon={<Pencil size={14} />} label="Ubah Kunjungan" onClick={() => { setMenu(null); onAction('editVisit', cell) }} />
             )}
             {canEdit && <MenuBtn icon={<CreditCard size={14} />} label="Bayar" onClick={() => { setMenu(null); onAction('pay', cell) }} />}
+            {canWhatsApp && (
+              <>
+                <MenuBtn icon={<FaWhatsapp size={14} />} label="Kirim Pengingat WA" whatsapp separated onClick={() => { setMenu(null); onAction('waReminder', cell) }} />
+                <MenuBtn icon={<FaWhatsapp size={14} />} label="Kirim Konfirmasi WA" whatsapp onClick={() => { setMenu(null); onAction('waConfirmation', cell) }} />
+              </>
+            )}
             <MenuBtn icon={<ExternalLink size={14} />} label="Lihat Siswa" onClick={() => { setMenu(null); onAction('open', cell) }} />
           </div>
         </>,
@@ -173,11 +184,11 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
   )
 }
 
-function MenuBtn({ icon, label, onClick, danger, separated }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean; separated?: boolean }) {
+function MenuBtn({ icon, label, onClick, danger, whatsapp, separated }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean; whatsapp?: boolean; separated?: boolean }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-white/10 text-left cursor-pointer ${danger ? 'text-destructive' : ''} ${separated ? 'mt-1 pt-2 border-t border-white/10' : ''}`}
+      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-white/10 text-left cursor-pointer ${danger ? 'text-destructive' : ''} ${whatsapp ? 'text-[#25D366] hover:bg-[#25D366]/10' : ''} ${separated ? 'mt-1 pt-2 border-t border-white/10' : ''}`}
     >
       {icon}{label}
     </button>

@@ -31,6 +31,7 @@ export interface GriyaSlot {
   id: string
   patient_id: string
   patient_name: string
+  patient_phone?: string        // decrypted; only set by fetchGriyaWeek (WA reminders)
   therapist_id: string | null   // optional pin (set from jadwal harian) — overrides daily rotation when still valid (see lib/griyaRotation.ts)
   discipline: Discipline
   hari: Hari
@@ -255,6 +256,7 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
       id: s.id as string,
       patient_id: s.patient_id as string,
       patient_name: nameMap.get(s.patient_id as string) ?? 'Anak',
+      patient_phone: phoneMap.get(s.patient_id as string) ?? '',
       therapist_id: (s.therapist_id as string) ?? null,
       discipline: s.discipline as Discipline,
       hari: s.hari as Hari,

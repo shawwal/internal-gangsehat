@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Users, RefreshCw } from 'lucide-react'
 import { useGriyaJadwal } from '@/hooks/useGriyaJadwal'
 import { useToast } from '@/context/ToastContext'
+import { createClient } from '@/lib/supabase/client'
 import { DateNav } from '@/components/jadwal/DateNav'
 import { hariOf, toIso, HARI_LABEL } from '@/components/griya/constants'
 import { DayGrid } from '@/components/griya/DayGrid'
@@ -24,6 +25,9 @@ import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { markAttendance, resetAttendance, markVisitAttendance, resetVisitAttendance, cancelOccurrence } from '@/app/actions/griyaJadwal'
 import { updateVisitStatus, deleteVisit } from '@/app/actions/jadwal'
 import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
+import { fetchWaConfigAll, type WaConfigAll } from '@/app/actions/reminder-template'
+import { resolveWaConfig } from '@/lib/waConfig'
+import { fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/utils'
 import type { CellAction } from '@/components/griya/SlotCell'
 import type { ResolvedCell } from '@/components/griya/resolve'
 import type { CellTarget } from '@/components/griya/types'
@@ -49,6 +53,38 @@ export default function GriyaJadwalPage() {
   const [manageOpen, setManageOpen] = useState(false)
   const [confirmTarget, setConfirmTarget] = useState<{ kind: 'cancel' | 'delete'; cell: ResolvedCell } | null>(null)
   const [confirming, setConfirming] = useState(false)
+
+  // WhatsApp templates & admin phone + branch name for the WA messages — loaded once
+  const [waConfig, setWaConfig] = useState<WaConfigAll | null>(null)
+  const [branchName, setBranchName] = useState('')
+  useEffect(() => {
+    fetchWaConfigAll().then(setWaConfig)
+  }, [])
+  useEffect(() => {
+    if (!branchId) return
+    createClient().from('branches').select('name').eq('id', branchId).single()
+      .then(({ data }) => setBranchName(data?.name ?? ''))
+  }, [branchId])
+
+  // Same templates/placeholders as jadwal harian (VisitCard → Kirim Pengingat/Konfirmasi WA)
+  function sendWhatsApp(kind: 'reminder' | 'confirmation', cell: ResolvedCell) {
+    const phone = cell.visit?.patient_phone || cell.slot?.patient_phone
+    if (!phone) { showToast('Nomor WA orang tua belum diisi.', 'error'); return }
+    const wa = resolveWaConfig(waConfig, branchId)
+    const col = week.therapists.find((t) => t.therapist_id === cell.therapistId)
+    const msg = fillTemplate(kind === 'reminder' ? wa.reminder : wa.confirmation, {
+      nama:        cell.studentName,
+      hari:        formatHari(dateIso),
+      tanggal:     formatDate(dateIso),
+      jam:         cell.hour,
+      layanan:     cell.visit?.service_type ?? cell.slot?.service_type ?? '',
+      cabang:      branchName,
+      terapis:     col?.nickname || col?.full_name || '',
+      order_id:    '',
+      nomor_admin: wa.phone,
+    })
+    window.open(`https://wa.me/${formatWaNumber(phone)}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
 
   function targetFor(cellKey: string, cell?: ResolvedCell): CellTarget | null {
     const [therapistId, hour] = cellKey.split('|')
@@ -83,6 +119,10 @@ export default function GriyaJadwalPage() {
     }
 
     switch (action) {
+      case 'waReminder':
+      case 'waConfirmation':
+        if (cell) sendWhatsApp(action === 'waReminder' ? 'reminder' : 'confirmation', cell)
+        break
       case 'assign': setAddMaster(target); break
       case 'substitute': setAssign(target); break
       case 'attendance': setAttendance(target); break
