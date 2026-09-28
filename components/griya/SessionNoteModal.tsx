@@ -90,12 +90,14 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }))
 
-  const requiredMissing = form.sudah_diperiksa && (
+  const locked = !form.sudah_diperiksa
+  const requiredMissing = (
     !form.subjective.trim() || !form.objective.trim() || !form.assessment.trim() ||
     !form.plan.trim() || !form.keterangan_periksa.trim()
   )
 
   async function save() {
+    if (locked) { setError('Centang "Sudah diperiksa" terlebih dahulu.'); return }
     if (requiredMissing) { setError('Lengkapi semua kolom sebelum menandai sudah diperiksa.'); return }
     setSaving(true); setError(null)
     const { error } = await saveGriyaSessionNote(target.visitId, target.patientId, target.branchId, form)
@@ -126,8 +128,15 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
                 onChange={(e) => set('sudah_diperiksa', e.target.checked)}
                 className="h-4 w-4 rounded accent-[#34C759]"
               />
-              Sudah diperiksa
+              Sudah diperiksa *
             </label>
+            {locked && (
+              <p className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                Centang &quot;Sudah diperiksa&quot; setelah memeriksa pasien untuk mengisi catatan.
+              </p>
+            )}
+
+            <fieldset disabled={locked} className={`space-y-3 border-0 m-0 p-0 min-w-0 transition-opacity ${locked ? 'opacity-50' : ''}`}>
 
             <div className="flex items-center gap-2 flex-wrap">
               <button type="button" onClick={copyPrevious} disabled={copying}
@@ -162,6 +171,7 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
               <textarea value={form.keterangan_periksa} onChange={(e) => set('keterangan_periksa', e.target.value)} rows={2}
                 className={inputCls} />
             </div>
+            </fieldset>
 
             {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
@@ -169,7 +179,7 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
 
         <div className="flex items-center justify-end gap-2 pt-4">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted cursor-pointer">Batal</button>
-          <button onClick={save} disabled={saving || loading}
+          <button onClick={save} disabled={saving || loading || locked}
             className="px-4 py-2 rounded-xl bg-[#34C759] text-white text-sm font-medium hover:bg-[#34C759]/90 disabled:opacity-60 cursor-pointer">
             {saving ? 'Menyimpan...' : '✓ Update'}
           </button>

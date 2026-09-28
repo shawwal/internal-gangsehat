@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, ExternalLink, Pencil, Printer } from 'lucide-react'
+import { ChevronLeft, ExternalLink, Pencil, FileDown, Loader2 } from 'lucide-react'
 import { fetchPatient, type PatientPlain } from '@/app/actions/patients'
 import { fetchGriyaMedicalRecords, type GriyaMedicalRecords, type GriyaRecordEntry } from '@/app/actions/griyaMedicalRecords'
 import { SessionNoteModal } from '@/components/griya/SessionNoteModal'
 import { useToast } from '@/context/ToastContext'
 import { createClient } from '@/lib/supabase/client'
 import type { GriyaTerapiAwal } from '@/types'
+import { downloadGriyaRekamMedisPdf, type GriyaPdfBlock } from '@/lib/downloadGriyaRekamMedisPdf'
 
 const TA_SECTIONS: { title: string; fields: [keyof GriyaTerapiAwal, string][] }[] = [
   { title: 'Keluhan & Riwayat', fields: [['keluhan_utama', 'Keluhan Utama'], ['riwayat_keluarga', 'Riwayat Keluarga'], ['riwayat_sakit', 'Riwayat Sakit/Keluhan']] },
@@ -55,6 +56,7 @@ export default function GriyaRekamMedisPage() {
   const [data, setData] = useState<GriyaMedicalRecords | null>(null)
   const [role, setRole] = useState<string | null>(null)
   const [edit, setEdit] = useState<GriyaRecordEntry | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   const load = useCallback(async () => {
     const [p, r] = await Promise.all([fetchPatient(id), fetchGriyaMedicalRecords(id)])
@@ -73,6 +75,35 @@ export default function GriyaRekamMedisPage() {
 
   const canEdit = !!role && ['director', 'manager', 'admin', 'therapist'].includes(role)
 
+  async function exportPdf() {
+    if (!data || !patient) return
+    setExporting(true)
+    try {
+      const blocks: GriyaPdfBlock[] = data.entries.map((e) => {
+        const st = e.kind === 'terapi-awal' ? (e.terapiAwal?.status ?? null) : (e.note?.status ?? null)
+        const heading = e.kind === 'terapi-awal' ? 'Terapi Awal' : `Pertemuan Ke-${e.pertemuanKe}`
+        const meta = [fmtDate(e.visitDate), e.visitTime, e.therapistName].filter(Boolean).join(' · ')
+        const status = st === 'completed' ? 'Lengkap' : st === 'draft' ? 'Draf' : 'Belum diisi'
+        if (e.kind === 'terapi-awal') {
+          if (!e.terapiAwal) return { heading, meta, status, groups: [], empty: 'Formulir Terapi Awal belum diisi.' }
+          const groups = TA_SECTIONS.map((sec) => ({
+            title: sec.title,
+            rows: sec.fields.filter(([k]) => e.terapiAwal![k]).map(([k, l]) => [l, String(e.terapiAwal![k])] as [string, string]),
+          })).filter((g) => g.rows.length)
+          return { heading, meta, status, groups }
+        }
+        if (!e.note) return { heading, meta, status, groups: [], empty: e.attended ? 'Rekam medis belum diisi.' : 'Belum ada catatan (anak belum hadir).' }
+        return { heading, meta, status, groups: [{ rows: SOAP.map(([k, l]) => [l, (e.note![k] as string | null) || '—'] as [string, string]) }] }
+      })
+      const safe = patient.name.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_')
+      await downloadGriyaRekamMedisPdf({ patientName: patient.name, noRm: patient.no_rm ?? null, blocks, filename: `Rekam_Medis_${safe}.pdf` })
+    } catch {
+      showToast('Gagal membuat PDF', 'error')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   if (!data || !patient) return <div className="text-sm text-muted-foreground">Memuat...</div>
 
   return (
@@ -81,8 +112,8 @@ export default function GriyaRekamMedisPage() {
         <Link href={`/griya-anak/siswa/${id}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ChevronLeft size={15} /> Kembali ke profil anak
         </Link>
-        <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted cursor-pointer">
-          <Printer size={14} /> Cetak
+        <button onClick={exportPdf} disabled={exporting} className="flex disabled:opacity-60 items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted cursor-pointer">
+          {exporting ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />} {exporting ? 'Membuat PDF...' : 'Unduh PDF'}
         </button>
       </div>
 
