@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { fetchDailyVisits, updateVisitStatus, deleteVisit } from '@/app/actions/jadwal'
+import { fetchDailyVisits, updateVisitStatus, deleteVisit, updateVisit } from '@/app/actions/jadwal'
 import { toIso, toHariIndonesia, getMondayOf } from '@/components/jadwal/utils'
 import { getWeekGroupForDate } from '@/lib/schedule/weekGroup'
 import type { DayStaffEntry, PendingLeaveInfo } from '@/components/jadwal/types'
@@ -325,6 +325,27 @@ export function useJadwalHarian() {
     deleteVisit(visitId)
   }
 
+  // Reassign a visit to another therapist and/or time slot. Optimistic — the card
+  // jumps immediately and is rolled back if the update fails. Works regardless of
+  // kehadiran/status, so a visit already marked HADIR can still be corrected.
+  async function handleMoveVisit(
+    visitId: string,
+    dest: { staffId: string; visitTime: string | null; shift?: string | null },
+  ): Promise<{ error: string | null }> {
+    const prev = visits.find((v) => v.id === visitId)
+    if (!prev) return { error: 'Kunjungan tidak ditemukan' }
+    setVisits((vs) => vs.map((v) => v.id === visitId
+      ? { ...v, attending_staff_id: dest.staffId, visit_time: dest.visitTime }
+      : v))
+    const { error } = await updateVisit(visitId, {
+      attending_staff_id: dest.staffId,
+      visit_time:         dest.visitTime,
+      ...(dest.shift !== undefined ? { shift: dest.shift } : {}),
+    })
+    if (error) setVisits((vs) => vs.map((v) => v.id === visitId ? prev : v))
+    return { error }
+  }
+
   async function handleLeaveAction(leaveId: string, action: 'approve' | 'reject') {
     setLeaveSaving(true)
     const supabase = createClient()
@@ -365,6 +386,7 @@ export function useJadwalHarian() {
     loadAll,
     handleStatusChange,
     handleDelete,
+    handleMoveVisit,
     handleLeaveAction,
   }
 }

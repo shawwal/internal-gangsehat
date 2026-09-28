@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink, Link2, UserCheck } from 'lucide-react'
+import { useDraggable } from '@dnd-kit/core'
+import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink, Link2, UserCheck, UserCog } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
@@ -41,9 +42,11 @@ interface Props {
   onDetachPackage?: (id: string) => void
   onAttachPackage?: (id: string) => void
   onMarkPresent?: (id: string, present: boolean) => void
+  /** Opens the reassign dialog (therapist + time) — available whatever the kehadiran */
+  onChangeTherapist?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const [menuReady, setMenuReady] = useState(false)
@@ -91,6 +94,14 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   // accidental press can be undone from the same spot.
   const showMarkPresentItem = canManageVisit && !!onMarkPresent
   const isMarkedPresent     = visit.kehadiran === 'HADIR'
+
+  // Drag to another therapist column / hour row to reassign — deliberately not
+  // gated on kehadiran, so a visit already marked HADIR can still be moved.
+  const canMove = canManageVisit && !!onChangeTherapist && visit.status !== 'cancelled'
+  const { attributes, listeners, setNodeRef: dragRef, isDragging } = useDraggable({
+    id: `visit:${visit.id}`, data: { visitId: visit.id }, disabled: !canMove,
+  })
+  function setRefs(el: HTMLDivElement | null) { cardRef.current = el; dragRef(el) }
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
@@ -152,11 +163,13 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
 
   return (
     <div
-      ref={cardRef}
+      ref={setRefs}
+      {...(canMove ? { ...attributes, ...listeners } : {})}
       className={[
         'relative rounded-lg border px-2 py-1.5 flex flex-col gap-0.5',
         'transition-all duration-150 cursor-pointer',
         menuOpen ? 'scale-[1.02]' : 'hover:scale-[1.02]',
+        isDragging ? 'opacity-40' : '',
         colorCls,
       ].join(' ')}
       onClick={openMenu}
@@ -328,6 +341,17 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
                   {isMarkedPresent ? 'Tandai Tidak Hadir' : 'Tandai Hadir'}
                 </button>
               </>
+            )}
+
+            {canMove && (
+              <button
+                onClick={() => { onChangeTherapist?.(visit.id); setMenuOpen(false) }}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-foreground/80 hover:bg-white/8 hover:text-foreground transition-colors cursor-pointer"
+                role="menuitem"
+              >
+                <UserCog size={13} />
+                Ganti Terapis / Jam
+              </button>
             )}
 
             {showPaymentItem && (

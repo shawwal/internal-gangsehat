@@ -22,6 +22,7 @@ import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { DetachPackageDialog } from '@/components/jadwal/DetachPackageDialog'
 import { AttachPackageDialog } from '@/components/jadwal/AttachPackageDialog'
+import { ChangeTherapistDialog } from '@/components/jadwal/ChangeTherapistDialog'
 import { BuyPackageButton } from '@/components/jadwal/buy-package/BuyPackageButton'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders, updateVisit } from '@/app/actions/jadwal'
 import { fetchWaConfigAll, type WaConfigAll } from '@/app/actions/reminder-template'
@@ -48,7 +49,7 @@ export default function JadwalHarianPage() {
     userRole,
     soreDividerHour, gridStart, gridEnd,
     branches, selectedBranchId, setSelectedBranchId,
-    loadAll, handleStatusChange, handleDelete, handleLeaveAction,
+    loadAll, handleStatusChange, handleDelete, handleMoveVisit, handleLeaveAction,
   } = useJadwalHarian()
 
   // Modal / dialog state
@@ -59,6 +60,7 @@ export default function JadwalHarianPage() {
   const [paymentVisit, setPaymentVisit]             = useState<DailyVisit | null>(null)
   const [detachVisit, setDetachVisit]               = useState<DailyVisit | null>(null)
   const [attachVisit, setAttachVisit]               = useState<DailyVisit | null>(null)
+  const [changeTherapistVisit, setChangeTherapistVisit] = useState<DailyVisit | null>(null)
   const [packagePrompt, setPackagePrompt]           = useState<
     (MedicalRecordSavedContext & { patientName: string; branchId: string | null; visitId: string }) | null
   >(null)
@@ -163,6 +165,25 @@ export default function JadwalHarianPage() {
     await updateVisit(visitId, present
       ? { kehadiran: 'HADIR', status: 'completed' }
       : { kehadiran: 'TIDAK HADIR', status: 'scheduled' })
+    silentReload({ type: 'visit', visitId })
+  }
+
+  function staffLabel(staffId: string) {
+    const s = staff.find((x) => x.staff_id === staffId)
+    return s?.nickname || s?.full_name || 'terapis'
+  }
+
+  // Drag-and-drop reassign. Keeps the visit's minutes when moving to another hour;
+  // shift follows the destination hour relative to the Pagi/Sore divider.
+  async function handleDropVisit(visitId: string, staffId: string, hour: number | null) {
+    const v = visits.find((x) => x.id === visitId)
+    if (!v) return
+    const minutes   = v.visit_time?.split(':')[1] ?? '00'
+    const visitTime = hour === null ? null : `${String(hour).padStart(2, '0')}:${minutes}`
+    const shift     = hour === null ? undefined : (hour >= soreDividerHour ? 'SORE' : 'PAGI')
+    const { error } = await handleMoveVisit(visitId, { staffId, visitTime, shift })
+    if (error) { showToast('Gagal memindahkan: ' + error, 'error'); return }
+    showToast(`${v.patient_name} dipindah ke ${staffLabel(staffId)}${visitTime ? ` · ${visitTime}` : ''}`, 'success')
     silentReload({ type: 'visit', visitId })
   }
 
@@ -427,6 +448,8 @@ export default function JadwalHarianPage() {
                 onDetachPackage={handleDetachPackage}
                 onAttachPackage={handleAttachPackage}
                 onMarkPresent={handleMarkPresent}
+                onChangeTherapist={(id) => setChangeTherapistVisit(visits.find((v) => v.id === id) ?? null)}
+                onMoveVisit={handleDropVisit}
               />
             )}
           </div>
@@ -544,6 +567,25 @@ export default function JadwalHarianPage() {
           onAttached={(visitId) => {
             setAttachVisit(null)
             silentReload({ type: 'visit', visitId })
+          }}
+        />
+      )}
+
+      {changeTherapistVisit && (
+        <ChangeTherapistDialog
+          visit={changeTherapistVisit}
+          staff={staff}
+          onClose={() => setChangeTherapistVisit(null)}
+          onSave={async (staffId, visitTime) => {
+            const visitId = changeTherapistVisit.id
+            const hour    = visitTime ? parseInt(visitTime.split(':')[0], 10) : null
+            const shift   = hour === null ? undefined : (hour >= soreDividerHour ? 'SORE' : 'PAGI')
+            const result  = await handleMoveVisit(visitId, { staffId, visitTime, shift })
+            if (!result.error) {
+              showToast(`Terapis diubah ke ${staffLabel(staffId)}`, 'success')
+              silentReload({ type: 'visit', visitId })
+            }
+            return result
           }}
         />
       )}

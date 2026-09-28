@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { DndContext, PointerSensor, useDroppable, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { AlertCircle, CalendarX, Loader2, Plus } from 'lucide-react'
 import type { DailyVisit, DayStaffEntry, AssignTarget, PendingLeaveInfo, RefreshingCell } from './types'
 import {
@@ -71,6 +72,28 @@ function StaffAvatar({ entry }: { entry: DayStaffEntry }) {
   )
 }
 
+// ── Drop target (one per staff × hour cell, plus the untimed row) ──────────────
+function DropCell({ id, staffId, hour, enabled, className, style, children }: {
+  id: string
+  staffId: string
+  hour: number | null
+  enabled: boolean
+  className: string
+  style?: React.CSSProperties
+  children: React.ReactNode
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id, data: { staffId, hour }, disabled: !enabled })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${className} ${isOver ? 'ring-2 ring-inset ring-primary bg-primary/10 rounded-lg' : ''}`}
+      style={style}
+    >
+      {children}
+    </div>
+  )
+}
+
 // ── Props ──────────────────────────────────────────────────────────────────────
 interface Props {
   staff: DayStaffEntry[]
@@ -97,10 +120,27 @@ interface Props {
   onDetachPackage?: (visitId: string) => void
   onAttachPackage?: (visitId: string) => void
   onMarkPresent?: (visitId: string, present: boolean) => void
+  onChangeTherapist?: (visitId: string) => void
+  /** Drag-and-drop reassign; `hour` null = dropped on the untimed row */
+  onMoveVisit?: (visitId: string, staffId: string, hour: number | null) => void
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit }: Props) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const canDrop = !!onMoveVisit
+
+  function handleDragEnd(e: DragEndEvent) {
+    const visitId = e.active.data.current?.visitId as string | undefined
+    const dest    = e.over?.data.current as { staffId: string; hour: number | null } | undefined
+    if (!visitId || !dest || !onMoveVisit) return
+    const v = visits.find((x) => x.id === visitId)
+    if (!v) return
+    const curHour = v.visit_time ? parseHour(v.visit_time) : null
+    if (v.attending_staff_id === dest.staffId && curHour === dest.hour) return
+    onMoveVisit(visitId, dest.staffId, dest.hour)
+  }
+
   // Current time (used later for time line after range is known)
   const now   = new Date()
   const today = now.toISOString().split('T')[0]
@@ -188,6 +228,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
   const minWidth = TIME_COL_W + staff.length * STAFF_COL_W
 
   return (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
     <div className="h-full overflow-auto scrollbar-thin">
       <div style={{ minWidth }}>
 
@@ -284,8 +325,12 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
             {staff.map((s) => {
               const cellVisits = untimedVisits.get(s.staff_id) ?? []
               return (
-                <div
+                <DropCell
                   key={s.staff_id}
+                  id={`drop:${s.staff_id}|untimed`}
+                  staffId={s.staff_id}
+                  hour={null}
+                  enabled={canDrop}
                   className="shrink-0 border-l border-border/30 p-1.5 flex flex-col gap-1"
                   style={{ width: STAFF_COL_W, minHeight: 48 }}
                 >
@@ -307,9 +352,10 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                       onDetachPackage={onDetachPackage}
                       onAttachPackage={onAttachPackage}
                       onMarkPresent={onMarkPresent}
+                      onChangeTherapist={onChangeTherapist}
                     />
                   ))}
-                </div>
+                </DropCell>
               )
             })}
           </div>
@@ -453,8 +499,12 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                   const unavailable = !isInShift && !s.isOnLeave && s.hasSchedule
 
                   return (
-                    <div
+                    <DropCell
                       key={h}
+                      id={`drop:${s.staff_id}|${h}`}
+                      staffId={s.staff_id}
+                      hour={h}
+                      enabled={canDrop}
                       className="absolute inset-x-0 flex flex-col gap-1 p-1 group"
                       style={{
                         top: rowOffsets[i],
@@ -506,6 +556,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                           onDetachPackage={onDetachPackage}
                           onAttachPackage={onAttachPackage}
                           onMarkPresent={onMarkPresent}
+                          onChangeTherapist={onChangeTherapist}
                         />
                       ))}
 
@@ -537,7 +588,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                           <Plus size={14} className="text-[#34C759]/60" />
                         </button>
                       )}
-                    </div>
+                    </DropCell>
                   )
                 })}
               </div>
@@ -546,5 +597,6 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
         </div>
       </div>
     </div>
+    </DndContext>
   )
 }
