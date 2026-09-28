@@ -167,6 +167,14 @@ export const navigation: NavItem[] = [
     group: 'management',
   },
   {
+    key: 'branch-template-wa',
+    label: 'Template Pesan WA Cabang',
+    href: '/template-wa',
+    icon: 'MessageCircle',
+    roles: ['manager', 'admin'],
+    group: 'management',
+  },
+  {
     key: 'branch-settings',
     label: 'Pengaturan Cabang',
     href: '/branch-settings',

@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { DEFAULT_REMINDER_TEMPLATE, DEFAULT_ORDER_CONFIRMATION_TEMPLATE } from '@/lib/utils'
 
 const KEY_REMINDER      = 'patient_reminder_template'
@@ -56,11 +57,29 @@ export async function fetchWaConfigAll(): Promise<WaConfigAll> {
   return { global, byBranch }
 }
 
+// Who may edit which WA config:
+//   director        — the global default and every branch
+//   admin / manager — only their own branch's override
+// Checked here, then written with the service-role client, so the rule doesn't
+// depend on internal_konfigurasi's table-wide RLS.
+async function authorizeWrite(branchId: string | null): Promise<{ error: string } | { ok: true }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+  const { data: profile } = await supabase
+    .from('internal_profiles').select('role, branch_id').eq('id', user.id).single()
+  if (profile?.role === 'director') return { ok: true }
+  if (profile?.role !== 'admin' && profile?.role !== 'manager') return { error: 'Tidak memiliki akses' }
+  if (!branchId || branchId !== profile.branch_id) return { error: 'Hanya bisa mengubah template cabang sendiri' }
+  return { ok: true }
+}
+
 /** Save a value globally (branchId null) or as a branch override. */
 export async function saveWaConfig(kind: WaConfigKind, nilai: string, branchId: string | null): Promise<{ error: string | null }> {
-  const supabase = await createClient()
+  const auth = await authorizeWrite(branchId)
+  if ('error' in auth) return { error: auth.error }
   const kunci = branchId ? branchKey(KEYS[kind], branchId) : KEYS[kind]
-  const { error } = await supabase
+  const { error } = await createAdminClient()
     .from('internal_konfigurasi')
     .upsert({ kunci, nilai, updated_at: new Date().toISOString() }, { onConflict: 'kunci' })
   return { error: error?.message ?? null }
@@ -68,8 +87,9 @@ export async function saveWaConfig(kind: WaConfigKind, nilai: string, branchId: 
 
 /** Remove a branch override so the branch follows the global value again. */
 export async function clearWaConfigOverride(kind: WaConfigKind, branchId: string): Promise<{ error: string | null }> {
-  const supabase = await createClient()
-  const { error } = await supabase
+  const auth = await authorizeWrite(branchId)
+  if ('error' in auth) return { error: auth.error }
+  const { error } = await createAdminClient()
     .from('internal_konfigurasi')
     .delete()
     .eq('kunci', branchKey(KEYS[kind], branchId))
