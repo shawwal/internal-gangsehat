@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchDailyVisits, updateVisitStatus, deleteVisit } from '@/app/actions/jadwal'
 import { toIso, toHariIndonesia, getMondayOf } from '@/components/jadwal/utils'
@@ -28,6 +28,7 @@ export function useJadwalHarian() {
   const [soreDividerHour, setSoreDividerHour] = useState(14)
   const [gridStart, setGridStart]             = useState(8)
   const [gridEnd, setGridEnd]                 = useState(21)
+  const loadSeq = useRef(0)
   const today = new Date()
 
   // Load user role, branch, and branches list on mount
@@ -84,6 +85,7 @@ export function useJadwalHarian() {
   // `silent` skips the full-grid loading flag so an in-place refresh (after
   // editing a single visit/cell) doesn't unmount the whole calendar into a skeleton.
   const loadAll = useCallback(async (date: Date, opts?: { silent?: boolean }) => {
+    const requestId = ++loadSeq.current
     if (!opts?.silent) setLoading(true)
     const supabase = createClient()
     const isoDate  = toIso(date)
@@ -95,15 +97,19 @@ export function useJadwalHarian() {
       return selectedBranchId ? q.eq('branch_id', selectedBranchId) : q
     }
 
+    const PROFILE_COLS = 'full_name, avatar_url, nickname, gender, role, branch_id'
+
+    // Schedules and overrides are fetched across all branches and mapped to a
+    // branch below rather than by the row's own branch_id: a regular schedule
+    // belongs to the staff's home branch, and an override at another branch
+    // must still pull the staff out of their home branch's grid.
     const [schedulesRes, leavesRes, visitsData, overridesRes, allTherapistsRes] = await Promise.all([
-      applyBranch(
-        supabase
-          .from('schedules')
-          .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(full_name, avatar_url, nickname, gender)')
-          .eq('hari', hari)
-          .eq('status', 'AKTIF')
-          .in('week_group', [weekGroup, 'SEMUA']),
-      ),
+      supabase
+        .from('schedules')
+        .select(`staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!staff_id(${PROFILE_COLS})`)
+        .eq('hari', hari)
+        .eq('status', 'AKTIF')
+        .in('week_group', [weekGroup, 'SEMUA']),
       supabase
         .from('leave_requests')
         .select('id, staff_id, reason, status, start_date, end_date')
@@ -113,14 +119,12 @@ export function useJadwalHarian() {
       fetchDailyVisits(isoDate, selectedBranchId, {
         serviceTypes: ['TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA'],
       }),
-      applyBranch(
-        supabase
-          .from('schedule_overrides')
-          .select('id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!staff_id(full_name, avatar_url, nickname, gender)')
-          .eq('status', 'active')
-          .lte('start_date', isoDate)
-          .gte('end_date', isoDate),
-      ),
+      supabase
+        .from('schedule_overrides')
+        .select(`id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!staff_id(${PROFILE_COLS})`)
+        .eq('status', 'active')
+        .lte('start_date', isoDate)
+        .gte('end_date', isoDate),
       applyBranch(
         supabase
           .from('internal_profiles')
@@ -130,6 +134,14 @@ export function useJadwalHarian() {
           .order('full_name'),
       ),
     ])
+
+    // A newer load (branch/date switched mid-flight) owns the grid now
+    if (requestId !== loadSeq.current) return
+
+    // Directors never get a column on the daily grid
+    const isDirector = (row: { internal_profiles?: { role?: string } | null }) => row.internal_profiles?.role === 'director'
+    const inSelectedBranch = (branchId: string | null) =>
+      !selectedBranchId || branchId === selectedBranchId
 
     // Separate approved vs pending leaves
     const approvedLeaveMap = new Map<string, string>()
@@ -155,9 +167,11 @@ export function useJadwalHarian() {
     // Staff whose override targets a DIFFERENT hari → suppress their regular schedule today
     const suppressedToday  = new Set<string>()
     for (const ov of overrideRows) {
-      if (ov.hari === hari) {
+      if (isDirector(ov)) continue
+      if (ov.hari === hari && inSelectedBranch(ov.branch_id ?? null)) {
         overrideForToday.set(ov.staff_id, ov)
       } else {
+        // Moved to another day, or to another branch today
         suppressedToday.add(ov.staff_id)
       }
     }
@@ -168,15 +182,21 @@ export function useJadwalHarian() {
     for (const row of (schedulesRes.data ?? []) as any[]) {
       const sid = row.staff_id as string
       if (entries.has(sid)) continue
-      // Skip staff who have been moved to a different day via override
-      if (suppressedToday.has(sid)) continue
+      if (isDirector(row)) continue
       const ov = overrideForToday.get(sid)
+      // Skip staff who have been moved to a different day/branch via override
+      if (!ov && suppressedToday.has(sid)) continue
+      // A regular schedule counts at the staff's home branch; the row's own
+      // branch_id is only a fallback for staff without one. Covering a shift
+      // at another branch goes through schedule_overrides instead.
+      const homeBranch = (row.internal_profiles?.branch_id ?? row.branch_id ?? null) as string | null
+      if (!ov && !inSelectedBranch(homeBranch)) continue
       entries.set(sid, {
         staff_id:    sid,
         full_name:   row.internal_profiles?.full_name ?? 'Unknown',
         nickname:    row.internal_profiles?.nickname ?? null,
         avatar_url:  row.internal_profiles?.avatar_url ?? null,
-        branch_id:   ov?.branch_id ?? row.branch_id ?? null,
+        branch_id:   ov?.branch_id ?? homeBranch,
         gender:      (row.internal_profiles?.gender ?? null) as 'male' | 'female' | null,
         shift:       ov?.shift ?? row.shift,
         jam_mulai:   (ov?.jam_mulai ?? row.jam_mulai)?.slice(0, 5) ?? '08:00',
@@ -263,9 +283,11 @@ export function useJadwalHarian() {
     if (unknownIds.length > 0) {
       const { data: profiles } = await supabase
         .from('internal_profiles')
-        .select('id, full_name, avatar_url, nickname, gender')
+        .select('id, full_name, avatar_url, nickname, gender, role')
         .in('id', unknownIds)
+      if (requestId !== loadSeq.current) return
       for (const p of profiles ?? []) {
+        if (p.role === 'director') { entries.delete(p.id); continue }
         const entry = entries.get(p.id)
         if (entry) {
           entry.full_name  = p.full_name

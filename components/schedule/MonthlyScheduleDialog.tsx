@@ -55,6 +55,11 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
         .select('hari, shift, jam_mulai, jam_selesai, status, branch_id, week_group')
         .eq('staff_id', staffId)
 
+      // Branch follows the selected staff — never carry over the previous
+      // staff's branch (that saved Griya Anak therapists under Pontianak).
+      const homeBranch = staffList.find((s) => s.id === staffId)?.branch_id ?? null
+      let rowBranch: string | null = null
+
       const nextSama  = buildEmptyWeekly()
       const nextWeek1 = buildEmptyWeekly()
       const nextWeek2 = buildEmptyWeekly()
@@ -79,10 +84,11 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
           } else if (nextSama[row.hari]) {
             nextSama[row.hari] = entry
           }
-          if (!branchId && row.branch_id) setBranchId(row.branch_id)
+          if (!rowBranch && row.branch_id) rowBranch = row.branch_id
         }
       }
 
+      setBranchId(homeBranch ?? rowBranch ?? '')
       setPatternSama(nextSama)
       setPatternWeek1(nextWeek1)
       setPatternWeek2(nextWeek2)
