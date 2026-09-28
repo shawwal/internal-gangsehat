@@ -761,6 +761,8 @@ export default function PatientVisitsPage() {
                                   patient_name:         patientName,
                                   visit_date:           v.visit_date,
                                   service_type:         v.service_type,
+                                  branch_id:            v.branch_id,
+                                  layanan_id:           v.layanan_id ?? null,
                                   attending_staff_name: therapist,
                                 })}
                                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-[#34C759] hover:bg-[#34C759]/10 transition-colors border border-[#34C759]/20"

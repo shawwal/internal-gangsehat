@@ -87,6 +87,8 @@ export interface PatientVisit {
   order_id: string | null
   // Griya Anak only — links this visit back to its recurring schedule slot (migration 066)
   griya_slot_id: string | null
+  // Sport Massage service type booked (internal_layanan id, migration 086)
+  layanan_id?: string | null
 }
 
 export type RedFlag =

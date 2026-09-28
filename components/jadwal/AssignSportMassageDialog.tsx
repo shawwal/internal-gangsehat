@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { X, User, Clock } from 'lucide-react'
+import { X, User, Clock, Check } from 'lucide-react'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { createVisit } from '@/app/actions/jadwal'
+import { fetchSportMassageLayanan, type LayananRow } from '@/app/actions/layanan'
 import type { AssignTarget } from './types'
 import type { VisitStatus } from '@/types'
 
@@ -18,6 +19,10 @@ interface Props {
 }
 
 type DialogView = 'search' | 'details'
+
+function fmtRp(n: number) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
+}
 
 // Single-session Sport Massage booking — no package/recurring logic, unlike
 // the regular AssignDialog. Sport massage is a standalone service booked
@@ -36,12 +41,29 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
   const [status] = useState<VisitStatus>('scheduled')
   const [notes, setNotes]              = useState('')
 
+  // Sport Massage service types (internal_layanan rows) for this branch
+  const [layananList, setLayananList]  = useState<LayananRow[]>([])
+  const [layananLoading, setLayananLoading] = useState(!!target.branchId)
+  const [layananId, setLayananId]      = useState<string | null>(null)
+
   const [saving, setSaving]            = useState(false)
   const [error, setError]              = useState<string | null>(null)
 
   useEffect(() => {
     setTimeout(() => searchRef.current?.focus(), 100)
   }, [])
+
+  useEffect(() => {
+    if (!target.branchId) return
+    let cancelled = false
+    fetchSportMassageLayanan(target.branchId).then((rows) => {
+      if (cancelled) return
+      setLayananList(rows)
+      if (rows.length === 1) setLayananId(rows[0].id)
+      setLayananLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [target.branchId])
 
   useEffect(() => {
     const q = search.trim()
@@ -69,6 +91,10 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
       setError('Terapis tidak memiliki branch. Hubungi HR.')
       return
     }
+    if (layananList.length > 0 && !layananId) {
+      setError('Pilih jenis layanan Sport Massage.')
+      return
+    }
     setSaving(true)
     setError(null)
 
@@ -84,6 +110,7 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
       status,
       notes:              notes.trim() || null,
       package_id:         null,
+      layanan_id:         layananId,
     })
     setSaving(false)
     if (err) { setError(err); return }
@@ -153,6 +180,47 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
                     onChange={(e) => setVisitTime(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">Jenis Layanan</label>
+                  {layananLoading ? (
+                    <p className="text-xs text-muted-foreground">Memuat layanan...</p>
+                  ) : layananList.length === 0 ? (
+                    <p className="text-xs text-muted-foreground bg-white/5 px-3 py-2 rounded-xl">
+                      Belum ada layanan Sport Massage aktif untuk cabang ini. Tambahkan di menu Layanan.
+                    </p>
+                  ) : (
+                    <div role="radiogroup" className="space-y-1.5">
+                      {layananList.map((l) => {
+                        const selected = l.id === layananId
+                        return (
+                          <button
+                            key={l.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() => { setLayananId(l.id); setError(null) }}
+                            className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                              selected
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border/40 bg-white/5 hover:bg-white/10'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                                selected ? 'border-primary bg-primary text-white' : 'border-border'
+                              }`}>
+                                {selected && <Check size={10} />}
+                              </span>
+                              <span className="text-sm text-foreground truncate">{l.nama}</span>
+                            </span>
+                            <span className="text-xs font-semibold text-foreground shrink-0">{fmtRp(Number(l.harga))}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <VisitFields

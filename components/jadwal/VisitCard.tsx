@@ -66,7 +66,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   // (e.g. 'SESI TERAPI') but is still a package session — package_id wins.
   const serviceTypeLabel   = visit.package_id
     ? 'Paket'
-    : (visit.service_type ? SERVICE_TYPE_LABEL[visit.service_type] : undefined)
+    : (visit.layanan_nama ?? (visit.service_type ? SERVICE_TYPE_LABEL[visit.service_type] : undefined))
 
   const isAssessmentVisit   = visit.service_type === 'TERAPI AWAL' || visit.service_type === 'TA VISIT'
   // Selling a package is always offered on a completed visit — including one that's

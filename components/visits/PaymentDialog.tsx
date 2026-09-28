@@ -8,6 +8,7 @@ import {
 import { createTransactionForVisit, updateTransaction, getPatientOutstanding, fetchLayananHarga } from '@/app/actions/transactions'
 import type { OutstandingTransaction } from '@/app/actions/transactions'
 import { updateVisit, type VisitTransaction } from '@/app/actions/jadwal'
+import { fetchSportMassageLayanan, type LayananRow } from '@/app/actions/layanan'
 import { SERVICE_TYPES, SERVICE_TO_CATEGORY, CATEGORY_TO_SERVICE_TYPE, getEffectivePackageServiceType } from '@/lib/serviceType'
 import type { ServiceType } from '@/types'
 import { SettlePaymentDialog } from '@/components/finance/SettlePaymentDialog'
@@ -22,6 +23,8 @@ export interface PaymentVisitInfo {
   branch_id?: string | null
   /** set → visit is part of a package; used to normalize a mislabeled service_type */
   package_id?: string | null
+  /** Sport Massage service type booked on the visit (internal_layanan id) */
+  layanan_id?: string | null
   attending_staff_name?: string
 }
 
@@ -78,6 +81,12 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   const [description, setDescription]     = useState(existingTransaction?.description ?? '')
   const [txDate, setTxDate]               = useState(existingTransaction?.transaction_date ?? visit.visit_date)
 
+  // Sport Massage has several priced service types per branch — pick one
+  const [smLayanan, setSmLayanan]     = useState<LayananRow[]>([])
+  const [smLayananId, setSmLayananId] = useState<string | null>(visit.layanan_id ?? null)
+  const isSportMassage = serviceType === 'SPORT MASSAGE'
+  const smSelected = smLayanan.find((l) => l.id === smLayananId) ?? null
+
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState<string | null>(null)
   const [success, setSuccess]       = useState(false)
@@ -113,10 +122,34 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
     // to enter manually instead.
     const category = SERVICE_TO_CATEGORY[serviceType]
     if (category === 'PAKET KLINIK' || category === 'PAKET VISIT') return
+    // Sport Massage price comes from the selected service type (effect below)
+    if (serviceType === 'SPORT MASSAGE') return
     fetchLayananHarga(serviceType, visit.branch_id).then((price) => {
       if (price != null) setHarga(String(price))
     })
   }, [serviceType, visit.branch_id, isEditing])
+
+  useEffect(() => {
+    if (!isSportMassage || !visit.branch_id) return
+    let cancelled = false
+    fetchSportMassageLayanan(visit.branch_id).then((rows) => {
+      if (cancelled) return
+      setSmLayanan(rows)
+      // Booked type may have been deactivated since — fall back to the only
+      // option when there's exactly one, otherwise make staff choose.
+      const booked = rows.find((r) => r.id === visit.layanan_id)
+      const initial = booked ?? (rows.length === 1 ? rows[0] : null)
+      setSmLayananId(initial?.id ?? null)
+      if (!isEditing && initial) setHarga(String(initial.harga))
+    })
+    return () => { cancelled = true }
+  }, [isSportMassage, visit.branch_id, visit.layanan_id, isEditing])
+
+  function handleSelectSmLayanan(id: string) {
+    setSmLayananId(id)
+    const row = smLayanan.find((l) => l.id === id)
+    if (row) setHarga(String(row.harga))
+  }
 
   function handleClose() {
     if (submitting) return
@@ -127,6 +160,10 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (submitting) return
+    if (isSportMassage && smLayanan.length > 0 && !smSelected) {
+      setError('Pilih jenis layanan Sport Massage.')
+      return
+    }
     setSubmitting(true)
     setError(null)
     const payload = {
@@ -136,7 +173,8 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
       payment_method: paymentMethod,
       payment_status: paymentStatus,
       penjamin:    penjamin    || null,
-      description: description || null,
+      // Record which Sport Massage type was billed when staff left no note
+      description: description || (isSportMassage && smSelected ? smSelected.nama : null),
       transaction_date: txDate,
       category: SERVICE_TO_CATEGORY[serviceType],
     }
@@ -152,8 +190,12 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
       // Keep the visit's own service_type in sync with whatever Layanan/Kategori
       // ended up being saved here, so the jadwal-harian grid card (which reads
       // service_type directly) reflects the same correction the user just made.
-      if (serviceType !== visit.service_type) {
-        await updateVisit(visit.id, { service_type: serviceType })
+      const nextLayananId = isSportMassage ? (smSelected?.id ?? visit.layanan_id ?? null) : null
+      const visitPatch: { service_type?: string; layanan_id?: string | null } = {}
+      if (serviceType !== visit.service_type) visitPatch.service_type = serviceType
+      if (nextLayananId !== (visit.layanan_id ?? null)) visitPatch.layanan_id = nextLayananId
+      if (Object.keys(visitPatch).length > 0) {
+        await updateVisit(visit.id, visitPatch)
       }
       setSuccess(true)
       setTimeout(() => { onSuccess(); onClose() }, 1400)
@@ -247,6 +289,22 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                   </select>
                 </div>
               </div>
+
+              {isSportMassage && smLayanan.length > 0 && (
+                <div className="rounded-xl bg-muted/30 border border-border/40 px-3 py-2.5">
+                  <label className="block text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Jenis Sport Massage</label>
+                  <select
+                    value={smLayananId ?? ''}
+                    onChange={(e) => handleSelectSmLayanan(e.target.value)}
+                    className="w-full bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer -ml-0.5"
+                  >
+                    {!smSelected && <option value="" disabled>Pilih jenis layanan...</option>}
+                    {smLayanan.map((l) => (
+                      <option key={l.id} value={l.id}>{l.nama} — {fmt(Number(l.harga))}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {visit.attending_staff_name && (
                 <div className="flex items-center gap-2 text-muted-foreground">

@@ -43,6 +43,9 @@ export interface DailyVisit {
   service_type: string | null
   package_id: string | null    // set → visit is part of a package
   order_id: string | null
+  // Sport Massage service type booked (internal_layanan row) — null otherwise
+  layanan_id: string | null
+  layanan_nama: string | null
   chief_complaint: string | null
   diagnosis: string | null
   treatment: string | null
@@ -86,6 +89,7 @@ export interface CreateVisitInput {
   notes: string | null
   package_id?: string | null
   kehadiran?: string | null
+  layanan_id?: string | null
 }
 
 // ── Fetch all visits for a date with decrypted patient names ───────────────────
@@ -98,7 +102,7 @@ export async function fetchDailyVisits(
 
   let query = supabase
     .from('patient_visits')
-    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, order_id, chief_complaint, diagnosis, treatment, regio, status, notes, branch_id, kehadiran')
+    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, order_id, layanan_id, chief_complaint, diagnosis, treatment, regio, status, notes, branch_id, kehadiran')
     .eq('visit_date', date)
     .order('visit_time', { ascending: true })
   if (branchId) query = query.eq('branch_id', branchId)
@@ -190,6 +194,17 @@ export async function fetchDailyVisits(
     for (const p of pkgs ?? []) packagePaymentOkMap.set(p.id, !!p.payment_ok)
   }
 
+  // Names of the booked Sport Massage service types
+  const layananIds = [...new Set(visits.map((v) => v.layanan_id).filter((id): id is string => !!id))]
+  const layananNameMap = new Map<string, string>()
+  if (layananIds.length > 0) {
+    const { data: layanan } = await supabase
+      .from('internal_layanan')
+      .select('id, nama')
+      .in('id', layananIds)
+    for (const l of layanan ?? []) layananNameMap.set(l.id, l.nama)
+  }
+
   return visits.map((v) => {
     const pay = payMap.get(v.id)
     const pkg = packageMap.get(v.id)
@@ -204,6 +219,8 @@ export async function fetchDailyVisits(
       service_type:         v.service_type,
       package_id:           v.package_id ?? null,
       order_id:             v.order_id ?? null,
+      layanan_id:           v.layanan_id ?? null,
+      layanan_nama:         v.layanan_id ? (layananNameMap.get(v.layanan_id) ?? null) : null,
       chief_complaint:      v.chief_complaint,
       diagnosis:            v.diagnosis,
       treatment:            v.treatment,
@@ -241,6 +258,7 @@ export async function createVisit(input: CreateVisitInput): Promise<{ error: str
     notes:               input.notes ?? null,
     package_id:          resolvePackageId(input.service_type, input.package_id),
     kehadiran:           input.kehadiran ?? null,
+    layanan_id:          input.layanan_id ?? null,
     order_id:            orderId,
     updated_at:          new Date().toISOString(),
   }).select('id').single()
@@ -491,13 +509,14 @@ export async function updateVisit(
     treatment?: string | null
     status?: VisitStatus
     notes?: string | null
+    layanan_id?: string | null
   },
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: oldRow } = await supabase
     .from('patient_visits')
-    .select('visit_date, visit_time, attending_staff_id, service_type, shift, kehadiran, regio, sumber_pasien, chief_complaint, diagnosis, treatment, status, notes, patient_id, branch_id')
+    .select('visit_date, visit_time, attending_staff_id, service_type, shift, kehadiran, regio, sumber_pasien, chief_complaint, diagnosis, treatment, status, notes, layanan_id, patient_id, branch_id')
     .eq('id', visitId)
     .single()
 

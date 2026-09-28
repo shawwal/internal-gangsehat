@@ -73,6 +73,9 @@ export interface MedicalRecordRow {
   // the Griya form it opens, or null when that service type has none.
   is_griya: boolean
   griya_route: GriyaVisitFormRoute | null
+  // Status of the Griya record (intake or session note) — Griya forms have no
+  // tindakan/regio, so is_complete for Griya rows follows this instead.
+  griya_status: 'completed' | 'draft' | null
 }
 
 export interface MedicalRecordsParams {
@@ -307,6 +310,17 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
   const griyaBranchIds = new Set((griyaBranches ?? []).map((b) => b.branch_id as string))
   const griyaVisits = data.filter((v) => griyaBranchIds.has(v.branch_id as string))
   const disciplines = await fetchVisitDisciplines(supabase, griyaVisits as unknown as { id: string }[])
+  const griyaStatus = new Map<string, 'completed' | 'draft'>()
+  if (griyaVisits.length > 0) {
+    const ids = griyaVisits.map((v) => v.id as string)
+    const [intakes, notes] = await Promise.all([
+      supabase.from('griya_terapi_awal').select('visit_id, status').in('visit_id', ids),
+      supabase.from('griya_session_notes').select('visit_id, status').in('visit_id', ids),
+    ])
+    for (const r of [...(intakes.data ?? []), ...(notes.data ?? [])]) {
+      griyaStatus.set(r.visit_id as string, r.status as 'completed' | 'draft')
+    }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let rows: MedicalRecordRow[] = (data as any[]).map((v) => ({
@@ -323,10 +337,13 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     diagnosis:             v.diagnosis,
     treatment:             v.treatment,
     regio:                 v.regio,
-    is_complete:           !!(v.diagnosis && v.treatment && (!isRegioRequired(v.service_type) || v.regio)),
+    is_complete:           griyaBranchIds.has(v.branch_id)
+      ? griyaStatus.get(v.id) === 'completed'
+      : !!(v.diagnosis && v.treatment && (!isRegioRequired(v.service_type) || v.regio)),
     pertemuan_number:      v.package_id ? pertemuanMap.get(v.id) ?? null : null,
     is_griya:              griyaBranchIds.has(v.branch_id),
     griya_route:           griyaBranchIds.has(v.branch_id) ? getGriyaVisitFormRoute(v.service_type, disciplines.get(v.id)) : null,
+    griya_status:          griyaStatus.get(v.id) ?? null,
   }))
 
   let total = count ?? 0

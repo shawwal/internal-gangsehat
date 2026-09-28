@@ -5,13 +5,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useSportMassageSettings } from '@/hooks/useSportMassageSettings'
 import { useGriyaSettings } from '@/hooks/useGriyaSettings'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
-import { fetchLayananByBranch, upsertLayanan, type LayananRow } from '@/app/actions/layanan'
+import { fetchSportMassageLayanan, updateLayananHarga, upsertLayanan, type LayananRow } from '@/app/actions/layanan'
 
 interface BranchOption { id: string; name: string }
-
-function fmt(n: number) {
-  return new Intl.NumberFormat('id-ID').format(n)
-}
 
 export default function BranchSettingsPage() {
   const [role, setRole]                 = useState<'director' | 'manager' | null>(null)
@@ -19,10 +15,15 @@ export default function BranchSettingsPage() {
   const [branches, setBranches]         = useState<BranchOption[]>([])
   const [initLoading, setInitLoading]   = useState(true)
 
-  // Sport massage price per branch — key: branch_id
-  const [prices, setPrices]     = useState<Record<string, LayananRow | null>>({})
-  const [priceInput, setPriceInput] = useState<Record<string, string>>({})
+  // Sport massage service types per branch — key: branch_id
+  const [prices, setPrices]           = useState<Record<string, LayananRow[]>>({})
+  // Price edits keyed by layanan id
+  const [priceInput, setPriceInput]   = useState<Record<string, string>>({})
   const [priceSaving, setPriceSaving] = useState<Record<string, boolean>>({})
+  // New-type form per branch — key: branch_id
+  const [newNama, setNewNama]         = useState<Record<string, string>>({})
+  const [newHarga, setNewHarga]       = useState<Record<string, string>>({})
+  const [addSaving, setAddSaving]     = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     async function init() {
@@ -55,45 +56,65 @@ export default function BranchSettingsPage() {
   const { enabledMap, loading: settingsLoading, toggle } = useSportMassageSettings(branchIds)
   const { enabledMap: griyaMap, loading: griyaLoading, toggle: toggleGriya } = useGriyaSettings(branchIds)
 
-  // Load sport massage layanan price for branches whose toggle is on
+  // Load sport massage service types for branches whose toggle is on
   useEffect(() => {
     async function loadPrices() {
       for (const b of branches) {
         if (!enabledMap[b.id]) continue
         if (prices[b.id] !== undefined) continue
-        const rows = await fetchLayananByBranch(b.id)
-        const row = rows.find(r => r.kategori === 'SPORT MASSAGE') ?? null
-        setPrices(prev => ({ ...prev, [b.id]: row }))
-        setPriceInput(prev => ({ ...prev, [b.id]: row ? String(row.harga) : '' }))
+        await reloadBranch(b.id)
       }
     }
     loadPrices()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branches, enabledMap])
 
-  async function savePrice(branchId: string) {
-    const raw = priceInput[branchId] ?? ''
-    const harga = Number(raw.replace(/[^\d]/g, ''))
+  async function reloadBranch(branchId: string) {
+    const rows = await fetchSportMassageLayanan(branchId)
+    setPrices(prev => ({ ...prev, [branchId]: rows }))
+    setPriceInput(prev => {
+      const next = { ...prev }
+      for (const r of rows) next[r.id] = String(r.harga)
+      return next
+    })
+  }
+
+  function parseHarga(raw: string | undefined) {
+    return Number((raw ?? '').replace(/[^\d]/g, ''))
+  }
+
+  async function savePrice(branchId: string, row: LayananRow) {
+    const harga = parseHarga(priceInput[row.id])
     if (!harga || harga <= 0) return
-    setPriceSaving(prev => ({ ...prev, [branchId]: true }))
-    const existing = prices[branchId]
+    setPriceSaving(prev => ({ ...prev, [row.id]: true }))
+    const { error } = await updateLayananHarga(row.id, harga)
+    if (error) console.error('[branch-settings] savePrice error:', error)
+    else await reloadBranch(branchId)
+    setPriceSaving(prev => ({ ...prev, [row.id]: false }))
+  }
+
+  async function addType(branchId: string) {
+    const nama = (newNama[branchId] ?? '').trim()
+    const harga = parseHarga(newHarga[branchId])
+    if (!nama || !harga || harga <= 0) return
+    setAddSaving(prev => ({ ...prev, [branchId]: true }))
     const { error } = await upsertLayanan({
-      id: existing?.id ?? crypto.randomUUID(),
+      id: crypto.randomUUID(),
       branch_id: branchId,
-      nama: 'Sport Massage',
+      nama,
       kategori: 'SPORT MASSAGE',
       jumlah_sesi: null,
       harga,
       is_active: true,
     })
-    if (!error) {
-      const rows = await fetchLayananByBranch(branchId)
-      const row = rows.find(r => r.kategori === 'SPORT MASSAGE') ?? null
-      setPrices(prev => ({ ...prev, [branchId]: row }))
+    if (error) {
+      console.error('[branch-settings] addType error:', error)
     } else {
-      console.error('[branch-settings] savePrice error:', error)
+      setNewNama(prev => ({ ...prev, [branchId]: '' }))
+      setNewHarga(prev => ({ ...prev, [branchId]: '' }))
+      await reloadBranch(branchId)
     }
-    setPriceSaving(prev => ({ ...prev, [branchId]: false }))
+    setAddSaving(prev => ({ ...prev, [branchId]: false }))
   }
 
   async function handleToggle(branchId: string) {
@@ -133,28 +154,65 @@ export default function BranchSettingsPage() {
                 </div>
 
                 {isEnabled && (
-                  <div className="pt-3 border-t border-white/10 space-y-2">
-                    <label className="block text-xs font-medium text-muted-foreground">Tarif Sport Massage (Rp)</label>
-                    <div className="flex items-center gap-2">
+                  <div className="pt-3 border-t border-white/10 space-y-3">
+                    <label className="block text-xs font-medium text-muted-foreground">Jenis &amp; Tarif Sport Massage (Rp)</label>
+                    {prices[b.id] === undefined ? (
+                      <p className="text-xs text-muted-foreground">Memuat...</p>
+                    ) : prices[b.id].length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Belum ada jenis layanan. Tambahkan di bawah.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {prices[b.id].map(row => {
+                          const dirty = parseHarga(priceInput[row.id]) !== Number(row.harga)
+                          return (
+                            <div key={row.id} className="flex items-center gap-2">
+                              <span className="flex-1 min-w-0 text-sm text-foreground truncate" title={row.nama}>{row.nama}</span>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                aria-label={`Tarif ${row.nama}`}
+                                value={priceInput[row.id] ?? ''}
+                                onChange={e => setPriceInput(prev => ({ ...prev, [row.id]: e.target.value }))}
+                                className="w-28 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-right focus:outline-none focus:ring-2 focus:ring-primary/50"
+                              />
+                              <button
+                                onClick={() => savePrice(b.id, row)}
+                                disabled={!dirty || priceSaving[row.id]}
+                                className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-40"
+                              >
+                                {priceSaving[row.id] ? '...' : 'Simpan'}
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                      <input
+                        type="text"
+                        value={newNama[b.id] ?? ''}
+                        onChange={e => setNewNama(prev => ({ ...prev, [b.id]: e.target.value }))}
+                        placeholder="Jenis baru, mis. Sport Massage 90 menit"
+                        className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
                       <input
                         type="text"
                         inputMode="numeric"
-                        value={priceInput[b.id] ?? ''}
-                        onChange={e => setPriceInput(prev => ({ ...prev, [b.id]: e.target.value }))}
-                        placeholder="mis. 150000"
-                        className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        value={newHarga[b.id] ?? ''}
+                        onChange={e => setNewHarga(prev => ({ ...prev, [b.id]: e.target.value }))}
+                        placeholder="Tarif"
+                        className="w-28 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-right focus:outline-none focus:ring-2 focus:ring-primary/50"
                       />
                       <button
-                        onClick={() => savePrice(b.id)}
-                        disabled={priceSaving[b.id]}
-                        className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+                        onClick={() => addType(b.id)}
+                        disabled={addSaving[b.id] || !(newNama[b.id] ?? '').trim() || !parseHarga(newHarga[b.id])}
+                        className="px-3 py-2 rounded-xl border border-primary/40 text-primary text-sm font-medium hover:bg-primary/10 transition-colors disabled:opacity-40"
                       >
-                        {priceSaving[b.id] ? 'Menyimpan...' : 'Simpan'}
+                        {addSaving[b.id] ? '...' : 'Tambah'}
                       </button>
                     </div>
-                    {prices[b.id] && (
-                      <p className="text-xs text-muted-foreground">Tarif saat ini: Rp {fmt(prices[b.id]!.harga)}</p>
-                    )}
+                    <p className="text-[11px] text-muted-foreground">Nonaktifkan atau hapus jenis layanan di menu Layanan.</p>
                   </div>
                 )}
               </div>

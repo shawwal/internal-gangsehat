@@ -20,6 +20,8 @@ interface Props {
 }
 
 function missingFieldsLabel(record: MedicalRecordRow): string {
+  // Griya Anak forms have no tindakan/regio — report the Griya record's state.
+  if (record.is_griya) return record.griya_status === 'draft' ? 'rekam medis masih draf' : 'rekam medis belum diisi'
   const missing: string[] = []
   if (!record.diagnosis) missing.push('diagnosis')
   if (!record.treatment) missing.push('tindakan')

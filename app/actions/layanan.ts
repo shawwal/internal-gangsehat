@@ -23,6 +23,21 @@ export async function fetchLayananByBranch(branchId: string): Promise<LayananRow
   return (data ?? []) as LayananRow[]
 }
 
+// Active Sport Massage service types for a branch — each row is one bookable
+// type with its own price (e.g. "Sport Massage 60 menit", "... 90 menit").
+export async function fetchSportMassageLayanan(branchId: string): Promise<LayananRow[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('internal_layanan')
+    .select('id, branch_id, nama, kategori, jumlah_sesi, harga, is_active, created_at')
+    .eq('branch_id', branchId)
+    .eq('kategori', 'SPORT MASSAGE')
+    .eq('is_active', true)
+    .order('harga', { ascending: true })
+    .order('nama', { ascending: true })
+  return (data ?? []) as LayananRow[]
+}
+
 export async function updateLayananHarga(
   id: string,
   harga: number,
