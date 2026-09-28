@@ -6,6 +6,7 @@ import { normalizeBirthDate } from '@/lib/dates'
 import { logActivity } from '@/lib/activityLog'
 import { addPatient } from '@/app/actions/patients'
 import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
+import { fetchVisitDisciplines } from '@/lib/griyaDiscipline'
 
 const WRITE_ROLES = ['director', 'manager', 'admin']
 
@@ -223,6 +224,7 @@ export interface GriyaStudentVisit {
   attending_staff_id: string | null
   package_id: string | null
   griya_slot_id: string | null
+  discipline: string | null        // slot's discipline, else attending therapist's (lib/griyaDiscipline.ts)
 }
 
 export interface GriyaStudentDetail {
@@ -297,8 +299,12 @@ export async function fetchGriyaStudentDetail(patientId: string): Promise<GriyaS
       attending_staff_id: (v.attending_staff_id as string) ?? null,
       package_id: (v.package_id as string) ?? null,
       griya_slot_id: (v.griya_slot_id as string) ?? null,
+      discipline: null,
     }
   })
+
+  const disciplines = await fetchVisitDisciplines(supabase, visits.map((v) => ({ ...v, branch_id: branchId })))
+  for (const v of visits) v.discipline = disciplines.get(v.id) ?? null
 
   const stats = {
     attended: visits.filter((v) => v.kehadiran === 'HADIR' || v.status === 'completed').length,
@@ -308,7 +314,7 @@ export async function fetchGriyaStudentDetail(patientId: string): Promise<GriyaS
 
   // visits is already ordered visit_date desc, so the first Terapi Awal-routed
   // visit found here is the most recent one.
-  const taVisit = visits.find((v) => getGriyaVisitFormRoute(v.service_type) === 'terapi-awal')
+  const taVisit = visits.find((v) => getGriyaVisitFormRoute(v.service_type, v.discipline) === 'terapi-awal')
   let terapiAwal: GriyaStudentDetail['terapiAwal'] = null
   if (taVisit) {
     const { data: ta } = await supabase

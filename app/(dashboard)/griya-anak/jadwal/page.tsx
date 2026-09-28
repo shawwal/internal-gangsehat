@@ -130,7 +130,8 @@ export default function GriyaJadwalPage() {
         break
       case 'examine':
         if (cell?.visit?.id) {
-          const route = getGriyaVisitFormRoute(cell.visit.service_type)
+          const discipline = cell.slot?.discipline ?? week.therapists.find((t) => t.therapist_id === cell.therapistId)?.discipline
+          const route = getGriyaVisitFormRoute(cell.visit.service_type, discipline)
           if (route === 'terapi-awal') {
             window.open(`/griya-anak/siswa/${cell.visit.patient_id}/terapi-awal/${cell.visit.id}`, '_blank', 'noopener,noreferrer')
           } else {

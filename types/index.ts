@@ -255,6 +255,8 @@ export interface GriyaTerapiAwal {
   created_by: string | null
   created_at: string
   updated_at: string
+  // Which intake form this record uses (migration 085)
+  rm_type: 'DEFAULT' | 'FISIOTERAPI' | 'PSIKOLOG'
   // Keluhan Utama
   keluhan_utama: string | null
   // Riwayat Keluarga
@@ -302,6 +304,49 @@ export interface GriyaTerapiAwal {
   // Jadwal Terapi
   jadwal_hari: string | null
   jadwal_pukul: string | null
+  // Fisioterapi form (migrations 074 + 085)
+  usia_ibu_hamil: string | null
+  jumlah_hamil: string | null
+  problem_kehamilan: string | null
+  obat_kehamilan: string | null
+  penyakit_ibu: string | null
+  vitamin_kehamilan: string | null
+  aktivitas_ibu_hamil: string | null
+  langsung_menangis: string | null
+  tempat_lahir: string | null
+  jumlah_melahirkan: string | null
+  induksi: string | null
+  cara_lahir: string | null
+  nicu: string | null
+  inkubator: string | null
+  berat_badan_lahir: string | null
+  panjang_badan_lahir: string | null
+  kondisi_khusus_lahir: string | null
+  kelahiran_lainnya: string | null
+  bb_standar: string | null
+  tb_standar: string | null
+  lk_standar: string | null
+  reflek_rooting: string | null
+  reflek_moro: string | null
+  reflek_sucking: string | null
+  reflek_atnr: string | null
+  reflek_grasping: string | null
+  reflek_babinski: string | null
+  reflek_step: string | null
+  pemeriksaan_penunjang: string | null
+  kepribadian_anak: string | null
+  tipe_sosialisasi: string | null
+  hobi_anak: string | null
+  program_fisioterapi: string | null
+  program_tambahan: string | null
+  // Psikolog form (migration 085)
+  hubungan: string | null
+  anak_ke: string | null
+  jumlah_saudara: string | null
+  durasi_keluhan: string | null
+  harapan_sesi: string | null
+  tl_konseling_lanjutan: string | null
+  tl_psikoterapi: string | null
   // Assessor sign-off
   assessor_si_id: string | null
   assessor_si_tanggal: string | null

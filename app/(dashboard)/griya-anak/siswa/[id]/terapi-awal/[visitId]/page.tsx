@@ -7,111 +7,53 @@ import { ChevronLeft, Loader2, AlertTriangle } from 'lucide-react'
 import { fetchVisitWithPatient, fetchBranchStaff, type VisitWithPatient, type BranchStaffMember } from '@/app/actions/jadwal'
 import { fetchGriyaTerapiAwal, saveGriyaTerapiAwalDraft, completeGriyaTerapiAwal, type GriyaTerapiAwalFieldsInput } from '@/app/actions/griyaTerapiAwal'
 import type { GriyaTerapiAwal, UserRole } from '@/types'
+import type { GriyaRmType } from '@/lib/griyaVisitRouting'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
+import { ALL_RM_FIELD_KEYS, RM_TYPES, RM_TYPE_ORDER, validateRm, type RmFieldKey } from '@/components/griya/rekam-medis/sections'
+import { RmSections, Section, inputCls, labelCls } from '@/components/griya/rekam-medis/RmSections'
 
-const inputCls = 'w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
-const taCls = `${inputCls} resize-none`
-const labelCls = 'block text-xs font-medium text-muted-foreground mb-2'
+type Form = Record<RmFieldKey, string>
 
-const FIELD_KEYS = [
-  'keluhan_utama',
-  'riwayat_keluarga',
-  'berat_badan', 'tinggi_badan', 'lingkar_kepala',
-  'usia_angkat_kepala', 'usia_merayap', 'usia_merangkak', 'usia_duduk_mandiri', 'usia_merambat', 'usia_berjalan',
-  'usia_menunjuk', 'usia_babbling', 'usia_mengucap_kata', 'toilet_training', 'pertumbuhan_lainnya',
-  'riwayat_sakit',
-  'kemampuan_menyedot', 'kemampuan_sikat_gigi', 'kemampuan_menghisap_pipet', 'kemampuan_meniup_lilin',
-  'kemampuan_kontrol_liur', 'kemampuan_mengunyah', 'kemampuan_makan', 'bentuk_tekstur_makanan', 'wicara_lainnya',
-  'kontak_mata', 'kemampuan_duduk_tenang',
-  'diagnosa',
-  'fisioterapi_motorik', 'fisioterapi_sensorik', 'terapi_wicara', 'terapi_okupasi', 'terapi_perilaku',
-  'target_program_terapi',
-  'jadwal_hari', 'jadwal_pukul',
-] as const
+const EMPTY_FORM = Object.fromEntries(ALL_RM_FIELD_KEYS.map((k) => [k, ''])) as Form
 
-type FieldKey = typeof FIELD_KEYS[number]
-
-const EMPTY_FORM = Object.fromEntries(FIELD_KEYS.map((k) => [k, ''])) as Record<FieldKey, string>
-
-function toForm(a: GriyaTerapiAwal | null): Record<FieldKey, string> {
+function toForm(a: GriyaTerapiAwal | null): Form {
   if (!a) return EMPTY_FORM
   const out = { ...EMPTY_FORM }
-  for (const k of FIELD_KEYS) out[k] = (a[k] as string | null) ?? ''
+  for (const k of ALL_RM_FIELD_KEYS) out[k] = (a[k] as string | null) ?? ''
   return out
 }
 
-function toFieldsInput(f: Record<FieldKey, string>, assessorSiId: string, assessorSiTanggal: string, assessorWicaraId: string, assessorWicaraTanggal: string): GriyaTerapiAwalFieldsInput {
+type Assessors = { siId: string; siTanggal: string; wicaraId: string; wicaraTanggal: string }
+
+function toFieldsInput(f: Form, type: GriyaRmType, a: Assessors): GriyaTerapiAwalFieldsInput {
   const out: GriyaTerapiAwalFieldsInput = {}
-  for (const k of FIELD_KEYS) (out as Record<string, string | null>)[k] = f[k] || null
-  out.assessor_si_id = assessorSiId || null
-  out.assessor_si_tanggal = assessorSiTanggal || null
-  out.assessor_wicara_id = assessorWicaraId || null
-  out.assessor_wicara_tanggal = assessorWicaraTanggal || null
+  for (const k of ALL_RM_FIELD_KEYS) (out as Record<string, string | null>)[k] = f[k] || null
+  out.rm_type = type
+  out.assessor_si_id = a.siId || null
+  out.assessor_si_tanggal = a.siTanggal || null
+  out.assessor_wicara_id = a.wicaraId || null
+  out.assessor_wicara_tanggal = a.wicaraTanggal || null
   return out
 }
 
-function Field({ label, k, value, onChange, textarea, required }: {
-  label: string; k: string; value: string; onChange: (k: string, v: string) => void; textarea?: boolean; required?: boolean
+function AssessorPicker({ label, staff, id, tanggal, onId, onTanggal }: {
+  label: string; staff: BranchStaffMember[]; id: string; tanggal: string; onId: (v: string) => void; onTanggal: (v: string) => void
 }) {
   return (
-    <div>
-      <label className={labelCls}>{label}{required && ' *'}</label>
-      {textarea ? (
-        <textarea value={value} onChange={(e) => onChange(k, e.target.value)} rows={2} className={taCls} />
-      ) : (
-        <input value={value} onChange={(e) => onChange(k, e.target.value)} className={inputCls} />
-      )}
-    </div>
-  )
-}
-
-function Section({ title, subtitle, children, className = '' }: { title: string; subtitle?: string; children: React.ReactNode; className?: string }) {
-  return (
-    <section className={`glass-card p-5 sm:p-6 space-y-4 ${className}`}>
+    <>
       <div>
-        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+        <label className={labelCls}>{label}</label>
+        <select value={id} onChange={(e) => onId(e.target.value)} className={inputCls}>
+          <option value="">— pilih —</option>
+          {staff.map((s) => <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>)}
+        </select>
       </div>
-      <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">{children}</div>
-    </section>
-  )
-}
-
-const PROGRAM_OPTIONS: { k: FieldKey; label: string }[] = [
-  { k: 'fisioterapi_motorik', label: 'Fisioterapi Motorik' },
-  { k: 'fisioterapi_sensorik', label: 'Fisioterapi Sensorik / Sensori Integrasi' },
-  { k: 'terapi_wicara', label: 'Terapi Wicara' },
-  { k: 'terapi_okupasi', label: 'Terapi Okupasi' },
-  { k: 'terapi_perilaku', label: 'Terapi Perilaku' },
-]
-
-// Checked = non-empty value. 'Ya' marks a plain check; any other text is kept as a note.
-const PROGRAM_CHECKED = 'Ya'
-
-function ProgramCheckbox({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  const checked = value.trim() !== '' && value.trim() !== '-'
-  const note = value === PROGRAM_CHECKED ? '' : value
-  return (
-    <div className={`rounded-2xl border p-3.5 transition-colors ${checked ? 'border-primary/40 bg-primary/5' : 'border-border'}`}>
-      <label className="flex items-center gap-3 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked ? PROGRAM_CHECKED : '')}
-          className="size-4 accent-primary cursor-pointer shrink-0"
-        />
-        <span className="text-sm font-medium text-foreground">{label}</span>
-      </label>
-      {checked && (
-        <input
-          value={note}
-          onChange={(e) => onChange(e.target.value || PROGRAM_CHECKED)}
-          placeholder="Catatan (opsional)"
-          className={`${inputCls} mt-3`}
-        />
-      )}
-    </div>
+      <div>
+        <label className={labelCls}>Tanggal</label>
+        <input type="date" value={tanggal} onChange={(e) => onTanggal(e.target.value)} className={inputCls} />
+      </div>
+    </>
   )
 }
 
@@ -122,11 +64,10 @@ export default function GriyaTerapiAwalPage() {
 
   const [loading, setLoading] = useState(true)
   const [visit, setVisit] = useState<VisitWithPatient | null>(null)
-  const [form, setForm] = useState<Record<FieldKey, string>>(EMPTY_FORM)
-  const [assessorSiId, setAssessorSiId] = useState('')
-  const [assessorSiTanggal, setAssessorSiTanggal] = useState('')
-  const [assessorWicaraId, setAssessorWicaraId] = useState('')
-  const [assessorWicaraTanggal, setAssessorWicaraTanggal] = useState('')
+  const [form, setForm] = useState<Form>(EMPTY_FORM)
+  const [rmType, setRmType] = useState<GriyaRmType>('DEFAULT')
+  const [suggestedType, setSuggestedType] = useState<GriyaRmType>('DEFAULT')
+  const [assessors, setAssessors] = useState<Assessors>({ siId: '', siTanggal: '', wicaraId: '', wicaraTanggal: '' })
   const [staff, setStaff] = useState<BranchStaffMember[]>([])
   const [alreadyCompleted, setAlreadyCompleted] = useState(false)
   const [userRole, setUserRole] = useState<UserRole | null>(null)
@@ -138,15 +79,19 @@ export default function GriyaTerapiAwalPage() {
     if (!visitId) return
     let cancelled = false
     setLoading(true)
-    Promise.all([fetchVisitWithPatient(visitId), fetchGriyaTerapiAwal(visitId)]).then(([v, a]) => {
+    Promise.all([fetchVisitWithPatient(visitId), fetchGriyaTerapiAwal(visitId)]).then(([v, { record: a, suggestedType: sug }]) => {
       if (cancelled) return
       if (!v) { router.replace(`/griya-anak/siswa/${id}`); return }
       setVisit(v)
       setForm(toForm(a))
-      setAssessorSiId(a?.assessor_si_id ?? '')
-      setAssessorSiTanggal(a?.assessor_si_tanggal ?? '')
-      setAssessorWicaraId(a?.assessor_wicara_id ?? '')
-      setAssessorWicaraTanggal(a?.assessor_wicara_tanggal ?? '')
+      setSuggestedType(sug)
+      setRmType(a?.rm_type ?? sug)
+      setAssessors({
+        siId: a?.assessor_si_id ?? '',
+        siTanggal: a?.assessor_si_tanggal ?? '',
+        wicaraId: a?.assessor_wicara_id ?? '',
+        wicaraTanggal: a?.assessor_wicara_tanggal ?? '',
+      })
       setAlreadyCompleted(a?.status === 'completed')
       setLoading(false)
       fetchBranchStaff(v.branch_id).then((s) => { if (!cancelled) setStaff(s) })
@@ -168,16 +113,15 @@ export default function GriyaTerapiAwalPage() {
 
   const isTherapistLike = userRole === 'therapist' || userRole === 'staff'
   const locked = isTherapistLike && alreadyCompleted
+  const meta = RM_TYPES[rmType]
 
-  function set(k: string, v: string) { setForm((f) => ({ ...f, [k]: v })) }
+  function set(k: RmFieldKey, v: string) { setForm((f) => ({ ...f, [k]: v })) }
+  const setA = (patch: Partial<Assessors>) => setAssessors((a) => ({ ...a, ...patch }))
 
   async function persistDraft() {
     if (!visit) return
     setSaving(true); setError(null)
-    const { error: err } = await saveGriyaTerapiAwalDraft(
-      visit.id, visit.patient_id, visit.branch_id,
-      toFieldsInput(form, assessorSiId, assessorSiTanggal, assessorWicaraId, assessorWicaraTanggal),
-    )
+    const { error: err } = await saveGriyaTerapiAwalDraft(visit.id, visit.patient_id, visit.branch_id, toFieldsInput(form, rmType, assessors))
     setSaving(false)
     if (err) { setError(err); return }
     showToast('Draf disimpan', 'success')
@@ -185,12 +129,10 @@ export default function GriyaTerapiAwalPage() {
 
   async function handleComplete() {
     if (!visit) return
-    if (!form.diagnosa.trim()) { setError('Diagnosa wajib diisi sebelum menyelesaikan Terapi Awal.'); return }
+    const invalid = validateRm(rmType, form)
+    if (invalid) { setError(invalid); return }
     setCompleting(true); setError(null)
-    const { error: err } = await completeGriyaTerapiAwal(
-      visit.id, visit.patient_id, visit.branch_id,
-      toFieldsInput(form, assessorSiId, assessorSiTanggal, assessorWicaraId, assessorWicaraTanggal),
-    )
+    const { error: err } = await completeGriyaTerapiAwal(visit.id, visit.patient_id, visit.branch_id, toFieldsInput(form, rmType, assessors))
     setCompleting(false)
     if (err) { setError(err); return }
     setAlreadyCompleted(true)
@@ -215,7 +157,7 @@ export default function GriyaTerapiAwalPage() {
         <div className="min-w-0">
           <h1 className="text-base font-semibold text-foreground truncate">{visit.patient_name}</h1>
           <p className="text-xs text-muted-foreground">
-            Terapi Awal — Rekam Medis Sensori Integrasi · {visit.visit_date}
+            Terapi Awal — {meta.formTitle} · {visit.visit_date}
             {alreadyCompleted && <span className="ml-2 text-[#34C759] font-medium">Selesai</span>}
           </p>
         </div>
@@ -227,113 +169,50 @@ export default function GriyaTerapiAwalPage() {
         </div>
       )}
 
+      <div className="glass-card p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="min-w-0 sm:mr-auto">
+          <p className="text-sm font-semibold text-foreground">Jenis Rekam Medis</p>
+          <p className="text-xs text-muted-foreground">Data yang sudah diisi tetap tersimpan saat berganti jenis.</p>
+        </div>
+        <div role="radiogroup" aria-label="Jenis Rekam Medis" className="inline-flex p-1 rounded-2xl bg-muted gap-1 self-start sm:self-auto">
+          {RM_TYPE_ORDER.map((t) => {
+            const active = rmType === t
+            return (
+              <button
+                key={t}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                disabled={locked}
+                onClick={() => setRmType(t)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer disabled:cursor-not-allowed ${
+                  active ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {RM_TYPES[t].label}
+                {t === suggestedType && <span className="ml-1 text-[10px] opacity-60">(sesuai layanan)</span>}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       <fieldset disabled={locked} className="border-0 m-0 p-0 min-w-0 space-y-5">
-        <div className="grid gap-5 lg:grid-cols-2">
-        <Section title="Keluhan Utama">
-          <div className="sm:col-span-2">
-            <Field label="Keluhan utama" k="keluhan_utama" value={form.keluhan_utama} onChange={set} textarea />
-          </div>
-        </Section>
+        <RmSections sections={meta.sections} form={form} set={set} />
 
-        <Section title="Riwayat Keluarga">
-          <div className="sm:col-span-2">
-            <Field label="Keluarga dengan keluhan yang sama (Paman/Bibi/Keponakan)" k="riwayat_keluarga" value={form.riwayat_keluarga} onChange={set} textarea />
-          </div>
-        </Section>
-        </div>
-
-        <Section title="Masa Pertumbuhan dan Perkembangan">
-          <Field label="Berat badan" k="berat_badan" value={form.berat_badan} onChange={set} />
-          <Field label="Tinggi badan" k="tinggi_badan" value={form.tinggi_badan} onChange={set} />
-          <Field label="Lingkar kepala" k="lingkar_kepala" value={form.lingkar_kepala} onChange={set} />
-          <Field label="Kemampuan angkat kepala (usia … bulan)" k="usia_angkat_kepala" value={form.usia_angkat_kepala} onChange={set} />
-          <Field label="Kemampuan merayap (usia … bulan)" k="usia_merayap" value={form.usia_merayap} onChange={set} />
-          <Field label="Kemampuan merangkak (usia … bulan)" k="usia_merangkak" value={form.usia_merangkak} onChange={set} />
-          <Field label="Kemampuan duduk mandiri (usia … bulan)" k="usia_duduk_mandiri" value={form.usia_duduk_mandiri} onChange={set} />
-          <Field label="Kemampuan merambat (usia … bulan)" k="usia_merambat" value={form.usia_merambat} onChange={set} />
-          <Field label="Kemampuan berjalan (usia … bulan)" k="usia_berjalan" value={form.usia_berjalan} onChange={set} />
-          <Field label="Kemampuan menunjuk (usia … bulan)" k="usia_menunjuk" value={form.usia_menunjuk} onChange={set} />
-          <Field label="Kemampuan babbling (usia … bulan)" k="usia_babbling" value={form.usia_babbling} onChange={set} />
-          <Field label="Kemampuan mengucapkan kata (usia … bulan)" k="usia_mengucap_kata" value={form.usia_mengucap_kata} onChange={set} />
-          <Field label="Toilet training" k="toilet_training" value={form.toilet_training} onChange={set} />
-          <div className="sm:col-span-2">
-            <Field label="Dan lain-lain" k="pertumbuhan_lainnya" value={form.pertumbuhan_lainnya} onChange={set} textarea />
-          </div>
-        </Section>
-
-        <Section title="Riwayat Sakit / Keluhan" subtitle="Rawat inap / rawat jalan / konsultasi / terapi">
-          <div className="sm:col-span-2">
-            <Field label="Riwayat" k="riwayat_sakit" value={form.riwayat_sakit} onChange={set} textarea />
-          </div>
-        </Section>
-
-        <Section title="Masalah Wicara / Oral Motor">
-          <Field label="Kemampuan menyedot (direct breastfeeding/dot)" k="kemampuan_menyedot" value={form.kemampuan_menyedot} onChange={set} />
-          <Field label="Kemampuan sikat gigi (mau/tidak)" k="kemampuan_sikat_gigi" value={form.kemampuan_sikat_gigi} onChange={set} />
-          <Field label="Kemampuan menghisap pipet (bisa/tidak)" k="kemampuan_menghisap_pipet" value={form.kemampuan_menghisap_pipet} onChange={set} />
-          <Field label="Kemampuan meniup lilin (bisa/tidak)" k="kemampuan_meniup_lilin" value={form.kemampuan_meniup_lilin} onChange={set} />
-          <Field label="Kemampuan kontrol liur (bisa/tidak)" k="kemampuan_kontrol_liur" value={form.kemampuan_kontrol_liur} onChange={set} />
-          <Field label="Kemampuan mengunyah (mengunyah/mengulum)" k="kemampuan_mengunyah" value={form.kemampuan_mengunyah} onChange={set} />
-          <Field label="Kemampuan makan (tersedak/batuk/baik saja)" k="kemampuan_makan" value={form.kemampuan_makan} onChange={set} />
-          <Field label="Bentuk tekstur makanan (halus-bayi/kasar-dewasa)" k="bentuk_tekstur_makanan" value={form.bentuk_tekstur_makanan} onChange={set} />
-          <div className="sm:col-span-2">
-            <Field label="Dan lain-lain" k="wicara_lainnya" value={form.wicara_lainnya} onChange={set} textarea />
-          </div>
-        </Section>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-        <Section title="Pemeriksaan Objektif/Penunjang">
-          <Field label="Kontak mata" k="kontak_mata" value={form.kontak_mata} onChange={set} />
-          <Field label="Kemampuan duduk tenang" k="kemampuan_duduk_tenang" value={form.kemampuan_duduk_tenang} onChange={set} />
-        </Section>
-
-        <Section title="Diagnosa (dari Assessor)">
-          <div className="sm:col-span-2">
-            <Field label="Diagnosa" k="diagnosa" value={form.diagnosa} onChange={set} textarea required />
-          </div>
-        </Section>
-        </div>
-
-        <Section title="Program Rencana Terapi" subtitle="Centang program yang direkomendasikan">
-          {PROGRAM_OPTIONS.map(({ k, label }) => (
-            <ProgramCheckbox key={k} label={label} value={form[k]} onChange={(v) => set(k, v)} />
-          ))}
-        </Section>
-
-        <Section title="Target & Program Terapi">
-          <div className="sm:col-span-2">
-            <Field label="Target & Program" k="target_program_terapi" value={form.target_program_terapi} onChange={set} textarea />
-          </div>
-        </Section>
-
-        <Section title="Jadwal Terapi" subtitle="Menyesuaikan orang tua dan jadwal kosong praktik">
-          <Field label="Hari" k="jadwal_hari" value={form.jadwal_hari} onChange={set} />
-          <Field label="Pukul" k="jadwal_pukul" value={form.jadwal_pukul} onChange={set} />
-        </Section>
-
-        <Section title="Asesor">
-          <div>
-            <label className={labelCls}>Asesor Sensori Integrasi</label>
-            <select value={assessorSiId} onChange={(e) => setAssessorSiId(e.target.value)} className={inputCls}>
-              <option value="">— pilih —</option>
-              {staff.map((s) => <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>Tanggal</label>
-            <input type="date" value={assessorSiTanggal} onChange={(e) => setAssessorSiTanggal(e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Asesor Terapi Wicara</label>
-            <select value={assessorWicaraId} onChange={(e) => setAssessorWicaraId(e.target.value)} className={inputCls}>
-              <option value="">— pilih —</option>
-              {staff.map((s) => <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>Tanggal</label>
-            <input type="date" value={assessorWicaraTanggal} onChange={(e) => setAssessorWicaraTanggal(e.target.value)} className={inputCls} />
-          </div>
+        <Section title={rmType === 'DEFAULT' ? 'Asesor' : 'Penanggung Jawab'}>
+          <AssessorPicker
+            label={meta.assessorLabel} staff={staff}
+            id={assessors.siId} tanggal={assessors.siTanggal}
+            onId={(v) => setA({ siId: v })} onTanggal={(v) => setA({ siTanggal: v })}
+          />
+          {rmType === 'DEFAULT' && (
+            <AssessorPicker
+              label="Asesor Terapi Wicara" staff={staff}
+              id={assessors.wicaraId} tanggal={assessors.wicaraTanggal}
+              onId={(v) => setA({ wicaraId: v })} onTanggal={(v) => setA({ wicaraTanggal: v })}
+            />
+          )}
         </Section>
 
         {error && (

@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
+import { getGriyaVisitFormRoute, disciplineToRmType, type GriyaRmType } from '@/lib/griyaVisitRouting'
+import { fetchVisitDisciplines } from '@/lib/griyaDiscipline'
 import type { GriyaSessionNote, GriyaTerapiAwal } from '@/types'
 
 export interface GriyaRecordEntry {
@@ -11,6 +12,8 @@ export interface GriyaRecordEntry {
   visitTime: string | null
   serviceType: string | null
   kind: 'terapi-awal' | 'session-note'
+  rmType: GriyaRmType            // saved rm_type, or the discipline's suggestion when not yet filled
+  assessorName: string | null
   therapistName: string | null
   griyaSlotId: string | null
   pertemuanKe: number | null
@@ -34,7 +37,10 @@ export async function fetchGriyaMedicalRecords(patientId: string): Promise<Griya
     .order('visit_date', { ascending: true })
     .order('visit_time', { ascending: true })
 
-  const rec = (visits ?? []).filter((v) => getGriyaVisitFormRoute(v.service_type))
+  const disciplines = await fetchVisitDisciplines(supabase, (visits ?? []) as { id: string }[])
+  const routeOf = (v: { id: unknown; service_type: unknown }) =>
+    getGriyaVisitFormRoute(v.service_type as string | null, disciplines.get(v.id as string))
+  const rec = (visits ?? []).filter((v) => routeOf(v))
   if (rec.length === 0) return { branchId: visits?.[0]?.branch_id ?? null, entries: [] }
 
   const ids = rec.map((v) => v.id as string)
@@ -45,7 +51,10 @@ export async function fetchGriyaMedicalRecords(patientId: string): Promise<Griya
   const noteMap = new Map((notes.data ?? []).map((n) => [n.visit_id as string, n as GriyaSessionNote]))
   const intakeMap = new Map((intakes.data ?? []).map((n) => [n.visit_id as string, n as GriyaTerapiAwal]))
 
-  const staffIds = [...new Set(rec.map((v) => v.attending_staff_id as string | null).filter((x): x is string => !!x))]
+  const staffIds = [...new Set([
+    ...rec.map((v) => v.attending_staff_id as string | null),
+    ...[...intakeMap.values()].map((t) => t.assessor_si_id),
+  ].filter((x): x is string => !!x))]
   const names = new Map<string, string>()
   if (staffIds.length > 0) {
     const { data: profs } = await createAdminClient()
@@ -55,19 +64,22 @@ export async function fetchGriyaMedicalRecords(patientId: string): Promise<Griya
 
   let ke = 0
   const entries: GriyaRecordEntry[] = rec.map((v) => {
-    const kind = getGriyaVisitFormRoute(v.service_type) as 'terapi-awal' | 'session-note'
+    const kind = routeOf(v) as 'terapi-awal' | 'session-note'
     if (kind === 'session-note') ke++
+    const intake = intakeMap.get(v.id as string) ?? null
     return {
       visitId: v.id as string,
       visitDate: v.visit_date as string,
       visitTime: v.visit_time ? String(v.visit_time).slice(0, 5) : null,
       serviceType: (v.service_type as string) ?? null,
       kind,
+      rmType: intake?.rm_type ?? disciplineToRmType(disciplines.get(v.id as string)),
+      assessorName: intake?.assessor_si_id ? names.get(intake.assessor_si_id) ?? null : null,
       therapistName: v.attending_staff_id ? names.get(v.attending_staff_id as string) ?? null : null,
       griyaSlotId: (v.griya_slot_id as string) ?? null,
       pertemuanKe: kind === 'session-note' ? ke : null,
       attended: v.kehadiran === 'HADIR' || v.status === 'completed',
-      terapiAwal: intakeMap.get(v.id as string) ?? null,
+      terapiAwal: intake,
       note: noteMap.get(v.id as string) ?? null,
     }
   })

@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { fetchVisitDisciplines } from '@/lib/griyaDiscipline'
+import { disciplineToRmType, type GriyaRmType } from '@/lib/griyaVisitRouting'
 import type { GriyaTerapiAwal, VisitStatus } from '@/types'
 
 export type GriyaTerapiAwalFieldsInput = Partial<Omit<GriyaTerapiAwal,
@@ -8,16 +10,22 @@ export type GriyaTerapiAwalFieldsInput = Partial<Omit<GriyaTerapiAwal,
 >>
 
 // ── Fetch the intake draft/completed row for a visit (may not exist yet) ──────
-export async function fetchGriyaTerapiAwal(visitId: string): Promise<GriyaTerapiAwal | null> {
+// suggestedType is the form type implied by the visit's discipline; the page
+// uses it only while no record has been saved (a saved rm_type always wins).
+export async function fetchGriyaTerapiAwal(
+  visitId: string,
+): Promise<{ record: GriyaTerapiAwal | null; suggestedType: GriyaRmType }> {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('griya_terapi_awal')
-    .select('*')
-    .eq('visit_id', visitId)
-    .maybeSingle()
-
-  if (error || !data) return null
-  return data as GriyaTerapiAwal
+  const [{ data }, { data: visit }] = await Promise.all([
+    supabase.from('griya_terapi_awal').select('*').eq('visit_id', visitId).maybeSingle(),
+    supabase.from('patient_visits').select('id, griya_slot_id, attending_staff_id, branch_id').eq('id', visitId).maybeSingle(),
+  ])
+  let suggestedType: GriyaRmType = 'DEFAULT'
+  if (visit) {
+    const disciplines = await fetchVisitDisciplines(supabase, [visit as { id: string }])
+    suggestedType = disciplineToRmType(disciplines.get(visitId))
+  }
+  return { record: (data as GriyaTerapiAwal) ?? null, suggestedType }
 }
 
 // ── Save the full current form state as a draft ────────────────────────────────

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { normalizeBirthDate } from '@/lib/dates'
 import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
+import { fetchVisitDisciplines } from '@/lib/griyaDiscipline'
 import { resolveGriyaBranchId, type Discipline, type Hari } from '@/app/actions/griyaJadwal'
 
 export interface MyStudentSlot {
@@ -60,6 +61,8 @@ type VisitRow = {
   service_type: string | null
   status: string
   kehadiran: string | null
+  griya_slot_id: string | null
+  attending_staff_id: string | null
 }
 
 function jakartaToday(): string {
@@ -93,7 +96,7 @@ export async function fetchMyGriyaStudents(): Promise<MyStudentsResult> {
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabase
       .from('patient_visits')
-      .select('id, patient_id, visit_date, visit_time, service_type, status, kehadiran')
+      .select('id, patient_id, visit_date, visit_time, service_type, status, kehadiran, griya_slot_id, attending_staff_id')
       .eq('branch_id', branchId)
       .eq('attending_staff_id', user.id)
       .order('visit_date', { ascending: true })
@@ -107,8 +110,11 @@ export async function fetchMyGriyaStudents(): Promise<MyStudentsResult> {
   const isAttended = (v: VisitRow) => v.kehadiran === 'HADIR' || v.status === 'completed'
   const isMissed = (v: VisitRow) => v.status === 'no_show' || (v.status === 'cancelled' && v.kehadiran === 'TIDAK HADIR')
 
+  const disciplines = await fetchVisitDisciplines(supabase, visits.map((v) => ({ ...v, branch_id: branchId })))
+  const routeOf = (v: VisitRow) => getGriyaVisitFormRoute(v.service_type, disciplines.get(v.id))
+
   // Which attended visits still lack a completed record.
-  const needsForm = visits.filter((v) => isAttended(v) && getGriyaVisitFormRoute(v.service_type))
+  const needsForm = visits.filter((v) => isAttended(v) && routeOf(v))
   const doneVisitIds = new Set<string>()
   for (const ids of chunk(needsForm.map((v) => v.id), 200)) {
     const [notes, intakes] = await Promise.all([
@@ -178,7 +184,7 @@ export async function fetchMyGriyaStudents(): Promise<MyStudentsResult> {
     const upcoming = vs
       .filter((v) => v.status === 'scheduled' && v.visit_date >= today)
       .sort((a, b) => a.visit_date.localeCompare(b.visit_date) || (a.visit_time ?? '').localeCompare(b.visit_time ?? ''))
-    const pending = attended.filter((v) => getGriyaVisitFormRoute(v.service_type) && !doneVisitIds.has(v.id))
+    const pending = attended.filter((v) => routeOf(v) && !doneVisitIds.has(v.id))
     const oldest = pending[0]
     const slots = slotMap.get(patientId) ?? []
 
@@ -199,7 +205,7 @@ export async function fetchMyGriyaStudents(): Promise<MyStudentsResult> {
       nextVisitTime: upcoming[0]?.visit_time ? String(upcoming[0].visit_time).slice(0, 5) : null,
       pendingRecords: pending.length,
       pendingHref: oldest
-        ? getGriyaVisitFormRoute(oldest.service_type) === 'terapi-awal'
+        ? routeOf(oldest) === 'terapi-awal'
           ? `/griya-anak/siswa/${patientId}/terapi-awal/${oldest.id}`
           : `/griya-anak/siswa/${patientId}/rekam-medis`
         : null,

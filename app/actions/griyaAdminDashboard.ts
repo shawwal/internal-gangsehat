@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import { getGriyaVisitFormRoute, type GriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
 import { resolveGriyaBranchId } from '@/app/actions/griyaJadwal'
+import { fetchVisitDisciplines } from '@/lib/griyaDiscipline'
 
 const ADMIN_ROLES = ['admin', 'director', 'manager']
 const BACKLOG_DAYS = 7
@@ -53,12 +54,15 @@ async function collect(
 ): Promise<{ stateByVisit: Record<string, RecordState>; pending: PendingRecord[] }> {
   const { data: visits } = await supabase
     .from('patient_visits')
-    .select('id, patient_id, attending_staff_id, visit_date, service_type, status, kehadiran')
+    .select('id, patient_id, attending_staff_id, griya_slot_id, branch_id, visit_date, service_type, status, kehadiran')
     .eq('branch_id', branchId)
     .gte('visit_date', fromIso)
     .lte('visit_date', toIso)
     .or('status.eq.completed,kehadiran.eq.HADIR')
-  const attended = (visits ?? []).filter((v) => getGriyaVisitFormRoute(v.service_type))
+  const disciplines = await fetchVisitDisciplines(supabase, (visits ?? []) as { id: string }[])
+  const routeOf = (v: { id: unknown; service_type: unknown }) =>
+    getGriyaVisitFormRoute(v.service_type as string | null, disciplines.get(v.id as string))
+  const attended = (visits ?? []).filter((v) => routeOf(v))
   if (attended.length === 0) return { stateByVisit: {}, pending: [] }
 
   const ids = attended.map((v) => v.id as string)
@@ -72,7 +76,7 @@ async function collect(
   const stateByVisit: Record<string, RecordState> = {}
   const pendingRaw: Omit<PendingRecord, 'patientName'>[] = []
   for (const v of attended) {
-    const kind = getGriyaVisitFormRoute(v.service_type)!
+    const kind = routeOf(v)!
     const st = (kind === 'terapi-awal' ? intakeStatus : noteStatus).get(v.id as string)
     const state: RecordState = st === 'completed' ? 'done' : st === 'draft' ? 'draft' : 'missing'
     stateByVisit[v.id as string] = state

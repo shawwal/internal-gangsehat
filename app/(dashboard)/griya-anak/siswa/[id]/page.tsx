@@ -80,7 +80,7 @@ export default function GriyaSiswaDetailPage() {
   const pastSlots = detail?.slots.filter((s) => s.status !== 'active') ?? []
 
   function handleExamine(v: NonNullable<typeof detail>['visits'][number]) {
-    const route = getGriyaVisitFormRoute(v.service_type)
+    const route = getGriyaVisitFormRoute(v.service_type, v.discipline)
     if (route === 'terapi-awal') router.push(`/griya-anak/siswa/${id}/terapi-awal/${v.id}`)
     else if (route === 'session-note') setExamineVisitId(v.id)
   }
@@ -309,7 +309,7 @@ export default function GriyaSiswaDetailPage() {
                       <td className="px-4 py-2 text-muted-foreground hidden lg:table-cell max-w-xs truncate">{v.notes ?? ''}</td>
                       {canExamine && (
                         <td className="px-4 py-2 text-right whitespace-nowrap">
-                          {getGriyaVisitFormRoute(v.service_type) && (
+                          {getGriyaVisitFormRoute(v.service_type, v.discipline) && (
                             <button onClick={() => handleExamine(v)}
                               className="inline-flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-muted text-muted-foreground text-xs cursor-pointer" title="Rekam Medis">
                               <Stethoscope size={13} /> Rekam Medis

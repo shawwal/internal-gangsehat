@@ -86,7 +86,8 @@ export default function GriyaTherapistDashboardPage() {
       showToast('Rekam medis bisa dibuka setelah anak ditandai hadir oleh admin.', 'info')
       return
     }
-    if (getGriyaVisitFormRoute(v.service_type) === 'terapi-awal') {
+    const discipline = cell.slot?.discipline ?? week.therapists.find((t) => t.therapist_id === cell.therapistId)?.discipline
+    if (getGriyaVisitFormRoute(v.service_type, discipline) === 'terapi-awal') {
       window.open(`/griya-anak/siswa/${v.patient_id}/terapi-awal/${v.id}`, '_blank', 'noopener,noreferrer')
     } else {
       setNote(cell)

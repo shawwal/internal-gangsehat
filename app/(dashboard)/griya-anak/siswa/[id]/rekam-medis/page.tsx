@@ -9,30 +9,8 @@ import { fetchGriyaMedicalRecords, type GriyaMedicalRecords, type GriyaRecordEnt
 import { SessionNoteModal } from '@/components/griya/SessionNoteModal'
 import { useToast } from '@/context/ToastContext'
 import { createClient } from '@/lib/supabase/client'
-import type { GriyaTerapiAwal } from '@/types'
+import { RM_TYPES, displayRmValue } from '@/components/griya/rekam-medis/sections'
 import { downloadGriyaRekamMedisPdf, type GriyaPdfBlock } from '@/lib/downloadGriyaRekamMedisPdf'
-
-const TA_SECTIONS: { title: string; fields: [keyof GriyaTerapiAwal, string][] }[] = [
-  { title: 'Keluhan & Riwayat', fields: [['keluhan_utama', 'Keluhan Utama'], ['riwayat_keluarga', 'Riwayat Keluarga'], ['riwayat_sakit', 'Riwayat Sakit/Keluhan']] },
-  { title: 'Pertumbuhan & Perkembangan', fields: [
-    ['berat_badan', 'Berat Badan'], ['tinggi_badan', 'Tinggi Badan'], ['lingkar_kepala', 'Lingkar Kepala'],
-    ['usia_angkat_kepala', 'Usia Angkat Kepala'], ['usia_merayap', 'Usia Merayap'], ['usia_merangkak', 'Usia Merangkak'], ['usia_duduk_mandiri', 'Usia Duduk Mandiri'],
-    ['usia_merambat', 'Usia Merambat'], ['usia_berjalan', 'Usia Berjalan'], ['usia_menunjuk', 'Usia Menunjuk'],
-    ['usia_babbling', 'Usia Babbling'], ['usia_mengucap_kata', 'Usia Mengucap Kata'], ['toilet_training', 'Toilet Training'],
-    ['pertumbuhan_lainnya', 'Lainnya'],
-  ] },
-  { title: 'Wicara / Oral Motor', fields: [
-    ['kemampuan_menyedot', 'Menyedot'], ['kemampuan_sikat_gigi', 'Sikat Gigi'], ['kemampuan_menghisap_pipet', 'Menghisap Pipet'],
-    ['kemampuan_meniup_lilin', 'Meniup Lilin'], ['kemampuan_kontrol_liur', 'Kontrol Liur'], ['kemampuan_mengunyah', 'Mengunyah'],
-    ['kemampuan_makan', 'Makan'], ['bentuk_tekstur_makanan', 'Bentuk/Tekstur Makanan'], ['wicara_lainnya', 'Lainnya'],
-  ] },
-  { title: 'Pemeriksaan Objektif', fields: [['kontak_mata', 'Kontak Mata'], ['kemampuan_duduk_tenang', 'Duduk Tenang']] },
-  { title: 'Diagnosa & Program Terapi', fields: [
-    ['diagnosa', 'Diagnosa'], ['fisioterapi_motorik', 'Fisioterapi Motorik'], ['fisioterapi_sensorik', 'Fisioterapi Sensorik'],
-    ['terapi_wicara', 'Terapi Wicara'], ['terapi_okupasi', 'Terapi Okupasi'], ['terapi_perilaku', 'Terapi Perilaku'],
-    ['target_program_terapi', 'Target & Program Terapi'], ['jadwal_hari', 'Jadwal Hari'], ['jadwal_pukul', 'Jadwal Pukul'],
-  ] },
-]
 
 const SOAP: [keyof NonNullable<GriyaRecordEntry['note']>, string][] = [
   ['subjective', 'Subjective'], ['objective', 'Objective'], ['assessment', 'Assessment'],
@@ -81,22 +59,27 @@ export default function GriyaRekamMedisPage() {
     try {
       const blocks: GriyaPdfBlock[] = data.entries.map((e) => {
         const st = e.kind === 'terapi-awal' ? (e.terapiAwal?.status ?? null) : (e.note?.status ?? null)
-        const heading = e.kind === 'terapi-awal' ? 'Terapi Awal' : `Pertemuan Ke-${e.pertemuanKe}`
+        const heading = e.kind === 'terapi-awal' ? `Terapi Awal — ${RM_TYPES[e.rmType].formTitle}` : `Pertemuan Ke-${e.pertemuanKe}`
         const meta = [fmtDate(e.visitDate), e.visitTime, e.therapistName].filter(Boolean).join(' · ')
         const status = st === 'completed' ? 'Lengkap' : st === 'draft' ? 'Draf' : 'Belum diisi'
         if (e.kind === 'terapi-awal') {
           if (!e.terapiAwal) return { heading, meta, status, groups: [], empty: 'Formulir Terapi Awal belum diisi.' }
-          const groups = TA_SECTIONS.map((sec) => ({
-            title: sec.title,
-            rows: sec.fields.filter(([k]) => e.terapiAwal![k]).map(([k, l]) => [l, String(e.terapiAwal![k])] as [string, string]),
+          const groups = RM_TYPES[e.rmType].sections.map((sec) => ({
+            title: sec.title.replace(/ \*$/, ''),
+            rows: sec.fields.filter((f) => e.terapiAwal![f.k]).map((f) => [f.label, displayRmValue(f, String(e.terapiAwal![f.k]))] as [string, string]),
           })).filter((g) => g.rows.length)
-          return { heading, meta, status, groups }
+          return { heading, meta, status, groups, signature: { role: RM_TYPES[e.rmType].signRole, name: e.assessorName ?? e.therapistName } }
         }
         if (!e.note) return { heading, meta, status, groups: [], empty: e.attended ? 'Rekam medis belum diisi.' : 'Belum ada catatan (anak belum hadir).' }
         return { heading, meta, status, groups: [{ rows: SOAP.map(([k, l]) => [l, (e.note![k] as string | null) || '—'] as [string, string]) }] }
       })
       const safe = patient.name.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_')
-      await downloadGriyaRekamMedisPdf({ patientName: patient.name, noRm: patient.no_rm ?? null, blocks, filename: `Rekam_Medis_${safe}.pdf` })
+      const latestTa = data.entries.find((e) => e.kind === 'terapi-awal')
+      await downloadGriyaRekamMedisPdf({
+        title: latestTa ? RM_TYPES[latestTa.rmType].pdfTitle : 'REKAM MEDIS',
+        patient,
+        blocks, filename: `Rekam_Medis_${safe}.pdf`,
+      })
     } catch {
       showToast('Gagal membuat PDF', 'error')
     } finally {
@@ -134,7 +117,7 @@ export default function GriyaRekamMedisPage() {
           <div key={e.visitId} className="glass-card overflow-hidden break-inside-avoid">
             <div className="px-4 py-3 border-b border-border flex items-center gap-2 flex-wrap">
               <h2 className="text-sm font-semibold text-foreground">
-                {e.kind === 'terapi-awal' ? 'Terapi Awal' : `Pertemuan Ke-${e.pertemuanKe}`}
+                {e.kind === 'terapi-awal' ? `Terapi Awal — ${RM_TYPES[e.rmType].label}` : `Pertemuan Ke-${e.pertemuanKe}`}
               </h2>
               <StatusChip status={status} />
               <span className="text-xs text-muted-foreground">
@@ -156,17 +139,17 @@ export default function GriyaRekamMedisPage() {
             {e.kind === 'terapi-awal' ? (
               e.terapiAwal ? (
                 <div className="p-4 space-y-4">
-                  {TA_SECTIONS.map((sec) => {
-                    const filled = sec.fields.filter(([k]) => e.terapiAwal![k])
+                  {RM_TYPES[e.rmType].sections.map((sec) => {
+                    const filled = sec.fields.filter((f) => e.terapiAwal![f.k])
                     if (filled.length === 0) return null
                     return (
                       <div key={sec.title}>
-                        <p className="text-xs font-semibold text-primary mb-1.5">{sec.title}</p>
+                        <p className="text-xs font-semibold text-primary mb-1.5">{sec.title.replace(/ \*$/, '')}</p>
                         <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-                          {filled.map(([k, label]) => (
-                            <div key={k as string} className="flex gap-2">
-                              <dt className="text-muted-foreground shrink-0">{label}:</dt>
-                              <dd className="text-foreground whitespace-pre-wrap">{String(e.terapiAwal![k])}</dd>
+                          {filled.map((f) => (
+                            <div key={f.k} className="flex gap-2">
+                              <dt className="text-muted-foreground shrink-0">{f.label}:</dt>
+                              <dd className="text-foreground whitespace-pre-wrap">{displayRmValue(f, String(e.terapiAwal![f.k]))}</dd>
                             </div>
                           ))}
                         </dl>
