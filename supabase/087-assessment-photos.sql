@@ -20,8 +20,8 @@ VALUES (
   'assessment-photos',
   'assessment-photos',
   false,
-  5242880,  -- 5 MB, matches the limit advertised in the upload UI
-  ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+  5242880,  -- 5 MB cap on the compressed file
+  ARRAY['image/webp']  -- client compresses every upload to WebP (PhotoUploadField)
 )
 ON CONFLICT (id) DO UPDATE SET
   public = EXCLUDED.public,

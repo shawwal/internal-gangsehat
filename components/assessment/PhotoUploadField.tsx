@@ -4,9 +4,14 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Loader2, Upload, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadErrorMessage } from '@/lib/storageErrors'
+import { compressImageToWebp } from '@/lib/imageCompress'
 
 const BUCKET = 'assessment-photos'
 const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB — matches bucket file_size_limit (migration 087)
+// Clinical photos (X-ray, lab sheets, consent forms) must stay legible, so keep
+// far more resolution than the avatar default.
+const MAX_DIMENSION = 2048
+const WEBP_QUALITY = 0.8
 
 interface Props {
   /** Object paths inside the `assessment-photos` bucket. */
@@ -49,19 +54,20 @@ export function PhotoUploadField({ paths, onChange, max, folder, label, readOnly
 
     const room = max - paths.length
     if (files.length > room) setError(`Maksimal ${max} foto.`)
-    const accepted = files.slice(0, room).filter((f) => {
-      if (f.size > MAX_SIZE_BYTES) { setError('Ukuran file maksimal 5 MB.'); return false }
-      return true
-    })
-    if (!accepted.length) return
+    const picked = files.slice(0, room)
+    if (!picked.length) return
 
     setUploading(true)
     const supabase = createClient()
     const uploaded: string[] = []
-    for (const file of accepted) {
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false })
+    for (const original of picked) {
+      // Every upload is downscaled + re-encoded to WebP; anything the browser
+      // can't convert (e.g. HEIC outside Safari) is rejected, never stored raw.
+      const file = await compressImageToWebp(original, { maxDimension: MAX_DIMENSION, quality: WEBP_QUALITY })
+      if (file.type !== 'image/webp') { setError('Format foto tidak didukung. Gunakan JPG atau PNG.'); continue }
+      if (file.size > MAX_SIZE_BYTES) { setError('Ukuran file maksimal 5 MB.'); continue }
+      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`
+      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false, contentType: 'image/webp' })
       if (upErr) { setError(uploadErrorMessage(upErr.message)); continue }
       uploaded.push(path)
     }
@@ -133,7 +139,7 @@ export function PhotoUploadField({ paths, onChange, max, folder, label, readOnly
                 {uploading ? 'Mengunggah...' : `Unggah foto ${label}`}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                JPG, PNG · Maks. 5 MB{max > 1 ? ` · ${paths.length}/${max} foto` : ' · 1 foto'}
+                JPG, PNG · otomatis dikompres ke WebP{max > 1 ? ` · ${paths.length}/${max} foto` : ' · 1 foto'}
               </p>
             </div>
           </label>
