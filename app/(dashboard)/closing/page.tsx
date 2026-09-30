@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Plus, Trash2, Wallet } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronRight, Plus, Trash2, Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/utils'
 import { TODAY_ISO } from '@/components/performance/utils'
@@ -20,6 +20,17 @@ type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 
 const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'TOKO', 'LAINNYA']
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
+const PAYMENT_STATUSES = ['LUNAS', 'DP', 'PELUNASAN']
+
+function shiftISO(iso: string, days: number) {
+  const d = new Date(iso + 'T00:00:00')
+  d.setDate(d.getDate() + days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function formatDateId(iso: string) {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+}
 
 const STATUS_LABEL: Record<string, string> = {
   scheduled: 'Terjadwal',
@@ -56,7 +67,9 @@ export default function ClosingAdminPage() {
   const [branchList, setBranchList] = useState<BranchOption[]>([])
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
   const [selectedBranchName, setSelectedBranchName] = useState<string>('')
-  const [date, setDate] = useState(TODAY_ISO)
+  const [dateFrom, setDateFrom] = useState(TODAY_ISO)
+  const [dateTo, setDateTo] = useState(TODAY_ISO)
+  const [expandedVisitId, setExpandedVisitId] = useState<string | null>(null)
 
   const [loading, setLoading] = useState(true)
   const [financial, setFinancial] = useState<ClosingFinancialRecap | null>(null)
@@ -96,23 +109,25 @@ export default function ClosingAdminPage() {
     if (!selectedBranchId) { setLoading(false); return }
     setLoading(true)
     const [fin, vis] = await Promise.all([
-      fetchClosingFinancialRecap(selectedBranchId, date),
-      fetchClosingVisitRecap(selectedBranchId, date),
+      fetchClosingFinancialRecap(selectedBranchId, dateFrom, dateTo),
+      fetchClosingVisitRecap(selectedBranchId, dateFrom, dateTo),
     ])
     setFinancial(fin)
     setVisits(vis)
     setLoading(false)
-  }, [selectedBranchId, date])
+  }, [selectedBranchId, dateFrom, dateTo])
 
   useEffect(() => { load() }, [load])
 
   async function handleTxFieldChange(
     txId: string,
-    field: 'category' | 'payment_method' | 'amount',
+    field: 'category' | 'payment_method' | 'payment_status' | 'amount' | 'harga' | 'discount' | 'penjamin',
     value: string,
   ) {
     setSavingTxId(txId)
-    const patch = field === 'amount' ? { amount: Number(value) || 0 } : { [field]: value }
+    const patch = field === 'amount' || field === 'harga' || field === 'discount'
+      ? { [field]: Number(value) || 0 }
+      : { [field]: value || null }
     const { error } = await updateTransaction(txId, patch)
     setSavingTxId(null)
     await load()
@@ -143,7 +158,7 @@ export default function ClosingAdminPage() {
       payment_status: null,
       penjamin: null,
       description: newExpense.description || null,
-      transaction_date: date,
+      transaction_date: dateTo,
       branch_id: selectedBranchId,
     })
     setAddingExpense(false)
@@ -158,9 +173,23 @@ export default function ClosingAdminPage() {
     setSelectedBranchName(branchList.find((b) => b.id === id)?.name ?? '')
   }
 
-  const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('id-ID', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  })
+  const dateLabel = dateFrom === dateTo
+    ? formatDateId(dateFrom)
+    : `${formatDateId(dateFrom)} – ${formatDateId(dateTo)}`
+
+  function setRange(from: string, to: string) {
+    setDateFrom(from)
+    setDateTo(to)
+  }
+
+  const presets = [
+    { label: 'Hari Ini', from: TODAY_ISO, to: TODAY_ISO },
+    { label: 'Kemarin', from: shiftISO(TODAY_ISO, -1), to: shiftISO(TODAY_ISO, -1) },
+    { label: '7 Hari', from: shiftISO(TODAY_ISO, -6), to: TODAY_ISO },
+    { label: 'Bulan Ini', from: TODAY_ISO.slice(0, 8) + '01', to: TODAY_ISO },
+  ]
+  const inputCls = 'px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
+  const cellInputCls = 'bg-transparent border border-border rounded-lg px-1.5 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50'
 
   return (
     <div className="space-y-6">
@@ -171,12 +200,42 @@ export default function ClosingAdminPage() {
           </h1>
           <p className="text-sm text-muted-foreground">Rekap inputan sebelum log out — cek kesesuaian data hari ini</p>
         </div>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
-        />
+      </div>
+
+      <div className="glass-card p-4 flex flex-col lg:flex-row lg:items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className="text-xs text-muted-foreground">Dari</label>
+          <input
+            type="date"
+            value={dateFrom}
+            max={dateTo}
+            onChange={(e) => e.target.value && setDateFrom(e.target.value)}
+            className={inputCls}
+          />
+          <label className="text-xs text-muted-foreground">Sampai</label>
+          <input
+            type="date"
+            value={dateTo}
+            min={dateFrom}
+            onChange={(e) => e.target.value && setDateTo(e.target.value)}
+            className={inputCls}
+          />
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {presets.map((p) => {
+            const active = p.from === dateFrom && p.to === dateTo
+            return (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => setRange(p.from, p.to)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`}
+              >
+                {p.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {canPickBranch && (
@@ -408,6 +467,7 @@ export default function ClosingAdminPage() {
           <div className="glass-card p-5 space-y-4">
             <h2 className="text-sm font-semibold text-foreground">Rekap Kunjungan</h2>
 
+
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-muted-foreground font-medium">{visits?.total ?? 0} kunjungan</span>
               {visits?.byStatus.map(({ status, count }) => (
@@ -433,9 +493,122 @@ export default function ClosingAdminPage() {
                 </div>
               </div>
             )}
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-foreground">Daftar Kunjungan &amp; Pembayaran</p>
+              {(visits?.visits.length ?? 0) === 0 ? (
+                <p className="text-xs text-muted-foreground/60">Tidak ada kunjungan</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {visits!.visits.map((v) => {
+                    const open = expandedVisitId === v.id
+                    const paid = v.payments.reduce((s, p) => s + p.amount, 0)
+                    return (
+                      <div key={v.id} className="rounded-xl bg-muted/30 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedVisitId(open ? null : v.id)}
+                          className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            <span className="font-medium text-foreground truncate">{v.patient_name}</span>
+                            <span className="text-muted-foreground truncate">
+                              {dateFrom !== dateTo && `${formatDateId(v.visit_date)} · `}{v.service_type ?? '—'} · {v.attending_staff_name ?? '—'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{STATUS_LABEL[v.status] ?? v.status}</span>
+                            {v.payments.length === 0 ? (
+                              <span className="px-2 py-0.5 rounded-full bg-[#FFB35C]/15 text-[#FFB35C] font-semibold">Belum ada pembayaran</span>
+                            ) : (
+                              <span className="font-semibold text-[#34C759]">{formatCurrency(paid)}</span>
+                            )}
+                          </div>
+                        </button>
+
+                        {open && (
+                          <div className="px-3 pb-3 space-y-2">
+                            {v.payments.length === 0 && (
+                              <p className="text-muted-foreground/60 pl-6">Tidak ada transaksi terhubung ke kunjungan ini</p>
+                            )}
+                            {v.payments.map((p) => {
+                              const busy = savingTxId === p.id
+                              return (
+                                <div key={p.id} className="ml-6 p-2.5 rounded-lg border border-border space-y-2">
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <Field label="Kategori">
+                                      {canEditCategory ? (
+                                        <select value={p.category} disabled={busy} onChange={(e) => handleTxFieldChange(p.id, 'category', e.target.value)} className={cellInputCls}>
+                                          {INCOME_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                      ) : <span className="text-foreground">{p.category}</span>}
+                                    </Field>
+                                    <Field label="Metode Bayar">
+                                      {canEditCategory ? (
+                                        <select value={p.payment_method ?? ''} disabled={busy} onChange={(e) => handleTxFieldChange(p.id, 'payment_method', e.target.value)} className={cellInputCls}>
+                                          <option value="">—</option>
+                                          {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                      ) : <span className="text-foreground">{p.payment_method ?? '—'}</span>}
+                                    </Field>
+                                    <Field label="Status Bayar">
+                                      {canEditCategory ? (
+                                        <select value={p.payment_status ?? ''} disabled={busy} onChange={(e) => handleTxFieldChange(p.id, 'payment_status', e.target.value)} className={cellInputCls}>
+                                          <option value="">—</option>
+                                          {PAYMENT_STATUSES.map((m) => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                      ) : <span className="text-foreground">{p.payment_status ?? '—'}</span>}
+                                    </Field>
+                                    <Field label="Penjamin">
+                                      {canEditCategory ? (
+                                        <input type="text" defaultValue={p.penjamin ?? ''} disabled={busy}
+                                          onBlur={(e) => { if (e.target.value !== (p.penjamin ?? '')) handleTxFieldChange(p.id, 'penjamin', e.target.value) }}
+                                          className={cellInputCls} />
+                                      ) : <span className="text-foreground">{p.penjamin ?? '—'}</span>}
+                                    </Field>
+                                    {(['harga', 'discount', 'amount'] as const).map((f) => (
+                                      <Field key={f} label={f === 'harga' ? 'Harga' : f === 'discount' ? 'Diskon' : 'Dibayar'}>
+                                        {canEditCategory ? (
+                                          <input type="number" min={0} defaultValue={p[f]} disabled={busy}
+                                            onBlur={(e) => { if (Number(e.target.value) !== p[f]) handleTxFieldChange(p.id, f, e.target.value) }}
+                                            className={`${cellInputCls} text-right`} />
+                                        ) : <span className="text-foreground">{formatCurrency(p[f])}</span>}
+                                      </Field>
+                                    ))}
+                                    <Field label="Sisa">
+                                      <span className={p.outstanding > 0 ? 'font-semibold text-destructive' : 'text-foreground'}>{formatCurrency(p.outstanding)}</span>
+                                    </Field>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-muted-foreground/80 truncate">{p.description ?? ''}</span>
+                                    <span className={`px-1.5 py-0.5 rounded-full font-semibold ${TX_STATUS_BADGE[p.status] ?? 'bg-muted text-muted-foreground'}`}>
+                                      {TX_STATUS_LABEL[p.status] ?? p.status}
+                                    </span>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
+      {children}
     </div>
   )
 }
