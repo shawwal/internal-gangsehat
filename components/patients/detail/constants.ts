@@ -58,7 +58,9 @@ export function formatDateTime(d: string | null): string {
 
 export function calcAge(birthDate: string | null): string {
   if (!birthDate) return '—'
-  const birth = new Date(birthDate)
+  // Imported records store DD/MM/YYYY, which Date can't parse on its own.
+  const dmy = birthDate.trim().match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
+  const birth = dmy ? new Date(+dmy[3], +dmy[2] - 1, +dmy[1]) : new Date(birthDate)
   if (isNaN(birth.getTime())) return '—'
   const today = new Date()
   let age = today.getFullYear() - birth.getFullYear()

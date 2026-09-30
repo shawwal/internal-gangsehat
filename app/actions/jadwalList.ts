@@ -63,6 +63,8 @@ export async function fetchJadwalListRows(date: string, branchId?: string | null
       internal_profiles!attending_staff_id(full_name, nickname)
     `)
     .eq('visit_date', date)
+    // Same service types as the jadwal-harian grid — Sport Massage has its own schedule page.
+    .in('service_type', ['TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA'])
     .order('visit_time', { ascending: true })
   if (branchId) query = query.eq('branch_id', branchId)
 
