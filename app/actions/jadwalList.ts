@@ -28,13 +28,23 @@ export interface JadwalListRow {
   branch_id: string
 }
 
-function deriveAdminStatus(v: {
-  diagnosis: string | null
-  treatment: string | null
-  regio: string | null
-  service_type: string | null
-}): AdminStatus {
-  const complete = !!v.diagnosis && !!v.treatment && (!isRegioRequired(v.service_type) || !!v.regio)
+// A visit is LENGKAP once its record form (assessment / session note / Griya
+// intake or note) is completed — the same source of truth the session-note and
+// medical-records pages use. Session notes don't always fill `diagnosis`
+// (clinical impression is optional), so the column check is only a fallback for
+// service types without a dedicated form (TA VISIT, SPORT MASSAGE, LAINNYA).
+function deriveAdminStatus(
+  v: {
+    diagnosis: string | null
+    treatment: string | null
+    regio: string | null
+    service_type: string | null
+  },
+  formStatus: string | undefined,
+): AdminStatus {
+  const complete = formStatus !== undefined
+    ? formStatus === 'completed'
+    : !!v.diagnosis && !!v.treatment && (!isRegioRequired(v.service_type) || !!v.regio)
   if (complete) return 'LENGKAP'
   return getVisitFormRoute(v.service_type) === 'assessment' ? 'BELUM_DIPERIKSA' : 'BELUM_DITANGANI'
 }
@@ -100,10 +110,24 @@ export async function fetchJadwalListRows(date: string, branchId?: string | null
   // Pertemuan ke (incl. legacy sessions) and the patient's latest complaint —
   // complaints follow the patient, so repeat visits under a new order still show one.
   const packageIds = [...new Set(visits.map((v) => v.package_id).filter((id): id is string => !!id))]
-  const [packagePositions, latestComplaints] = await Promise.all([
+  const [packagePositions, latestComplaints, assessments, sessionNotes, griyaIntakes, griyaNotes] = await Promise.all([
     fetchPackagePositions(supabase, packageIds),
     fetchLatestComplaints(supabase, patientIds),
+    supabase.from('terapi_awal_assessments').select('visit_id, status').in('visit_id', visitIds),
+    supabase.from('session_notes').select('visit_id, status').in('visit_id', visitIds),
+    supabase.from('griya_terapi_awal').select('visit_id, status').in('visit_id', visitIds),
+    supabase.from('griya_session_notes').select('visit_id, status').in('visit_id', visitIds),
   ])
+
+  // Record-form status per visit; 'completed' wins if a visit has more than one row.
+  const formStatusMap = new Map<string, string>()
+  for (const r of [
+    ...(assessments.data ?? []), ...(sessionNotes.data ?? []),
+    ...(griyaIntakes.data ?? []), ...(griyaNotes.data ?? []),
+  ]) {
+    const vid = r.visit_id as string
+    if (formStatusMap.get(vid) !== 'completed') formStatusMap.set(vid, r.status as string)
+  }
 
   return visits.map((v) => {
     const staff = v.internal_profiles as unknown as { full_name: string; nickname: string | null } | null
@@ -121,7 +145,7 @@ export async function fetchJadwalListRows(date: string, branchId?: string | null
       pertemuan_ke:          v.package_id ? (packagePositions.get(v.id)?.pertemuan ?? 1) : 1,
       kurang_bayar:          outstandingMap.get(v.id) ?? 0,
       kehadiran:             v.kehadiran,
-      admin_status:          deriveAdminStatus(v),
+      admin_status:          deriveAdminStatus(v, formStatusMap.get(v.id)),
       notes:                 v.notes,
       order_id:              v.order_id,
       branch_id:             v.branch_id,
