@@ -159,6 +159,18 @@ export async function resolveGriyaBranchId(): Promise<string | null> {
 
 // ── Fetch a week ──────────────────────────────────────────────────────────────
 
+async function readBranchSchedules(supabase: SupaClient, branchId: string) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: [] }
+  const { data: profile } = await supabase
+    .from('internal_profiles').select('role, branch_id').eq('id', user.id).single()
+  if (!profile || (profile.role !== 'director' && profile.branch_id !== branchId)) return { data: [] }
+  return createAdminClient()
+    .from('schedules')
+    .select('staff_id, hari, jam_mulai, jam_selesai, status')
+    .eq('branch_id', branchId)
+}
+
 export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): Promise<GriyaWeek> {
   const supabase = await createClient()
   const weekEndIso = addDaysIso(weekMondayIso, 6)
@@ -182,10 +194,11 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
       .eq('branch_id', branchId)
       .gte('visit_date', weekMondayIso)
       .lte('visit_date', weekEndIso),
-    supabase
-      .from('schedules')
-      .select('staff_id, hari, jam_mulai, jam_selesai, status')
-      .eq('branch_id', branchId),
+    // Therapist/staff roles can only SELECT their own `schedules` rows (RLS "self access"),
+    // so rotation saw only the viewer on duty and piled every slot of their discipline into
+    // their column. Read the branch's rolling schedule with the admin client instead, but
+    // only for a signed-in user of this branch (or a cross-branch director).
+    readBranchSchedules(supabase, branchId),
   ])
 
   const slots = (slotsRes.data ?? []) as Record<string, unknown>[]
