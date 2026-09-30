@@ -33,7 +33,7 @@ export function JadwalListRow({ row, no, onRemind, onConfirm, onCancel }: Props)
       <td className={td}>{row.patient_age ?? '—'}</td>
       <td className={td}>{row.chief_complaint || '—'}</td>
       <td className={td}>{row.attending_staff_name ?? '—'}</td>
-      <td className={td}>{row.service_type ?? '—'}</td>
+      <td className={td}>{row.layanan_label ?? '—'}</td>
       <td className={td}>{row.pertemuan_ke}</td>
       <td className={`${td} whitespace-nowrap`}>{formatCurrency(row.kurang_bayar)}</td>
       <td className={td}><KehadiranBadge kehadiran={row.kehadiran} /></td>

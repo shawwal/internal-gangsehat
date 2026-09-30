@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { calcAge } from '@/components/patients/detail/constants'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
+import { SERVICE_TYPE_LABEL } from '@/components/jadwal/types'
 import { fetchLatestComplaints, fetchPackagePositions } from '@/lib/internal/visitInsights'
 
 export type AdminStatus = 'BELUM_DIPERIKSA' | 'BELUM_DITANGANI' | 'LENGKAP'
@@ -19,6 +20,8 @@ export interface JadwalListRow {
   chief_complaint: string | null
   attending_staff_name: string | null
   service_type: string | null
+  // Display label — same rule as the jadwal-harian VisitCard (package_id wins → 'Paket')
+  layanan_label: string | null
   pertemuan_ke: number
   kurang_bayar: number
   kehadiran: string | null
@@ -55,7 +58,7 @@ export async function fetchJadwalListRows(date: string, branchId?: string | null
   let query = supabase
     .from('patient_visits')
     .select(`
-      id, patient_id, branch_id, visit_date, visit_time, service_type, package_id, order_id,
+      id, patient_id, branch_id, visit_date, visit_time, service_type, package_id, order_id, layanan_id,
       chief_complaint, diagnosis, treatment, regio, kehadiran, status, notes, attending_staff_id,
       internal_profiles!attending_staff_id(full_name, nickname)
     `)
@@ -119,6 +122,13 @@ export async function fetchJadwalListRows(date: string, branchId?: string | null
     supabase.from('griya_session_notes').select('visit_id, status').in('visit_id', visitIds),
   ])
 
+  const layananIds = [...new Set(visits.map((v) => v.layanan_id).filter((id): id is string => !!id))]
+  const layananNameMap = new Map<string, string>()
+  if (layananIds.length > 0) {
+    const { data: layanan } = await supabase.from('internal_layanan').select('id, nama').in('id', layananIds)
+    for (const l of layanan ?? []) layananNameMap.set(l.id, l.nama)
+  }
+
   // Record-form status per visit; 'completed' wins if a visit has more than one row.
   const formStatusMap = new Map<string, string>()
   for (const r of [
@@ -142,6 +152,10 @@ export async function fetchJadwalListRows(date: string, branchId?: string | null
       chief_complaint:       v.chief_complaint?.trim() || latestComplaints.get(v.patient_id) || null,
       attending_staff_name:  staff?.nickname || staff?.full_name || null,
       service_type:          v.service_type,
+      layanan_label:         v.package_id
+        ? 'Paket'
+        : ((v.layanan_id ? layananNameMap.get(v.layanan_id) : undefined)
+          ?? (v.service_type ? SERVICE_TYPE_LABEL[v.service_type] ?? v.service_type : null)),
       pertemuan_ke:          v.package_id ? (packagePositions.get(v.id)?.pertemuan ?? 1) : 1,
       kurang_bayar:          outstandingMap.get(v.id) ?? 0,
       kehadiran:             v.kehadiran,

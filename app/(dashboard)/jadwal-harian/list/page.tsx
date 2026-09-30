@@ -37,11 +37,11 @@ export default function JadwalHarianListPage() {
   const uniqueSorted = (vals: (string | null)[]) =>
     [...new Set(vals.filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b, 'id'))
   const fisioOptions   = uniqueSorted(rows.map((r) => r.attending_staff_name))
-  const layananOptions = uniqueSorted(rows.map((r) => r.service_type))
+  const layananOptions = uniqueSorted(rows.map((r) => r.layanan_label))
 
   const filteredRows = rows.filter((r) =>
     (!fisioFilter || r.attending_staff_name === fisioFilter) &&
-    (!layananFilter || r.service_type === layananFilter))
+    (!layananFilter || r.layanan_label === layananFilter))
   const total = filteredRows.length
   const from = (page - 1) * pageSize
   const pagedRows = filteredRows.slice(from, from + pageSize)
@@ -53,7 +53,7 @@ export default function JadwalHarianListPage() {
       nama:        row.patient_name,
       tanggal:     formatDate(row.visit_date),
       jam:         row.visit_time ?? '',
-      layanan:     row.service_type ?? '',
+      layanan:     row.layanan_label ?? '',
       cabang:      branchName,
       terapis:     row.attending_staff_name ?? '',
       order_id:    row.order_id ?? '',
@@ -71,7 +71,7 @@ export default function JadwalHarianListPage() {
       hari:        formatHari(row.visit_date),
       tanggal:     formatDate(row.visit_date),
       jam:         row.visit_time ?? '',
-      layanan:     row.service_type ?? '',
+      layanan:     row.layanan_label ?? '',
       cabang:      branchName,
       order_id:    row.order_id ?? '',
       nomor_admin: resolveWaConfig(waConfig, row.branch_id).phone,
