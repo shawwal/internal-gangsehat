@@ -9,6 +9,8 @@ import type { DayStaffEntry, PendingLeaveInfo } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { VisitStatus } from '@/types'
 
+const HIDDEN_ROLES = ['director', 'sport_massage_therapist']
+
 export interface LeavePopoverState {
   staffName: string
   leave: PendingLeaveInfo
@@ -138,8 +140,8 @@ export function useJadwalHarian() {
     // A newer load (branch/date switched mid-flight) owns the grid now
     if (requestId !== loadSeq.current) return
 
-    // Directors never get a column on the daily grid
-    const isDirector = (row: { internal_profiles?: { role?: string } | null }) => row.internal_profiles?.role === 'director'
+    // Directors and sport massage therapists (who have their own jadwal) never get a column on the daily grid
+    const isHidden = (row: { internal_profiles?: { role?: string } | null }) => HIDDEN_ROLES.includes(row.internal_profiles?.role ?? '')
     const inSelectedBranch = (branchId: string | null) =>
       !selectedBranchId || branchId === selectedBranchId
 
@@ -167,7 +169,7 @@ export function useJadwalHarian() {
     // Staff whose override targets a DIFFERENT hari → suppress their regular schedule today
     const suppressedToday  = new Set<string>()
     for (const ov of overrideRows) {
-      if (isDirector(ov)) continue
+      if (isHidden(ov)) continue
       if (ov.hari === hari && inSelectedBranch(ov.branch_id ?? null)) {
         overrideForToday.set(ov.staff_id, ov)
       } else {
@@ -182,7 +184,7 @@ export function useJadwalHarian() {
     for (const row of (schedulesRes.data ?? []) as any[]) {
       const sid = row.staff_id as string
       if (entries.has(sid)) continue
-      if (isDirector(row)) continue
+      if (isHidden(row)) continue
       const ov = overrideForToday.get(sid)
       // Skip staff who have been moved to a different day/branch via override
       if (!ov && suppressedToday.has(sid)) continue
@@ -287,7 +289,7 @@ export function useJadwalHarian() {
         .in('id', unknownIds)
       if (requestId !== loadSeq.current) return
       for (const p of profiles ?? []) {
-        if (p.role === 'director') { entries.delete(p.id); continue }
+        if (HIDDEN_ROLES.includes(p.role)) { entries.delete(p.id); continue }
         const entry = entries.get(p.id)
         if (entry) {
           entry.full_name  = p.full_name
