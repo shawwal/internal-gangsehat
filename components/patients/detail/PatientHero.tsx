@@ -1,4 +1,4 @@
-import { Clock, Droplets, Hash } from 'lucide-react'
+import { Clock, Droplets, Hash, MessageSquareWarning } from 'lucide-react'
 import type { PatientPlain } from '@/app/actions/patients'
 import { GENDER_LABEL, AVATAR_BG, calcAge, formatDateTime, getInitials } from './constants'
 import { PatientEditButton } from './PatientEditButton'
@@ -7,9 +7,10 @@ interface PatientHeroProps {
   patient: PatientPlain
   totalVisits: number
   canEdit: boolean
+  latestComplaint?: string | null
 }
 
-export function PatientHero({ patient, totalVisits, canEdit }: PatientHeroProps) {
+export function PatientHero({ patient, totalVisits, canEdit, latestComplaint }: PatientHeroProps) {
   const avatarBg = AVATAR_BG[patient.gender ?? 'other']
 
   return (
@@ -21,7 +22,7 @@ export function PatientHero({ patient, totalVisits, canEdit }: PatientHeroProps)
         </div>
 
         {/* Name + key facts */}
-        <div className="flex-1 min-w-0 space-y-2">
+        <div className="min-w-0 space-y-2 sm:max-w-[40%]">
           <div>
             <p className="text-lg font-bold text-foreground">{patient.name}</p>
             <p className="text-sm text-muted-foreground">
@@ -53,6 +54,16 @@ export function PatientHero({ patient, totalVisits, canEdit }: PatientHeroProps)
               </span>
             )}
           </div>
+        </div>
+
+        {/* Latest complaint — TA first, then any visit, then patient's own input */}
+        <div className="flex-1 w-full min-w-0 rounded-2xl border border-[#FFB35C]/30 bg-[#FFB35C]/10 px-4 py-3">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#FFB35C]">
+            <MessageSquareWarning size={12} /> Keluhan Terakhir
+          </p>
+          <p className="mt-1 text-sm text-foreground line-clamp-3" title={latestComplaint ?? undefined}>
+            {latestComplaint || '—'}
+          </p>
         </div>
 
         {/* Right: visit count + edit button */}

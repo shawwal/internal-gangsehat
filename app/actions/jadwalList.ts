@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { calcAge } from '@/components/patients/detail/constants'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
+import { fetchLatestComplaints, fetchPackagePositions } from '@/lib/internal/visitInsights'
 
 export type AdminStatus = 'BELUM_DIPERIKSA' | 'BELUM_DITANGANI' | 'LENGKAP'
 
@@ -96,31 +97,13 @@ export async function fetchJadwalListRows(date: string, branchId?: string | null
     outstandingMap.set(vid, (outstandingMap.get(vid) ?? 0) + (t.outstanding ?? 0))
   }
 
-  // Pertemuan ke — ordinal rank of this visit among all visits sharing its package_id.
+  // Pertemuan ke (incl. legacy sessions) and the patient's latest complaint —
+  // complaints follow the patient, so repeat visits under a new order still show one.
   const packageIds = [...new Set(visits.map((v) => v.package_id).filter((id): id is string => !!id))]
-  const pertemuanMap = new Map<string, number>()
-  if (packageIds.length > 0) {
-    const { data: pkgVisits } = await supabase
-      .from('patient_visits')
-      .select('id, package_id, visit_date, visit_time, status')
-      .in('package_id', packageIds)
-      .neq('status', 'cancelled')
-    const byPackage = new Map<string, { id: string; visit_date: string; visit_time: string | null }[]>()
-    for (const v of pkgVisits ?? []) {
-      const pid = v.package_id as string
-      const list = byPackage.get(pid) ?? []
-      list.push({ id: v.id, visit_date: v.visit_date, visit_time: v.visit_time })
-      byPackage.set(pid, list)
-    }
-    for (const [, list] of byPackage) {
-      list.sort((a, b) => {
-        const da = `${a.visit_date} ${a.visit_time ?? '00:00'}`
-        const db = `${b.visit_date} ${b.visit_time ?? '00:00'}`
-        return da.localeCompare(db)
-      })
-      list.forEach((v, i) => pertemuanMap.set(v.id, i + 1))
-    }
-  }
+  const [packagePositions, latestComplaints] = await Promise.all([
+    fetchPackagePositions(supabase, packageIds),
+    fetchLatestComplaints(supabase, patientIds),
+  ])
 
   return visits.map((v) => {
     const staff = v.internal_profiles as unknown as { full_name: string; nickname: string | null } | null
@@ -132,10 +115,10 @@ export async function fetchJadwalListRows(date: string, branchId?: string | null
       patient_name:          nameMap.get(v.patient_id) ?? 'Pasien',
       patient_phone:         phoneMap.get(v.patient_id) ?? '',
       patient_age:           ageMap.get(v.patient_id) ?? null,
-      chief_complaint:       v.chief_complaint,
+      chief_complaint:       v.chief_complaint?.trim() || latestComplaints.get(v.patient_id) || null,
       attending_staff_name:  staff?.nickname || staff?.full_name || null,
       service_type:          v.service_type,
-      pertemuan_ke:          v.package_id ? (pertemuanMap.get(v.id) ?? 1) : 1,
+      pertemuan_ke:          v.package_id ? (packagePositions.get(v.id)?.pertemuan ?? 1) : 1,
       kurang_bayar:          outstandingMap.get(v.id) ?? 0,
       kehadiran:             v.kehadiran,
       admin_status:          deriveAdminStatus(v),

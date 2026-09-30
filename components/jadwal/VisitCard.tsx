@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useDraggable } from '@dnd-kit/core'
-import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink, Link2, UserCheck, UserCog } from 'lucide-react'
+import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink, Link2, UserCheck, UserCog, Star } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
@@ -190,8 +190,15 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
         <button
           onClick={(e) => { e.stopPropagation(); onOpen(visit.id) }}
           className="text-[11px] font-semibold leading-tight flex-1 truncate text-left hover:underline cursor-pointer"
-          title="Buka riwayat kunjungan & pembayaran"
+          title="Buka profil pasien"
         >
+          {visit.is_priority && (
+            <Star
+              size={10}
+              className="inline -mt-0.5 mr-1 fill-[#FFB35C] text-[#FFB35C]"
+              aria-label="Pasien yang perlu diperhatikan hari ini"
+            />
+          )}
           {visit.patient_name}
         </button>
         {/* Roles without the quick-action menu (therapist/staff) get an explicit

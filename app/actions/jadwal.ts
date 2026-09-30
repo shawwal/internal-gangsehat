@@ -7,6 +7,7 @@ import type { VisitStatus } from '@/types'
 import { isRegioRequired } from '@/lib/visitRouting'
 import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
+import { fetchFirstSesiAfterTa, fetchPackagePositions, isTaServiceType } from '@/lib/internal/visitInsights'
 
 async function decryptedPatientName(supabase: Awaited<ReturnType<typeof createClient>>, patientId: string | null | undefined): Promise<string> {
   if (!patientId) return 'Pasien'
@@ -64,6 +65,9 @@ export interface DailyVisit {
   // a confirmed transaction) — null when package_id is null. See
   // patient_packages_with_stats.payment_ok.
   package_payment_ok: boolean | null
+  // "Pasien yang perlu diperhatikan hari ini": TA, first SESI after a TA, or the
+  // last session of a package.
+  is_priority: boolean
 }
 
 const PACKAGE_CATEGORIES = new Set(['PAKET VISIT', 'PAKET KLINIK'])
@@ -194,6 +198,20 @@ export async function fetchDailyVisits(
     for (const p of pkgs ?? []) packagePaymentOkMap.set(p.id, !!p.payment_ok)
   }
 
+  // Priority flags — last package session and first SESI after TA
+  const [packagePositions, firstSesiAfterTa] = await Promise.all([
+    fetchPackagePositions(supabase, packageIds),
+    fetchFirstSesiAfterTa(supabase, visits.map((v) => ({
+      id: v.id, patient_id: v.patient_id, visit_date: v.visit_date,
+      visit_time: v.visit_time ? String(v.visit_time).slice(0, 5) : null,
+      service_type: v.service_type, package_id: v.package_id ?? null,
+    }))),
+  ])
+  const isLastPackageSession = (visitId: string) => {
+    const pos = packagePositions.get(visitId)
+    return !!pos && pos.total != null && pos.pertemuan === pos.total
+  }
+
   // Names of the booked Sport Massage service types
   const layananIds = [...new Set(visits.map((v) => v.layanan_id).filter((id): id is string => !!id))]
   const layananNameMap = new Map<string, string>()
@@ -235,6 +253,8 @@ export async function fetchDailyVisits(
       visit_package_outstanding: pkg?.outstanding ?? null,
       visit_transaction:    latestTxnMap.get(v.id) ?? null,
       package_payment_ok:  v.package_id ? (packagePaymentOkMap.get(v.package_id) ?? false) : null,
+      is_priority:          isTaServiceType(v.service_type) || firstSesiAfterTa.has(v.id)
+        || (!!v.package_id && isLastPackageSession(v.id)),
     }
   })
 }

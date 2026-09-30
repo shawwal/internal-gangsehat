@@ -4,8 +4,7 @@ import { formatCurrency } from '@/lib/utils'
 import { StatusBadge } from './StatusBadge'
 import { KehadiranBadge } from './KehadiranBadge'
 import { RowActions } from './RowActions'
-import { OrderIdCell } from './OrderIdCell'
-import { formatShortDate, TIPE_ORDER_LABEL, type JadwalListRow as Row } from './types'
+import { formatShortDate, type JadwalListRow as Row } from './types'
 
 interface Props {
   row: Row
@@ -25,7 +24,7 @@ export function JadwalListRow({ row, no, onRemind, onConfirm, onCancel }: Props)
       <td className={`${td} whitespace-nowrap`}>{row.visit_time ?? '—'}</td>
       <td className={td}>
         <button
-          onClick={() => window.open(`/patients/${row.patient_id}/visits`, '_blank', 'noopener,noreferrer')}
+          onClick={() => window.open(`/patients/${row.patient_id}`, '_blank', 'noopener,noreferrer')}
           className="text-primary font-medium hover:underline cursor-pointer text-left"
         >
           {row.patient_name}
@@ -34,8 +33,6 @@ export function JadwalListRow({ row, no, onRemind, onConfirm, onCancel }: Props)
       <td className={td}>{row.patient_age ?? '—'}</td>
       <td className={td}>{row.chief_complaint || '—'}</td>
       <td className={td}>{row.attending_staff_name ?? '—'}</td>
-      <td className={td}>{TIPE_ORDER_LABEL}</td>
-      <td className={`${td} whitespace-nowrap`}><OrderIdCell orderId={row.order_id} /></td>
       <td className={td}>{row.service_type ?? '—'}</td>
       <td className={td}>{row.pertemuan_ke}</td>
       <td className={`${td} whitespace-nowrap`}>{formatCurrency(row.kurang_bayar)}</td>

@@ -1,3 +1,5 @@
+import { Star } from 'lucide-react'
+
 const items = [
   { bg: 'bg-blue-500/20', border: 'border-blue-400/50', label: 'Terjadwal' },
   { bg: 'bg-[#34C759]/20', border: 'border-[#34C759]/50', label: 'Selesai' },
@@ -14,6 +16,10 @@ export function Legend() {
           <span>{label}</span>
         </div>
       ))}
+      <div className="flex items-center gap-1.5">
+        <Star size={12} className="fill-[#FFB35C] text-[#FFB35C]" />
+        <span>Perlu diperhatikan (TA, sesi pertama setelah TA, sesi terakhir paket)</span>
+      </div>
       <div className="flex items-center gap-1.5 ml-auto">
         <div className="w-2 h-2 rounded-full bg-primary" />
         <span>Waktu sekarang</span>

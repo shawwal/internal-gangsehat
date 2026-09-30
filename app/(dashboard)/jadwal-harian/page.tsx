@@ -440,7 +440,7 @@ export default function JadwalHarianPage() {
                 onDelete={handleDelete}
                 onOpen={(id) => {
                   const v = visits.find((x) => x.id === id)
-                  if (v) window.open(`/patients/${v.patient_id}/visits`, '_blank', 'noopener,noreferrer')
+                  if (v) window.open(`/patients/${v.patient_id}`, '_blank', 'noopener,noreferrer')
                 }}
                 onOpenRecord={(id, shift) => {
                   const v = visits.find((x) => x.id === id)

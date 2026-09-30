@@ -15,7 +15,7 @@ interface Props {
 }
 
 const HEADERS = [
-  'No', 'Tanggal', 'Jam', 'Pasien', 'Umur', 'Keluhan', 'Fisio', 'Tipe Order', 'Order ID',
+  'No', 'Tanggal', 'Jam', 'Pasien', 'Umur', 'Keluhan', 'Fisio',
   'Layanan', 'Pertemuan Ke', 'Kurang Bayar', 'Kehadiran', 'Status', 'Catatan Admin', '',
 ]
 

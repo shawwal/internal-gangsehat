@@ -4,6 +4,7 @@ import { ChevronLeft, BadgeCheck, Package, ChevronRight } from 'lucide-react'
 import { fetchPatient } from '@/app/actions/patients'
 import { fetchPatientPackages } from '@/app/actions/packages'
 import { createClient } from '@/lib/supabase/server'
+import { fetchLatestComplaints } from '@/lib/internal/visitInsights'
 import type { UserRole, PatientPackage } from '@/types'
 import { PatientHero } from '@/components/patients/detail/PatientHero'
 import { PatientInfoSections } from '@/components/patients/detail/PatientInfoSections'
@@ -107,7 +108,7 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
 
   if (!patient) notFound()
 
-  const [{ data: profile }, { data: visits }, { count: totalVisits }, packages] = await Promise.all([
+  const [{ data: profile }, { data: visits }, { count: totalVisits }, packages, latestComplaints] = await Promise.all([
     supabase.from('internal_profiles').select('role').eq('id', user?.id ?? '').single(),
     supabase
       .from('patient_visits')
@@ -120,6 +121,7 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
       .select('*', { count: 'exact', head: true })
       .eq('patient_id', id),
     fetchPatientPackages(id),
+    fetchLatestComplaints(supabase, [id]),
   ])
 
   const canEdit = CAN_EDIT.includes(profile?.role as UserRole)
@@ -150,7 +152,7 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
         )}
       </div>
 
-      <PatientHero patient={patient} totalVisits={totalVisits ?? 0} canEdit={canEdit} />
+      <PatientHero patient={patient} totalVisits={totalVisits ?? 0} canEdit={canEdit} latestComplaint={latestComplaints.get(id) ?? null} />
       <PatientInfoSections patient={patient} />
       <PatientPackagesSummary packages={packages} patientId={id} />
       <PatientVisitHistory visits={visits ?? []} totalVisits={totalVisits ?? 0} patientId={id} />

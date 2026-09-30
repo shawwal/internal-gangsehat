@@ -25,16 +25,26 @@ export default function JadwalHarianListPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [waConfig, setWaConfig] = useState<WaConfigAll | null>(null)
+  const [fisioFilter, setFisioFilter]     = useState('')
+  const [layananFilter, setLayananFilter] = useState('')
 
   useEffect(() => {
     fetchWaConfigAll().then(setWaConfig)
   }, [])
 
-  useEffect(() => { setPage(1) }, [selectedDate, selectedBranchId, pageSize])
+  useEffect(() => { setPage(1) }, [selectedDate, selectedBranchId, pageSize, fisioFilter, layananFilter])
 
-  const total = rows.length
+  const uniqueSorted = (vals: (string | null)[]) =>
+    [...new Set(vals.filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b, 'id'))
+  const fisioOptions   = uniqueSorted(rows.map((r) => r.attending_staff_name))
+  const layananOptions = uniqueSorted(rows.map((r) => r.service_type))
+
+  const filteredRows = rows.filter((r) =>
+    (!fisioFilter || r.attending_staff_name === fisioFilter) &&
+    (!layananFilter || r.service_type === layananFilter))
+  const total = filteredRows.length
   const from = (page - 1) * pageSize
-  const pagedRows = rows.slice(from, from + pageSize)
+  const pagedRows = filteredRows.slice(from, from + pageSize)
 
   function handleRemind(row: JadwalListRow) {
     if (!row.patient_phone) return
@@ -98,7 +108,16 @@ export default function JadwalHarianListPage() {
 
       <DateNav selectedDate={selectedDate} today={today} onSelect={setSelectedDate} />
 
-      <JadwalListToolbar pageSize={pageSize} onPageSizeChange={setPageSize} />
+      <JadwalListToolbar
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+        fisioOptions={fisioOptions}
+        fisio={fisioFilter}
+        onFisioChange={setFisioFilter}
+        layananOptions={layananOptions}
+        layanan={layananFilter}
+        onLayananChange={setLayananFilter}
+      />
 
       <JadwalListTable
         rows={pagedRows}
