@@ -1,6 +1,7 @@
 'use client'
 
 import { RichTextEditor } from './RichTextEditor'
+import { PhotoUploadField } from './PhotoUploadField'
 import type { AssessmentFormState } from './types'
 
 interface Props {
@@ -47,6 +48,18 @@ export function StepPlanOfCare({ value, onChange, readOnly }: Props) {
           value={value.treatment_plan_today}
           onChange={(html) => onChange({ treatment_plan_today: html })}
           placeholder="What specific interventions were performed today?"
+          readOnly={readOnly}
+        />
+      </div>
+
+      <div>
+        <label className={labelCls}>Informed Consent</label>
+        <PhotoUploadField
+          paths={value.informed_consent_path ? [value.informed_consent_path] : []}
+          onChange={(paths) => onChange({ informed_consent_path: paths[0] ?? '' })}
+          max={1}
+          folder="informed-consent"
+          label="informed consent"
           readOnly={readOnly}
         />
       </div>

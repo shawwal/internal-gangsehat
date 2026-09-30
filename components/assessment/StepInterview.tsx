@@ -1,6 +1,7 @@
 'use client'
 
 import { RichTextEditor } from './RichTextEditor'
+import { PhotoUploadField } from './PhotoUploadField'
 import { RangeSlider } from '@/components/ui/RangeSlider'
 import {
   RED_FLAG_LABEL, RED_FLAG_OPTIONS,
@@ -176,6 +177,18 @@ export function StepInterview({ value, onChange, readOnly }: Props) {
           value={value.riwayat_cedera_pengobatan}
           onChange={(html) => onChange({ riwayat_cedera_pengobatan: html })}
           placeholder="Riwayat cedera sebelumnya, pengobatan/terapi yang pernah dijalani..."
+          readOnly={readOnly}
+        />
+      </div>
+
+      <div>
+        <label className={labelCls}>Pemeriksaan Penunjang</label>
+        <PhotoUploadField
+          paths={value.pemeriksaan_penunjang_paths}
+          onChange={(paths) => onChange({ pemeriksaan_penunjang_paths: paths })}
+          max={10}
+          folder="pemeriksaan-penunjang"
+          label="pemeriksaan penunjang"
           readOnly={readOnly}
         />
       </div>

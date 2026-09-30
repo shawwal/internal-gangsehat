@@ -79,6 +79,7 @@ export function PatientEditForm({ patient }: Props) {
     kecamatan:        patient.kecamatan        ?? '',
     kabupaten_kota:   patient.kabupaten_kota   ?? '',
     provinsi:         patient.provinsi         ?? '',
+    keluhan:          patient.keluhan          ?? '',
   })
 
   const set = (field: keyof UpdatePatientInput) =>
@@ -106,6 +107,7 @@ export function PatientEditForm({ patient }: Props) {
         kecamatan:        form.kecamatan        || undefined,
         kabupaten_kota:   form.kabupaten_kota   || undefined,
         provinsi:         form.provinsi         || undefined,
+        keluhan:          form.keluhan          || undefined,
       }
       const { error: err } = await updatePatient(patient.id, payload)
       if (err) {
@@ -265,6 +267,16 @@ export function PatientEditForm({ patient }: Props) {
 
       {/* ── Catatan Medis ─────────────────────────────────────────────────── */}
       <FormSection id="medis" title="Catatan Medis" icon={<Stethoscope size={15} />}>
+        <Field label="Keluhan" hint="Keluhan utama yang membawa pasien datang">
+          <textarea
+            value={form.keluhan}
+            onChange={set('keluhan')}
+            rows={3}
+            placeholder="Contoh: Nyeri lutut kanan saat naik tangga..."
+            className={INPUT_CLS + ' resize-none'}
+          />
+        </Field>
+
         <Field label="Alergi">
           <input
             value={form.allergies}

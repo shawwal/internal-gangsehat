@@ -162,6 +162,7 @@ export interface TerapiAwalAssessment {
   pain_severity_vas: number | null
   // Step 1: Injury/treatment history (form v2)
   riwayat_cedera_pengobatan: string | null
+  pemeriksaan_penunjang_paths: string[]  // migration 087 — paths in assessment-photos bucket
   // Step 2: Physical Examination (Objective)
   observation_gait_posture: string | null
   observation_findings: ObservationFinding[]
@@ -203,6 +204,7 @@ export interface TerapiAwalAssessment {
   short_term_goals: string | null
   long_term_goals: string | null
   treatment_plan_today: string | null
+  informed_consent_path: string | null   // migration 087
 }
 
 export type SymptomTrend = 'IMPROVING' | 'SAME' | 'WORSENING'

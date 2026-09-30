@@ -200,6 +200,7 @@ export interface AssessmentFormState {
   pain_time_course: PainTimeCourse | ''
   pain_severity_vas: number
   riwayat_cedera_pengobatan: string
+  pemeriksaan_penunjang_paths: string[]
   observation_gait_posture: string
   observation_findings: ObservationFinding[]
   rom_active_passive: string
@@ -236,6 +237,7 @@ export interface AssessmentFormState {
   short_term_goals: string
   long_term_goals: string
   treatment_plan_today: string
+  informed_consent_path: string
 }
 
 export const EMPTY_ASSESSMENT_FORM: AssessmentFormState = {
@@ -251,6 +253,7 @@ export const EMPTY_ASSESSMENT_FORM: AssessmentFormState = {
   pain_time_course: '',
   pain_severity_vas: 0,
   riwayat_cedera_pengobatan: '',
+  pemeriksaan_penunjang_paths: [],
   observation_gait_posture: '',
   observation_findings: [],
   rom_active_passive: '',
@@ -287,6 +290,7 @@ export const EMPTY_ASSESSMENT_FORM: AssessmentFormState = {
   short_term_goals: '',
   long_term_goals: '',
   treatment_plan_today: '',
+  informed_consent_path: '',
 }
 
 export function toFormState(a: Partial<AssessmentFormState> | null | undefined): AssessmentFormState {
@@ -307,6 +311,7 @@ export function toFieldsInput(f: AssessmentFormState): AssessmentFieldsInput {
     pain_time_course: f.pain_time_course || null,
     pain_severity_vas: f.pain_severity_vas,
     riwayat_cedera_pengobatan: f.riwayat_cedera_pengobatan || null,
+    pemeriksaan_penunjang_paths: f.pemeriksaan_penunjang_paths,
     observation_gait_posture: f.observation_gait_posture || null,
     observation_findings: f.observation_findings,
     rom_active_passive: f.rom_active_passive || null,
@@ -343,6 +348,7 @@ export function toFieldsInput(f: AssessmentFormState): AssessmentFieldsInput {
     short_term_goals: f.short_term_goals || null,
     long_term_goals: f.long_term_goals || null,
     treatment_plan_today: f.treatment_plan_today || null,
+    informed_consent_path: f.informed_consent_path || null,
   }
 }
 
@@ -359,6 +365,7 @@ export function fromAssessment(a: {
   pain_time_course: PainTimeCourse | null
   pain_severity_vas: number | null
   riwayat_cedera_pengobatan: string | null
+  pemeriksaan_penunjang_paths?: string[] | null
   observation_gait_posture: string | null
   observation_findings: ObservationFinding[]
   rom_active_passive: string | null
@@ -395,6 +402,7 @@ export function fromAssessment(a: {
   short_term_goals: string | null
   long_term_goals: string | null
   treatment_plan_today: string | null
+  informed_consent_path?: string | null
 } | null | undefined): AssessmentFormState {
   if (!a) return { ...EMPTY_ASSESSMENT_FORM, joint_exam_rows: [emptyJointExamRow()] }
   return {
@@ -410,6 +418,7 @@ export function fromAssessment(a: {
     pain_time_course: a.pain_time_course ?? '',
     pain_severity_vas: a.pain_severity_vas ?? 0,
     riwayat_cedera_pengobatan: a.riwayat_cedera_pengobatan ?? '',
+    pemeriksaan_penunjang_paths: a.pemeriksaan_penunjang_paths ?? [],
     observation_gait_posture: a.observation_gait_posture ?? '',
     observation_findings: a.observation_findings ?? [],
     rom_active_passive: a.rom_active_passive ?? '',
@@ -446,5 +455,6 @@ export function fromAssessment(a: {
     short_term_goals: a.short_term_goals ?? '',
     long_term_goals: a.long_term_goals ?? '',
     treatment_plan_today: a.treatment_plan_today ?? '',
+    informed_consent_path: a.informed_consent_path ?? '',
   }
 }
