@@ -42,14 +42,14 @@ export function buildBranchChartFromTransactions(
   const byBranch: Record<string, { name: string; pemasukan: number; pengeluaran: number }> = {}
 
   for (const b of branches ?? []) {
-    byBranch[b.id] = { name: b.name.slice(0, 16), pemasukan: 0, pengeluaran: 0 }
+    byBranch[b.id] = { name: b.name, pemasukan: 0, pengeluaran: 0 }
   }
 
   for (const tx of transactions ?? []) {
     const bid = tx.branch_id as string
     if (!byBranch[bid]) {
       byBranch[bid] = {
-        name:        (tx.branches as { name: string } | null)?.name?.slice(0, 16) ?? '—',
+        name:        (tx.branches as { name: string } | null)?.name ?? '—',
         pemasukan:   0,
         pengeluaran: 0,
       }
@@ -81,7 +81,7 @@ export function buildBranchChartData(branchReports: any[] | null): BranchRevenue
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }, {} as Record<string, any>)
   ).map((r: any) => ({
-    name:        (r.branches as { name: string })?.name?.slice(0, 14) ?? '—',
+    name:        (r.branches as { name: string })?.name ?? '—',
     pemasukan:   Number(r.total_income),
     pengeluaran: Number(r.total_expense),
   })) as BranchRevenueData[]

@@ -11,6 +11,7 @@ import {
   deleteLayanan,
   type LayananRow,
 } from '@/app/actions/layanan'
+import { RowsSkeleton } from '@/components/ui/Skeleton'
 
 const KATEGORI_OPTIONS = [
   'TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK',
@@ -161,9 +162,7 @@ export default function LayananPage() {
       {/* Table */}
       <div className="glass-card overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground text-sm">
-            <Loader2 size={16} className="animate-spin" /> Memuat...
-          </div>
+          <RowsSkeleton rows={8} cols={5} />
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
             <p className="text-sm">Belum ada layanan untuk {activeBranch?.name ?? 'cabang ini'}.</p>

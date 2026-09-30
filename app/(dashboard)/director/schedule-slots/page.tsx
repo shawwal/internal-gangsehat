@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, X, Loader2, Sunrise, Sunset } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { ScheduleSlot } from '@/components/schedule/types'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { RowsSkeleton } from '@/components/ui/Skeleton'
 
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
@@ -215,9 +216,7 @@ export default function ScheduleSlotsPage() {
               {/* Panel body */}
               <div className="p-4">
                 {loading ? (
-                  <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-sm">
-                    <Loader2 size={15} className="animate-spin" /> Memuat...
-                  </div>
+                  <RowsSkeleton rows={4} cols={3} />
                 ) : group.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
                     <p className="text-xs text-muted-foreground">Belum ada slot {meta.label.toLowerCase()}</p>

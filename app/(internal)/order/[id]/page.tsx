@@ -11,6 +11,7 @@ import { SessionsTable } from '@/components/internal/SessionsTable'
 import { PaymentsTable } from '@/components/internal/PaymentsTable'
 import { useProfile } from '@/hooks/useProfile'
 import { formatCurrency, formatDate, formatWaNumber } from '@/lib/utils'
+import OrderDetailLoading from './loading'
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
@@ -114,11 +115,7 @@ export default function OrderDetailPage() {
   const waNumber = booking?._patientPhone ? formatWaNumber(booking._patientPhone) : null
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw size={22} className="animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <OrderDetailLoading />
   }
 
   if (!booking) {

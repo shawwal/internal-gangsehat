@@ -11,6 +11,7 @@ import { useToast } from '@/context/ToastContext'
 import { createClient } from '@/lib/supabase/client'
 import { RM_TYPES, displayRmValue } from '@/components/griya/rekam-medis/sections'
 import { downloadGriyaRekamMedisPdf, type GriyaPdfBlock } from '@/lib/downloadGriyaRekamMedisPdf'
+import GriyaAnakSiswaIdRekamMedisLoading from './loading'
 
 const SOAP: [keyof NonNullable<GriyaRecordEntry['note']>, string][] = [
   ['subjective', 'Subjective'], ['objective', 'Objective'], ['assessment', 'Assessment'],
@@ -87,7 +88,7 @@ export default function GriyaRekamMedisPage() {
     }
   }
 
-  if (!data || !patient) return <div className="text-sm text-muted-foreground">Memuat...</div>
+  if (!data || !patient) return <GriyaAnakSiswaIdRekamMedisLoading />
 
   return (
     <div className="space-y-4 max-w-4xl">

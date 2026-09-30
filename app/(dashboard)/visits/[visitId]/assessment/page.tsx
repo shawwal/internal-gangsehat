@@ -29,6 +29,7 @@ import { STEP_LABELS, fromAssessment, toFieldsInput } from '@/components/assessm
 import type { AssessmentFormState } from '@/components/assessment/types'
 import { SingleStepAssessmentForm } from '@/components/assessment/SingleStepAssessmentForm'
 import { createClient } from '@/lib/supabase/client'
+import AssessmentLoading from './loading'
 
 type FormMode = 'single_step' | 'multi_step'
 
@@ -215,11 +216,7 @@ export default function TerapiAwalAssessmentPage() {
   }
 
   if (loading || !visit || !form || !formMode) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 size={24} className="animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <AssessmentLoading />
   }
 
   const isTherapistLike = userRole === 'therapist' || userRole === 'staff'

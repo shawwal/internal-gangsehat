@@ -8,6 +8,7 @@ import { LaporanTab } from '@/components/finance/accounting/LaporanTab'
 import { ArusKasTab } from '@/components/finance/accounting/ArusKasTab'
 import { PengaturanTab } from '@/components/finance/accounting/PengaturanTab'
 import { MONTH_NAMES, monthRange } from '@/components/finance/accounting/shared'
+import FinanceAccountingLoading from './loading'
 
 type TabKey = 'pemasukan' | 'pengeluaran' | 'laporan' | 'aruskas' | 'pengaturan'
 
@@ -68,7 +69,7 @@ export default function AccountingPage() {
     setBranchName(b?.name ?? '')
   }
 
-  if (loading) return <p className="text-sm text-muted-foreground">Memuat...</p>
+  if (loading) return <FinanceAccountingLoading />
 
   if (!userId) {
     return (

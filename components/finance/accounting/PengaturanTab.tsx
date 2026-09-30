@@ -11,6 +11,7 @@ import {
   toggleExpenseCategoryActive, deleteExpenseCategory, type ExpenseCategoryRow,
 } from '@/app/actions/accounting'
 import { formatRp, inputCls } from './shared'
+import { RowsSkeleton } from '@/components/ui/Skeleton'
 
 interface Props {
   branchId: string
@@ -97,7 +98,7 @@ function LayananSection({ branchId }: { branchId: string }) {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground text-center py-6">Memuat...</p>
+        <RowsSkeleton rows={5} cols={4} />
       ) : (
         <table className="w-full text-sm">
           <thead>
@@ -242,7 +243,7 @@ function ExpenseCategorySection({ branchId }: { branchId: string }) {
       </form>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground text-center py-6">Memuat...</p>
+        <RowsSkeleton rows={5} cols={4} />
       ) : (
         <ul className="divide-y divide-border">
           {rows.map((r) => (

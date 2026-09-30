@@ -21,6 +21,7 @@ import {
   type TransactionForProgress,
 } from '@/components/targetProgress/types'
 import { daysInMonth, buildDailyCounts, buildTransactionDailyCounts, mergeDailyCounts, sum, getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR } from '@/components/targetProgress/utils'
+import { SkeletonRegion, StatCardsSkeleton, TableSkeleton } from '@/components/ui/Skeleton'
 
 type Tab = 'klasik' | 'visual'
 type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'admin' | null
@@ -189,7 +190,10 @@ export default function TargetProgressPage() {
           <p className="text-sm font-medium text-foreground">Pilih cabang untuk melihat progress target</p>
         </div>
       ) : loading ? (
-        <div className="animate-pulse bg-muted rounded-3xl h-72" />
+        <SkeletonRegion>
+          <StatCardsSkeleton count={4} />
+          <TableSkeleton rows={8} cols={6} />
+        </SkeletonRegion>
       ) : (
         <>
           {!hasApprovedTarget && (

@@ -13,6 +13,8 @@ import { GENDER_LABEL, calcAge } from '@/components/patients/detail/constants'
 import { Pagination } from '@/components/leave/Pagination'
 import { AddStudentButton } from '@/components/griya/AddStudentButton'
 import { useToast } from '@/context/ToastContext'
+import GriyaAnakSiswaLoading from './loading'
+import { TableRowsSkeleton } from '@/components/ui/Skeleton'
 
 const PAGE_SIZE = 15
 type StatusFilter = 'all' | 'active' | 'graduated' | 'inactive'
@@ -64,7 +66,7 @@ export default function GriyaSiswaPage() {
   useEffect(() => { load() }, [load])
   useEffect(() => { setPage(1) }, [search, status])
 
-  if (branchId === undefined || enabled === null) return <div className="text-sm text-muted-foreground">Memuat...</div>
+  if (branchId === undefined || enabled === null) return <GriyaAnakSiswaLoading />
   if (!branchId || !enabled) return <div className="glass-card p-8 text-sm text-muted-foreground">Fitur Griya Anak belum aktif untuk cabang ini.</div>
 
   async function act(fn: () => Promise<{ error: string | null }>, ok: string) {
@@ -115,7 +117,7 @@ export default function GriyaSiswaPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Memuat...</td></tr>
+              <TableRowsSkeleton rows={8} cols={8} />
             ) : rows.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Belum ada siswa.</td></tr>
             ) : rows.map((r) => (

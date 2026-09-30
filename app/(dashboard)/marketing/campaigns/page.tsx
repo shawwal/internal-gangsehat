@@ -7,6 +7,7 @@ import { logActivity } from '@/lib/activityLog'
 import type { Campaign, CampaignChannel, CampaignStatus } from '@/types'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
+import { CardGridSkeleton } from '@/components/ui/Skeleton'
 
 const CHANNEL_LABELS: Record<CampaignChannel, string> = {
   social_media: 'Media Sosial', whatsapp: 'WhatsApp', email: 'Email', flyer: 'Flyer', other: 'Lainnya',
@@ -204,7 +205,7 @@ export default function CampaignsPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <CardGridSkeleton count={6} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" height="h-44" />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {campaigns.map((c) => (

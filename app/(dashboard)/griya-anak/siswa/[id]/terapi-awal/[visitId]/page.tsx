@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Loader2, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, AlertTriangle } from 'lucide-react'
 import { fetchVisitWithPatient, fetchBranchStaff, type VisitWithPatient, type BranchStaffMember } from '@/app/actions/jadwal'
 import { fetchGriyaTerapiAwal, saveGriyaTerapiAwalDraft, completeGriyaTerapiAwal, type GriyaTerapiAwalFieldsInput } from '@/app/actions/griyaTerapiAwal'
 import type { GriyaTerapiAwal, UserRole } from '@/types'
@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
 import { ALL_RM_FIELD_KEYS, RM_TYPES, RM_TYPE_ORDER, validateRm, type RmFieldKey } from '@/components/griya/rekam-medis/sections'
 import { RmSections, Section, inputCls, labelCls } from '@/components/griya/rekam-medis/RmSections'
+import TerapiAwalLoading from './loading'
 
 type Form = Record<RmFieldKey, string>
 
@@ -141,11 +142,7 @@ export default function GriyaTerapiAwalPage() {
   }
 
   if (loading || !visit) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 size={24} className="animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <TerapiAwalLoading />
   }
 
   return (

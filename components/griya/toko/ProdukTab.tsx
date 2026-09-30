@@ -6,6 +6,7 @@ import {
   fetchProducts, upsertProduct, toggleProductActive, deleteProduct, adjustStock,
   type GriyaProduct,
 } from '@/app/actions/griyaToko'
+import { TableRowsSkeleton } from '@/components/ui/Skeleton'
 
 const CATEGORIES = ['BUKU', 'ALAT TERAPI', 'MERCHANDISE', 'LAINNYA']
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
@@ -65,7 +66,7 @@ export function ProdukTab({ branchId }: { branchId: string }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">Memuat...</td></tr>
+              <TableRowsSkeleton rows={6} cols={5} />
             ) : rows.length === 0 ? (
               <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">Belum ada produk.</td></tr>
             ) : rows.map((p) => (

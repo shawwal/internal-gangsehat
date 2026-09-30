@@ -15,6 +15,7 @@ import { PerformaLeaderboardTable } from '@/components/griya/performa/PerformaLe
 import { TherapistVisitsModal } from '@/components/griya/performa/TherapistVisitsModal'
 import { defaultThisMonth, defaultLastMonth } from '@/components/griya/performa/utils'
 import type { TherapistPerforma, DateRangeState } from '@/components/griya/performa/types'
+import PerformaLoading from './loading'
 
 const presetBtnCls =
   'px-3 py-2 rounded-xl border border-border text-xs font-medium hover:bg-muted cursor-pointer transition-colors'
@@ -166,13 +167,7 @@ export default function GriyaPerformaPage() {
   }
 
   if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-7 w-48 rounded bg-muted" />
-        <div className="h-16 w-full rounded-2xl bg-muted" />
-        <div className="h-64 w-full rounded-2xl bg-muted" />
-      </div>
-    )
+    return <PerformaLoading />
   }
   if (!branchId || !enabled) {
     return <div className="glass-card p-8 text-sm text-muted-foreground">Fitur Griya Anak belum aktif untuk cabang ini.</div>

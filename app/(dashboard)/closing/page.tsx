@@ -14,6 +14,7 @@ import {
   type ClosingVisitRecap,
 } from '@/app/actions/closing'
 import { createTransactionManual, deleteTransaction, updateTransaction } from '@/app/actions/transactions'
+import { Skeleton, SkeletonRegion, FormSkeleton, StatCardsSkeleton } from '@/components/ui/Skeleton'
 
 type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'admin' | null
 
@@ -249,7 +250,11 @@ export default function ClosingAdminPage() {
           <p className="text-sm font-medium text-foreground">Pilih cabang untuk melihat rekap closing</p>
         </div>
       ) : loading ? (
-        <div className="animate-pulse bg-muted rounded-3xl h-72" />
+        <SkeletonRegion>
+          <Skeleton className="h-3 w-40" />
+          <FormSkeleton fields={6} />
+          <StatCardsSkeleton count={3} className="grid grid-cols-1 sm:grid-cols-3 gap-4" />
+        </SkeletonRegion>
       ) : (
         <div className="space-y-6">
           <p className="text-xs text-muted-foreground">Rekap untuk {dateLabel}</p>

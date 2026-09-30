@@ -8,6 +8,7 @@ import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { openPrintableReport } from '@/lib/pdf-export'
 import { ExportMenu } from './ExportMenu'
 import { formatRp, MONTH_NAMES, INCOME_CATEGORIES, yearRange, inputCls } from './shared'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 interface Props {
   branchId: string
@@ -142,7 +143,7 @@ export function ArusKasTab({ branchId, branchName }: Props) {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <TableSkeleton rows={8} cols={4} />
       ) : (
         <div className="glass-card overflow-x-auto">
           <table className="w-full text-xs whitespace-nowrap">

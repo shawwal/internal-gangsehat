@@ -9,6 +9,7 @@ import { LaporanTab } from '@/components/finance/accounting/LaporanTab'
 import { ArusKasTab } from '@/components/finance/accounting/ArusKasTab'
 import { PengaturanTab } from '@/components/finance/accounting/PengaturanTab'
 import { MONTH_NAMES, monthRange } from '@/components/finance/accounting/shared'
+import AkuntansiLoading from './loading'
 
 type TabKey = 'pemasukan' | 'pengeluaran' | 'laporan' | 'aruskas' | 'pengaturan'
 const TABS: { key: TabKey; label: string; icon: typeof BookOpen }[] = [
@@ -47,13 +48,7 @@ export default function AkuntansiPage() {
   }, [])
 
   if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-7 w-40 rounded bg-muted" />
-        <div className="h-10 w-full max-w-lg rounded-xl bg-muted" />
-        <div className="h-64 w-full rounded-2xl bg-muted" />
-      </div>
-    )
+    return <AkuntansiLoading />
   }
   if (!branchId) {
     return <div className="glass-card p-8 text-sm text-muted-foreground">Cabang tidak ditemukan.</div>

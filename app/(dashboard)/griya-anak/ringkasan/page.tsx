@@ -11,6 +11,7 @@ import {
   fetchGriyaAdminRecords, sendGriyaRecordReminders,
   type GriyaAdminRecords, type PendingRecord,
 } from '@/app/actions/griyaAdminDashboard'
+import { RowsSkeleton } from '@/components/ui/Skeleton'
 
 const EMPTY_RECORDS: GriyaAdminRecords = { stateByVisit: {}, pending: [] }
 
@@ -139,7 +140,7 @@ export default function GriyaAdminDashboardPage() {
 
       <div className="glass-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border"><h2 className="text-sm font-semibold text-foreground">Aktivitas Terapis</h2></div>
-        {loading ? <div className="h-32 animate-pulse" /> : rows.length === 0 ? (
+        {loading ? <RowsSkeleton rows={5} cols={5} /> : rows.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted-foreground text-center">Belum ada terapis di jadwal Griya Anak.</p>
         ) : (
           <div className="overflow-x-auto">

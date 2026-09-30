@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Bell, BellOff, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { UserNotification } from '@/types'
+import { CardListSkeleton } from '@/components/ui/Skeleton'
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<UserNotification[]>([])
@@ -69,7 +70,7 @@ export default function NotificationsPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <CardListSkeleton count={6} />
       ) : !notifications.length ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <BellOff size={32} className="mb-3 opacity-40" />

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { fetchSales, fetchSaleItems, voidSale, deleteSale, type SaleRow, type SaleItemRow } from '@/app/actions/griyaToko'
 import { Pagination } from '@/components/leave/Pagination'
 import { useToast } from '@/context/ToastContext'
+import { TableRowsSkeleton } from '@/components/ui/Skeleton'
 
 const PAGE_SIZE = 10
 function rp(n: number) {
@@ -62,7 +63,7 @@ export function RiwayatTab({ branchId }: { branchId: string }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">Memuat...</td></tr>
+              <TableRowsSkeleton rows={6} cols={5} />
             ) : paged.length === 0 ? (
               <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">Belum ada penjualan.</td></tr>
             ) : paged.map((s) => (

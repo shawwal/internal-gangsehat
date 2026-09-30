@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState, useTransition } from 'react'
-import { UserPlus, Loader2, Archive } from 'lucide-react'
+import { UserPlus, Archive } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activityLog'
 import { deleteInternalUser } from '@/app/actions/delete-user'
@@ -18,6 +18,7 @@ import { EditUserModal } from '@/components/users/EditUserModal'
 import { ChangePasswordModal } from '@/components/users/ChangePasswordModal'
 import { STAFF_ROLES } from '@/components/users/types'
 import type { UserRow, BranchOption, Tab, UserRole } from '@/components/users/types'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 export default function UsersPage() {
   const [users, setUsers]       = useState<UserRow[]>([])
@@ -172,9 +173,7 @@ export default function UsersPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
-          <Loader2 size={15} className="animate-spin" /> Memuat...
-        </div>
+        <TableSkeleton rows={10} cols={6} />
       ) : tab === 'director' ? (
         <DirectorCards
           users={filtered}

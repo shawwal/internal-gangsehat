@@ -7,6 +7,7 @@ import { logActivity } from '@/lib/activityLog'
 import type { AttendanceStatus } from '@/types'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 interface StaffRow { id: string; full_name: string }
 interface AttendanceRow { id: string; staff_id: string; date: string; status: AttendanceStatus }
@@ -196,7 +197,7 @@ export default function AttendancePage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <TableSkeleton rows={10} cols={8} />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-xs border border-border rounded-2xl overflow-hidden bg-card">

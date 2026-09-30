@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { useEffect, useState, useTransition } from 'react'
-import { ArrowLeft, Loader2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { permanentlyDeleteUser } from '@/app/actions/delete-user'
 import { UserAvatar } from '@/components/users/UserAvatar'
 import { PurgeModal } from '@/components/users/PurgeModal'
 import { ROLE_LABELS, ROLE_COLOR, formatDate } from '@/components/users/types'
 import type { UserRow } from '@/components/users/types'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 export default function DeletedUsersPage() {
   const [users, setUsers]     = useState<UserRow[]>([])
@@ -53,9 +54,7 @@ export default function DeletedUsersPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
-          <Loader2 size={15} className="animate-spin" /> Memuat...
-        </div>
+        <TableSkeleton rows={6} cols={5} />
       ) : !users.length ? (
         <p className="text-sm text-muted-foreground text-center py-10">Tidak ada pengguna nonaktif.</p>
       ) : (

@@ -5,6 +5,7 @@ import { Plus, Send } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activityLog'
 import type { BranchFinancialReport, ReportStatus } from '@/types'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 const MONTH_NAMES = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
 
@@ -166,7 +167,7 @@ export default function FinanceReportsPage() {
       )}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <TableSkeleton rows={8} cols={6} />
       ) : (
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <table className="w-full text-sm">

@@ -5,6 +5,7 @@ import { Search, UserPlus, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activityLog'
 import type { UserRole } from '@/types'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 interface StaffRow {
   id: string
@@ -137,7 +138,7 @@ export default function HRStaffPage() {
       )}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <TableSkeleton rows={10} cols={5} />
       ) : !noBranchWarning && (
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <table className="w-full text-sm">

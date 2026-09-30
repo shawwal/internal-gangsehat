@@ -7,6 +7,7 @@ import { Clock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { roleDashboard } from '@/lib/auth'
 import type { UserRole } from '@/lib/auth'
+import { CenteredCardSkeleton } from '@/components/ui/Skeleton'
 
 export default function PendingPage() {
   const router = useRouter()
@@ -49,8 +50,8 @@ export default function PendingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      <div className="bg-background">
+        <CenteredCardSkeleton fields={0} />
       </div>
     )
   }

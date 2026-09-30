@@ -14,6 +14,7 @@ import { SportMassageBarChart } from '@/components/sport-massage/performa/BarCha
 import { SportMassageLeaderboardTable } from '@/components/sport-massage/performa/LeaderboardTable'
 import { defaultThisMonth, defaultLastMonth } from '@/components/sport-massage/performa/utils'
 import type { TherapistPerforma, DateRangeState } from '@/components/sport-massage/performa/types'
+import PerformaLoading from './loading'
 
 const ALLOWED_ROLES = ['director', 'admin']
 
@@ -199,13 +200,7 @@ export default function SportMassagePerformaPage() {
   }
 
   if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-7 w-48 rounded bg-muted" />
-        <div className="h-16 w-full rounded-2xl bg-muted" />
-        <div className="h-64 w-full rounded-2xl bg-muted" />
-      </div>
-    )
+    return <PerformaLoading />
   }
   if (!role || !ALLOWED_ROLES.includes(role)) {
     return <div className="glass-card p-8 text-sm text-muted-foreground">Halaman ini hanya untuk admin dan direktur.</div>

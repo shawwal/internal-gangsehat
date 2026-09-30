@@ -5,6 +5,7 @@ import { Plus, Pencil, Building2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activityLog'
 import type { Branch } from '@/types'
+import { CardGridSkeleton } from '@/components/ui/Skeleton'
 
 export default function BranchesPage() {
   const [branches, setBranches] = useState<Branch[]>([])
@@ -88,7 +89,7 @@ export default function BranchesPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <CardGridSkeleton count={6} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" height="h-36" />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {branches.map((b) => (

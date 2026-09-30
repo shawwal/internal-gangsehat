@@ -62,6 +62,41 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   )
 }
 
+interface BranchTickProps {
+  x?: number
+  y?: number
+  width?: number
+  visibleTicksCount?: number
+  payload?: { value: string }
+}
+
+// Wraps long branch names onto multiple lines so they aren't truncated
+function BranchTick({ x = 0, y = 0, width = 0, visibleTicksCount = 1, payload }: BranchTickProps) {
+  const label = payload?.value ?? ''
+  const slotWidth = width / Math.max(visibleTicksCount, 1)
+  const maxChars = Math.max(8, Math.floor((slotWidth - 8) / 6.5))
+
+  const lines: string[] = []
+  for (const word of label.split(/\s+/)) {
+    const last = lines[lines.length - 1]
+    if (last && (last + ' ' + word).length <= maxChars) {
+      lines[lines.length - 1] = last + ' ' + word
+    } else {
+      lines.push(word)
+    }
+  }
+
+  return (
+    <text x={x} y={y + 4} textAnchor="middle" fontSize={12} fill="var(--muted-foreground)">
+      {lines.map((line, i) => (
+        <tspan key={i} x={x} dy={i === 0 ? '0.71em' : '1.2em'}>
+          {line}
+        </tspan>
+      ))}
+    </text>
+  )
+}
+
 export function BranchRevenueChart({ data }: Props) {
   if (!data.length) {
     return (
@@ -102,7 +137,7 @@ export function BranchRevenueChart({ data }: Props) {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={260}>
+      <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }} barCategoryGap="30%">
           <CartesianGrid
             strokeDasharray="3 3"
@@ -111,7 +146,9 @@ export function BranchRevenueChart({ data }: Props) {
           />
           <XAxis
             dataKey="name"
-            tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
+            tick={<BranchTick />}
+            interval={0}
+            height={64}
             axisLine={false}
             tickLine={false}
           />

@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
 import { DEFAULT_REMINDER_TEMPLATE, DEFAULT_ORDER_CONFIRMATION_TEMPLATE } from '@/lib/utils'
 import { TemplateEditorCard } from './TemplateEditorCard'
+import { FormSkeleton } from '@/components/ui/Skeleton'
 
 const REMINDER_PLACEHOLDERS = [
   { key: 'nama',        label: 'Nama pasien' },
@@ -155,9 +156,7 @@ export function WaTemplateEditor({ lockedBranchId }: { lockedBranchId?: string }
       </div>
 
       {loading ? (
-        <div className="glass-card flex items-center justify-center gap-2 py-16 text-muted-foreground text-sm">
-          <Loader2 size={16} className="animate-spin" /> Memuat...
-        </div>
+        <FormSkeleton fields={4} columns={1} />
       ) : (
         <>
           {/* Branch picker */}

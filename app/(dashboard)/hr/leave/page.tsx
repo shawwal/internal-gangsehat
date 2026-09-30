@@ -1,14 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import {
-  CalendarOff, CalendarRange, CheckCircle2, Clock,
-  Eye, FileText, Users, X, XCircle,
-} from 'lucide-react'
+import { CalendarOff, CalendarRange, CheckCircle2, Clock, Eye, FileText, Users, X, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activityLog'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
+import { CardListSkeleton } from '@/components/ui/Skeleton'
 
 interface LeaveRow {
   id: string
@@ -285,9 +283,7 @@ export default function HRLeavePage() {
 
       {/* List */}
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => <div key={i} className="animate-pulse bg-muted rounded-2xl h-24" />)}
-        </div>
+        <CardListSkeleton count={4} />
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center py-14 px-4 bg-muted/30 rounded-2xl gap-3">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">

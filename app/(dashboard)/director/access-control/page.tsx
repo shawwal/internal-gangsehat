@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { Database, Loader2, RotateCcw } from 'lucide-react'
+import { Database, RotateCcw } from 'lucide-react'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { NAV_GROUP_LABELS, type NavGroup } from '@/config/navigation'
 import {
@@ -12,6 +12,7 @@ import {
   type PageRegistryRow,
 } from '@/app/actions/pagePermissions'
 import type { UserRole } from '@/types'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 const ROLE_COLUMNS: { role: UserRole; label: string }[] = [
   { role: 'manager',                 label: 'Manager' },
@@ -109,9 +110,7 @@ export default function AccessControlPage() {
       )}
 
       {loading ? (
-        <div className="glass-card flex items-center justify-center gap-2 py-16 text-muted-foreground text-sm">
-          <Loader2 size={16} className="animate-spin" /> Memuat...
-        </div>
+        <TableSkeleton rows={10} cols={6} />
       ) : (
         <div className="glass-card p-5 overflow-x-auto">
           <table className="w-full text-sm border-collapse min-w-[900px]">

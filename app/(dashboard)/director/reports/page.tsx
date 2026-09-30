@@ -7,6 +7,7 @@ import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel } from '@/lib/excel-export'
 import { logActivity } from '@/lib/activityLog'
 import type { ReportStatus } from '@/types'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 interface Report {
   id: string
@@ -114,7 +115,7 @@ export default function DirectorReportsPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <TableSkeleton rows={8} cols={6} />
       ) : (
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <table className="w-full text-sm">

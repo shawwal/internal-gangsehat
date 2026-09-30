@@ -10,6 +10,8 @@ import { EditMasterScheduleDialog } from '@/components/griya/master/EditMasterSc
 import { EndEnrollmentDialog } from '@/components/griya/EndEnrollmentDialog'
 import { useToast } from '@/context/ToastContext'
 import type { CellTarget } from '@/components/griya/types'
+import GriyaAnakJadwalMasterLoading from './loading'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 export default function GriyaJadwalMasterPage() {
   const { showToast } = useToast()
@@ -63,7 +65,7 @@ export default function GriyaJadwalMasterPage() {
     }
   }
 
-  if (branchId === undefined || enabled === null) return <div className="text-sm text-muted-foreground">Memuat...</div>
+  if (branchId === undefined || enabled === null) return <GriyaAnakJadwalMasterLoading />
   if (!branchId || !enabled) return <div className="glass-card p-8 text-sm text-muted-foreground">Fitur Griya Anak belum aktif untuk cabang ini.</div>
 
   const term = search.trim().toLowerCase()
@@ -121,7 +123,7 @@ export default function GriyaJadwalMasterPage() {
       </div>
 
       {loading ? (
-        <div className="glass-card p-8 text-center text-sm text-muted-foreground">Memuat...</div>
+        <TableSkeleton rows={8} cols={5} />
       ) : rows.length === 0 ? (
         <div className="glass-card p-8 text-center text-sm text-muted-foreground">Belum ada jadwal master.</div>
       ) : filtered.length === 0 ? (

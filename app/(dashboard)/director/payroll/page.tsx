@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Wallet, Loader2 } from 'lucide-react'
+import { Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
 
@@ -16,6 +16,8 @@ import { PayrollEditForm }     from '@/components/salary/PayrollEditForm'
 import { SalarySettingsTable } from '@/components/salary/SalarySettingsTable'
 import { EmployeeOverrideList } from '@/components/salary/EmployeeOverrideList'
 import type { EmployeeSalary } from '@/components/salary/types'
+import DirectorPayrollLoading from './loading'
+import { CardListSkeleton } from '@/components/ui/Skeleton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -69,11 +71,7 @@ export default function PayrollPage() {
 
   // ── Loading skeleton ──────────────────────────────────────────────────────
   if (!identity.role) {
-    return (
-      <div className="flex items-center justify-center h-48">
-        <Loader2 className="animate-spin text-muted-foreground" size={24} />
-      </div>
-    )
+    return <DirectorPayrollLoading />
   }
 
   return (
@@ -180,9 +178,7 @@ export default function PayrollPage() {
       {/* ── TAB: Override Karyawan ───────────────────────────────────────── */}
       {activeTab === 'overrides' && !identity.isManager && (
         overridesLoading ? (
-          <div className="flex items-center justify-center h-32">
-            <Loader2 className="animate-spin text-muted-foreground" size={20} />
-          </div>
+          <CardListSkeleton count={4} />
         ) : (
           <EmployeeOverrideList
             overrides={overrides}

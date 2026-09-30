@@ -14,6 +14,7 @@ import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { openPrintableReport } from '@/lib/pdf-export'
 import { ExportMenu } from './ExportMenu'
 import { formatRp, PAYMENT_METHODS, PAYMENT_STATUSES, inputCls } from './shared'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 interface Props {
   type: TransactionType
@@ -229,7 +230,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <TableSkeleton rows={10} cols={6} />
       ) : (
         <div className="glass-card overflow-x-auto">
           <table className="w-full text-sm">

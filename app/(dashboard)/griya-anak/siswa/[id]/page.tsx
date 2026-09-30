@@ -21,6 +21,7 @@ import { GENDER_LABEL, calcAge } from '@/components/patients/detail/constants'
 import { HARI_LABEL, DISCIPLINE_LABEL } from '@/components/griya/constants'
 import { useToast } from '@/context/ToastContext'
 import type { Discipline, Hari } from '@/app/actions/griyaJadwal'
+import GriyaAnakSiswaIdLoading from './loading'
 
 const STATUS_LABEL: Record<string, string> = { active: 'Aktif', graduated: 'Lulus', inactive: 'Nonaktif' }
 const STATUS_CLS: Record<string, string> = {
@@ -73,7 +74,7 @@ export default function GriyaSiswaDetailPage() {
   const canEdit = !!role && ['director', 'manager', 'admin'].includes(role)
   const canExamine = canEdit || role === 'therapist'
 
-  if (loading) return <div className="text-sm text-muted-foreground">Memuat...</div>
+  if (loading) return <GriyaAnakSiswaIdLoading />
   if (!patient) return <div className="glass-card p-8 text-sm text-muted-foreground">Pasien tidak ditemukan.</div>
 
   const activeSlots = detail?.slots.filter((s) => s.status === 'active') ?? []

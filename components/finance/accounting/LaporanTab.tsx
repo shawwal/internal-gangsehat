@@ -7,6 +7,7 @@ import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { openPrintableReport } from '@/lib/pdf-export'
 import { ExportMenu } from './ExportMenu'
 import { formatRp, formatNum, inputCls } from './shared'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 interface Props {
   branchId: string
@@ -141,7 +142,7 @@ export function LaporanTab({ branchId, branchName, dateFrom, dateToExclusive, pe
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <TableSkeleton rows={10} cols={3} />
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

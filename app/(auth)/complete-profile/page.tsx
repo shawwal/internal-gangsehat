@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { roleDashboard } from '@/lib/auth'
 import type { UserRole } from '@/lib/auth'
+import { CenteredCardSkeleton } from '@/components/ui/Skeleton'
 
 type Profile = {
   id: string
@@ -90,11 +91,8 @@ export default function CompleteProfilePage() {
   // Full-screen loading
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#FF0090]/10 via-background to-[#FFB35C]/10">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-          <p className="text-sm text-muted-foreground">Memuat profil...</p>
-        </div>
+      <div className="bg-gradient-to-br from-[#FF0090]/10 via-background to-[#FFB35C]/10">
+        <CenteredCardSkeleton fields={3} />
       </div>
     )
   }

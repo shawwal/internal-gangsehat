@@ -9,6 +9,7 @@ import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { createTransactionManual } from '@/app/actions/transactions'
 import { todayJakartaISO } from '@/lib/utils'
 import { logActivity } from '@/lib/activityLog'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 const TYPE_LABELS: Record<TransactionType, string>    = { income: 'Pemasukan', expense: 'Pengeluaran' }
 const STATUS_BADGE: Record<TransactionStatus, string> = {
@@ -225,7 +226,7 @@ export default function TransactionsPage() {
 
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
+        <TableSkeleton rows={10} cols={8} />
       ) : (
         <div className="bg-card rounded-2xl border border-border overflow-x-auto">
           <table className="w-full text-sm">

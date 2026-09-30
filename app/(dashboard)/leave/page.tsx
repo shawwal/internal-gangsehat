@@ -9,6 +9,7 @@ import { MyLeaveHeader } from '@/components/leave/MyLeaveHeader'
 import { MyLeaveForm } from '@/components/leave/MyLeaveForm'
 import { MyLeaveList } from '@/components/leave/MyLeaveList'
 import type { StatusFilter } from '@/components/leave/types'
+import { CardListSkeleton } from '@/components/ui/Skeleton'
 
 interface LeaveRow {
   id: string
@@ -165,9 +166,7 @@ export default function MyLeavePage() {
       )}
 
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => <div key={i} className="animate-pulse bg-muted rounded-3xl h-24" />)}
-        </div>
+        <CardListSkeleton count={4} />
       ) : (
         <MyLeaveList
           requests={requests}

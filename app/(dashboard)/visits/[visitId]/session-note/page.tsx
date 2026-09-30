@@ -22,6 +22,7 @@ import type { SessionNoteFormState } from '@/components/sessionNote/types'
 import { stripHtml } from '@/lib/richtext'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
+import SessionNoteLoading from './loading'
 
 type FormMode = 'single_step' | 'multi_step'
 
@@ -154,11 +155,7 @@ export default function SessionNotePage() {
   }
 
   if (loading || !visit || !form || !formMode) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 size={24} className="animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <SessionNoteLoading />
   }
 
   const isTherapistLike = userRole === 'therapist' || userRole === 'staff'

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Loader2, FileText, ClipboardList } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { RowsSkeleton } from '@/components/ui/Skeleton'
 
 type FormMode = 'single_step' | 'multi_step'
 
@@ -81,9 +82,7 @@ export default function SessionNoteSettingsPage() {
 
       <div className="glass-card p-5">
         {loading || !settings ? (
-          <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-sm">
-            <Loader2 size={15} className="animate-spin" /> Memuat...
-          </div>
+          <RowsSkeleton rows={6} cols={3} />
         ) : (
           <div className="space-y-4">
             {(Object.keys(FIELD_META) as (keyof Settings)[]).map((field, i) => {

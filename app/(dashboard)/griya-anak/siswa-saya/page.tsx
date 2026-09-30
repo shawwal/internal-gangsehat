@@ -10,6 +10,7 @@ import { StudentStats } from '@/components/griya/siswa-saya/StudentStats'
 import { StudentFilters, DEFAULT_FILTERS, type StudentFilterState } from '@/components/griya/siswa-saya/StudentFilters'
 import { StudentList, type StudentRow } from '@/components/griya/siswa-saya/StudentList'
 import { periodShort, resolveBounds, statsInPeriod, type Period } from '@/components/griya/siswa-saya/period'
+import GriyaAnakSiswaSayaLoading from './loading'
 
 export default function GriyaMySiswaPage() {
   const { loading: gateLoading, branchId, enabled } = useGriyaBranch()
@@ -62,7 +63,7 @@ export default function GriyaMySiswaPage() {
   const hasFilter = filters.search !== '' || filters.status !== DEFAULT_FILTERS.status || filters.onlyPending
   const resetFilters = () => setFilters((f) => ({ ...DEFAULT_FILTERS, sort: f.sort }))
 
-  if (gateLoading) return <div className="text-sm text-muted-foreground">Memuat...</div>
+  if (gateLoading) return <GriyaAnakSiswaSayaLoading />
   if (!branchId || !enabled) return <div className="glass-card p-8 text-sm text-muted-foreground">Fitur Griya Anak belum aktif untuk cabang ini.</div>
 
   const emptyText = students.length === 0

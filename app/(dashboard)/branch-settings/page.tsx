@@ -6,6 +6,7 @@ import { useSportMassageSettings } from '@/hooks/useSportMassageSettings'
 import { useGriyaSettings } from '@/hooks/useGriyaSettings'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { fetchSportMassageLayanan, updateLayananHarga, upsertLayanan, type LayananRow } from '@/app/actions/layanan'
+import BranchSettingsLoading from './loading'
 
 interface BranchOption { id: string; name: string }
 
@@ -123,7 +124,7 @@ export default function BranchSettingsPage() {
   }
 
   if (initLoading) {
-    return <div className="text-sm text-muted-foreground">Memuat...</div>
+    return <BranchSettingsLoading />
   }
 
   if (role !== 'director' && role !== 'manager') {
