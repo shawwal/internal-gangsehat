@@ -121,7 +121,7 @@ export default function ClosingAdminPage() {
 
   async function handleTxFieldChange(
     txId: string,
-    field: 'category' | 'payment_method' | 'payment_status' | 'amount' | 'harga' | 'discount' | 'penjamin',
+    field: 'category' | 'payment_method' | 'payment_status' | 'amount' | 'harga' | 'discount' | 'penjamin' | 'description',
     value: string,
   ) {
     setSavingTxId(txId)
@@ -422,11 +422,38 @@ export default function ClosingAdminPage() {
                           ) : (
                             t.payment_method && <span className="text-muted-foreground">· {t.payment_method}</span>
                           )}
+                          {t.type === 'income' && (canEditCategory ? (
+                            <select
+                              value={t.payment_status ?? ''}
+                              disabled={savingTxId === t.id}
+                              onChange={(e) => handleTxFieldChange(t.id, 'payment_status', e.target.value)}
+                              className={`text-muted-foreground ${cellInputCls}`}
+                              aria-label="Jenis pembayaran"
+                            >
+                              <option value="">Jenis bayar —</option>
+                              {PAYMENT_STATUSES.map((m) => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                          ) : (
+                            t.payment_status && <span className="text-muted-foreground">· {t.payment_status}</span>
+                          ))}
                           <span className={`px-1.5 py-0.5 rounded-full font-semibold ${TX_STATUS_BADGE[t.status] ?? 'bg-muted text-muted-foreground'}`}>
                             {TX_STATUS_LABEL[t.status] ?? t.status}
                           </span>
                         </div>
-                        {t.description && <p className="text-muted-foreground/80 truncate mt-0.5">{t.description}</p>}
+                        {t.patient_name && <p className="font-semibold text-foreground mt-1">{t.patient_name}</p>}
+                        {canEditCategory ? (
+                          <input
+                            type="text"
+                            key={`${t.id}-${t.description ?? ''}`}
+                            defaultValue={t.description ?? ''}
+                            placeholder="Keterangan layanan"
+                            disabled={savingTxId === t.id}
+                            onBlur={(e) => { if (e.target.value !== (t.description ?? '')) handleTxFieldChange(t.id, 'description', e.target.value) }}
+                            className={`mt-1 w-full text-muted-foreground ${cellInputCls}`}
+                          />
+                        ) : (
+                          t.description && <p className="text-muted-foreground/80 truncate mt-0.5">{t.description}</p>
+                        )}
                       </div>
                       {canEditCategory ? (
                         <input
@@ -552,7 +579,7 @@ export default function ClosingAdminPage() {
                                         </select>
                                       ) : <span className="text-foreground">{p.payment_method ?? '—'}</span>}
                                     </Field>
-                                    <Field label="Status Bayar">
+                                    <Field label="Jenis Pembayaran">
                                       {canEditCategory ? (
                                         <select value={p.payment_status ?? ''} disabled={busy} onChange={(e) => handleTxFieldChange(p.id, 'payment_status', e.target.value)} className={cellInputCls}>
                                           <option value="">—</option>
@@ -581,7 +608,13 @@ export default function ClosingAdminPage() {
                                     </Field>
                                   </div>
                                   <div className="flex items-center justify-between gap-2">
-                                    <span className="text-muted-foreground/80 truncate">{p.description ?? ''}</span>
+                                    {canEditCategory ? (
+                                      <input type="text" defaultValue={p.description ?? ''} placeholder="Keterangan layanan" disabled={busy}
+                                        onBlur={(e) => { if (e.target.value !== (p.description ?? '')) handleTxFieldChange(p.id, 'description', e.target.value) }}
+                                        className={`flex-1 ${cellInputCls}`} />
+                                    ) : (
+                                      <span className="text-muted-foreground/80 truncate">{p.description ?? ''}</span>
+                                    )}
                                     <span className={`px-1.5 py-0.5 rounded-full font-semibold ${TX_STATUS_BADGE[p.status] ?? 'bg-muted text-muted-foreground'}`}>
                                       {TX_STATUS_LABEL[p.status] ?? p.status}
                                     </span>

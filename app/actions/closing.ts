@@ -21,6 +21,8 @@ export interface ClosingTransactionItem {
   category: string
   amount: number
   payment_method: string | null
+  payment_status: string | null
+  patient_name: string | null
   status: string
   description: string | null
   created_at: string
@@ -45,7 +47,7 @@ export async function fetchClosingFinancialRecap(
 
   const { data } = await supabase
     .from('transactions')
-    .select('id, type, category, payment_method, amount, status, description, created_at')
+    .select('id, type, category, payment_method, payment_status, patient_id, amount, status, description, created_at')
     .eq('branch_id', branchId)
     .gte('transaction_date', dateFrom)
     .lte('transaction_date', dateTo)
@@ -53,6 +55,18 @@ export async function fetchClosingFinancialRecap(
     .order('created_at', { ascending: false })
 
   const rows = data ?? []
+
+  const txPatientIds = [...new Set(rows.map((r) => r.patient_id).filter(Boolean))] as string[]
+  const { data: txPatients } = txPatientIds.length
+    ? await supabase.from('patients').select('id, encrypted_name').in('id', txPatientIds)
+    : { data: [] }
+  const { decryptPatientPII } = await import('@/lib/encryption')
+  const txNameById = new Map<string, string>()
+  for (const p of txPatients ?? []) {
+    try {
+      txNameById.set(p.id, decryptPatientPII({ encrypted_name: p.encrypted_name, encrypted_phone: '' }).name || '—')
+    } catch { /* skip */ }
+  }
 
   const incomeByMethodMap = new Map<string, PaymentMethodTotal>()
   const incomeByCategoryMap = new Map<string, CategoryTotal>()
@@ -104,6 +118,8 @@ export async function fetchClosingFinancialRecap(
       category: r.category ?? 'LAINNYA',
       amount: Number(r.amount ?? 0),
       payment_method: r.payment_method,
+      payment_status: r.payment_status,
+      patient_name: r.patient_id ? txNameById.get(r.patient_id) ?? null : null,
       status: r.status,
       description: r.description,
       created_at: r.created_at,
