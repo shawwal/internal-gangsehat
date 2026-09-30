@@ -3,7 +3,8 @@ import type { JadwalListRow, AdminStatus } from '@/app/actions/jadwalList'
 export type { JadwalListRow, AdminStatus }
 
 export const PAGE_SIZE_OPTIONS = [10, 25, 50] as const
-export const DEFAULT_PAGE_SIZE = 10
+export const DEFAULT_PAGE_SIZE = 50
+export const PAGE_SIZE_STORAGE_KEY = 'jadwal_list_page_size'
 
 export const STATUS_LABEL: Record<AdminStatus, string> = {
   BELUM_DIPERIKSA: 'Belum Diperiksa',

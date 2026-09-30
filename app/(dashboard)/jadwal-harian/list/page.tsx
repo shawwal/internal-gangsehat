@@ -8,7 +8,7 @@ import { DateNav } from '@/components/jadwal/DateNav'
 import { JadwalListToolbar } from '@/components/jadwalList/JadwalListToolbar'
 import { JadwalListTable } from '@/components/jadwalList/JadwalListTable'
 import { Pagination } from '@/components/leave/Pagination'
-import { DEFAULT_PAGE_SIZE, type JadwalListRow } from '@/components/jadwalList/types'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, PAGE_SIZE_STORAGE_KEY, type JadwalListRow } from '@/components/jadwalList/types'
 import { fetchWaConfigAll, type WaConfigAll } from '@/app/actions/reminder-template'
 import { resolveWaConfig } from '@/lib/waConfig'
 import { fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/utils'
@@ -23,7 +23,20 @@ export default function JadwalHarianListPage() {
 
   const { showToast } = useToast()
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const [pageSize, setPageSizeState] = useState<number>(DEFAULT_PAGE_SIZE)
+
+  // Remember the user's chosen page size across visits.
+  useEffect(() => {
+    try {
+      const saved = Number(window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY))
+      if ((PAGE_SIZE_OPTIONS as readonly number[]).includes(saved)) setPageSizeState(saved)
+    } catch {}
+  }, [])
+
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    try { window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(size)) } catch {}
+  }
   const [waConfig, setWaConfig] = useState<WaConfigAll | null>(null)
   const [fisioFilter, setFisioFilter]     = useState('')
   const [layananFilter, setLayananFilter] = useState('')
