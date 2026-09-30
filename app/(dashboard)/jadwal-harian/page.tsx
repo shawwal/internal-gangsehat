@@ -133,9 +133,23 @@ export default function JadwalHarianPage() {
   const activeStaff   = staff.filter((s) => s.hasSchedule && !s.isOnLeave)
   const inactiveStaff = staff.filter((s) => !s.hasSchedule || s.isOnLeave)
   const baseStaff     = showInactive ? staff : activeStaff
-  const filteredStaff = genderFilter === 'all'
+  const genderStaff   = genderFilter === 'all'
     ? baseStaff
     : baseStaff.filter((s) => s.gender === genderFilter)
+  // With a shift filter on, hide therapists whose working hours don't overlap
+  // that shift — unless they still have a visit booked inside it.
+  const toHour = (t: string | null | undefined) => (t ? parseInt(t.split(':')[0], 10) : NaN)
+  const inShift = (h: number) => (shiftFilter === 'pagi' ? h < soreDividerHour : h >= soreDividerHour)
+  const filteredStaff = shiftFilter === 'all'
+    ? genderStaff
+    : genderStaff.filter((s) => {
+        const start = toHour(s.jam_mulai)
+        const end   = toHour(s.jam_selesai)
+        const worksShift = s.hasSchedule && !s.isOnLeave && !isNaN(start) && !isNaN(end)
+          && (shiftFilter === 'pagi' ? start < soreDividerHour : end > soreDividerHour)
+        return worksShift || visits.some((v) =>
+          v.attending_staff_id === s.staff_id && !!v.visit_time && inShift(toHour(v.visit_time)))
+      })
   const visibleStaff  = [...filteredStaff].sort((a, b) => {
     const nameA = (a.nickname?.trim() || a.full_name).toLowerCase()
     const nameB = (b.nickname?.trim() || b.full_name).toLowerCase()
