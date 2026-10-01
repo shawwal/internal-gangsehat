@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { ACTIVITY_RESOURCE_TYPES, ACTION_LABEL, formatTimestamp, type ActivityLogRow } from './types'
 
@@ -19,7 +20,9 @@ export function ActivityLogDetailDialog({ log, onClose }: { log: ActivityLogRow;
 
   const resourceLabel = ACTIVITY_RESOURCE_TYPES[log.resource_type as keyof typeof ACTIVITY_RESOURCE_TYPES] ?? log.resource_type
 
-  return (
+  // Portaled to <body>: .glass-card's backdrop-filter would otherwise become
+  // the containing block for this fixed overlay and clip it to the card.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
       onClick={onClose}
@@ -94,6 +97,7 @@ export function ActivityLogDetailDialog({ log, onClose }: { log: ActivityLogRow;
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
