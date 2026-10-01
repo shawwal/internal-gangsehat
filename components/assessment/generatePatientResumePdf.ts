@@ -1,6 +1,6 @@
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { TerapiAwalAssessment } from '@/types'
-import type { PublicResumeData } from '@/app/actions/resumeLinks'
+import { fetchResumeTherapistName, type PublicResumeData } from '@/app/actions/resumeLinks'
 import { downloadPatientResumePdf } from '@/lib/downloadPatientResumePdf'
 
 // Staff-side "Download Resume" — patient-facing plain-language version of
@@ -22,6 +22,7 @@ export async function generatePatientResumePdf(visit: VisitWithPatient, assessme
     chiefComplaint,
     diagnosis: assessment.diagnosis_primer || visit.diagnosis,
     plan,
+    therapistName: await fetchResumeTherapistName(visit.id).catch(() => null),
   }
 
   await downloadPatientResumePdf(data, 'Resume')

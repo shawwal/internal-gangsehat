@@ -1,14 +1,24 @@
-// Patient-facing "Recovery Roadmap" resume — plain language, no clinical jargon.
+// Patient-facing "Ringkasan Pemeriksaan Fisioterapi" resume — plain language, no clinical jargon.
 // Rendered both as a print window (staff side, see components/assessment/
 // generatePatientResumePdf.ts) and as the public /resume/[token] page, so the
 // markup/styles live here once and get reused by both entry points.
 import type { PublicResumeData } from '@/app/actions/resumeLinks'
 
 export const PATIENT_RESUME_STYLES = `
+    /* Same typeface as the internal.gangsehat.com UI. Self-hosted because the
+       PDF is rendered inside a detached iframe that never sees next/font. */
+    @font-face {
+      font-family: 'Geist';
+      src: url('/fonts/Geist-Variable.woff2') format('woff2');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: Georgia, 'Times New Roman', serif;
+      font-family: 'Geist', -apple-system, 'Segoe UI', Arial, sans-serif;
       font-size: 14px;
       color: #2c3e50;
       line-height: 1.6;
@@ -28,57 +38,71 @@ export const PATIENT_RESUME_STYLES = `
 
     .resume-header { text-align: center; margin-bottom: 24px; }
     .resume-kop { display: block; width: 100%; height: auto; padding-bottom: 14px; border-bottom: 2px solid #FF0090; }
-    .resume-header h2 { font-family: Arial, sans-serif; color: #7f8c8d; margin: 16px 0 0 0; font-size: 12pt; font-weight: 300; }
+    .resume-header h2 { color: #7f8c8d; margin: 16px 0 0 0; font-size: 12pt; font-weight: 400; }
 
     .resume-meta {
-      display: flex; justify-content: space-between; margin-bottom: 30px;
-      font-family: Arial, sans-serif; font-size: 11pt;
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;
+      font-size: 11pt; line-height: 1.3;
       border: 1px solid #ecf0f1; padding: 15px; border-radius: 8px; background: #fbfcfc;
     }
 
     .resume-section { margin-bottom: 30px; }
     .resume-section h3 {
-      font-family: Arial, sans-serif; color: #FF0090;
+      color: #FF0090;
       border-left: 4px solid #FF0090; padding-left: 10px;
-      font-size: 14pt; margin-bottom: 12px;
+      font-size: 14pt; line-height: 1.3; margin-bottom: 12px;
     }
     .resume-content { font-size: 11pt; }
     .resume-box { background: #fdfefe; padding: 12px 15px; border-left: 3px solid #bdc3c7; border-radius: 0 6px 6px 0; }
     .resume-box.plan { background: #fff0f7; border-left-color: #FF0090; border-radius: 8px; }
     .resume-box p { margin-bottom: 6px; }
-    .resume-box ul, .resume-box ol { padding-left: 20px; margin-bottom: 6px; }
+    /* Markers are drawn as ::before text instead of native list bullets so
+       html2canvas paints them on the same baseline as the item text. */
+    .resume-box ul, .resume-box ol { list-style: none; margin-bottom: 6px; }
+    .resume-box ol { counter-reset: resume-item; }
+    .resume-box li { position: relative; padding-left: 20px; margin-bottom: 4px; }
+    .resume-box li::before { position: absolute; left: 4px; top: 0; }
+    .resume-box ul > li::before { content: '\\2022'; }
+    .resume-box ol > li { counter-increment: resume-item; }
+    .resume-box ol > li::before { content: counter(resume-item) '.'; left: 0; }
+    .resume-box li > p { margin-bottom: 0; }
     .empty { color: #adb5bd; font-style: italic; }
 
     .education-box { background: #f4f6f7; border: 1px solid #bdc3c7; border-radius: 10px; padding: 20px; margin-top: 30px; page-break-inside: avoid; }
-    .education-box h4 { font-family: Arial, sans-serif; color: #FF0090; margin: 0 0 15px 0; font-size: 13pt; text-align: center; }
-    .education-box p { text-align: center; font-family: Arial, sans-serif; font-size: 10pt; color: #2c3e50; margin-bottom: 18px; }
+    .education-box h4 { color: #FF0090; margin: 0 0 15px 0; font-size: 13pt; text-align: center; }
+    .education-box p { text-align: center; font-size: 10pt; color: #2c3e50; margin-bottom: 18px; }
     .healing-phases { display: flex; gap: 14px; }
     .phase { flex: 1; background: #fff; padding: 14px; border-radius: 6px; border-top: 4px solid #FF0090; box-shadow: 0 2px 5px rgba(0,0,0,.05); text-align: center; }
     .phase:nth-child(2) { border-top-color: #FFB35C; }
     .phase:nth-child(3) { border-top-color: #34C759; }
-    .phase-title { font-weight: bold; color: #34495e; font-family: Arial, sans-serif; display: block; margin-bottom: 8px; font-size: 10pt; }
-    .phase-desc { font-size: 9pt; color: #7f8c8d; font-family: Arial, sans-serif; }
+    .phase-title { font-weight: bold; color: #34495e; display: block; margin-bottom: 8px; font-size: 10pt; }
+    .phase-desc { font-size: 9pt; color: #7f8c8d; }
 
-    .signature-block { margin-top: 40px; text-align: right; font-family: Arial, sans-serif; }
+    .signature-block { margin-top: 40px; text-align: right; }
     .signature-line { border-bottom: 1px solid #2c3e50; width: 200px; display: inline-block; margin-bottom: 5px; }
 
     .btn-wrap { text-align: center; margin-top: 24px; }
     .print-btn {
       background: #FF0090; color: #fff; border: none;
       padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 700;
-      cursor: pointer; letter-spacing: .2px; font-family: Arial, sans-serif;
+      cursor: pointer; letter-spacing: .2px; font-family: inherit;
     }
     .print-btn:hover { background: #d4007a; }
 
-    .not-found { max-width: 480px; margin: 80px auto; text-align: center; font-family: Arial, sans-serif; color: #6c757d; }
+    .not-found { max-width: 480px; margin: 80px auto; text-align: center; color: #6c757d; }
 
     @media print {
       body      { background: #fff; padding: 0; }
       .sheet    { box-shadow: none; border-radius: 0; padding: 0; }
       .btn-wrap { display: none !important; }
+      .education-box { break-before: page; page-break-before: always; margin-top: 0; }
       @page { size: A4; margin: 15mm; }
     }
 `
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
 
 function box(html: string | null, extraClass = ''): string {
   if (!html || !html.trim()) return `<div class="resume-box ${extraClass}"><p class="empty">Belum ada catatan.</p></div>`
@@ -87,12 +111,13 @@ function box(html: string | null, extraClass = ''): string {
 
 export function renderPatientResumeBody(data: PublicResumeData, includePrintButton: boolean): string {
   const visitDate = new Date(data.visitDate).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+  const therapistName = data.therapistName?.trim() ? escapeHtml(data.therapistName.trim()) : 'Fisioterapis Pemeriksa'
 
   return `
 <div class="sheet">
   <div class="resume-header">
     <img class="resume-kop" src="/kop-fisioterapi-gang-sehat.png" width="1420" height="208" alt="Praktik Mandiri Fisioterapi Ridho Budi Rahmad, S.Fis., Ftr. — Fisioterapi Gang Sehat" />
-    <h2>Peta Jalan Pemulihan Anda</h2>
+    <h2>Ringkasan Pemeriksaan Fisioterapi</h2>
   </div>
 
   <div class="resume-meta">
@@ -114,7 +139,7 @@ export function renderPatientResumeBody(data: PublicResumeData, includePrintButt
     ${box(data.plan, 'plan')}
   </div>
 
-  <div class="education-box">
+  <div class="education-box" data-pdf-break-before>
     <h4>Kenapa Anda Membutuhkan Program Terapi Lanjutan?</h4>
     <p>
       Seringkali, saat rasa nyeri mereda setelah 1-2 sesi terapi perdana, pasien merasa sudah sembuh total.
@@ -140,7 +165,7 @@ export function renderPatientResumeBody(data: PublicResumeData, includePrintButt
   <div class="signature-block">
     <p>Salam Sehat,</p>
     <div class="signature-line"></div>
-    <p style="margin-top: 0; font-weight: bold; color: #1a4a76;">Fisioterapis Pemeriksa</p>
+    <p style="margin-top: 0; font-weight: bold; color: #1a4a76;">${therapistName}</p>
     <p style="font-size: 9pt; color: #7f8c8d; margin-top: -6px;">Fisioterapi Gang Sehat</p>
   </div>
 

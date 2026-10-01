@@ -1,4 +1,5 @@
 import type { createClient } from '@/lib/supabase/server'
+import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 
 type Supabase = Awaited<ReturnType<typeof createClient>>
 
@@ -7,6 +8,29 @@ const SESI_TYPES = new Set(['SESI TERAPI', 'SESI VISIT'])
 
 export const isTaServiceType = (t: string | null | undefined) => TA_TYPES.has(t ?? '')
 export const isSesiServiceType = (t: string | null | undefined) => SESI_TYPES.has(t ?? '')
+
+export type AdminStatus = 'BELUM_DIPERIKSA' | 'BELUM_DITANGANI' | 'LENGKAP'
+
+// A visit is LENGKAP once its record form (assessment / session note / Griya
+// intake or note) is completed — the same source of truth the session-note and
+// medical-records pages use. Session notes don't always fill `diagnosis`
+// (clinical impression is optional), so the column check is only a fallback for
+// service types without a dedicated form (TA VISIT, SPORT MASSAGE, LAINNYA).
+export function deriveAdminStatus(
+  v: {
+    diagnosis: string | null
+    treatment: string | null
+    regio: string | null
+    service_type: string | null
+  },
+  formStatus: string | undefined,
+): AdminStatus {
+  const complete = formStatus !== undefined
+    ? formStatus === 'completed'
+    : !!v.diagnosis && !!v.treatment && (!isRegioRequired(v.service_type) || !!v.regio)
+  if (complete) return 'LENGKAP'
+  return getVisitFormRoute(v.service_type) === 'assessment' ? 'BELUM_DIPERIKSA' : 'BELUM_DITANGANI'
+}
 
 /**
  * Latest complaint per patient. Preference order:

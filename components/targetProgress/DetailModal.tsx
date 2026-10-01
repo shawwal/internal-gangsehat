@@ -5,7 +5,28 @@ import { X, Loader2 } from 'lucide-react'
 import { fetchTargetProgressDetail, type TargetProgressDetailRow } from '@/app/actions/targetProgress'
 import { EditTransactionSheet } from '@/components/director/finance/EditTransactionSheet'
 import { PAY_STATUS_BADGE, formatRp } from '@/components/director/finance/types'
+import { ExportButton } from '@/components/ui/ExportButton'
+import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import type { CategoryKey } from './types'
+
+// "Sab 27 Sep 2026" — matches the Tanggal column of the clinic's visit log.
+function formatExportDate(date: string): string {
+  return new Date(date + 'T00:00:00')
+    .toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+    .replace(',', '')
+}
+
+const KUNJUNGAN_EXPORT_COLUMNS: ExportColumn<TargetProgressDetailRow>[] = [
+  { header: 'Tanggal',          value: (r) => (r.visitDate ? formatExportDate(r.visitDate) : '') },
+  { header: 'Jam',              value: (r) => r.visitTime?.slice(0, 5) },
+  { header: 'Nama Pasien',      value: (r) => r.patientName },
+  { header: 'Nama Terapis',     value: (r) => r.fisioName },
+  { header: 'Layanan',          value: (r) => r.serviceType },
+  { header: 'Pertemuan Ke',     value: (r) => r.pertemuanKe },
+  // Rows with no recorded kehadiran are past visits the target counts as attended.
+  { header: 'Kehadiran',        value: (r) => (r.kehadiran === 'HADIR' ? 'Hadir' : 'Belum Dicatat') },
+  { header: 'Status Kunjungan', value: (r) => r.statusKunjungan },
+]
 
 interface DetailModalProps {
   open: boolean
@@ -43,6 +64,11 @@ export function DetailModal({ open, onClose, branchId, date, category, label, ca
     ? new Date(date + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
     : ''
 
+  function handleExport() {
+    exportToExcel(rows, KUNJUNGAN_EXPORT_COLUMNS, `kunjungan_${date}`)
+    return Promise.resolve()
+  }
+
   function handleSaved() {
     setEditingRow(null)
     refetch()
@@ -59,12 +85,17 @@ export function DetailModal({ open, onClose, branchId, date, category, label, ca
             <h2 className="text-sm font-semibold text-foreground">Detail {label}</h2>
             <p className="text-xs text-muted-foreground">{dateLabel}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-          >
-            <X size={15} />
-          </button>
+          <div className="flex items-center gap-2">
+            {category === 'kunjungan' && (
+              <ExportButton onExport={handleExport} disabled={loading || rows.length === 0} />
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              <X size={15} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}

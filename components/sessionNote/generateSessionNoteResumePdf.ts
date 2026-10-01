@@ -1,6 +1,6 @@
 import type { VisitWithPatient } from '@/app/actions/jadwal'
 import type { SessionNote } from '@/types'
-import type { PublicResumeData } from '@/app/actions/resumeLinks'
+import { fetchResumeTherapistName, type PublicResumeData } from '@/app/actions/resumeLinks'
 import { downloadPatientResumePdf } from '@/lib/downloadPatientResumePdf'
 
 // Staff-side "Download Resume" for follow-up SOAP session notes — mirrors
@@ -15,6 +15,7 @@ export async function generateSessionNoteResumePdf(visit: VisitWithPatient, note
     chiefComplaint: note.subjective_notes || visit.chief_complaint,
     diagnosis: note.clinical_impression || visit.diagnosis,
     plan,
+    therapistName: await fetchResumeTherapistName(visit.id).catch(() => null),
   }
 
   await downloadPatientResumePdf(data, 'Resume')

@@ -3,11 +3,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { calcAge } from '@/components/patients/detail/constants'
-import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 import { SERVICE_TYPE_LABEL } from '@/components/jadwal/types'
-import { fetchLatestComplaints, fetchPackagePositions } from '@/lib/internal/visitInsights'
+import { deriveAdminStatus, fetchLatestComplaints, fetchPackagePositions, type AdminStatus } from '@/lib/internal/visitInsights'
 
-export type AdminStatus = 'BELUM_DIPERIKSA' | 'BELUM_DITANGANI' | 'LENGKAP'
+export type { AdminStatus }
 
 export interface JadwalListRow {
   id: string
@@ -29,27 +28,6 @@ export interface JadwalListRow {
   notes: string | null
   order_id: string | null
   branch_id: string
-}
-
-// A visit is LENGKAP once its record form (assessment / session note / Griya
-// intake or note) is completed — the same source of truth the session-note and
-// medical-records pages use. Session notes don't always fill `diagnosis`
-// (clinical impression is optional), so the column check is only a fallback for
-// service types without a dedicated form (TA VISIT, SPORT MASSAGE, LAINNYA).
-function deriveAdminStatus(
-  v: {
-    diagnosis: string | null
-    treatment: string | null
-    regio: string | null
-    service_type: string | null
-  },
-  formStatus: string | undefined,
-): AdminStatus {
-  const complete = formStatus !== undefined
-    ? formStatus === 'completed'
-    : !!v.diagnosis && !!v.treatment && (!isRegioRequired(v.service_type) || !!v.regio)
-  if (complete) return 'LENGKAP'
-  return getVisitFormRoute(v.service_type) === 'assessment' ? 'BELUM_DIPERIKSA' : 'BELUM_DITANGANI'
 }
 
 export async function fetchJadwalListRows(date: string, branchId?: string | null): Promise<JadwalListRow[]> {

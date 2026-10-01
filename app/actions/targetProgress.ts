@@ -6,6 +6,8 @@ import { VISIT_STATUS_FILTER, isAttended } from '@/components/performance/utils'
 import { CATEGORY_TO_TRANSACTION_TYPES } from '@/components/targetProgress/types'
 import type { CategoryKey } from '@/components/targetProgress/types'
 import type { TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
+import { deriveAdminStatus, fetchPackagePositions } from '@/lib/internal/visitInsights'
+import { getVisitFormRoute } from '@/lib/visitRouting'
 
 export interface TargetProgressDetailRow {
   id: string
@@ -16,6 +18,11 @@ export interface TargetProgressDetailRow {
   packageName?: string
   jenisPaket?: string | null
   tx?: TransactionForEdit
+  // Kunjungan rows only — feeds the popup's Excel export.
+  visitDate?: string
+  pertemuanKe?: number
+  kehadiran?: 'HADIR' | 'TIDAK HADIR' | null
+  statusKunjungan?: string
 }
 
 interface VisitRow {
@@ -24,8 +31,20 @@ interface VisitRow {
   visit_date: string
   visit_time: string | null
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
+  service_type: string | null
+  package_id: string | null
+  diagnosis: string | null
+  treatment: string | null
+  regio: string | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   internal_profiles: any
+}
+
+// Same wording the clinic's own visit log uses: a TERAPI AWAL is "diperiksa"
+// (assessed), every follow-up session is "ditangani" (treated).
+function statusKunjunganLabel(v: VisitRow, formStatus: string | undefined): string {
+  const verb = getVisitFormRoute(v.service_type) === 'assessment' ? 'Diperiksa' : 'Ditangani'
+  return `${deriveAdminStatus(v, formStatus) === 'LENGKAP' ? 'Sudah' : 'Belum'} ${verb}`
 }
 
 interface TransactionRow {
@@ -114,8 +133,8 @@ export async function fetchTargetProgressDetail(
   const { data, error } = await supabase
     .from('patient_visits')
     .select(
-      'id, patient_id, visit_date, visit_time, kehadiran, ' +
-      'internal_profiles!attending_staff_id(full_name)',
+      'id, patient_id, visit_date, visit_time, kehadiran, service_type, package_id, ' +
+      'diagnosis, treatment, regio, internal_profiles!attending_staff_id(full_name)',
     )
     .eq('branch_id', branchId)
     .eq('visit_date', visitDate)
@@ -137,7 +156,39 @@ export async function fetchTargetProgressDetail(
     .in('id', patientIds)
   const nameById = new Map((patients ?? []).map((p) => [p.id, p.encrypted_name]))
 
+  // Layanan / pertemuan ke / status kunjungan — derived the same way as the
+  // Jadwal List page (app/actions/jadwalList.ts) so both views agree.
+  const visitIds = rows.map((row) => row.id)
+  const packageIds = [...new Set(rows.map((row) => row.package_id).filter((id): id is string => !!id))]
+  const [packagePositions, packages, assessments, sessionNotes, griyaIntakes, griyaNotes] = await Promise.all([
+    fetchPackagePositions(supabase, packageIds),
+    packageIds.length > 0
+      ? supabase.from('patient_packages_with_stats').select('id, jenis_paket').in('id', packageIds)
+      : Promise.resolve({ data: [] as { id: string; jenis_paket: string | null }[] }),
+    supabase.from('terapi_awal_assessments').select('visit_id, status').in('visit_id', visitIds),
+    supabase.from('session_notes').select('visit_id, status').in('visit_id', visitIds),
+    supabase.from('griya_terapi_awal').select('visit_id, status').in('visit_id', visitIds),
+    supabase.from('griya_session_notes').select('visit_id, status').in('visit_id', visitIds),
+  ])
+
+  const jenisPaketById = new Map((packages.data ?? []).map((p) => [p.id as string, p.jenis_paket as string | null]))
+
+  // Record-form status per visit; 'completed' wins if a visit has more than one row.
+  const formStatusMap = new Map<string, string>()
+  for (const r of [
+    ...(assessments.data ?? []), ...(sessionNotes.data ?? []),
+    ...(griyaIntakes.data ?? []), ...(griyaNotes.data ?? []),
+  ]) {
+    const vid = r.visit_id as string
+    if (formStatusMap.get(vid) !== 'completed') formStatusMap.set(vid, r.status as string)
+  }
+
   return rows.map((row) => {
+    // P1/P2 → "PAKET 1"/"PAKET 2"; a package with no jenis is just "PAKET".
+    const jenisPaket = row.package_id ? jenisPaketById.get(row.package_id) ?? null : null
+    const layanan = row.package_id
+      ? `PAKET ${jenisPaket?.replace(/^P/, '') ?? ''}`.trim()
+      : row.service_type
     const encName = nameById.get(row.patient_id) ?? ''
     const name = encName
       ? decryptPatientPII({ encrypted_name: encName, encrypted_phone: '' }).name
@@ -145,9 +196,13 @@ export async function fetchTargetProgressDetail(
     return {
       id: row.id,
       patientName: name || '—',
-      serviceType: null,
+      serviceType: layanan,
       visitTime: row.visit_time,
       fisioName: row.internal_profiles?.full_name ?? '—',
+      visitDate: row.visit_date,
+      pertemuanKe: row.package_id ? (packagePositions.get(row.id)?.pertemuan ?? 1) : 1,
+      kehadiran: row.kehadiran,
+      statusKunjungan: statusKunjunganLabel(row, formStatusMap.get(row.id)),
     }
   })
 }
