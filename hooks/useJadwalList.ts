@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchJadwalListRows, type JadwalListRow } from '@/app/actions/jadwalList'
 import { updateVisitStatus } from '@/app/actions/jadwal'
@@ -10,6 +10,8 @@ export function useJadwalList() {
   const [selectedDate, setSelectedDate]         = useState(() => new Date())
   const [rows, setRows]                         = useState<JadwalListRow[]>([])
   const [loading, setLoading]                   = useState(true)
+  const [error, setError]                       = useState<string | null>(null)
+  const requestId                               = useRef(0)
   const [userRole, setUserRole]                 = useState<string | null>(null)
   const [branches, setBranches]                 = useState<{ id: string; name: string }[]>([])
   const [selectedBranchId, setSelectedBranchId] = useState<string | null | undefined>(undefined)
@@ -33,10 +35,21 @@ export function useJadwalList() {
   }, [])
 
   const loadRows = useCallback(async (date: Date) => {
+    const id = ++requestId.current
     setLoading(true)
-    const data = await fetchJadwalListRows(toIso(date), selectedBranchId)
-    setRows(data)
-    setLoading(false)
+    setError(null)
+    try {
+      const data = await fetchJadwalListRows(toIso(date), selectedBranchId)
+      if (id === requestId.current) setRows(data)
+    } catch (e) {
+      console.error('fetchJadwalListRows failed', e)
+      if (id === requestId.current) {
+        setRows([])
+        setError('Gagal memuat jadwal. Coba muat ulang.')
+      }
+    } finally {
+      if (id === requestId.current) setLoading(false)
+    }
   }, [selectedBranchId])
 
   useEffect(() => {
@@ -51,7 +64,7 @@ export function useJadwalList() {
 
   return {
     today, selectedDate, setSelectedDate,
-    rows, loading,
+    rows, loading, error,
     userRole,
     branches, selectedBranchId, setSelectedBranchId,
     reload: () => loadRows(selectedDate),

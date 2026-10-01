@@ -6,8 +6,6 @@ import { calcAge } from '@/components/patients/detail/constants'
 import { SERVICE_TYPE_LABEL } from '@/components/jadwal/types'
 import { deriveAdminStatus, fetchLatestComplaints, fetchPackagePositions, type AdminStatus } from '@/lib/internal/visitInsights'
 
-export type { AdminStatus }
-
 export interface JadwalListRow {
   id: string
   visit_date: string

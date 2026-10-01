@@ -16,7 +16,7 @@ import { fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/util
 export default function JadwalHarianListPage() {
   const {
     today, selectedDate, setSelectedDate,
-    rows, loading,
+    rows, loading, error,
     branches, selectedBranchId, setSelectedBranchId,
     reload, handleCancel,
   } = useJadwalList()
@@ -131,6 +131,13 @@ export default function JadwalHarianListPage() {
         layanan={layananFilter}
         onLayananChange={setLayananFilter}
       />
+
+      {error && !loading && (
+        <div className="glass-card px-4 py-3 text-sm text-destructive flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button onClick={reload} className="font-medium underline cursor-pointer">Coba lagi</button>
+        </div>
+      )}
 
       <JadwalListTable
         rows={pagedRows}

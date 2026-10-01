@@ -1,4 +1,5 @@
-import type { JadwalListRow, AdminStatus } from '@/app/actions/jadwalList'
+import type { JadwalListRow } from '@/app/actions/jadwalList'
+import type { AdminStatus } from '@/lib/internal/visitInsights'
 
 export type { JadwalListRow, AdminStatus }
 
