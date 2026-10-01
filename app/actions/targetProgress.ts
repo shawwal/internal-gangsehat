@@ -139,6 +139,8 @@ export async function fetchTargetProgressDetail(
     .eq('branch_id', branchId)
     .eq('visit_date', visitDate)
     .in('status', [...VISIT_STATUS_FILTER])
+    // Sport massage is tracked separately — not a "kunjungan" (matches target-progress page)
+    .or('service_type.is.null,service_type.neq."SPORT MASSAGE"')
 
   if (error || !data) return []
 
