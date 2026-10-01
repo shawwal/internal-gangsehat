@@ -41,6 +41,10 @@ export async function downloadHtmlAsPdf(html: string, filename: string, selector
       iframe.onload = () => resolve()
     })
 
+    // Images (e.g. the resume letterhead) must be decoded before capture or
+    // html2canvas paints an empty box in their place.
+    await Promise.all(Array.from(doc.images).map((img) => img.decode().catch(() => {})))
+
     const sheet = doc.querySelector<HTMLElement>(selector)
     if (!sheet) throw new Error('Gagal merender dokumen')
 

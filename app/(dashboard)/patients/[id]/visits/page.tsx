@@ -375,7 +375,7 @@ export default function PatientVisitsPage() {
     if (inserted?.id) {
       await logActivity({
         supabase, userId, action: 'create', resourceType: 'patient_visit',
-        resourceId: inserted.id, resourceLabel: patientName, branchId,
+        resourceId: inserted.id, resourceLabel: patientName, branchId, patientId: id,
         newValues: {
           visit_date: form.visit_date, service_type: form.service_type || null,
           shift: form.shift || null, status: form.status,

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchPatientNames } from '@/app/actions/patients'
 import { History } from 'lucide-react'
 import { Suspense } from 'react'
 import { ActivityLogFilters } from '@/components/activity-log/ActivityLogFilters'
@@ -8,15 +9,18 @@ import { PAGE_SIZE, type ActionFilter, type ResourceTypeFilter, type ActivityLog
 
 export const dynamic = 'force-dynamic'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export default async function ActivityLogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; action?: string; resourceType?: string; page?: string }>
+  searchParams: Promise<{ q?: string; action?: string; resourceType?: string; patient?: string; page?: string }>
 }) {
   const params = await searchParams
   const q = params.q?.trim() ?? ''
   const action = (['create', 'update', 'delete'].includes(params.action ?? '') ? params.action : 'all') as ActionFilter
   const resourceType = (params.resourceType ?? 'all') as ResourceTypeFilter
+  const patientId = UUID_RE.test(params.patient ?? '') ? params.patient! : ''
   const page = Math.max(1, Number(params.page) || 1)
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
@@ -47,11 +51,18 @@ export default async function ActivityLogPage({
   if (resourceType !== 'all') {
     query = query.eq('resource_type', resourceType)
   }
+  if (patientId) {
+    query = query.eq('patient_id', patientId)
+  }
   if (q) {
     query = query.or(`actor_name.ilike.%${q}%,actor_email.ilike.%${q}%,resource_label.ilike.%${q}%`)
   }
 
-  const { data: rows, count } = await query
+  const [{ data: rows, count }, patientNames] = await Promise.all([
+    query,
+    patientId ? fetchPatientNames([patientId]) : Promise.resolve({} as Record<string, string>),
+  ])
+  const patient = patientId ? { id: patientId, name: patientNames[patientId] ?? 'Pasien' } : null
   const totalCount = count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
@@ -59,6 +70,7 @@ export default async function ActivityLogPage({
   if (q) baseParams.q = q
   if (action !== 'all') baseParams.action = action
   if (resourceType !== 'all') baseParams.resourceType = resourceType
+  if (patientId) baseParams.patient = patientId
 
   return (
     <div className="space-y-6">
@@ -75,7 +87,7 @@ export default async function ActivityLogPage({
       <div className="glass-card overflow-hidden">
         <div className="px-5 py-4 border-b border-white/10">
           <Suspense>
-            <ActivityLogFilters defaultSearch={q} action={action} resourceType={resourceType} />
+            <ActivityLogFilters defaultSearch={q} action={action} resourceType={resourceType} patient={patient} />
           </Suspense>
         </div>
 

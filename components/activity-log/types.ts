@@ -13,6 +13,7 @@ export interface ActivityLogRow {
   resource_id: string | null
   resource_label: string | null
   branch_id: string | null
+  patient_id: string | null
   changed_fields: string[] | null
   old_values: Record<string, unknown> | null
   new_values: Record<string, unknown> | null

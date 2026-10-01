@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Plus, Send } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activityLog'
+import { computeReportTotals } from '@/lib/financialReports'
 import type { BranchFinancialReport, ReportStatus } from '@/types'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 
@@ -71,46 +72,20 @@ export default function FinanceReportsPage() {
     setSaving(true)
     const supabase = createClient()
 
-    // Date range for the selected period
-    const periodStart = `${form.year}-${String(form.month).padStart(2, '0')}-01`
-    const lastDay     = new Date(form.year, form.month, 0).getDate()
-    const periodEnd   = `${form.year}-${String(form.month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-
-    const [{ data: income }, { data: expense }, { count: visitCount }] = await Promise.all([
-      supabase.from('transactions')
-        .select('amount')
-        .eq('type', 'income').eq('status', 'confirmed').eq('branch_id', branchId)
-        .gte('transaction_date', periodStart).lte('transaction_date', periodEnd),
-      supabase.from('transactions')
-        .select('amount')
-        .eq('type', 'expense').eq('status', 'confirmed').eq('branch_id', branchId)
-        .gte('transaction_date', periodStart).lte('transaction_date', periodEnd),
-      supabase.from('patient_visits')
-        .select('id', { count: 'exact', head: true })
-        .eq('branch_id', branchId)
-        .gte('visit_date', periodStart).lte('visit_date', periodEnd),
-    ])
-
-    const totalIncome  = (income ?? []).reduce((s, r) => s + Number(r.amount), 0)
-    const totalExpense = (expense ?? []).reduce((s, r) => s + Number(r.amount), 0)
-
-    // Distinct patient count via visit records for this branch/period
-    const { data: patientVisits } = await supabase
-      .from('patient_visits')
-      .select('patient_id')
-      .eq('branch_id', branchId)
-      .gte('visit_date', periodStart).lte('visit_date', periodEnd)
-
-    const patientCount = new Set((patientVisits ?? []).map((v) => v.patient_id)).size
+    let totals
+    try {
+      totals = await computeReportTotals(supabase, branchId, form.year, form.month)
+    } catch (err) {
+      alert('Gagal menghitung laporan: ' + (err as Error).message)
+      setSaving(false)
+      return
+    }
 
     const { error } = await supabase.from('branch_financial_reports').upsert({
       branch_id:     branchId,
       period_year:   form.year,
       period_month:  form.month,
-      total_income:  totalIncome,
-      total_expense: totalExpense,
-      patient_count: patientCount,
-      visit_count:   visitCount ?? 0,
+      ...totals,
       notes:         form.notes || null,
       status:        'draft',
     }, { onConflict: 'branch_id,period_year,period_month' })

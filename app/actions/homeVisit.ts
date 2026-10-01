@@ -275,6 +275,7 @@ export async function createHomeVisitSession(
     await logActivity({
       supabase, userId: user.id, action: 'create', resourceType: 'patient_visit',
       resourceId: data.id, resourceLabel: input.patient_id, branchId: input.branch_id,
+      patientId: input.patient_id,
       newValues: {
         visit_date: input.visit_date, service_type: input.service_type,
         status: input.status, package_id: packageId,

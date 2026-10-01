@@ -3,6 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { Search, X } from 'lucide-react'
+import { PatientFilter } from './PatientFilter'
 import { ACTIVITY_RESOURCE_TYPES, type ActionFilter, type ResourceTypeFilter } from './types'
 
 const ACTION_TABS: { value: ActionFilter; label: string }[] = [
@@ -16,10 +17,12 @@ export function ActivityLogFilters({
   defaultSearch,
   action,
   resourceType,
+  patient,
 }: {
   defaultSearch: string
   action: ActionFilter
   resourceType: ResourceTypeFilter
+  patient: { id: string; name: string } | null
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -69,6 +72,8 @@ export function ActivityLogFilters({
           <option key={key} value={key}>{label}</option>
         ))}
       </select>
+
+      <PatientFilter patient={patient} onChange={(id) => navigate({ patient: id })} />
 
       <form onSubmit={handleSubmit} className="relative flex items-center">
         <Search size={14} className="absolute left-3 text-muted-foreground pointer-events-none" />

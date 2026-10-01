@@ -422,7 +422,7 @@ export async function setGriyaStudentStatus(
   if (!error) {
     await logActivity({
       supabase: a.supabase, userId: a.userId, action: 'update', resourceType: 'griya_slot',
-      resourceId: patientId, newValues: { student_status: status },
+      resourceId: patientId, patientId, newValues: { student_status: status },
     })
   }
   return { error: error?.message ?? null }

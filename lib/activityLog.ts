@@ -29,8 +29,36 @@ interface LogActivityInput {
   resourceId?: string | number | null
   resourceLabel?: string | null
   branchId?: string | null
+  /** Patient this activity concerns. Resolved automatically when omitted. */
+  patientId?: string | null
   oldValues?: Record<string, unknown> | null
   newValues?: Record<string, unknown> | null
+}
+
+// Tables whose rows carry a patient_id, keyed by the resource type logged for them.
+const PATIENT_LINKED_TABLES: Partial<Record<ActivityResourceType, string>> = {
+  patient_visit: 'patient_visits',
+  transaction: 'transactions',
+  griya_slot: 'griya_schedule_slots',
+}
+
+/**
+ * Finds the patient an activity concerns so the log can be filtered per
+ * patient. Falls back to looking the resource row up — that can't work for a
+ * deleted row, so delete call sites must pass patientId themselves.
+ */
+async function resolvePatientId(input: LogActivityInput): Promise<string | null> {
+  const { supabase, patientId, resourceType, resourceId, oldValues, newValues } = input
+  if (patientId) return patientId
+  if (resourceType === 'patient') return resourceId != null ? String(resourceId) : null
+
+  const fromValues = newValues?.patient_id ?? oldValues?.patient_id
+  if (typeof fromValues === 'string' && fromValues) return fromValues
+
+  const table = PATIENT_LINKED_TABLES[resourceType]
+  if (!table || resourceId == null) return null
+  const { data } = await supabase.from(table).select('patient_id').eq('id', String(resourceId)).maybeSingle()
+  return (data?.patient_id as string | null) ?? null
 }
 
 /**
@@ -75,6 +103,7 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
       resource_id: resourceId != null ? String(resourceId) : null,
       resource_label: resourceLabel ?? null,
       branch_id: branchId ?? null,
+      patient_id: await resolvePatientId(input),
       changed_fields: changedFields,
       old_values: storedOld,
       new_values: storedNew,

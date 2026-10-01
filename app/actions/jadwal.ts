@@ -287,7 +287,7 @@ export async function createVisit(input: CreateVisitInput): Promise<{ error: str
     await logActivity({
       supabase, userId: user?.id, action: 'create', resourceType: 'patient_visit',
       resourceId: data.id, resourceLabel: await decryptedPatientName(supabase, input.patient_id),
-      branchId: input.branch_id,
+      branchId: input.branch_id, patientId: input.patient_id,
       newValues: {
         visit_date: input.visit_date, visit_time: input.visit_time ?? null,
         service_type: input.service_type ?? null, shift: input.shift ?? null,
@@ -328,7 +328,7 @@ export async function updateVisitStatus(
     await logActivity({
       supabase, userId: user?.id, action: 'update', resourceType: 'patient_visit',
       resourceId: visitId, resourceLabel: await decryptedPatientName(supabase, oldRow.patient_id),
-      branchId: oldRow.branch_id,
+      branchId: oldRow.branch_id, patientId: oldRow.patient_id,
       oldValues: { status: oldRow.status, kehadiran: oldRow.kehadiran },
       newValues: { status, kehadiran: update.kehadiran ?? oldRow.kehadiran },
     })
@@ -353,7 +353,7 @@ export async function deleteVisit(visitId: string): Promise<{ error: string | nu
     await logActivity({
       supabase, userId: user?.id, action: 'delete', resourceType: 'patient_visit',
       resourceId: visitId, resourceLabel: await decryptedPatientName(supabase, oldRow.patient_id),
-      branchId: oldRow.branch_id,
+      branchId: oldRow.branch_id, patientId: oldRow.patient_id,
       oldValues: { visit_date: oldRow.visit_date, service_type: oldRow.service_type, status: oldRow.status },
     })
   }
@@ -550,7 +550,7 @@ export async function updateVisit(
     await logActivity({
       supabase, userId: user?.id, action: 'update', resourceType: 'patient_visit',
       resourceId: visitId, resourceLabel: await decryptedPatientName(supabase, patient_id),
-      branchId: branch_id,
+      branchId: branch_id, patientId: patient_id,
       oldValues: oldFields,
       newValues: { ...oldFields, ...data },
     })

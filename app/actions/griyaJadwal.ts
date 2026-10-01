@@ -403,7 +403,7 @@ export async function assignRecurringSlot(input: AssignSlotInput): Promise<{ err
 
   await logActivity({
     supabase, userId, action: 'create', resourceType: 'griya_slot',
-    resourceId: data?.id, branchId: input.branch_id,
+    resourceId: data?.id, branchId: input.branch_id, patientId: input.patient_id,
     newValues: { hari: input.hari, slot_time: input.slot_time, discipline: input.discipline },
   })
   return { error: null, id: data?.id }
@@ -937,7 +937,7 @@ export async function addSubstitute(input: AddSubstituteInput): Promise<{ error:
 
   await logActivity({
     supabase, userId, action: 'create', resourceType: 'griya_slot', resourceId: null,
-    branchId: input.branch_id,
+    branchId: input.branch_id, patientId: input.patient_id,
     newValues: { substitute: true, date: input.date, therapist_id: input.therapist_id, slot_time: input.slot_time },
   })
   return { error: null }
@@ -988,14 +988,14 @@ export async function removeSlot(slotId: string): Promise<{ error: string | null
   }
 
   const { data: slot } = await supabase
-    .from('griya_schedule_slots').select('branch_id, hari, slot_time').eq('id', slotId).single()
+    .from('griya_schedule_slots').select('branch_id, patient_id, hari, slot_time').eq('id', slotId).single()
 
   const { error } = await supabase.from('griya_schedule_slots').delete().eq('id', slotId)
   if (error) return { error: error.message }
 
   await logActivity({
     supabase, userId, action: 'delete', resourceType: 'griya_slot', resourceId: slotId,
-    branchId: (slot?.branch_id as string) ?? null,
+    branchId: (slot?.branch_id as string) ?? null, patientId: (slot?.patient_id as string) ?? null,
     oldValues: slot ? { hari: slot.hari, slot_time: hhmm(slot.slot_time as string) } : null,
   })
   return { error: null }

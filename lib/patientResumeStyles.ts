@@ -26,9 +26,9 @@ export const PATIENT_RESUME_STYLES = `
       padding: 20mm;
     }
 
-    .resume-header { text-align: center; border-bottom: 2px solid #FF0090; padding-bottom: 20px; margin-bottom: 30px; }
-    .resume-header h1 { font-family: Arial, sans-serif; color: #1a4a76; margin: 0; font-size: 24pt; text-transform: uppercase; letter-spacing: 2px; }
-    .resume-header h2 { font-family: Arial, sans-serif; color: #7f8c8d; margin: 6px 0 0 0; font-size: 12pt; font-weight: 300; }
+    .resume-header { text-align: center; margin-bottom: 24px; }
+    .resume-kop { display: block; width: 100%; height: auto; padding-bottom: 14px; border-bottom: 2px solid #FF0090; }
+    .resume-header h2 { font-family: Arial, sans-serif; color: #7f8c8d; margin: 16px 0 0 0; font-size: 12pt; font-weight: 300; }
 
     .resume-meta {
       display: flex; justify-content: space-between; margin-bottom: 30px;
@@ -91,7 +91,7 @@ export function renderPatientResumeBody(data: PublicResumeData, includePrintButt
   return `
 <div class="sheet">
   <div class="resume-header">
-    <h1>Fisioterapi Gang Sehat</h1>
+    <img class="resume-kop" src="/kop-fisioterapi-gang-sehat.png" width="1420" height="208" alt="Praktik Mandiri Fisioterapi Ridho Budi Rahmad, S.Fis., Ftr. — Fisioterapi Gang Sehat" />
     <h2>Peta Jalan Pemulihan Anda</h2>
   </div>
 

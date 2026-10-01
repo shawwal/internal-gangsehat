@@ -127,6 +127,30 @@ export async function searchPatients(term: string): Promise<PatientPlain[]> {
   return (data ?? []).map((row) => toPlain(row as unknown as Record<string, unknown>))
 }
 
+/**
+ * Lean patient lookup for the activity log filter. Unlike searchPatients it
+ * includes deactivated patients — their history is exactly what gets audited.
+ */
+export async function searchPatientsForActivityLog(
+  term: string,
+): Promise<{ id: string; name: string; no_rm: string | null; is_active: boolean }[]> {
+  const q = term.trim().toLowerCase()
+  if (q.length < 2) return []
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('patients')
+    .select('id, encrypted_name, encrypted_phone, no_rm, is_active')
+    .ilike('name_normalized', `%${q}%`)
+    .order('name_normalized', { ascending: true })
+    .limit(10)
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: decryptPatientPII({ encrypted_name: row.encrypted_name ?? '', encrypted_phone: row.encrypted_phone ?? '' }).name,
+    no_rm: row.no_rm,
+    is_active: row.is_active,
+  }))
+}
+
 export async function fetchPatientNames(ids: string[]): Promise<Record<string, string>> {
   const unique = [...new Set(ids.filter(Boolean))]
   if (!unique.length) return {}
