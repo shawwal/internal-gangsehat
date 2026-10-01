@@ -6,9 +6,11 @@ import { useToast } from '@/context/ToastContext'
 import { PageHeader } from '@/components/jadwal/PageHeader'
 import { DateNav } from '@/components/jadwal/DateNav'
 import { JadwalListToolbar } from '@/components/jadwalList/JadwalListToolbar'
+import type { EditField } from '@/components/jadwalList/JadwalListRow'
 import { JadwalListTable } from '@/components/jadwalList/JadwalListTable'
 import { Pagination } from '@/components/leave/Pagination'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, PAGE_SIZE_STORAGE_KEY, type JadwalListRow } from '@/components/jadwalList/types'
+import { fetchBranchStaff, type BranchStaffMember } from '@/app/actions/jadwal'
 import { fetchWaConfigAll, type WaConfigAll } from '@/app/actions/reminder-template'
 import { resolveWaConfig } from '@/lib/waConfig'
 import { fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/utils'
@@ -18,7 +20,7 @@ export default function JadwalHarianListPage() {
     today, selectedDate, setSelectedDate,
     rows, loading, error,
     branches, selectedBranchId, setSelectedBranchId,
-    reload, handleCancel,
+    reload, handleCancel, handleEdit,
   } = useJadwalList()
 
   const { showToast } = useToast()
@@ -40,12 +42,32 @@ export default function JadwalHarianListPage() {
   const [waConfig, setWaConfig] = useState<WaConfigAll | null>(null)
   const [fisioFilter, setFisioFilter]     = useState('')
   const [layananFilter, setLayananFilter] = useState('')
+  const [kehadiranFilter, setKehadiranFilter] = useState('')
+
+  const [staff, setStaff] = useState<BranchStaffMember[]>([])
+  useEffect(() => {
+    if (!selectedBranchId) { setStaff([]); return }
+    fetchBranchStaff(selectedBranchId).then(setStaff).catch(() => setStaff([]))
+  }, [selectedBranchId])
+  const staffOptions = staff.map((s) => ({ value: s.id, label: s.nickname || s.full_name }))
+
+  async function handleEditRow(row: JadwalListRow, field: EditField, value: string) {
+    const v = value === '' ? null : value
+    const local: Partial<JadwalListRow> = {}
+    if (field === 'attending_staff_id') {
+      local.attending_staff_name = staffOptions.find((o) => o.value === v)?.label ?? null
+    }
+    // A date or time can't be blank — ignore an emptied value.
+    if (field === 'visit_date' && !v) return
+    const error = await handleEdit(row, { [field]: v }, local)
+    showToast(error ?? 'Perubahan disimpan', error ? 'error' : 'success')
+  }
 
   useEffect(() => {
     fetchWaConfigAll().then(setWaConfig)
   }, [])
 
-  useEffect(() => { setPage(1) }, [selectedDate, selectedBranchId, pageSize, fisioFilter, layananFilter])
+  useEffect(() => { setPage(1) }, [selectedDate, selectedBranchId, pageSize, fisioFilter, layananFilter, kehadiranFilter])
 
   const uniqueSorted = (vals: (string | null)[]) =>
     [...new Set(vals.filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b, 'id'))
@@ -54,7 +76,8 @@ export default function JadwalHarianListPage() {
 
   const filteredRows = rows.filter((r) =>
     (!fisioFilter || r.attending_staff_name === fisioFilter) &&
-    (!layananFilter || r.layanan_label === layananFilter))
+    (!layananFilter || r.layanan_label === layananFilter) &&
+    (!kehadiranFilter || (kehadiranFilter === 'BELUM' ? !r.kehadiran : r.kehadiran === kehadiranFilter)))
   const total = filteredRows.length
   const from = (page - 1) * pageSize
   const pagedRows = filteredRows.slice(from, from + pageSize)
@@ -130,6 +153,8 @@ export default function JadwalHarianListPage() {
         layananOptions={layananOptions}
         layanan={layananFilter}
         onLayananChange={setLayananFilter}
+        kehadiran={kehadiranFilter}
+        onKehadiranChange={setKehadiranFilter}
       />
 
       {error && !loading && (
@@ -147,6 +172,8 @@ export default function JadwalHarianListPage() {
         onRemind={handleRemind}
         onConfirm={handleConfirm}
         onCancel={handleCancelRow}
+        fisioOptions={staffOptions}
+        onEdit={handleEditRow}
       />
 
       <Pagination page={page} pageSize={pageSize} total={total} onPage={setPage} />

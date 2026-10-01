@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchJadwalListRows, type JadwalListRow } from '@/app/actions/jadwalList'
-import { updateVisitStatus } from '@/app/actions/jadwal'
+import { updateVisit, updateVisitStatus } from '@/app/actions/jadwal'
 import { toIso } from '@/components/jadwal/utils'
 
 export function useJadwalList() {
@@ -62,12 +62,35 @@ export function useJadwalList() {
     await loadRows(selectedDate)
   }
 
+  /** Persist an inline edit, then patch the local row (or drop it if moved to another date). */
+  async function handleEdit(
+    row: JadwalListRow,
+    patch: {
+      visit_date?: string
+      visit_time?: string | null
+      attending_staff_id?: string | null
+      chief_complaint?: string | null
+      kehadiran?: string | null
+      notes?: string | null
+    },
+    local: Partial<JadwalListRow> = {},
+  ): Promise<string | null> {
+    const { error } = await updateVisit(row.id, patch)
+    if (error) return error
+    if (patch.visit_date && patch.visit_date !== toIso(selectedDate)) {
+      setRows((prev) => prev.filter((r) => r.id !== row.id))
+    } else {
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...patch, ...local } : r)))
+    }
+    return null
+  }
+
   return {
     today, selectedDate, setSelectedDate,
     rows, loading, error,
     userRole,
     branches, selectedBranchId, setSelectedBranchId,
     reload: () => loadRows(selectedDate),
-    handleCancel,
+    handleCancel, handleEdit,
   }
 }

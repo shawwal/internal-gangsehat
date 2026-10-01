@@ -11,6 +11,8 @@ interface Props {
   layananOptions: string[]
   layanan: string
   onLayananChange: (v: string) => void
+  kehadiran: string
+  onKehadiranChange: (v: string) => void
 }
 
 const selectCls = 'px-2.5 py-1.5 border border-border rounded-xl bg-input text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer'
@@ -19,6 +21,7 @@ export function JadwalListToolbar({
   pageSize, onPageSizeChange,
   fisioOptions, fisio, onFisioChange,
   layananOptions, layanan, onLayananChange,
+  kehadiran, onKehadiranChange,
 }: Props) {
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
@@ -41,6 +44,13 @@ export function JadwalListToolbar({
       <select value={layanan} onChange={(e) => onLayananChange(e.target.value)} className={selectCls}>
         <option value="">Semua Layanan</option>
         {layananOptions.map((l) => <option key={l} value={l}>{l}</option>)}
+      </select>
+
+      <select value={kehadiran} onChange={(e) => onKehadiranChange(e.target.value)} className={selectCls}>
+        <option value="">Semua Kehadiran</option>
+        <option value="HADIR">Hadir</option>
+        <option value="TIDAK HADIR">Tidak Hadir</option>
+        <option value="BELUM">Belum Diisi</option>
       </select>
     </div>
   )

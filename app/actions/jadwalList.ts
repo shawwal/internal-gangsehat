@@ -15,6 +15,7 @@ export interface JadwalListRow {
   patient_phone: string
   patient_age: string | null
   chief_complaint: string | null
+  attending_staff_id: string | null
   attending_staff_name: string | null
   service_type: string | null
   // Display label — same rule as the jadwal-harian VisitCard (package_id wins → 'Paket')
@@ -128,6 +129,7 @@ export async function fetchJadwalListRows(date: string, branchId?: string | null
       patient_phone:         phoneMap.get(v.patient_id) ?? '',
       patient_age:           ageMap.get(v.patient_id) ?? null,
       chief_complaint:       v.chief_complaint?.trim() || latestComplaints.get(v.patient_id) || null,
+      attending_staff_id:    v.attending_staff_id ?? null,
       attending_staff_name:  staff?.nickname || staff?.full_name || null,
       service_type:          v.service_type,
       layanan_label:         v.package_id

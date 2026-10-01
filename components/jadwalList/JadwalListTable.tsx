@@ -1,7 +1,7 @@
 'use client'
 
 import { CalendarX2 } from 'lucide-react'
-import { JadwalListRow } from './JadwalListRow'
+import { JadwalListRow, type EditField } from './JadwalListRow'
 import type { JadwalListRow as Row } from './types'
 
 interface Props {
@@ -12,6 +12,8 @@ interface Props {
   onRemind: (row: Row) => void
   onConfirm: (row: Row) => void
   onCancel: (row: Row) => void | Promise<void>
+  fisioOptions: { value: string; label: string }[]
+  onEdit: (row: Row, field: EditField, value: string) => Promise<void>
 }
 
 const HEADERS = [
@@ -21,7 +23,7 @@ const HEADERS = [
 
 const th = 'px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap'
 
-export function JadwalListTable({ rows, loading, page, pageSize, onRemind, onConfirm, onCancel }: Props) {
+export function JadwalListTable({ rows, loading, page, pageSize, onRemind, onConfirm, onCancel, fisioOptions, onEdit }: Props) {
   return (
     <div className="glass-card overflow-hidden">
       <div className="overflow-x-auto">
@@ -59,6 +61,8 @@ export function JadwalListTable({ rows, loading, page, pageSize, onRemind, onCon
                 onRemind={onRemind}
                 onConfirm={onConfirm}
                 onCancel={onCancel}
+                fisioOptions={fisioOptions}
+                onEdit={onEdit}
               />
             ))}
           </tbody>
