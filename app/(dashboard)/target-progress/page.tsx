@@ -5,20 +5,19 @@ import { useCallback, useEffect, useState } from 'react'
 import { Table2, TrendingUp, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { VISIT_STATUS_FILTER } from '@/components/performance/utils'
+import { fetchTargetProgressTransactions } from '@/app/actions/targetProgress'
 import { MonthPicker } from '@/components/targetProgress/MonthPicker'
 import { BranchPicker } from '@/components/targetProgress/BranchPicker'
 import { ClassicTable } from '@/components/targetProgress/ClassicTable'
 import { ModernView } from '@/components/targetProgress/ModernView'
 import {
   CATEGORY_DEFS,
-  TRANSACTION_CATEGORY_MAP,
   EDITABLE_ROLES,
   type CategoryKey,
   type CategorySummary,
   type BranchOption,
   type BranchTargetForProgress,
   type VisitForProgress,
-  type TransactionForProgress,
 } from '@/components/targetProgress/types'
 import { daysInMonth, buildDailyCounts, buildTransactionDailyCounts, mergeDailyCounts, sum, getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR } from '@/components/targetProgress/utils'
 import { SkeletonRegion, StatCardsSkeleton, TableSkeleton } from '@/components/ui/Skeleton'
@@ -88,7 +87,7 @@ export default function TargetProgressPage() {
     const supabase = createClient()
     const range = getMonthRange(month, year)
 
-    const [{ data: targetRow }, { data: visits }, { data: txRows }, { data: categorySettings }] = await Promise.all([
+    const [{ data: targetRow }, { data: visits }, transactionRows, { data: categorySettings }] = await Promise.all([
       supabase
         .from('branch_targets')
         .select('target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi')
@@ -106,16 +105,8 @@ export default function TargetProgressPage() {
         .in('status', [...VISIT_STATUS_FILTER])
         // Sport massage is tracked separately — not a "kunjungan"
         .or('service_type.is.null,service_type.neq."SPORT MASSAGE"'),
-      supabase
-        .from('transactions')
-        .select('category, transaction_date')
-        .eq('branch_id', selectedBranchId)
-        .eq('type', 'income')
-        .neq('status', 'rejected')
-        .in('payment_status', ['LUNAS', 'DP'])
-        .in('category', Object.keys(TRANSACTION_CATEGORY_MAP))
-        .gte('transaction_date', range.start)
-        .lte('transaction_date', range.end),
+      // Server action — therapist/staff can't read `transactions` under RLS
+      fetchTargetProgressTransactions(selectedBranchId, range.start, range.end),
       supabase
         .from('branch_target_category_settings')
         .select('category')
@@ -125,7 +116,6 @@ export default function TargetProgressPage() {
     const disabled = new Set((categorySettings ?? []).map(r => r.category as CategoryKey))
 
     const visitRows = (visits ?? []) as VisitForProgress[]
-    const transactionRows = (txRows ?? []) as TransactionForProgress[]
 
     const days = daysInMonth(year, month)
     const visitDaily = buildDailyCounts(visitRows, days)

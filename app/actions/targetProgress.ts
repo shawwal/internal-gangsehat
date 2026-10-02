@@ -1,10 +1,11 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import { VISIT_STATUS_FILTER, isAttended } from '@/components/performance/utils'
-import { CATEGORY_TO_TRANSACTION_TYPES } from '@/components/targetProgress/types'
-import type { CategoryKey } from '@/components/targetProgress/types'
+import { CATEGORY_TO_TRANSACTION_TYPES, TRANSACTION_CATEGORY_MAP } from '@/components/targetProgress/types'
+import type { CategoryKey, TransactionForProgress } from '@/components/targetProgress/types'
 import type { TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
 import { deriveAdminStatus, fetchPackagePositions } from '@/lib/internal/visitInsights'
 import { getVisitFormRoute } from '@/lib/visitRouting'
@@ -60,6 +61,43 @@ interface TransactionRow {
   description: string | null
   penjamin: string | null
   transaction_date: string
+}
+
+// Transactions that count toward the branch's TA/Sesi/Paket progress for a date
+// range. RLS only lets finance-capable roles read `transactions`, but every
+// role with the Progress Target page (therapist, staff, hr, marketing) must see
+// the same branch totals — so this reads with the service role after checking
+// the caller belongs to that branch, and returns only category + date (no
+// amounts or patient data).
+export async function fetchTargetProgressTransactions(
+  branchId: string,
+  start: string,
+  end: string,
+): Promise<TransactionForProgress[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data: profile } = await supabase
+    .from('internal_profiles')
+    .select('role, branch_id')
+    .eq('id', user.id)
+    .single()
+  if (!profile || profile.role === 'non-staff') return []
+  if (profile.role !== 'director' && profile.branch_id !== branchId) return []
+
+  const { data, error } = await createAdminClient()
+    .from('transactions')
+    .select('category, transaction_date')
+    .eq('branch_id', branchId)
+    .eq('type', 'income')
+    .neq('status', 'rejected')
+    .in('payment_status', ['LUNAS', 'DP'])
+    .in('category', Object.keys(TRANSACTION_CATEGORY_MAP))
+    .gte('transaction_date', start)
+    .lte('transaction_date', end)
+
+  if (error || !data) return []
+  return data as TransactionForProgress[]
 }
 
 export async function fetchTargetProgressDetail(
