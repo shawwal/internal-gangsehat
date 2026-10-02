@@ -49,8 +49,8 @@ export const DEFAULT_REMINDER_TEMPLATE =
 export const DEFAULT_ORDER_CONFIRMATION_TEMPLATE =
   'KONFIRMASI PENDAFTARAN JADWAL FISIOTERAPI\n\n* Nama: {{nama}}\n* Hari : {{hari}}\n* Tanggal: {{tanggal}}\n* Jam: {{jam}}\n* Order ID: {{order_id}}\nCatatan: admin akan mengingatkan kembali H-1 sebelum jadwal kunjungan anda'
 
-export const DEFAULT_RESUME_SHARE_TEMPLATE =
-  'Halo {{nama}},\n\nTerima kasih telah berkunjung ke Fisioterapi Gang Sehat. Berikut kami kirimkan ringkasan hasil pemeriksaan fisioterapi Anda pada {{tanggal}} (PDF terlampir).\n\nRingkasan juga dapat dibuka melalui link berikut:\n{{link}}\n\nSalam sehat,\nFisioterapi Gang Sehat'
+export const DEFAULT_RESUME_SHARE_MESSAGE =
+  'Halo, ini hasil pemeriksaan atas nama pasien tersebut yang terdaftar ya. Terimakasih😊🙏🏻'
 
 const HARI_ID =['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', "JUM'AT", 'SABTU']
 

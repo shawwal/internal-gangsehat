@@ -6,10 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { Bell, Building2, Calendar, CheckCircle2, ChevronRight, Loader2, User, AlertTriangle, Share2 } from 'lucide-react'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 import type { MedicalRecordRow } from '@/app/actions/medicalRecords'
-import { getResumeShareData } from '@/app/actions/resumeLinks'
-import { downloadPatientResumePdf } from '@/lib/downloadPatientResumePdf'
-import { DEFAULT_RESUME_SHARE_TEMPLATE, fillTemplate, formatDate, formatWaNumber } from '@/lib/utils'
-import { useToast } from '@/context/ToastContext'
+import { ShareResumeDialog } from './ShareResumeDialog'
 import { formatRecordDate } from './types'
 
 interface Props {
@@ -32,10 +29,9 @@ function missingFieldsLabel(record: MedicalRecordRow): string {
 }
 
 export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemind, reminding, reminded }: Props) {
-  const { showToast } = useToast()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [sharing, setSharing] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const formRoute = getVisitFormRoute(record.service_type)
   // Carry the full current path + query string back through `from` (not just
   // the bare pathname) so returning here after saving restores this exact
@@ -48,55 +44,6 @@ export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemin
       ? `/griya-anak/siswa/${record.patient_id}/terapi-awal/${record.id}`
       : `/griya-anak/siswa/${record.patient_id}/rekam-medis`
     : formRoute ? `/visits/${record.id}/${formRoute}?from=${encodeURIComponent(returnTo)}` : null
-
-  async function handleShare() {
-    // Opened synchronously, before any await, so the browser still treats it as
-    // part of the click — a window.open after the server round-trip is blocked
-    // as a popup (Safari, mobile Chrome).
-    const waWindow = window.open('', '_blank')
-    setSharing(true)
-    try {
-      const { url, phone, resume, error: err } = await getResumeShareData(record.id)
-      if (err || !url) {
-        waWindow?.close()
-        showToast(err || 'Gagal membuat link resume', 'error')
-        return
-      }
-
-      if (!phone) {
-        waWindow?.close()
-        try {
-          await navigator.clipboard.writeText(url)
-          showToast('Nomor WhatsApp pasien belum diisi — link resume disalin ke clipboard', 'info')
-        } catch {
-          showToast(url, 'info')
-        }
-        return
-      }
-
-      const msg = fillTemplate(DEFAULT_RESUME_SHARE_TEMPLATE, {
-        nama:    record.patient_name,
-        tanggal: formatDate(record.visit_date),
-        link:    url,
-      })
-      const waUrl = `https://wa.me/${formatWaNumber(phone)}?text=${encodeURIComponent(msg)}`
-      if (waWindow) waWindow.location.href = waUrl
-      else window.location.href = waUrl
-
-      // wa.me links can only prefill text, so the PDF is saved locally for the
-      // admin to attach in the chat that just opened.
-      if (resume) {
-        await downloadPatientResumePdf(resume, 'Resume')
-        showToast('Chat WhatsApp dibuka — lampirkan PDF resume yang baru diunduh', 'success')
-      } else {
-        showToast('Chat WhatsApp dibuka dengan link resume', 'success')
-      }
-    } catch {
-      showToast('Gagal membagikan resume', 'error')
-    } finally {
-      setSharing(false)
-    }
-  }
 
   return (
     <div className={`glass-card border-l-4 p-4 space-y-3 transition-all ${
@@ -185,12 +132,11 @@ export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemin
         {record.is_complete && (
           <button
             type="button"
-            onClick={handleShare}
-            disabled={sharing}
+            onClick={() => setShareOpen(true)}
             title="Kirim resume ke WhatsApp pasien"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors disabled:opacity-60"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
           >
-            {sharing ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
+            <Share2 size={14} />
             Bagikan ke Pasien
           </button>
         )}
@@ -207,6 +153,14 @@ export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemin
           </button>
         )}
       </div>
+
+      {shareOpen && (
+        <ShareResumeDialog
+          visitId={record.id}
+          patientName={record.patient_name}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -116,41 +116,49 @@ export async function getOrCreateResumeLink(visitId: string): Promise<{ url: str
 }
 
 // ── Staff: everything "Bagikan ke Pasien" needs to open a WhatsApp chat ──────
-// The share link, the resume payload (to render the PDF client-side) and the
-// patient's phone. getOrCreateResumeLink reads the visit with the caller's own
-// session, so RLS still decides who may share; the phone is decrypted here
-// because patient PII can only be decrypted server-side.
+// The resume payload (to render the PDF client-side) and the patient's phone.
+// No public link is created — the patient gets the PDF itself. The visit is
+// read with the caller's own session first, so RLS still decides who may
+// share; the phone is decrypted here because patient PII can only be
+// decrypted server-side.
 export interface ResumeShareData {
-  url: string | null
   phone: string | null
   resume: PublicResumeData | null
   error: string | null
 }
 
 export async function getResumeShareData(visitId: string): Promise<ResumeShareData> {
-  const { url, error } = await getOrCreateResumeLink(visitId)
-  if (error || !url) return { url: null, phone: null, resume: null, error: error ?? 'Gagal membuat link resume' }
-
-  const resume = await fetchPublicResume(url.split('/').pop() ?? '')
-
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { phone: null, resume: null, error: 'Tidak terautentikasi' }
+
   const { data: visit } = await supabase
     .from('patient_visits')
-    .select('patient_id')
+    .select('id, patient_id, diagnosis, treatment')
     .eq('id', visitId)
     .maybeSingle()
-  const { data: patient } = visit
-    ? await supabase.from('patients').select('encrypted_phone').eq('id', visit.patient_id).maybeSingle()
-    : { data: null }
+  if (!visit) return { phone: null, resume: null, error: 'Kunjungan tidak ditemukan' }
+  if (!visit.diagnosis || !visit.treatment) {
+    return { phone: null, resume: null, error: 'Diagnosis dan tindakan harus diisi sebelum membagikan resume' }
+  }
+
+  const resume = await buildResumeData(createAdminClient(), visitId)
+  if (!resume) return { phone: null, resume: null, error: 'Gagal memuat resume' }
+
+  const { data: patient } = await supabase
+    .from('patients')
+    .select('encrypted_phone')
+    .eq('id', visit.patient_id)
+    .maybeSingle()
 
   let phone: string | null = null
   if (patient?.encrypted_phone) {
     try {
       phone = decryptPatientPII({ encrypted_name: '', encrypted_phone: patient.encrypted_phone }).phone.trim() || null
-    } catch { /* leave null — caller falls back to copying the link */ }
+    } catch { /* leave null — the dialog then only offers the PDF download */ }
   }
 
-  return { url, phone, resume, error: null }
+  return { phone, resume, error: null }
 }
 
 // ── Staff: revoke a visit's active share link ─────────────────────────────────
@@ -184,17 +192,23 @@ export async function fetchPublicResume(token: string): Promise<PublicResumeData
     .maybeSingle()
   if (!link || link.revoked_at) return null
 
+  return buildResumeData(admin, link.visit_id)
+}
+
+// The narrow patient-facing payload for one visit — shared by the public
+// token page above and the staff-side "Bagikan ke Pasien" PDF.
+async function buildResumeData(admin: AdminClient, visitId: string): Promise<PublicResumeData | null> {
   const { data: visit } = await admin
     .from('patient_visits')
     .select('patient_id, visit_date, chief_complaint, diagnosis, treatment, attending_staff_id')
-    .eq('id', link.visit_id)
+    .eq('id', visitId)
     .maybeSingle()
   if (!visit) return null
 
   const { data: assessment } = await admin
     .from('terapi_awal_assessments')
     .select('history_moi, diagnosis_primer, icf_body_functions_notes, icf_activity_notes, short_term_goals, long_term_goals, created_by')
-    .eq('visit_id', link.visit_id)
+    .eq('visit_id', visitId)
     .maybeSingle()
 
   // Follow-up (SESI/PAKET TERAPI|VISIT) visits have no terapi_awal_assessments
@@ -203,7 +217,7 @@ export async function fetchPublicResume(token: string): Promise<PublicResumeData
   const { data: sessionNote } = assessment ? { data: null } : await admin
     .from('session_notes')
     .select('subjective_notes, clinical_impression, next_plan, hep_given, created_by')
-    .eq('visit_id', link.visit_id)
+    .eq('visit_id', visitId)
     .maybeSingle()
 
   const { data: patient } = await admin
