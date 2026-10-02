@@ -86,6 +86,7 @@ export function useGriyaJadwal() {
           kehadiran: 'HADIR',
           notes: null,
           package_id: null,
+          layanan_id: null,
         })
       }
       return { ...prev, visits }

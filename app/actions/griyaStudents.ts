@@ -223,6 +223,7 @@ export interface GriyaStudentVisit {
   therapist_name: string | null
   attending_staff_id: string | null
   package_id: string | null
+  layanan_id: string | null
   griya_slot_id: string | null
   discipline: string | null        // slot's discipline, else attending therapist's (lib/griyaDiscipline.ts)
 }
@@ -264,7 +265,7 @@ export async function fetchGriyaStudentDetail(patientId: string): Promise<GriyaS
       .order('hari', { ascending: true }),
     supabase
       .from('patient_visits')
-      .select('id, visit_date, visit_time, service_type, status, kehadiran, notes, attending_staff_id, package_id, griya_slot_id, internal_profiles!attending_staff_id(full_name, nickname)')
+      .select('id, visit_date, visit_time, service_type, status, kehadiran, notes, attending_staff_id, package_id, layanan_id, griya_slot_id, internal_profiles!attending_staff_id(full_name, nickname)')
       .eq('patient_id', patientId)
       .order('visit_date', { ascending: false })
       .limit(60),
@@ -298,6 +299,7 @@ export async function fetchGriyaStudentDetail(patientId: string): Promise<GriyaS
       therapist_name: p?.nickname || p?.full_name || null,
       attending_staff_id: (v.attending_staff_id as string) ?? null,
       package_id: (v.package_id as string) ?? null,
+      layanan_id: (v.layanan_id as string) ?? null,
       griya_slot_id: (v.griya_slot_id as string) ?? null,
       discipline: null,
     }

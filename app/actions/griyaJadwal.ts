@@ -58,6 +58,7 @@ export interface GriyaWeekVisit {
   kehadiran: string | null
   notes: string | null
   package_id: string | null
+  layanan_id: string | null
 }
 
 export interface GriyaScheduleRow {
@@ -190,7 +191,7 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
       .or(`end_date.is.null,end_date.gte.${weekMondayIso}`),
     supabase
       .from('patient_visits')
-      .select('id, patient_id, griya_slot_id, attending_staff_id, visit_date, visit_time, service_type, status, kehadiran, notes, package_id')
+      .select('id, patient_id, griya_slot_id, attending_staff_id, visit_date, visit_time, service_type, status, kehadiran, notes, package_id, layanan_id')
       .eq('branch_id', branchId)
       .gte('visit_date', weekMondayIso)
       .lte('visit_date', weekEndIso),
@@ -295,6 +296,7 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
       kehadiran: (v.kehadiran as string) ?? null,
       notes: (v.notes as string) ?? null,
       package_id: (v.package_id as string) ?? null,
+      layanan_id: (v.layanan_id as string) ?? null,
     })),
     schedules: ((schedulesRes.data ?? []) as Record<string, unknown>[]).map((r) => ({
       staff_id: r.staff_id as string,
