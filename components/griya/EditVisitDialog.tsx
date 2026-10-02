@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { X, Trash2 } from 'lucide-react'
 import { updateVisit, deleteVisit, fetchBranchStaff, type BranchStaffMember } from '@/app/actions/jadwal'
+import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
+import { CATEGORY_TO_SERVICE_TYPE } from '@/lib/serviceType'
 import { GRIYA_SERVICE_TYPES } from './types'
 import type { VisitStatus } from '@/types'
 
@@ -11,6 +13,7 @@ export interface EditableVisit {
   visit_date: string
   visit_time: string | null
   service_type: string | null
+  layanan_id?: string | null
   status: string
   kehadiran: string | null
   notes: string | null
@@ -25,6 +28,10 @@ const STATUS_OPTIONS: { value: VisitStatus; label: string }[] = [
   { value: 'no_show', label: 'Tidak Hadir (Alpa)' },
   { value: 'rescheduled', label: 'Dijadwalkan Ulang' },
 ]
+
+function rp(n: number) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
+}
 
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 const labelCls = 'block text-xs font-medium text-muted-foreground mb-1'
@@ -42,6 +49,7 @@ export function EditVisitDialog({ visit, branchId, onClose, onSaved }: Props) {
     visit_date: visit.visit_date,
     visit_time: visit.visit_time ?? '',
     service_type: visit.service_type ?? '',
+    layanan_id: visit.layanan_id ?? '',
     attending_staff_id: visit.attending_staff_id ?? '',
     kehadiran: visit.kehadiran ?? '',
     status: (visit.status as VisitStatus) ?? 'scheduled',
@@ -52,6 +60,24 @@ export function EditVisitDialog({ visit, branchId, onClose, onSaved }: Props) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { fetchBranchStaff(branchId).then(setStaff) }, [branchId])
+
+  // The branch's own service catalog (internal_layanan) — same picker as
+  // AssignStudentDialog. The visit's current layanan stays listed even if it
+  // has since been deactivated.
+  const [layanan, setLayanan] = useState<LayananRow[]>([])
+  useEffect(() => {
+    fetchLayananByBranch(branchId).then((rows) => setLayanan(rows.filter((r) => r.is_active || r.id === visit.layanan_id)))
+  }, [branchId, visit.layanan_id])
+
+  function pickLayanan(id: string) {
+    const row = layanan.find((l) => l.id === id)
+    setForm((f) => ({
+      ...f,
+      layanan_id: id,
+      // Clearing the pick falls back to the visit's original service type.
+      service_type: row ? (CATEGORY_TO_SERVICE_TYPE[row.kategori] ?? 'LAINNYA') : (visit.service_type ?? ''),
+    }))
+  }
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -67,6 +93,7 @@ export function EditVisitDialog({ visit, branchId, onClose, onSaved }: Props) {
       visit_date: form.visit_date,
       visit_time: form.visit_time || null,
       service_type: form.service_type || null,
+      ...(form.layanan_id !== (visit.layanan_id ?? '') ? { layanan_id: form.layanan_id || null } : {}),
       attending_staff_id: form.attending_staff_id || null,
       kehadiran: form.kehadiran || null,
       status: form.status,
@@ -111,10 +138,23 @@ export function EditVisitDialog({ visit, branchId, onClose, onSaved }: Props) {
 
           <div>
             <label className={labelCls}>Layanan</label>
-            <select value={form.service_type} onChange={(e) => set('service_type', e.target.value)} className={inputCls}>
-              <option value="">— pilih —</option>
-              {serviceOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            {layanan.length > 0 ? (
+              <select value={form.layanan_id} onChange={(e) => pickLayanan(e.target.value)} className={inputCls}>
+                <option value="">{visit.service_type ? `${visit.service_type} (saat ini)` : '— pilih layanan —'}</option>
+                {Array.from(new Set(layanan.map((l) => l.kategori))).map((kat) => (
+                  <optgroup key={kat} label={kat}>
+                    {layanan.filter((l) => l.kategori === kat).map((l) => (
+                      <option key={l.id} value={l.id}>{l.nama} · {rp(l.harga)}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            ) : (
+              <select value={form.service_type} onChange={(e) => set('service_type', e.target.value)} className={inputCls}>
+                <option value="">— pilih —</option>
+                {serviceOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
           </div>
 
           <div>

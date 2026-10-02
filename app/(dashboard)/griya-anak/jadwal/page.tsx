@@ -320,6 +320,7 @@ export default function GriyaJadwalPage() {
             visit_date: editVisit.visit.visit_date,
             visit_time: editVisit.visit.visit_time,
             service_type: editVisit.visit.service_type,
+            layanan_id: editVisit.visit.layanan_id,
             status: editVisit.visit.status,
             kehadiran: editVisit.visit.kehadiran,
             notes: editVisit.visit.notes,
