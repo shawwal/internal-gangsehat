@@ -115,6 +115,44 @@ export async function getOrCreateResumeLink(visitId: string): Promise<{ url: str
   return { url: `${origin}/resume/${token}`, error: null }
 }
 
+// ── Staff: everything "Bagikan ke Pasien" needs to open a WhatsApp chat ──────
+// The share link, the resume payload (to render the PDF client-side) and the
+// patient's phone. getOrCreateResumeLink reads the visit with the caller's own
+// session, so RLS still decides who may share; the phone is decrypted here
+// because patient PII can only be decrypted server-side.
+export interface ResumeShareData {
+  url: string | null
+  phone: string | null
+  resume: PublicResumeData | null
+  error: string | null
+}
+
+export async function getResumeShareData(visitId: string): Promise<ResumeShareData> {
+  const { url, error } = await getOrCreateResumeLink(visitId)
+  if (error || !url) return { url: null, phone: null, resume: null, error: error ?? 'Gagal membuat link resume' }
+
+  const resume = await fetchPublicResume(url.split('/').pop() ?? '')
+
+  const supabase = await createClient()
+  const { data: visit } = await supabase
+    .from('patient_visits')
+    .select('patient_id')
+    .eq('id', visitId)
+    .maybeSingle()
+  const { data: patient } = visit
+    ? await supabase.from('patients').select('encrypted_phone').eq('id', visit.patient_id).maybeSingle()
+    : { data: null }
+
+  let phone: string | null = null
+  if (patient?.encrypted_phone) {
+    try {
+      phone = decryptPatientPII({ encrypted_name: '', encrypted_phone: patient.encrypted_phone }).phone.trim() || null
+    } catch { /* leave null — caller falls back to copying the link */ }
+  }
+
+  return { url, phone, resume, error: null }
+}
+
 // ── Staff: revoke a visit's active share link ─────────────────────────────────
 export async function revokeResumeLink(visitId: string): Promise<{ error: string | null }> {
   const supabase = await createClient()

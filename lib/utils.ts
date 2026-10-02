@@ -49,7 +49,10 @@ export const DEFAULT_REMINDER_TEMPLATE =
 export const DEFAULT_ORDER_CONFIRMATION_TEMPLATE =
   'KONFIRMASI PENDAFTARAN JADWAL FISIOTERAPI\n\n* Nama: {{nama}}\n* Hari : {{hari}}\n* Tanggal: {{tanggal}}\n* Jam: {{jam}}\n* Order ID: {{order_id}}\nCatatan: admin akan mengingatkan kembali H-1 sebelum jadwal kunjungan anda'
 
-const HARI_ID = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', "JUM'AT", 'SABTU']
+export const DEFAULT_RESUME_SHARE_TEMPLATE =
+  'Halo {{nama}},\n\nTerima kasih telah berkunjung ke Fisioterapi Gang Sehat. Berikut kami kirimkan ringkasan hasil pemeriksaan fisioterapi Anda pada {{tanggal}} (PDF terlampir).\n\nRingkasan juga dapat dibuka melalui link berikut:\n{{link}}\n\nSalam sehat,\nFisioterapi Gang Sehat'
+
+const HARI_ID =['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', "JUM'AT", 'SABTU']
 
 export function formatHari(date: string | Date): string {
   const d = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)

@@ -6,7 +6,9 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { Bell, Building2, Calendar, CheckCircle2, ChevronRight, Loader2, User, AlertTriangle, Share2 } from 'lucide-react'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 import type { MedicalRecordRow } from '@/app/actions/medicalRecords'
-import { getOrCreateResumeLink } from '@/app/actions/resumeLinks'
+import { getResumeShareData } from '@/app/actions/resumeLinks'
+import { downloadPatientResumePdf } from '@/lib/downloadPatientResumePdf'
+import { DEFAULT_RESUME_SHARE_TEMPLATE, fillTemplate, formatDate, formatWaNumber } from '@/lib/utils'
 import { useToast } from '@/context/ToastContext'
 import { formatRecordDate } from './types'
 
@@ -48,15 +50,51 @@ export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemin
     : formRoute ? `/visits/${record.id}/${formRoute}?from=${encodeURIComponent(returnTo)}` : null
 
   async function handleShare() {
+    // Opened synchronously, before any await, so the browser still treats it as
+    // part of the click — a window.open after the server round-trip is blocked
+    // as a popup (Safari, mobile Chrome).
+    const waWindow = window.open('', '_blank')
     setSharing(true)
-    const { url, error: err } = await getOrCreateResumeLink(record.id)
-    setSharing(false)
-    if (err || !url) { showToast(err || 'Gagal membuat link resume', 'error'); return }
     try {
-      await navigator.clipboard.writeText(url)
-      showToast('Link resume disalin ke clipboard', 'success')
+      const { url, phone, resume, error: err } = await getResumeShareData(record.id)
+      if (err || !url) {
+        waWindow?.close()
+        showToast(err || 'Gagal membuat link resume', 'error')
+        return
+      }
+
+      if (!phone) {
+        waWindow?.close()
+        try {
+          await navigator.clipboard.writeText(url)
+          showToast('Nomor WhatsApp pasien belum diisi — link resume disalin ke clipboard', 'info')
+        } catch {
+          showToast(url, 'info')
+        }
+        return
+      }
+
+      const msg = fillTemplate(DEFAULT_RESUME_SHARE_TEMPLATE, {
+        nama:    record.patient_name,
+        tanggal: formatDate(record.visit_date),
+        link:    url,
+      })
+      const waUrl = `https://wa.me/${formatWaNumber(phone)}?text=${encodeURIComponent(msg)}`
+      if (waWindow) waWindow.location.href = waUrl
+      else window.location.href = waUrl
+
+      // wa.me links can only prefill text, so the PDF is saved locally for the
+      // admin to attach in the chat that just opened.
+      if (resume) {
+        await downloadPatientResumePdf(resume, 'Resume')
+        showToast('Chat WhatsApp dibuka — lampirkan PDF resume yang baru diunduh', 'success')
+      } else {
+        showToast('Chat WhatsApp dibuka dengan link resume', 'success')
+      }
     } catch {
-      showToast(url, 'info')
+      showToast('Gagal membagikan resume', 'error')
+    } finally {
+      setSharing(false)
     }
   }
 
@@ -149,7 +187,7 @@ export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemin
             type="button"
             onClick={handleShare}
             disabled={sharing}
-            title="Salin link resume untuk dibagikan ke pasien"
+            title="Kirim resume ke WhatsApp pasien"
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors disabled:opacity-60"
           >
             {sharing ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
