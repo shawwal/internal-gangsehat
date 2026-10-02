@@ -2,24 +2,27 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { DEFAULT_REMINDER_TEMPLATE, DEFAULT_ORDER_CONFIRMATION_TEMPLATE } from '@/lib/utils'
+import { DEFAULT_REMINDER_TEMPLATE, DEFAULT_ORDER_CONFIRMATION_TEMPLATE, DEFAULT_RESUME_SHARE_MESSAGE } from '@/lib/utils'
 
 const KEY_REMINDER      = 'patient_reminder_template'
 const KEY_CONFIRMATION  = 'order_confirmation_template'
 const KEY_ADMIN_PHONE   = 'admin_primary_phone'
+const KEY_RESUME        = 'resume_share_template'
 
-export type WaConfigKind = 'reminder' | 'confirmation' | 'phone'
+export type WaConfigKind = 'reminder' | 'confirmation' | 'phone' | 'resume'
 
 const KEYS: Record<WaConfigKind, string> = {
   reminder: KEY_REMINDER,
   confirmation: KEY_CONFIRMATION,
   phone: KEY_ADMIN_PHONE,
+  resume: KEY_RESUME,
 }
 
 const DEFAULTS: Record<WaConfigKind, string> = {
   reminder: DEFAULT_REMINDER_TEMPLATE,
   confirmation: DEFAULT_ORDER_CONFIRMATION_TEMPLATE,
   phone: '',
+  resume: DEFAULT_RESUME_SHARE_MESSAGE,
 }
 
 // Per-branch overrides live in the same internal_konfigurasi table under
@@ -27,7 +30,7 @@ const DEFAULTS: Record<WaConfigKind, string> = {
 // key, then to the built-in default.
 const branchKey = (kunci: string, branchId: string) => `${kunci}:${branchId}`
 
-export interface WaConfigSet { reminder: string; confirmation: string; phone: string }
+export interface WaConfigSet { reminder: string; confirmation: string; phone: string; resume: string }
 
 export interface WaConfigAll {
   global: WaConfigSet

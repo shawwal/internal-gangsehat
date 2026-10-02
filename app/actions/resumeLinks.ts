@@ -5,6 +5,8 @@ import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
+import { fetchWaConfigAll } from '@/app/actions/reminder-template'
+import { resolveWaConfig } from '@/lib/waConfig'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface PublicResumeData {
@@ -124,26 +126,29 @@ export async function getOrCreateResumeLink(visitId: string): Promise<{ url: str
 export interface ResumeShareData {
   phone: string | null
   resume: PublicResumeData | null
+  // The branch's "Bagikan Resume" message from Template Pesan WA, unfilled.
+  template: string
   error: string | null
 }
 
 export async function getResumeShareData(visitId: string): Promise<ResumeShareData> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { phone: null, resume: null, error: 'Tidak terautentikasi' }
+  const fail = (error: string): ResumeShareData => ({ phone: null, resume: null, template: '', error })
+  if (!user) return fail('Tidak terautentikasi')
 
   const { data: visit } = await supabase
     .from('patient_visits')
-    .select('id, patient_id, diagnosis, treatment')
+    .select('id, patient_id, branch_id, diagnosis, treatment')
     .eq('id', visitId)
     .maybeSingle()
-  if (!visit) return { phone: null, resume: null, error: 'Kunjungan tidak ditemukan' }
+  if (!visit) return fail('Kunjungan tidak ditemukan')
   if (!visit.diagnosis || !visit.treatment) {
-    return { phone: null, resume: null, error: 'Diagnosis dan tindakan harus diisi sebelum membagikan resume' }
+    return fail('Diagnosis dan tindakan harus diisi sebelum membagikan resume')
   }
 
   const resume = await buildResumeData(createAdminClient(), visitId)
-  if (!resume) return { phone: null, resume: null, error: 'Gagal memuat resume' }
+  if (!resume) return fail('Gagal memuat resume')
 
   const { data: patient } = await supabase
     .from('patients')
@@ -158,7 +163,8 @@ export async function getResumeShareData(visitId: string): Promise<ResumeShareDa
     } catch { /* leave null — the dialog then only offers the PDF download */ }
   }
 
-  return { phone, resume, error: null }
+  const template = resolveWaConfig(await fetchWaConfigAll(), visit.branch_id).resume
+  return { phone, resume, template, error: null }
 }
 
 // ── Staff: revoke a visit's active share link ─────────────────────────────────

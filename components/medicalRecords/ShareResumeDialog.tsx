@@ -6,7 +6,7 @@ import { Loader2, X } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import { getResumeShareData, type ResumeShareData } from '@/app/actions/resumeLinks'
 import { downloadPatientResumePdf } from '@/lib/downloadPatientResumePdf'
-import { DEFAULT_RESUME_SHARE_MESSAGE, formatWaNumber } from '@/lib/utils'
+import { DEFAULT_RESUME_SHARE_MESSAGE, fillTemplate, formatDate, formatWaNumber } from '@/lib/utils'
 import { useToast } from '@/context/ToastContext'
 
 interface Props {
@@ -21,14 +21,22 @@ interface Props {
 export function ShareResumeDialog({ visitId, patientName, onClose }: Props) {
   const { showToast } = useToast()
   const [data, setData] = useState<ResumeShareData | null>(null)
-  const [message, setMessage] = useState(DEFAULT_RESUME_SHARE_MESSAGE)
+  const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    getResumeShareData(visitId).then((result) => { if (!cancelled) setData(result) })
+    getResumeShareData(visitId).then((result) => {
+      if (cancelled) return
+      setData(result)
+      // Default text comes from Template Pesan WA (per branch), still editable here.
+      setMessage(fillTemplate(result.template || DEFAULT_RESUME_SHARE_MESSAGE, {
+        nama:    result.resume?.patientName ?? patientName,
+        tanggal: result.resume ? formatDate(result.resume.visitDate) : '',
+      }))
+    })
     return () => { cancelled = true }
-  }, [visitId])
+  }, [visitId, patientName])
 
   async function send() {
     if (!data?.resume) return

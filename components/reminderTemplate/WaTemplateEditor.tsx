@@ -10,7 +10,7 @@ import {
 import { resolveWaConfig } from '@/lib/waConfig'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
-import { DEFAULT_REMINDER_TEMPLATE, DEFAULT_ORDER_CONFIRMATION_TEMPLATE } from '@/lib/utils'
+import { DEFAULT_REMINDER_TEMPLATE, DEFAULT_ORDER_CONFIRMATION_TEMPLATE, DEFAULT_RESUME_SHARE_MESSAGE } from '@/lib/utils'
 import { TemplateEditorCard } from './TemplateEditorCard'
 import { FormSkeleton } from '@/components/ui/Skeleton'
 
@@ -34,6 +34,11 @@ const CONFIRMATION_PLACEHOLDERS = [
   { key: 'cabang',      label: 'Nama cabang' },
   { key: 'order_id',    label: 'Order ID' },
   { key: 'nomor_admin', label: 'Nomor WhatsApp admin' },
+]
+
+const RESUME_PLACEHOLDERS = [
+  { key: 'nama',    label: 'Nama pasien' },
+  { key: 'tanggal', label: 'Tanggal kunjungan' },
 ]
 
 const REMINDER_SAMPLE = {
@@ -87,8 +92,8 @@ export function WaTemplateEditor({ lockedBranchId }: { lockedBranchId?: string }
   const [all, setAll] = useState<WaConfigAll | null>(null)
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
   const [branchId, setBranchId] = useState<string | null>(lockedBranchId ?? null)   // null = default for every branch
-  const [draft, setDraft] = useState<WaConfigSet>({ reminder: '', confirmation: '', phone: '' })
-  const [status, setStatus] = useState<Record<WaConfigKind, Status>>({ reminder: IDLE, confirmation: IDLE, phone: IDLE })
+  const [draft, setDraft] = useState<WaConfigSet>({ reminder: '', confirmation: '', phone: '', resume: '' })
+  const [status, setStatus] = useState<Record<WaConfigKind, Status>>({ reminder: IDLE, confirmation: IDLE, phone: IDLE, resume: IDLE })
   const [clearing, setClearing] = useState<WaConfigKind | null>(null)
 
   const load = useCallback(async () => {
@@ -113,7 +118,7 @@ export function WaTemplateEditor({ lockedBranchId }: { lockedBranchId?: string }
   function selectBranch(id: string | null) {
     setBranchId(id)
     setDraft(id ? resolveWaConfig(all, id) : all!.global)
-    setStatus({ reminder: IDLE, confirmation: IDLE, phone: IDLE })
+    setStatus({ reminder: IDLE, confirmation: IDLE, phone: IDLE, resume: IDLE })
   }
 
   const overrides = branchId ? all?.byBranch[branchId] ?? {} : {}
@@ -264,6 +269,24 @@ export function WaTemplateEditor({ lockedBranchId }: { lockedBranchId?: string }
               error={status.confirmation.error}
               placeholders={CONFIRMATION_PLACEHOLDERS}
               sampleVars={{ ...CONFIRMATION_SAMPLE, ...(branchName ? { cabang: branchName } : {}), ...(draft.phone ? { nomor_admin: draft.phone } : {}) }}
+            />
+          </div>
+
+          {/* Resume share message */}
+          <div className="space-y-2">
+            {branchId && <OverrideBar overridden={overrides.resume !== undefined} onClear={() => handleClear('resume')} clearing={clearing === 'resume'} />}
+            <TemplateEditorCard
+              title="Bagikan Resume ke Pasien"
+              description="Pesan awal saat menekan Bagikan ke Pasien di Rekam Medis — masih bisa diubah sebelum dikirim"
+              template={draft.resume}
+              onChange={(v) => setDraft((d) => ({ ...d, resume: v }))}
+              onSave={() => handleSave('resume')}
+              onReset={() => setDraft((d) => ({ ...d, resume: DEFAULT_RESUME_SHARE_MESSAGE }))}
+              saving={status.resume.saving}
+              saved={status.resume.saved}
+              error={status.resume.error}
+              placeholders={RESUME_PLACEHOLDERS}
+              sampleVars={{ nama: REMINDER_SAMPLE.nama, tanggal: REMINDER_SAMPLE.tanggal }}
             />
           </div>
         </>
