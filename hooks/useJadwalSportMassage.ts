@@ -28,6 +28,8 @@ export function useJadwalSportMassage() {
   const [soreDividerHour, setSoreDividerHour] = useState(14)
   const [gridStart, setGridStart]             = useState(8)
   const [gridEnd, setGridEnd]                 = useState(21)
+  // Hours of the branch's active schedule_slots; null = branch has none configured
+  const [slotHours, setSlotHours]             = useState<number[] | null>(null)
   const today = new Date()
 
   // Load user role, branch, and branches list on mount
@@ -52,33 +54,43 @@ export function useJadwalSportMassage() {
     loadMeta()
   }, [])
 
-  // Grid bounds + Pagi/Sore divider follow the selected branch's configured slots
-  useEffect(() => {
-    if (!selectedBranchId) return
-    let cancelled = false
-    createClient()
+  // The grid's hour rows + Pagi/Sore divider follow the selected branch's active slots
+  const fetchSlots = useCallback(async () => {
+    if (!selectedBranchId) return null
+    const { data } = await createClient()
       .from('schedule_slots')
       .select('shift, slot_time')
       .eq('is_active', true)
       .eq('branch_id', selectedBranchId)
       .order('slot_time')
-      .then(({ data }) => {
-        if (cancelled) return
-        if (data && data.length > 0) {
-          const toHour = (t: string) => parseInt(t.split(':')[0], 10)
-          const hours = data.map((s) => toHour(s.slot_time))
-          setGridStart(Math.min(...hours))
-          setGridEnd(Math.max(...hours) + 1)
-          const soreHours = data.filter((s) => s.shift === 'SORE').map((s) => toHour(s.slot_time))
-          setSoreDividerHour(soreHours.length > 0 ? Math.min(...soreHours) : 14)
-        } else {
-          setGridStart(8)
-          setGridEnd(21)
-          setSoreDividerHour(14)
-        }
-      })
-    return () => { cancelled = true }
+    return data ?? null
   }, [selectedBranchId])
+
+  function applySlots(data: { shift: string; slot_time: string }[] | null) {
+    const toHour = (t: string) => parseInt(t.split(':')[0], 10)
+    if (data && data.length > 0) {
+      const hours = [...new Set(data.map((s) => toHour(s.slot_time)))].sort((a, b) => a - b)
+      setSlotHours(hours)
+      setGridStart(hours[0])
+      setGridEnd(hours[hours.length - 1] + 1)
+      const soreHours = data.filter((s) => s.shift === 'SORE').map((s) => toHour(s.slot_time))
+      setSoreDividerHour(soreHours.length > 0 ? Math.min(...soreHours) : 14)
+    } else {
+      setSlotHours(null)
+      setGridStart(8)
+      setGridEnd(21)
+      setSoreDividerHour(14)
+    }
+  }
+
+  // Slots are edited on another page (Slot Jadwal) — re-read them whenever this
+  // tab regains focus so a newly added/disabled slot shows up without a reload.
+  useEffect(() => {
+    let cancelled = false
+    const onFocus = () => { fetchSlots().then((data) => { if (!cancelled) applySlots(data) }) }
+    window.addEventListener('focus', onFocus)
+    return () => { cancelled = true; window.removeEventListener('focus', onFocus) }
+  }, [fetchSlots])
 
   // Load schedules, leaves, and visits for a date.
   // `silent` skips the full-grid loading flag so an in-place refresh (after
@@ -95,7 +107,7 @@ export function useJadwalSportMassage() {
       return selectedBranchId ? q.eq('branch_id', selectedBranchId) : q
     }
 
-    const [schedulesRes, leavesRes, visitsData, overridesRes, allTherapistsRes] = await Promise.all([
+    const [schedulesRes, leavesRes, visitsData, overridesRes, allTherapistsRes, slotsData] = await Promise.all([
       applyBranch(
         supabase
           .from('schedules')
@@ -129,7 +141,10 @@ export function useJadwalSportMassage() {
           .eq('is_active', true)
           .order('full_name'),
       ),
+      fetchSlots(),
     ])
+
+    applySlots(slotsData)
 
     // Separate approved vs pending leaves
     const approvedLeaveMap = new Map<string, string>()
@@ -286,7 +301,7 @@ export function useJadwalSportMassage() {
     setStaff(sorted)
     setVisits(visitsData)
     setLoading(false)
-  }, [selectedBranchId])
+  }, [selectedBranchId, fetchSlots])
 
   useEffect(() => {
     if (selectedBranchId === undefined) return
@@ -337,6 +352,7 @@ export function useJadwalSportMassage() {
     soreDividerHour,
     gridStart,
     gridEnd,
+    slotHours,
     branches,
     selectedBranchId,
     setSelectedBranchId,

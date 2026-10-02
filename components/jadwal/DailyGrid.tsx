@@ -103,6 +103,8 @@ interface Props {
   soreDividerHour?: number
   gridStart?: number
   gridEnd?: number
+  /** Hours of the branch's active schedule_slots — when set, the grid shows exactly these rows */
+  slotHours?: number[] | null
   shiftFilter?: 'all' | 'pagi' | 'sore'
   onAssign: (target: AssignTarget) => void
   onStatusChange: (visitId: string, status: VisitStatus) => void
@@ -126,7 +128,7 @@ interface Props {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const canDrop = !!onMoveVisit
 
@@ -169,15 +171,20 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
     hourMap.set(hour, list)
   }
 
-  // Visible hour range follows the configured schedule_slots bounds directly
-  // (gridStart/gridEnd), so the grid is consistent day-to-day regardless of
-  // which staff happen to be scheduled that particular day.
-  const effectiveStart = gridStart
-  const effectiveEnd   = gridEnd
-  const SKIP_HOURS     = new Set([12, 18])
-  const HOURS_VISIBLE  = Array.from({ length: effectiveEnd - effectiveStart }, (_, i) => effectiveStart + i)
-    .filter(h => !SKIP_HOURS.has(h))
+  // Visible hour rows are the branch's active schedule_slots, so adding or
+  // disabling a slot shows up here. Hours that already hold a visit are always
+  // kept, so a booking never disappears with its slot. Without configured
+  // slots, fall back to the gridStart–gridEnd range minus the default breaks.
+  const SKIP_HOURS = new Set([12, 18])
+  const bookedHours = [...visitMap.values()].flatMap((hourMap) => [...hourMap.keys()])
+  const baseHours = slotHours && slotHours.length > 0
+    ? slotHours
+    : Array.from({ length: gridEnd - gridStart }, (_, i) => gridStart + i).filter((h) => !SKIP_HOURS.has(h))
+  const HOURS_VISIBLE = [...new Set([...baseHours, ...bookedHours])]
+    .sort((a, b) => a - b)
     .filter(h => shiftFilter === 'all' ? true : shiftFilter === 'pagi' ? h < soreDividerHour : h >= soreDividerHour)
+  const effectiveStart = HOURS_VISIBLE[0] ?? gridStart
+  const effectiveEnd   = (HOURS_VISIBLE[HOURS_VISIBLE.length - 1] ?? gridEnd - 1) + 1
 
   // Row height per hour is normally SLOT_H, but grows for hours where any staff
   // column has 2+ stacked visits, so rows never overlap the next hour's cell.
@@ -202,12 +209,12 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
   function hourToPx(h: number): number {
     const floorH = Math.floor(h)
     const frac   = h - floorH
-    if (SKIP_HOURS.has(floorH)) {
+    const idx = HOURS_VISIBLE.indexOf(floorH)
+    if (idx === -1) {
+      // Hour has no row (break / disabled slot) — snap to the next visible row
       const nextIdx = HOURS_VISIBLE.findIndex(vh => vh > floorH)
       return nextIdx === -1 ? totalH : rowOffsets[nextIdx]
     }
-    const idx = HOURS_VISIBLE.indexOf(floorH)
-    if (idx === -1) return floorH < (HOURS_VISIBLE[0] ?? 0) ? 0 : totalH
     return rowOffsets[idx] + frac * rowHeights[idx]
   }
 

@@ -48,7 +48,7 @@ export const navigation: NavItem[] = [
     label: 'Slot Jadwal',
     href: '/director/schedule-slots',
     icon: 'Clock',
-    roles: ['director'],
+    roles: ['director', 'admin'],
     group: 'management',
   },
   {

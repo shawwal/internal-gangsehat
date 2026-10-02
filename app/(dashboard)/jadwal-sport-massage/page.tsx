@@ -34,7 +34,7 @@ export default function JadwalSportMassagePage() {
     leavePopover, setLeavePopover,
     leaveSaving, canApproveLeave,
     userRole,
-    soreDividerHour, gridStart, gridEnd,
+    soreDividerHour, gridStart, gridEnd, slotHours,
     branches, selectedBranchId, setSelectedBranchId,
     loadAll, handleStatusChange, handleDelete, handleLeaveAction,
   } = useJadwalSportMassage()
@@ -228,6 +228,7 @@ export default function JadwalSportMassagePage() {
                     soreDividerHour={soreDividerHour}
                     gridStart={gridStart}
                     gridEnd={gridEnd}
+                    slotHours={slotHours}
                     shiftFilter={shiftFilter}
                     onAssign={setAssignTarget}
                     onStatusChange={handleStatusChange}

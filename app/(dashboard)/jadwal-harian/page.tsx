@@ -47,7 +47,7 @@ export default function JadwalHarianPage() {
     leavePopover, setLeavePopover,
     leaveSaving, canApproveLeave,
     userRole,
-    soreDividerHour, gridStart, gridEnd,
+    soreDividerHour, gridStart, gridEnd, slotHours,
     branches, selectedBranchId, setSelectedBranchId,
     loadAll, handleStatusChange, handleDelete, handleMoveVisit, handleLeaveAction,
   } = useJadwalHarian()
@@ -434,6 +434,7 @@ export default function JadwalHarianPage() {
                 soreDividerHour={soreDividerHour}
                 gridStart={gridStart}
                 gridEnd={gridEnd}
+                slotHours={slotHours}
                 shiftFilter={shiftFilter}
                 onAssign={setAssignTarget}
                 onStatusChange={handleStatusChange}
