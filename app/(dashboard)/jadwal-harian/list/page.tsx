@@ -87,6 +87,7 @@ export default function JadwalHarianListPage() {
     const branchName = branches.find((b) => b.id === row.branch_id)?.name ?? ''
     const msg = fillTemplate(resolveWaConfig(waConfig, row.branch_id).reminder, {
       nama:        row.patient_name,
+      hari:        formatHari(row.visit_date),
       tanggal:     formatDate(row.visit_date),
       jam:         row.visit_time ?? '',
       layanan:     row.layanan_label ?? '',

@@ -6,7 +6,7 @@ import { Loader2, X } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import { getResumeShareData, type ResumeShareData } from '@/app/actions/resumeLinks'
 import { downloadPatientResumePdf } from '@/lib/downloadPatientResumePdf'
-import { DEFAULT_RESUME_SHARE_MESSAGE, fillTemplate, formatDate, formatWaNumber } from '@/lib/utils'
+import { DEFAULT_RESUME_SHARE_MESSAGE, fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/utils'
 import { useToast } from '@/context/ToastContext'
 
 interface Props {
@@ -32,6 +32,7 @@ export function ShareResumeDialog({ visitId, patientName, onClose }: Props) {
       // Default text comes from Template Pesan WA (per branch), still editable here.
       setMessage(fillTemplate(result.template || DEFAULT_RESUME_SHARE_MESSAGE, {
         nama:    result.resume?.patientName ?? patientName,
+        hari:    result.resume ? formatHari(result.resume.visitDate) : '',
         tanggal: result.resume ? formatDate(result.resume.visitDate) : '',
       }))
     })

@@ -238,6 +238,7 @@ export default function JadwalHarianPage() {
 
     const msg = fillTemplate(resolveWaConfig(waConfig, visit.branch_id).reminder, {
       nama:        visit.patient_name,
+      hari:        formatHari(visit.visit_date),
       tanggal:     formatDate(visit.visit_date),
       jam:         visit.visit_time ?? '',
       layanan:     visit.service_type ?? '',

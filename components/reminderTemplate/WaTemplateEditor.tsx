@@ -16,6 +16,7 @@ import { FormSkeleton } from '@/components/ui/Skeleton'
 
 const REMINDER_PLACEHOLDERS = [
   { key: 'nama',        label: 'Nama pasien' },
+  { key: 'hari',        label: 'Hari kunjungan' },
   { key: 'tanggal',     label: 'Tanggal kunjungan' },
   { key: 'jam',         label: 'Jam kunjungan' },
   { key: 'layanan',     label: 'Jenis layanan' },
@@ -38,11 +39,13 @@ const CONFIRMATION_PLACEHOLDERS = [
 
 const RESUME_PLACEHOLDERS = [
   { key: 'nama',    label: 'Nama pasien' },
+  { key: 'hari',    label: 'Hari kunjungan' },
   { key: 'tanggal', label: 'Tanggal kunjungan' },
 ]
 
 const REMINDER_SAMPLE = {
   nama:        'Budi Santoso',
+  hari:        'RABU',
   tanggal:     '15 Jul 2026',
   jam:         '09:00',
   layanan:     'SESI TERAPI',
@@ -286,7 +289,7 @@ export function WaTemplateEditor({ lockedBranchId }: { lockedBranchId?: string }
               saved={status.resume.saved}
               error={status.resume.error}
               placeholders={RESUME_PLACEHOLDERS}
-              sampleVars={{ nama: REMINDER_SAMPLE.nama, tanggal: REMINDER_SAMPLE.tanggal }}
+              sampleVars={{ nama: REMINDER_SAMPLE.nama, hari: REMINDER_SAMPLE.hari, tanggal: REMINDER_SAMPLE.tanggal }}
             />
           </div>
         </>
