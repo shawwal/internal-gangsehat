@@ -7,7 +7,7 @@ import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
 import { SERVICE_TYPES } from '@/lib/serviceType'
 import { resolveTherapistForSlot } from '@/lib/griyaRotation'
-import { hariOf } from '@/components/griya/constants'
+import { resolveDay, isBusyCell } from '@/components/griya/resolve'
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -172,10 +172,19 @@ async function readBranchSchedules(supabase: SupaClient, branchId: string) {
     .eq('branch_id', branchId)
 }
 
-export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): Promise<GriyaWeek> {
-  const supabase = await createClient()
-  const weekEndIso = addDaysIso(weekMondayIso, 6)
+const SLOT_COLS = 'id, patient_id, therapist_id, discipline, hari, slot_time, service_type, package_id, start_date, end_date, status, notes'
+const VISIT_COLS = 'id, patient_id, griya_slot_id, attending_staff_id, visit_date, visit_time, service_type, status, kehadiran, notes, package_id, layanan_id'
 
+type Row = Record<string, unknown>
+
+/** The raw rows behind one week of the grid (visits optionally narrowed to a
+ *  range of that week). Shared by fetchGriyaWeek and isCellOccupied so the
+ *  server's "is this cell taken" check always sees exactly what the grid renders. */
+async function loadGriyaWeekRows(
+  supabase: SupaClient, branchId: string, weekMondayIso: string,
+  visitRange?: { from: string; to: string },
+) {
+  const weekEndIso = addDaysIso(weekMondayIso, 6)
   const [therapistsRes, slotsRes, visitsRes, schedulesRes] = await Promise.all([
     supabase
       .from('griya_therapists')
@@ -189,16 +198,16 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
     // start_date/end_date window per day.
     supabase
       .from('griya_schedule_slots')
-      .select('id, patient_id, therapist_id, discipline, hari, slot_time, service_type, package_id, start_date, end_date, status, notes')
+      .select(SLOT_COLS)
       .eq('branch_id', branchId)
       .lte('start_date', weekEndIso)
       .or(`and(status.eq.active,end_date.is.null),end_date.gte.${weekMondayIso}`),
     supabase
       .from('patient_visits')
-      .select('id, patient_id, griya_slot_id, attending_staff_id, visit_date, visit_time, service_type, status, kehadiran, notes, package_id, layanan_id')
+      .select(VISIT_COLS)
       .eq('branch_id', branchId)
-      .gte('visit_date', weekMondayIso)
-      .lte('visit_date', weekEndIso),
+      .gte('visit_date', visitRange?.from ?? weekMondayIso)
+      .lte('visit_date', visitRange?.to ?? weekEndIso),
     // Therapist/staff roles can only SELECT their own `schedules` rows (RLS "self access"),
     // so rotation saw only the viewer on duty and piled every slot of their discipline into
     // their column. Read the branch's rolling schedule with the admin client instead, but
@@ -206,10 +215,76 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
     readBranchSchedules(supabase, branchId),
   ])
 
-  const slots = (slotsRes.data ?? []) as Record<string, unknown>[]
-  const visits = ((visitsRes.data ?? []) as Record<string, unknown>[]).filter(
-    (v) => v.griya_slot_id != null || (SERVICE_TYPES as string[]).includes((v.service_type as string) ?? ''),
-  )
+  return {
+    therapistRows: (therapistsRes.data ?? []) as Row[],
+    slots: (slotsRes.data ?? []) as Row[],
+    visits: ((visitsRes.data ?? []) as Row[]).filter(
+      (v) => v.griya_slot_id != null || (SERVICE_TYPES as string[]).includes((v.service_type as string) ?? ''),
+    ),
+    schedules: ((schedulesRes.data ?? []) as Row[]).map((r): GriyaScheduleRow => ({
+      staff_id: r.staff_id as string,
+      hari: r.hari as string,
+      jam_mulai: hhmm(r.jam_mulai as string) ?? '08:00',
+      jam_selesai: hhmm(r.jam_selesai as string) ?? '17:00',
+      status: r.status as string,
+    })),
+  }
+}
+
+function toGriyaTherapist(t: Row, p: { full_name?: string; nickname?: string | null; avatar_url?: string | null } | null): GriyaTherapist {
+  return {
+    id: t.id as string,
+    therapist_id: t.therapist_id as string,
+    full_name: p?.full_name ?? 'Terapis',
+    nickname: p?.nickname ?? null,
+    avatar_url: p?.avatar_url ?? null,
+    discipline: t.discipline as Discipline,
+    display_order: t.display_order as number,
+    is_active: t.is_active as boolean,
+  }
+}
+
+function toGriyaSlot(s: Row, name: string, phone?: string): GriyaSlot {
+  return {
+    id: s.id as string,
+    patient_id: s.patient_id as string,
+    patient_name: name,
+    ...(phone !== undefined ? { patient_phone: phone } : {}),
+    therapist_id: (s.therapist_id as string) ?? null,
+    discipline: s.discipline as Discipline,
+    hari: s.hari as Hari,
+    slot_time: hhmm(s.slot_time as string) ?? '08:00',
+    service_type: (s.service_type as string) ?? null,
+    package_id: (s.package_id as string) ?? null,
+    start_date: s.start_date as string,
+    end_date: (s.end_date as string) ?? null,
+    status: s.status as SlotStatus,
+    notes: (s.notes as string) ?? null,
+  }
+}
+
+function toGriyaVisit(v: Row, name: string, phone: string): GriyaWeekVisit {
+  return {
+    id: v.id as string,
+    patient_id: v.patient_id as string,
+    patient_name: name,
+    patient_phone: phone,
+    griya_slot_id: (v.griya_slot_id as string) ?? null,
+    attending_staff_id: (v.attending_staff_id as string) ?? null,
+    visit_date: v.visit_date as string,
+    visit_time: hhmm(v.visit_time as string),
+    service_type: (v.service_type as string) ?? null,
+    status: v.status as string,
+    kehadiran: (v.kehadiran as string) ?? null,
+    notes: (v.notes as string) ?? null,
+    package_id: (v.package_id as string) ?? null,
+    layanan_id: (v.layanan_id as string) ?? null,
+  }
+}
+
+export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): Promise<GriyaWeek> {
+  const supabase = await createClient()
+  const { therapistRows, slots, visits, schedules } = await loadGriyaWeekRows(supabase, branchId, weekMondayIso)
 
   // Batch-decrypt patient names for every patient referenced by a slot or visit
   const patientIds = [...new Set([
@@ -242,7 +317,6 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
   // embedded join showed every other column as a blank "Terapis". The roster itself was
   // already scoped by RLS on griya_therapists, so read just these display fields with the
   // admin client for exactly those ids.
-  const therapistRows = (therapistsRes.data ?? []) as Record<string, unknown>[]
   type ProfileLite = { full_name?: string; nickname?: string | null; avatar_url?: string | null }
   const profileMap = new Map<string, ProfileLite>()
   if (therapistRows.length > 0) {
@@ -253,62 +327,12 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
     for (const pr of profs ?? []) profileMap.set(pr.id, pr)
   }
 
-  const therapists: GriyaTherapist[] = therapistRows.map((t) => {
-    const p = profileMap.get(t.therapist_id as string) ?? null
-    return {
-      id: t.id as string,
-      therapist_id: t.therapist_id as string,
-      full_name: p?.full_name ?? 'Terapis',
-      nickname: p?.nickname ?? null,
-      avatar_url: p?.avatar_url ?? null,
-      discipline: t.discipline as Discipline,
-      display_order: t.display_order as number,
-      is_active: t.is_active as boolean,
-    }
-  })
-
   return {
     branchId,
-    therapists,
-    slots: slots.map((s) => ({
-      id: s.id as string,
-      patient_id: s.patient_id as string,
-      patient_name: nameMap.get(s.patient_id as string) ?? 'Anak',
-      patient_phone: phoneMap.get(s.patient_id as string) ?? '',
-      therapist_id: (s.therapist_id as string) ?? null,
-      discipline: s.discipline as Discipline,
-      hari: s.hari as Hari,
-      slot_time: hhmm(s.slot_time as string) ?? '08:00',
-      service_type: (s.service_type as string) ?? null,
-      package_id: (s.package_id as string) ?? null,
-      start_date: s.start_date as string,
-      end_date: (s.end_date as string) ?? null,
-      status: s.status as SlotStatus,
-      notes: (s.notes as string) ?? null,
-    })),
-    visits: visits.map((v) => ({
-      id: v.id as string,
-      patient_id: v.patient_id as string,
-      patient_name: nameMap.get(v.patient_id as string) ?? 'Anak',
-      patient_phone: phoneMap.get(v.patient_id as string) ?? '',
-      griya_slot_id: (v.griya_slot_id as string) ?? null,
-      attending_staff_id: (v.attending_staff_id as string) ?? null,
-      visit_date: v.visit_date as string,
-      visit_time: hhmm(v.visit_time as string),
-      service_type: (v.service_type as string) ?? null,
-      status: v.status as string,
-      kehadiran: (v.kehadiran as string) ?? null,
-      notes: (v.notes as string) ?? null,
-      package_id: (v.package_id as string) ?? null,
-      layanan_id: (v.layanan_id as string) ?? null,
-    })),
-    schedules: ((schedulesRes.data ?? []) as Record<string, unknown>[]).map((r) => ({
-      staff_id: r.staff_id as string,
-      hari: r.hari as string,
-      jam_mulai: hhmm(r.jam_mulai as string) ?? '08:00',
-      jam_selesai: hhmm(r.jam_selesai as string) ?? '17:00',
-      status: r.status as string,
-    })),
+    therapists: therapistRows.map((t) => toGriyaTherapist(t, profileMap.get(t.therapist_id as string) ?? null)),
+    slots: slots.map((s) => toGriyaSlot(s, nameMap.get(s.patient_id as string) ?? 'Anak', phoneMap.get(s.patient_id as string) ?? '')),
+    visits: visits.map((v) => toGriyaVisit(v, nameMap.get(v.patient_id as string) ?? 'Anak', phoneMap.get(v.patient_id as string) ?? '')),
+    schedules,
   }
 }
 
@@ -328,14 +352,13 @@ async function findSlotCollision(
     supabase.from('griya_therapists')
       .select('therapist_id, discipline, display_order, is_active')
       .eq('branch_id', branchId).eq('is_active', true),
-    supabase.from('schedules')
-      .select('staff_id, hari, jam_mulai, jam_selesai')
-      .eq('branch_id', branchId).eq('status', 'AKTIF').eq('hari', hari as string),
+    // same source as the grid (fetchGriyaWeek) — rotation must resolve identically
+    readBranchSchedules(supabase, branchId),
   ])
 
   const therapists = (therapistRows ?? []) as { therapist_id: string; discipline: Discipline; display_order: number; is_active: boolean }[]
-  const schedules = ((scheduleRows ?? []) as { staff_id: string; hari: string; jam_mulai: string; jam_selesai: string }[])
-    .map((r) => ({ ...r, status: 'AKTIF' }))
+  const schedules = ((scheduleRows ?? []) as { staff_id: string; hari: string; jam_mulai: string; jam_selesai: string; status: string }[])
+    .filter((r) => r.hari === hari && r.status === 'AKTIF')
 
   const newResolved = resolveTherapistForSlot({ discipline, hari, slot_time: slotTime, therapist_id: therapistIdPin ?? null }, therapists, schedules)
   if (!newResolved) return null // nobody on duty — surfaces as "Unassigned", not a collision
@@ -624,7 +647,7 @@ export async function markAttendance(
 
   const { data: slot } = await supabase
     .from('griya_schedule_slots')
-    .select('branch_id, patient_id, discipline, hari, service_type, slot_time, package_id')
+    .select('branch_id, patient_id, discipline, hari, service_type, slot_time, package_id, therapist_id')
     .eq('id', slotId)
     .single()
   if (!slot) return { error: 'Slot tidak ditemukan' }
@@ -635,15 +658,22 @@ export async function markAttendance(
   // is materialized (an existing row already has attending_staff_id set).
   let resolvedTherapistId: string | null = null
   if (!existing) {
+    // Same inputs as the grid (incl. the slot's therapist pin and the admin-read
+    // branch schedule), so the child stays in the column it was shown in — resolving
+    // without the pin attributed a pinned slot to whoever rotation picked instead,
+    // and the card jumped columns the moment it was marked.
     const [{ data: therapists }, { data: schedules }] = await Promise.all([
       supabase.from('griya_therapists').select('therapist_id, discipline, display_order, is_active').eq('branch_id', slot.branch_id).eq('is_active', true),
-      supabase.from('schedules').select('staff_id, hari, jam_mulai, jam_selesai').eq('branch_id', slot.branch_id).eq('status', 'AKTIF').eq('hari', slot.hari as string),
+      readBranchSchedules(supabase, slot.branch_id as string),
     ])
     resolvedTherapistId = resolveTherapistForSlot(
-      { discipline: slot.discipline as Discipline, hari: slot.hari as string, slot_time: hhmm(slot.slot_time as string) ?? '' },
+      {
+        discipline: slot.discipline as Discipline, hari: slot.hari as string,
+        slot_time: hhmm(slot.slot_time as string) ?? '', therapist_id: (slot.therapist_id as string) ?? null,
+      },
       (therapists ?? []) as { therapist_id: string; discipline: Discipline; display_order: number; is_active: boolean }[],
-      ((schedules ?? []) as { staff_id: string; hari: string; jam_mulai: string; jam_selesai: string }[])
-        .map((r) => ({ ...r, status: 'AKTIF' })),
+      ((schedules ?? []) as { staff_id: string; hari: string; jam_mulai: string; jam_selesai: string; status: string }[])
+        .filter((r) => r.hari === slot.hari && r.status === 'AKTIF'),
     )
   }
 
@@ -851,53 +881,36 @@ export async function resetVisitAttendance(visitId: string): Promise<{ error: st
 // ── Detect whether a specific therapist+date+hour is already occupied by a real
 // booking (not just a freed/moved-out ghost) — used to reject a substitute that
 // would otherwise be inserted into the database but never render anywhere on the
-// grid (resolve.ts only shows one occupant per cell), which looked like the
-// action silently doing nothing. ──────────────────────────────────────────────
+// grid, which looked like the action silently doing nothing.
+//
+// This deliberately runs the grid's own resolveDay() over the same rows the grid
+// loads, rather than re-implementing the rules: a hand-rolled copy here ignored
+// each slot's start_date/end_date, so a schedule starting next week (or one
+// already ended) still "occupied" cells the grid showed as Kosong — and every
+// "Sekali saja (1 sesi)" booking into them was rejected. ──────────────────────
 
 async function isCellOccupied(
   supabase: SupaClient, branchId: string, therapistId: string, dateIso: string, hour: string,
   opts?: { excludeSlotId?: string; excludeVisitId?: string },
 ): Promise<boolean> {
-  let directQuery = supabase
-    .from('patient_visits')
-    .select('id', { count: 'exact', head: true })
-    .eq('branch_id', branchId).eq('attending_staff_id', therapistId)
-    .eq('visit_date', dateIso).eq('visit_time', hour)
-    .not('status', 'in', '(cancelled,no_show)')
-  if (opts?.excludeVisitId) directQuery = directQuery.neq('id', opts.excludeVisitId)
-  const { count: directCount } = await directQuery
-  if ((directCount ?? 0) > 0) return true
-
-  const hari = hariOf(new Date(dateIso + 'T00:00:00'))
-  const [{ data: slotRows }, { data: therapistRows }, { data: scheduleRows }] = await Promise.all([
-    supabase.from('griya_schedule_slots')
-      .select('id, discipline, therapist_id').eq('branch_id', branchId).eq('hari', hari).eq('slot_time', hour).eq('status', 'active'),
-    supabase.from('griya_therapists')
-      .select('therapist_id, discipline, display_order, is_active').eq('branch_id', branchId).eq('is_active', true),
-    supabase.from('schedules')
-      .select('staff_id, hari, jam_mulai, jam_selesai').eq('branch_id', branchId).eq('status', 'AKTIF').eq('hari', hari as string),
-  ])
-  const therapists = (therapistRows ?? []) as { therapist_id: string; discipline: Discipline; display_order: number; is_active: boolean }[]
-  const schedules = ((scheduleRows ?? []) as { staff_id: string; hari: string; jam_mulai: string; jam_selesai: string }[])
-    .map((r) => ({ ...r, status: 'AKTIF' }))
-
-  for (const s of slotRows ?? []) {
-    if (s.id === opts?.excludeSlotId) continue
-    const resolved = resolveTherapistForSlot(
-      { discipline: s.discipline as Discipline, hari, slot_time: hour, therapist_id: s.therapist_id as string | null },
-      therapists, schedules,
-    )
-    if (resolved !== therapistId) continue
-    const { data: vRows } = await supabase
-      .from('patient_visits').select('attending_staff_id, status')
-      .eq('griya_slot_id', s.id as string).eq('visit_date', dateIso)
-      .order('created_at', { ascending: true })
-    const v = vRows?.[0] // .maybeSingle() would error (silently, if ignored) on a pre-existing duplicate row
-    if (!v) return true // plain scheduled occurrence, nothing overriding it — occupies this cell
-    if (v.attending_staff_id && v.attending_staff_id !== therapistId) continue // moved elsewhere — just a ghost here
-    if (!['cancelled', 'no_show'].includes(v.status as string)) return true
+  const day = new Date(dateIso + 'T00:00:00')
+  const weekMondayIso = addDaysIso(dateIso, -((day.getDay() + 6) % 7))
+  const { therapistRows, slots, visits, schedules } = await loadGriyaWeekRows(
+    supabase, branchId, weekMondayIso, { from: dateIso, to: dateIso },
+  )
+  const week: GriyaWeek = {
+    branchId,
+    therapists: therapistRows.map((t) => toGriyaTherapist(t, null)),
+    slots: slots.map((s) => toGriyaSlot(s, '')),
+    visits: visits.map((v) => toGriyaVisit(v, '', '')),
+    schedules,
   }
-  return false
+  const { cells } = resolveDay(week, dateIso)
+  return (cells.get(`${therapistId}|${hour}`) ?? []).some((c) =>
+    isBusyCell(c)
+    && !(opts?.excludeSlotId && c.slot?.id === opts.excludeSlotId)
+    && !(opts?.excludeVisitId && c.visit?.id === opts.excludeVisitId),
+  )
 }
 
 // ── Add a substitute into a freed cell for one week ──────────────────────────
@@ -972,17 +985,27 @@ export async function endEnrollment(
     .from('griya_schedule_slots').select('branch_id, status, end_date').eq('id', slotId).single()
   if (!slot) return { error: 'Slot tidak ditemukan' }
 
+  // Anything already recorded after the end date must be dealt with first. A
+  // session marked Hadir there stayed on the grid as history next to the slot
+  // that replaced it — the same child counted twice for one real session.
+  const { data: after } = await supabase
+    .from('patient_visits').select('id, status, kehadiran')
+    .eq('griya_slot_id', slotId).gt('visit_date', input.end_date)
+  const afterRows = (after ?? []) as { id: string; status: string | null; kehadiran: string | null }[]
+  if (afterRows.some(isRealisedVisit)) {
+    return { error: 'Jadwal ini sudah punya sesi hadir setelah tanggal tersebut — ubah/hapus sesi itu dulu, atau pilih tanggal akhir yang lebih akhir.' }
+  }
+  // Untouched placeholders after the end date (e.g. a future move/cancel) would
+  // otherwise linger as orphans of a schedule that no longer exists. Checked, not
+  // fire-and-forget: a silently failed delete is how those orphans got left behind.
+  const delErr = await deleteVisitsStrict(supabase, afterRows.map((v) => v.id))
+  if (delErr) return { error: delErr }
+
   const { error } = await supabase
     .from('griya_schedule_slots')
     .update({ status: input.status, end_date: input.end_date })
     .eq('id', slotId)
   if (error) return { error: error.message }
-
-  // Untouched placeholders after the end date (e.g. a future move) would otherwise
-  // keep showing as "Terjadwal" for a schedule that no longer exists.
-  await supabase.from('patient_visits').delete()
-    .eq('griya_slot_id', slotId).gt('visit_date', input.end_date)
-    .eq('status', 'scheduled').is('kehadiran', null)
 
   await logActivity({
     supabase, userId, action: 'update', resourceType: 'griya_slot', resourceId: slotId,

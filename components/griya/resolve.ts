@@ -22,6 +22,17 @@ function deriveState(v: GriyaWeekVisit): CellState {
   return 'scheduled'
 }
 
+/** Does this cell hold a live booking (a child who will actually be seen), as
+ *  opposed to a freed spot — a moved-out ghost, an absence, or a cancelled
+ *  one-off? Shared with the server's occupancy check (isCellOccupied in
+ *  app/actions/griyaJadwal.ts) so "is this cell taken" is decided by exactly
+ *  the same rule the grid renders with. */
+export function isBusyCell(c: ResolvedCell): boolean {
+  if (c.state === 'scheduled' || c.state === 'hadir') return true
+  if (c.state === 'adhoc') return !['cancelled', 'no_show'].includes(c.visit?.status ?? '')
+  return false
+}
+
 /** Builds the cell map for one calendar day of the loaded week, plus any master
  *  slots that couldn't be placed because nobody of that discipline is on duty. */
 export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<string, ResolvedCell[]>; unassigned: ResolvedCell[] } {
@@ -44,10 +55,15 @@ export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<strin
   // a specific therapist_id (set from jadwal harian), which wins when still valid.
   for (const s of week.slots) {
     if (s.hari !== hari) continue
-    const v = bySlot.get(s.id) ?? null
+    let v = bySlot.get(s.id) ?? null
     // An ended slot, or a date outside the slot's validity window, generates
     // nothing — only a visit already recorded for that date (history) is shown.
-    if (!v && (s.status !== 'active' || dateIso < s.start_date || (s.end_date && dateIso > s.end_date))) continue
+    // An untouched placeholder there (status 'scheduled', no attendance — e.g. a
+    // one-week move made before the schedule was ended/replaced) isn't history:
+    // rendering it showed the same child twice, next to the slot that replaced it.
+    const inWindow = s.status === 'active' && dateIso >= s.start_date && !(s.end_date && dateIso > s.end_date)
+    if (!inWindow && v && v.status === 'scheduled' && !v.kehadiran) v = null
+    if (!v && !inWindow) continue
     const resolvedTherapistId = resolveTherapistForSlot(
       { discipline: s.discipline, hari: s.hari, slot_time: s.slot_time, therapist_id: s.therapist_id },
       week.therapists, week.schedules,
@@ -61,8 +77,9 @@ export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<strin
         state: deriveState(v), slot: s, visit: v, studentName: s.patient_name,
         reason: v.status === 'cancelled' ? (v.notes ?? null) : null,
       })
-      // Ghost the "home" cell (where rotation would've put it today) if the override moved it elsewhere.
-      if (resolvedTherapistId) {
+      // Ghost the "home" cell (where rotation would've put it today) if the override moved it elsewhere
+      // — only while the schedule is actually in effect that day, otherwise there's no home cell.
+      if (resolvedTherapistId && inWindow) {
         const homeKey = `${resolvedTherapistId}|${s.slot_time}`
         if (homeKey !== placedKey) {
           push(homeKey, {
@@ -98,7 +115,9 @@ export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<strin
     if (v.griya_slot_id || !v.attending_staff_id) continue
     const key = `${v.attending_staff_id}|${v.visit_time ?? ''}`
     const existing = cells.get(key)
-    const blocked = existing?.some((c) => c.state !== 'moved-out' && c.state !== 'izin' && c.state !== 'alpa')
+    // A cancelled one-off frees the cell too — a new booking there must replace it,
+    // not be hidden behind it (the server accepts that booking, see isCellOccupied).
+    const blocked = existing?.some(isBusyCell)
     if (!blocked) {
       cells.set(key, [{
         key, therapistId: v.attending_staff_id, hour: v.visit_time ?? '',
