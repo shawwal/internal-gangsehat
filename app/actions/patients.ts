@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII, encryptPatientPII, hashPhone } from '@/lib/encryption'
 import { normalizeBirthDate } from '@/lib/dates'
 import { logActivity } from '@/lib/activityLog'
+import { phoneHashIfFree } from '@/lib/patientPhoneHash'
 
 export interface PatientPlain {
   id: string
@@ -449,19 +450,6 @@ export async function fetchPatient(id: string): Promise<PatientPlain | null> {
     .eq('id', id)
     .single()
   return data ? toPlain(data as unknown as Record<string, unknown>) : null
-}
-
-/**
- * phone_hash has a UNIQUE index, but siblings (e.g. Griya Anak children) share a
- * parent's number. Return the hash only when no other patient owns it; otherwise
- * null so the row still saves (the real phone stays in encrypted_phone).
- */
-async function phoneHashIfFree(phone: string, excludeId?: string): Promise<string | null> {
-  const hash = hashPhone(phone)
-  let q = createAdminClient().from('patients').select('id').eq('phone_hash', hash).limit(1)
-  if (excludeId) q = q.neq('id', excludeId)
-  const { data } = await q
-  return data && data.length > 0 ? null : hash
 }
 
 export async function addPatient(input: {

@@ -467,6 +467,14 @@ export const navigation: NavItem[] = [
     group: 'clinic',
   },
   {
+    key: 'patient-registrations',
+    label: 'Pendaftaran Pasien',
+    href: '/patient-registrations',
+    icon: 'UserCheck',
+    roles: ['director', 'manager', 'admin'],
+    group: 'clinic',
+  },
+  {
     key: 'home-visit',
     label: 'Home Visit',
     href: '/home-visit',

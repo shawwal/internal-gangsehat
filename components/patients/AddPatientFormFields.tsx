@@ -26,6 +26,23 @@ export const DEFAULT_ADD_PATIENT_FORM: AddPatientFormData = {
   agama: '', pekerjaan: '', keluhan: '', hobi: '',
 }
 
+export function validateAddPatientForm(form: AddPatientFormData): string | null {
+  if (!form.name.trim())           return 'Nama lengkap wajib diisi.'
+  if (!form.phone.trim())          return 'Nomor HP/WhatsApp wajib diisi.'
+  if (!form.gender)                return 'Jenis kelamin wajib dipilih.'
+  if (!form.birthDate)             return 'Tanggal lahir wajib diisi.'
+  if (!form.address.trim())        return 'Alamat wajib diisi.'
+  if (!form.provinsi.trim())       return 'Provinsi wajib diisi.'
+  if (!form.kabupatenKota.trim())  return 'Kabupaten/Kota wajib diisi.'
+  if (!form.kecamatan.trim())      return 'Kecamatan wajib diisi.'
+  if (!form.kelurahan.trim())      return 'Kelurahan/Desa wajib diisi.'
+  if (!form.agama)                 return 'Agama wajib dipilih.'
+  if (!form.pekerjaan.trim())      return 'Pekerjaan wajib diisi.'
+  if (!form.keluhan.trim())        return 'Keluhan wajib diisi.'
+  if (!form.hobi.trim())           return 'Hobi/Aktivitas wajib diisi.'
+  return null
+}
+
 const AGAMA_OPTIONS = [
   'ISLAM', 'KRISTEN PROTESTAN', 'KRISTEN KATOLIK',
   'HINDU', 'BUDHA', 'KONGHUCU', 'LAINNYA',

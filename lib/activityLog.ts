@@ -17,6 +17,7 @@ export const ACTIVITY_RESOURCE_TYPES = {
   griya_slot: 'Jadwal Griya Anak',
   griya_product: 'Produk Toko Griya Anak',
   griya_sale: 'Penjualan Toko Griya Anak',
+  patient_registration: 'Pendaftaran Pasien',
 } as const
 
 export type ActivityResourceType = keyof typeof ACTIVITY_RESOURCE_TYPES
