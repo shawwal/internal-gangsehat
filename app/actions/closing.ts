@@ -26,6 +26,7 @@ export interface ClosingTransactionItem {
   status: string
   description: string | null
   created_at: string
+  receipt_url: string | null
 }
 
 export interface ClosingFinancialRecap {
@@ -47,7 +48,7 @@ export async function fetchClosingFinancialRecap(
 
   const { data } = await supabase
     .from('transactions')
-    .select('id, type, category, payment_method, payment_status, patient_id, amount, status, description, created_at')
+    .select('id, type, category, payment_method, payment_status, patient_id, amount, status, description, created_at, receipt_url')
     .eq('branch_id', branchId)
     .gte('transaction_date', dateFrom)
     .lte('transaction_date', dateTo)
@@ -123,6 +124,7 @@ export async function fetchClosingFinancialRecap(
       status: r.status,
       description: r.description,
       created_at: r.created_at,
+      receipt_url: r.receipt_url,
     })),
   }
 }
@@ -146,6 +148,7 @@ export interface VisitPayment {
   penjamin: string | null
   status: string
   description: string | null
+  receipt_url: string | null
 }
 
 export interface ClosingVisitItem {
@@ -197,7 +200,7 @@ export async function fetchClosingVisitRecap(
   const { data: txRows } = visitIds.length
     ? await supabase
       .from('transactions')
-      .select('id, visit_id, category, amount, harga, discount, outstanding, payment_method, payment_status, penjamin, status, description')
+      .select('id, visit_id, category, amount, harga, discount, outstanding, payment_method, payment_status, penjamin, status, description, receipt_url')
       .in('visit_id', visitIds)
       .neq('status', 'rejected')
       .order('created_at', { ascending: true })
@@ -217,6 +220,7 @@ export async function fetchClosingVisitRecap(
       penjamin: t.penjamin,
       status: t.status,
       description: t.description,
+      receipt_url: t.receipt_url,
     })
     paymentsByVisit.set(t.visit_id, list)
   }

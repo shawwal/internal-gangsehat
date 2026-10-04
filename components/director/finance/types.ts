@@ -23,6 +23,7 @@ export interface TransactionRow {
   transaction_date: string
   description: string | null
   penjamin: string | null
+  receipt_url: string | null
   patient_name: string | null
   branch_name: string
 }

@@ -29,6 +29,8 @@ import { STEP_LABELS, fromAssessment, toFieldsInput } from '@/components/assessm
 import type { AssessmentFormState } from '@/components/assessment/types'
 import { SingleStepAssessmentForm } from '@/components/assessment/SingleStepAssessmentForm'
 import { createClient } from '@/lib/supabase/client'
+import { useAutoSave } from '@/hooks/useAutoSave'
+import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator'
 import AssessmentLoading from './loading'
 
 type FormMode = 'single_step' | 'multi_step'
@@ -123,6 +125,12 @@ export default function TerapiAwalAssessmentPage() {
     return () => { cancelled = true }
   }, [])
 
+  const autoSave = useAutoSave(
+    visit && form ? form : null,
+    (f) => saveAssessmentDraft(visit!.id, visit!.patient_id, visit!.branch_id, toFieldsInput(f)),
+    { enabled: !alreadyCompleted && !completing },
+  )
+
   function patchForm(patch: Partial<AssessmentFormState>) {
     setForm((f) => f ? { ...f, ...patch } : f)
   }
@@ -134,6 +142,7 @@ export default function TerapiAwalAssessmentPage() {
     const { error: err } = await saveAssessmentDraft(visit.id, visit.patient_id, visit.branch_id, toFieldsInput(form))
     setSaving(false)
     if (err) { setError(err); return false }
+    autoSave.markSaved(form)
     return true
   }
 
@@ -201,6 +210,7 @@ export default function TerapiAwalAssessmentPage() {
 
     setCompleting(true)
     setError(null)
+    await autoSave.flush()
     const { error: err } = await completeAssessment(
       visit.id, visit.patient_id, visit.branch_id, toFieldsInput(form), visitInfo,
     )
@@ -248,6 +258,7 @@ export default function TerapiAwalAssessmentPage() {
               Guided MSK &amp; Sports Assessment · {visit.visit_date}
               {alreadyCompleted && <span className="ml-2 text-[#34C759] font-medium">Selesai</span>}
             </p>
+            {!alreadyCompleted && <AutoSaveIndicator status={autoSave.status} savedAt={autoSave.savedAt} />}
           </div>
         </div>
         {alreadyCompleted && (
@@ -310,7 +321,7 @@ export default function TerapiAwalAssessmentPage() {
               priorAssessmentVisitId={priorAssessment && priorAssessment.visit_id !== visit.id ? priorAssessment.visit_id : null}
             />
           )}
-          <fieldset disabled={locked} className="contents border-0 m-0 p-0 min-w-0">
+          <fieldset disabled={locked} onBlur={autoSave.onBlur} className="contents border-0 m-0 p-0 min-w-0">
             <VisitInfoBar visitId={visit.id} value={visitInfo} onChange={setVisitInfo} />
 
             {formMode === 'multi_step' ? (

@@ -12,6 +12,8 @@ import { fetchSportMassageLayanan, type LayananRow } from '@/app/actions/layanan
 import { SERVICE_TYPES, SERVICE_TO_CATEGORY, CATEGORY_TO_SERVICE_TYPE, getEffectivePackageServiceType } from '@/lib/serviceType'
 import type { ServiceType } from '@/types'
 import { SettlePaymentDialog } from '@/components/finance/SettlePaymentDialog'
+import { PaymentProofField } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, isPaymentProofRequiredOnEdit, requiresPaymentProof } from '@/lib/paymentProof'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface PaymentVisitInfo {
@@ -80,6 +82,8 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   const [penjamin, setPenjamin]           = useState(existingTransaction?.penjamin ?? '')
   const [description, setDescription]     = useState(existingTransaction?.description ?? '')
   const [txDate, setTxDate]               = useState(existingTransaction?.transaction_date ?? visit.visit_date)
+  const [proofPath, setProofPath]         = useState<string | null>(existingTransaction?.receipt_url ?? null)
+  const [proofUploading, setProofUploading] = useState(false)
 
   // Sport Massage has several priced service types per branch — pick one
   const [smLayanan, setSmLayanan]     = useState<LayananRow[]>([])
@@ -91,6 +95,10 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   const [error, setError]           = useState<string | null>(null)
   const [success, setSuccess]       = useState(false)
   const [shakeBtn, setShakeBtn]     = useState(false)
+
+  const proofRequired = isEditing
+    ? isPaymentProofRequiredOnEdit({ method: existingTransaction.payment_method, proofPath: existingTransaction.receipt_url }, paymentMethod)
+    : requiresPaymentProof(paymentMethod)
 
   const h = Number(harga) || 0
   const d = Number(discount) || 0
@@ -159,9 +167,13 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (submitting) return
+    if (submitting || proofUploading) return
     if (isSportMassage && smLayanan.length > 0 && !smSelected) {
       setError('Pilih jenis layanan Sport Massage.')
+      return
+    }
+    if (proofRequired && !proofPath) {
+      setError(PAYMENT_PROOF_REQUIRED_MSG)
       return
     }
     setSubmitting(true)
@@ -177,6 +189,8 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
       description: description || (isSportMassage && smSelected ? smSelected.nama : null),
       transaction_date: txDate,
       category: SERVICE_TO_CATEGORY[serviceType],
+      // Cash/EDC payments don't keep a stale proof from a previous transfer edit
+      receipt_url: requiresPaymentProof(paymentMethod) ? proofPath : null,
     }
     const result = isEditing
       ? await updateTransaction(existingTransaction.id, payload)
@@ -477,6 +491,14 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                 </div>
               </div>
 
+              <PaymentProofField
+                method={paymentMethod}
+                value={proofPath}
+                onChange={setProofPath}
+                onUploadingChange={setProofUploading}
+                required={proofRequired}
+              />
+
               {/* Penjamin */}
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1.5">
@@ -536,7 +558,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                 <button
                   type="submit"
                   form="pay-form"
-                  disabled={submitting}
+                  disabled={submitting || proofUploading}
                   style={{ animation: shakeBtn ? 'shakeX 300ms ease forwards' : undefined }}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-70 transition-colors cursor-pointer"
                 >

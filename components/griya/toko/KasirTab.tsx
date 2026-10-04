@@ -5,6 +5,8 @@ import { Search, Plus, Minus, Trash2, X } from 'lucide-react'
 import { fetchProducts, createSale, type GriyaProduct } from '@/app/actions/griyaToko'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { useToast } from '@/context/ToastContext'
+import { PaymentProofField } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
@@ -32,6 +34,8 @@ export function KasirTab({ branchId }: { branchId: string }) {
   const [patientResults, setPatientResults] = useState<PatientPlain[]>([])
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [proofPath, setProofPath] = useState<string | null>(null)
+  const [proofUploading, setProofUploading] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -72,7 +76,9 @@ export function KasirTab({ branchId }: { branchId: string }) {
 
   async function complete() {
     const items = Object.entries(cart).map(([product_id, qty]) => ({ product_id, qty }))
-    if (items.length === 0) return
+    if (items.length === 0 || proofUploading) return
+    const needsProof = requiresPaymentProof(method)
+    if (needsProof && !proofPath) { showToast(PAYMENT_PROOF_REQUIRED_MSG, 'error'); return }
     setSaving(true)
     const { error } = await createSale({
       branch_id: branchId,
@@ -82,13 +88,14 @@ export function KasirTab({ branchId }: { branchId: string }) {
       payment_method: method,
       amount_paid: amountPaid ? Number(amountPaid.replace(/\D/g, '')) : total,
       sale_date: saleDate,
+      receipt_url: needsProof ? proofPath : null,
     })
     setSaving(false)
     if (error) { showToast(error, 'error'); return }
     showToast('Penjualan tersimpan', 'success')
     // optimistic: drop the sold qty from local stock immediately
     setProducts((prev) => prev.map((p) => cart[p.id] ? { ...p, stock: p.stock - cart[p.id] } : p))
-    setCart({}); setDiscount(''); setAmountPaid(''); setPatient(null); setPatientQ('')
+    setCart({}); setDiscount(''); setAmountPaid(''); setPatient(null); setPatientQ(''); setProofPath(null)
     fetchProducts(branchId, { activeOnly: true }).then(setProducts)
   }
 
@@ -177,12 +184,19 @@ export function KasirTab({ branchId }: { branchId: string }) {
           </select>
           <input value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} placeholder={`Bayar (default ${rp(total)})`} inputMode="numeric" className={`${inputCls} text-xs`} />
           <input type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className={`${inputCls} text-xs`} />
+          <PaymentProofField
+            method={method}
+            value={proofPath}
+            onChange={setProofPath}
+            onUploadingChange={setProofUploading}
+            compact
+          />
         </div>
 
         <div className="flex items-center justify-between text-sm font-semibold pt-2 border-t border-border/40">
           <span>Total</span><span>{rp(total)}</span>
         </div>
-        <button onClick={complete} disabled={saving || total === 0}
+        <button onClick={complete} disabled={saving || proofUploading || total === 0}
           className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 cursor-pointer">
           {saving ? 'Menyimpan...' : 'Selesaikan Penjualan'}
         </button>

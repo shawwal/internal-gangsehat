@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { AlertCircle } from 'lucide-react'
 import { ReclassifyButton } from './ReclassifyButton'
 import { EditTransactionSheet, type TransactionForEdit } from './EditTransactionSheet'
+import { PaymentProofLink } from '@/components/payments/PaymentProofField'
 import {
   buildFinanceUrl, formatRp, TX_STATUS_BADGE, TX_STATUS_LABEL, PAY_STATUS_BADGE, type TransactionRow,
 } from './types'
@@ -75,6 +76,7 @@ export function TransactionsTable({ txns, showBranchColumn, q, baseParams }: Pro
               transaction_date: tx.transaction_date,
               patient_id:       tx.patient_id,
               patient_name:     tx.patient_name,
+              receipt_url:      tx.receipt_url,
             }
 
             return (
@@ -110,6 +112,7 @@ export function TransactionsTable({ txns, showBranchColumn, q, baseParams }: Pro
                       Tanpa pasien
                     </span>
                   )}
+                  <PaymentProofLink path={tx.receipt_url} />
                   {/* Reclassify: only for LAINNYA income without patient */}
                   {showReclassify && (
                     <ReclassifyButton transactionId={tx.id} />

@@ -84,6 +84,8 @@ export type BookingPayment = {
   waktu_bayar: string | null
   metode: string | null
   catatan: string | null
+  /** Bukti transfer path in `payment-proofs` (migration 092). */
+  proof_path: string | null
   created_at: string
 }
 

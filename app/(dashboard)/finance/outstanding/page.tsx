@@ -96,7 +96,7 @@ export default async function OutstandingPaymentsPage({
       let q2 = supabase
         .from('transactions')
         .select(
-          'id, order_id, branch_id, patient_id, visit_id, category, harga, discount, amount, outstanding, payment_method, payment_status, transaction_date, description, penjamin, branches!branch_id(name)',
+          'id, order_id, branch_id, patient_id, visit_id, category, harga, discount, amount, outstanding, payment_method, payment_status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)',
           { count: 'exact' },
         )
         .eq('type', 'income')
@@ -286,6 +286,7 @@ export default async function OutstandingPaymentsPage({
                       transaction_date: tx.transaction_date,
                       patient_id:       tx.patient_id as string | null,
                       patient_name:     tx.patient_name,
+                      receipt_url:      tx.receipt_url as string | null,
                     }
                     return (
                       <OutstandingRow

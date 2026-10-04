@@ -15,6 +15,8 @@ import { openPrintableReport } from '@/lib/pdf-export'
 import { ExportMenu } from './ExportMenu'
 import { formatRp, PAYMENT_METHODS, PAYMENT_STATUSES, inputCls } from './shared'
 import { TableSkeleton } from '@/components/ui/Skeleton'
+import { PaymentProofField, PaymentProofLink } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 
 interface Props {
   type: TransactionType
@@ -40,6 +42,7 @@ function getDefaultForm(dateFrom: string) {
     patient_label: '',
     description: '',
     transaction_date: dateFrom,
+    receipt_url: null as string | null,
   }
 }
 
@@ -52,6 +55,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
   const [saving, setSaving] = useState(false)
   const [rejectId, setRejectId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  const [proofUploading, setProofUploading] = useState(false)
 
   const [layanan, setLayanan] = useState<LayananRow[]>([])
   const [expenseCats, setExpenseCats] = useState<ExpenseCategoryRow[]>([])
@@ -125,6 +129,9 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
+    if (proofUploading) return
+    const needsProof = requiresPaymentProof(form.payment_method)
+    if (needsProof && !form.receipt_url) { alert(PAYMENT_PROOF_REQUIRED_MSG); return }
     setSaving(true)
     const { error } = await createTransactionManual({
       type,
@@ -140,6 +147,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
       patient_id: isIncome ? (form.patient_id || null) : null,
       branch_id: branchId,
       fisio_id: form.fisio_id || null,
+      receipt_url: needsProof ? form.receipt_url : null,
     })
     setSaving(false)
     if (error) { alert(error); return }
@@ -261,7 +269,9 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
                   <td className={`px-4 py-3 text-right font-medium ${isIncome ? 'text-chart-4' : 'text-destructive'}`}>
                     {isIncome ? '+' : '-'}{formatRp(r.amount)}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{r.payment_method ?? '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                    <div className="flex items-center gap-1.5">{r.payment_method ?? '—'} <PaymentProofLink path={r.receipt_url} /></div>
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                       r.status === 'confirmed' ? 'bg-chart-4/15 text-chart-4' : r.status === 'pending' ? 'bg-secondary/20 text-secondary-foreground' : 'bg-destructive/10 text-destructive'
@@ -366,6 +376,13 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
                 </div>
               </div>
 
+              <PaymentProofField
+                method={form.payment_method}
+                value={form.receipt_url}
+                onChange={(path) => setForm((f) => ({ ...f, receipt_url: path }))}
+                onUploadingChange={setProofUploading}
+              />
+
               {isIncome && (
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">Status Bayar</label>
@@ -390,7 +407,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
 
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Batal</button>
-                <button type="submit" disabled={saving} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
+                <button type="submit" disabled={saving || proofUploading} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
                   {saving ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/activityLog'
 import { createTransactionManual } from '@/app/actions/transactions'
+import { PAYMENT_PROOF_BUCKET, isValidPaymentProofPath, paymentProofError } from '@/lib/paymentProof'
 
 const WRITE_ROLES = ['director', 'manager', 'admin']
 
@@ -156,10 +157,15 @@ export async function createSale(input: {
   amount_paid: number
   sale_date: string
   notes?: string | null
+  /** Bukti transfer path in `payment-proofs`; required for transfer methods. */
+  receipt_url?: string | null
 }): Promise<{ error: string | null; saleId?: string }> {
   const a = await requireWrite()
   if ('error' in a) return { error: a.error }
   if (input.items.length === 0) return { error: 'Keranjang kosong' }
+  // Validate before the sale RPC so a missing proof never leaves a sale without its income row
+  const proofErr = paymentProofError(input.payment_method, input.receipt_url)
+  if (proofErr) return { error: proofErr }
 
   // Compute total for the transaction + payment status
   const { data: prods } = await a.supabase
@@ -205,6 +211,7 @@ export async function createSale(input: {
     transaction_date: input.sale_date,
     patient_id: input.patient_id ?? null,
     branch_id: input.branch_id,
+    receipt_url: input.receipt_url ?? null,
   })
   if (!txErr) {
     // link the transaction back (best-effort — find the just-created row)
@@ -240,6 +247,8 @@ export interface SaleRow {
   status: string
   patient_id: string | null
   notes: string | null
+  /** Bukti transfer, from the linked income transaction. */
+  receipt_url: string | null
 }
 
 export async function fetchSales(
@@ -248,13 +257,16 @@ export async function fetchSales(
   const supabase = await createClient()
   const { data } = await supabase
     .from('griya_sales')
-    .select('id, sale_date, subtotal, discount, total, amount_paid, payment_method, payment_status, status, patient_id, notes')
+    .select('id, sale_date, subtotal, discount, total, amount_paid, payment_method, payment_status, status, patient_id, notes, transactions!transaction_id(receipt_url)')
     .eq('branch_id', branchId)
     .gte('sale_date', range.from)
     .lt('sale_date', range.toExclusive)
     .order('sale_date', { ascending: false })
     .order('created_at', { ascending: false })
-  return (data ?? []) as SaleRow[]
+  return (data ?? []).map(({ transactions, ...r }) => ({
+    ...r,
+    receipt_url: (transactions as unknown as { receipt_url: string | null } | null)?.receipt_url ?? null,
+  })) as SaleRow[]
 }
 
 export interface SaleItemRow {
@@ -325,7 +337,11 @@ export async function deleteSale(saleId: string): Promise<{ error: string | null
     await restockFromSale(a, saleId, sale.branch_id as string)
   }
   if (sale.transaction_id) {
-    await a.supabase.from('transactions').delete().eq('id', sale.transaction_id)
+    const { data: tx } = await a.supabase
+      .from('transactions').delete().eq('id', sale.transaction_id).select('receipt_url').maybeSingle()
+    if (isValidPaymentProofPath(tx?.receipt_url)) {
+      await a.supabase.storage.from(PAYMENT_PROOF_BUCKET).remove([tx.receipt_url])
+    }
   }
   // detach movements (sale_id FK is ON DELETE SET NULL), then delete the sale
   await a.supabase.from('griya_stock_movements').update({ sale_id: null }).eq('sale_id', saleId)

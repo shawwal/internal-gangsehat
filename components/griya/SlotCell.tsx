@@ -101,7 +101,9 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
       >
         <span className="block truncate">{cell.studentName}</span>
         {cell.state === 'izin' && cell.reason && <span className="block truncate text-[9px] opacity-80">{cell.reason}</span>}
-        {cell.state === 'adhoc' && <span className="block truncate text-[9px] opacity-80">pengganti</span>}
+        {cell.state === 'adhoc' && (
+          <span className="block truncate text-[9px] opacity-80">{cell.reason?.startsWith('Pengganti') ? 'pengganti' : '1x sesi'}</span>
+        )}
       </div>
 
       {menu && createPortal(
@@ -118,6 +120,7 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
                 <MenuBtn icon={<Move size={14} />} label="Pindahkan" onClick={() => { setMenu(null); onAction('move', cell) }} />
                 <MenuBtn icon={<GraduationCap size={14} />} label="Akhiri Jadwal" onClick={() => { setMenu(null); onAction('end', cell) }} />
                 <MenuBtn icon={<Ban size={14} />} label="Batalkan Hari Ini" danger separated onClick={() => { setMenu(null); onAction('cancel', cell) }} />
+                <MenuBtn icon={<Trash2 size={14} />} label="Hapus" danger onClick={() => { setMenu(null); onAction('deleteVisit', cell) }} />
               </>
             )}
             {cell.slot && cell.state === 'hadir' && canEdit && (

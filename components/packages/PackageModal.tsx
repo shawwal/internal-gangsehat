@@ -6,6 +6,8 @@ import { createPatientPackage, updatePatientPackage } from '@/app/actions/packag
 import { createTransactionManual, fetchLayananHarga } from '@/app/actions/transactions'
 import type { CreateTransactionManualInput } from '@/app/actions/transactions'
 import { DEFAULT_FORM, INPUT_CLS, LABEL_CLS } from './types'
+import { PaymentProofField } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 import type { PatientPackage, JenisPaket, PackageOperationalStatus, PackageCompletionStatus, PackageStatus, FormState } from './types'
 
 interface PackageModalProps {
@@ -37,6 +39,8 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
   )
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
+  const [proofPath, setProofPath] = useState<string | null>(null)
+  const [proofUploading, setProofUploading] = useState(false)
 
   const sessionCount = form.jenis_paket === 'P1' ? 5 : 10
 
@@ -64,6 +68,10 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
     e.preventDefault()
     if (!form.package_name.trim()) { setError('Nama paket wajib diisi.'); return }
     if (!isEdit && (!form.harga || !form.amount)) { setError('Isi harga dan jumlah bayar.'); return }
+    if (proofUploading) return
+    // Check before the package is created, so a missing proof never leaves an unpaid package
+    const needsProof = !isEdit && requiresPaymentProof(form.payment_method)
+    if (needsProof && !proofPath) { setError(PAYMENT_PROOF_REQUIRED_MSG); return }
     setSaving(true)
     setError(null)
 
@@ -106,6 +114,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
         patient_id:       patientId,
         package_id:       pkgId,
         branch_id:        branchId,
+        receipt_url:      needsProof ? proofPath : null,
       }
       const { error: txErr } = await createTransactionManual(txInput)
       if (txErr) { setError(`Paket dibuat, tapi gagal mencatat pembayaran: ${txErr}`); setSaving(false); return }
@@ -259,6 +268,13 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
                   <option value="TRANSFER BANK KALBAR">TRANSFER BANK KALBAR</option>
                 </select>
               </div>
+
+              <PaymentProofField
+                method={form.payment_method}
+                value={proofPath}
+                onChange={setProofPath}
+                onUploadingChange={setProofUploading}
+              />
             </>
           )}
 
@@ -343,7 +359,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
           <button
             type="submit"
             form="pkg-form"
-            disabled={saving}
+            disabled={saving || proofUploading}
             className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
           >
             {saving ? 'Menyimpan...' : isEdit ? 'Simpan' : 'Tambah'}

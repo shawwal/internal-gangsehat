@@ -5,6 +5,7 @@ import { fetchSales, fetchSaleItems, voidSale, deleteSale, type SaleRow, type Sa
 import { Pagination } from '@/components/leave/Pagination'
 import { useToast } from '@/context/ToastContext'
 import { TableRowsSkeleton } from '@/components/ui/Skeleton'
+import { PaymentProofLink } from '@/components/payments/PaymentProofField'
 
 const PAGE_SIZE = 10
 function rp(n: number) {
@@ -69,7 +70,9 @@ export function RiwayatTab({ branchId }: { branchId: string }) {
             ) : paged.map((s) => (
               <tr key={s.id} className="border-b border-border last:border-0">
                 <td className="px-4 py-2">{new Date(s.sale_date + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</td>
-                <td className="px-4 py-2 text-muted-foreground hidden sm:table-cell">{s.payment_method ?? '—'}</td>
+                <td className="px-4 py-2 text-muted-foreground hidden sm:table-cell">
+                  <div className="flex items-center gap-1.5">{s.payment_method ?? '—'} <PaymentProofLink path={s.receipt_url} /></div>
+                </td>
                 <td className="px-4 py-2 text-right">{rp(s.total)}</td>
                 <td className="px-4 py-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${s.status === 'void' ? 'bg-destructive/15 text-destructive' : 'bg-[#34C759]/15 text-[#34C759]'}`}>

@@ -45,6 +45,45 @@ export async function fetchGriyaPertemuanKe(visitId: string, patientId: string, 
 // retain the ability to correct a mistake.
 const LOCKED_FOR_ROLES = ['therapist', 'staff']
 
+// ── Autosave: persist the in-progress note as a draft (visit left untouched) ───
+export async function saveGriyaSessionNoteDraft(
+  visitId: string,
+  patientId: string,
+  branchId: string,
+  fields: GriyaSessionNoteFieldsInput,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+
+  const { data: existing } = await supabase
+    .from('griya_session_notes')
+    .select('status')
+    .eq('visit_id', visitId)
+    .maybeSingle()
+
+  // Drafts never overwrite a completed note — edits to those go through
+  // saveGriyaSessionNote(), which enforces the therapist lock.
+  if (existing?.status === 'completed') return { error: null }
+
+  const { error } = await supabase
+    .from('griya_session_notes')
+    .upsert(
+      {
+        visit_id: visitId,
+        patient_id: patientId,
+        branch_id: branchId,
+        created_by: user.id,
+        status: 'draft',
+        ...fields,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'visit_id' },
+    )
+
+  return { error: error?.message ?? null }
+}
+
 // ── Single-shot save (matches the "Sudah diperiksa" + Update modal) ─────────────
 export async function saveGriyaSessionNote(
   visitId: string,

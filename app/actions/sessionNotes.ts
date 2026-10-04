@@ -119,6 +119,45 @@ export async function fetchPreviousSessionNote(
   return data as SessionNote
 }
 
+// ── Autosave: persist the in-progress form as a draft (no patient_visits sync) ──
+export async function saveSessionNoteDraft(
+  visitId: string,
+  patientId: string,
+  branchId: string,
+  fields: SessionNoteFieldsInput,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Tidak terautentikasi' }
+
+  const { data: existing } = await supabase
+    .from('session_notes')
+    .select('status')
+    .eq('visit_id', visitId)
+    .maybeSingle()
+
+  // Drafts never overwrite a completed note — edits to those go through
+  // completeSessionNote(), which enforces the therapist lock.
+  if (existing?.status === 'completed') return { error: null }
+
+  const { error } = await supabase
+    .from('session_notes')
+    .upsert(
+      {
+        visit_id: visitId,
+        patient_id: patientId,
+        branch_id: branchId,
+        created_by: user.id,
+        status: 'draft',
+        ...fields,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'visit_id' },
+    )
+
+  return { error: error?.message ?? null }
+}
+
 // Therapists/staff can't resubmit a note that's already completed — keeps the
 // record from being silently rewritten after the fact. Admin/manager/director
 // retain the ability to correct a mistake.

@@ -6,7 +6,7 @@ const ITEMS: { c: string; label: string }[] = [
   { c: 'bg-[#34C759] border-[#34C759] text-white', label: 'Hadir' },
   { c: 'bg-[#FFB35C]/30 border-[#FFB35C]/70', label: 'Izin / Sakit' },
   { c: 'bg-[#FF3B30]/20 border-[#FF3B30]/70', label: 'Alpa' },
-  { c: 'bg-purple-500/20 border-purple-500/70', label: 'Pengganti' },
+  { c: 'bg-purple-500/20 border-purple-500/70', label: 'Pengganti / 1x sesi' },
   { c: 'bg-muted border-muted-foreground/40', label: 'Terapis OFF' },
 ]
 

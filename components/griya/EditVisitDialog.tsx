@@ -19,6 +19,8 @@ export interface EditableVisit {
   notes: string | null
   attending_staff_id: string | null
   patient_name?: string | null
+  /** Set when this visit is an occurrence of a weekly (master) schedule. */
+  griya_slot_id?: string | null
 }
 
 const STATUS_OPTIONS: { value: VisitStatus; label: string }[] = [
@@ -105,7 +107,10 @@ export function EditVisitDialog({ visit, branchId, onClose, onSaved }: Props) {
   }
 
   async function remove() {
-    if (!confirm('Hapus kunjungan ini dari riwayat? Tindakan ini tidak bisa dibatalkan.')) return
+    const msg = visit.griya_slot_id
+      ? 'Hapus catatan kunjungan ini? Jadwal rutin mingguannya tetap ada, jadi sel akan kembali "Terjadwal".\n\nUntuk menghapus jadwalnya juga, pakai menu "Hapus" pada sel jadwal.'
+      : 'Hapus kunjungan ini dari riwayat? Tindakan ini tidak bisa dibatalkan.'
+    if (!confirm(msg)) return
     setDeleting(true); setError(null)
     const { error } = await deleteVisit(visit.id)
     setDeleting(false)

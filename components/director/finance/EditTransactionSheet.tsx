@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation'
 import { updateTransaction, deleteTransaction } from '@/app/actions/transactions'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
+import { PaymentProofField } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, isPaymentProofRequiredOnEdit, requiresPaymentProof } from '@/lib/paymentProof'
 
 const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'TOKO', 'LAINNYA']
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
@@ -37,6 +39,7 @@ export interface TransactionForEdit {
   transaction_date: string
   patient_id: string | null
   patient_name: string | null
+  receipt_url: string | null
 }
 
 type Status = 'idle' | 'saving' | 'success' | 'error'
@@ -78,6 +81,8 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
   const [txDate, setTxDate]                 = useState(transaction.transaction_date.split('T')[0])
   const [patientId, setPatientId]           = useState<string | null>(transaction.patient_id)
   const [patientName, setPatientName]       = useState<string | null>(transaction.patient_name)
+  const [proofPath, setProofPath]           = useState<string | null>(transaction.receipt_url)
+  const [proofUploading, setProofUploading] = useState(false)
 
   // Patient search
   const [patientQuery, setPatientQuery]     = useState('')
@@ -103,6 +108,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
     setTxDate(transaction.transaction_date.split('T')[0])
     setPatientId(transaction.patient_id)
     setPatientName(transaction.patient_name)
+    setProofPath(transaction.receipt_url)
     setPatientQuery('')
     setPatientResults([])
     setStatus('idle')
@@ -170,8 +176,18 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
 
   const categories = isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
 
+  const proofRequired = isPaymentProofRequiredOnEdit(
+    { method: transaction.payment_method, proofPath: transaction.receipt_url }, payMethod,
+  )
+
   async function handleSave() {
-    if (status === 'saving') return
+    if (status === 'saving' || proofUploading) return
+    if (proofRequired && !proofPath) {
+      setStatus('error')
+      setErrMsg(PAYMENT_PROOF_REQUIRED_MSG)
+      setTimeout(() => setStatus('idle'), 600)
+      return
+    }
     setStatus('saving')
     setErrMsg('')
 
@@ -186,6 +202,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
       description:      description || null,
       transaction_date: txDate,
       patient_id:       patientId ?? null,
+      receipt_url:      requiresPaymentProof(payMethod) ? proofPath : null,
     })
 
     if (error) {
@@ -466,6 +483,14 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
               ))}
             </div>
           </div>
+
+          <PaymentProofField
+            method={payMethod}
+            value={proofPath}
+            onChange={setProofPath}
+            onUploadingChange={setProofUploading}
+            required={proofRequired}
+          />
 
           {/* Description */}
           <div>

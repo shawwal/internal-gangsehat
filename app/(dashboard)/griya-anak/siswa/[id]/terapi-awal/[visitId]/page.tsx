@@ -12,6 +12,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
 import { ALL_RM_FIELD_KEYS, RM_TYPES, RM_TYPE_ORDER, validateRm, type RmFieldKey } from '@/components/griya/rekam-medis/sections'
 import { RmSections, Section, inputCls, labelCls } from '@/components/griya/rekam-medis/RmSections'
+import { useAutoSave } from '@/hooks/useAutoSave'
+import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator'
 import TerapiAwalLoading from './loading'
 
 type Form = Record<RmFieldKey, string>
@@ -116,15 +118,23 @@ export default function GriyaTerapiAwalPage() {
   const locked = isTherapistLike && alreadyCompleted
   const meta = RM_TYPES[rmType]
 
+  const autoSave = useAutoSave(
+    visit && !loading ? toFieldsInput(form, rmType, assessors) : null,
+    (fields) => saveGriyaTerapiAwalDraft(visit!.id, visit!.patient_id, visit!.branch_id, fields),
+    { enabled: !alreadyCompleted && !completing },
+  )
+
   function set(k: RmFieldKey, v: string) { setForm((f) => ({ ...f, [k]: v })) }
   const setA = (patch: Partial<Assessors>) => setAssessors((a) => ({ ...a, ...patch }))
 
   async function persistDraft() {
     if (!visit) return
     setSaving(true); setError(null)
-    const { error: err } = await saveGriyaTerapiAwalDraft(visit.id, visit.patient_id, visit.branch_id, toFieldsInput(form, rmType, assessors))
+    const fields = toFieldsInput(form, rmType, assessors)
+    const { error: err } = await saveGriyaTerapiAwalDraft(visit.id, visit.patient_id, visit.branch_id, fields)
     setSaving(false)
     if (err) { setError(err); return }
+    autoSave.markSaved(fields)
     showToast('Draf disimpan', 'success')
   }
 
@@ -133,6 +143,7 @@ export default function GriyaTerapiAwalPage() {
     const invalid = validateRm(rmType, form)
     if (invalid) { setError(invalid); return }
     setCompleting(true); setError(null)
+    await autoSave.flush()
     const { error: err } = await completeGriyaTerapiAwal(visit.id, visit.patient_id, visit.branch_id, toFieldsInput(form, rmType, assessors))
     setCompleting(false)
     if (err) { setError(err); return }
@@ -157,6 +168,7 @@ export default function GriyaTerapiAwalPage() {
             Terapi Awal — {meta.formTitle} · {visit.visit_date}
             {alreadyCompleted && <span className="ml-2 text-[#34C759] font-medium">Selesai</span>}
           </p>
+          {!alreadyCompleted && <AutoSaveIndicator status={autoSave.status} savedAt={autoSave.savedAt} />}
         </div>
       </div>
 
@@ -194,7 +206,7 @@ export default function GriyaTerapiAwalPage() {
         </div>
       </div>
 
-      <fieldset disabled={locked} className="border-0 m-0 p-0 min-w-0 space-y-5">
+      <fieldset disabled={locked} onBlur={autoSave.onBlur} className="border-0 m-0 p-0 min-w-0 space-y-5">
         <RmSections sections={meta.sections} form={form} set={set} />
 
         <Section title={rmType === 'DEFAULT' ? 'Asesor' : 'Penanggung Jawab'}>

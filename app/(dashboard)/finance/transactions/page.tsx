@@ -10,6 +10,8 @@ import { createTransactionManual } from '@/app/actions/transactions'
 import { todayJakartaISO } from '@/lib/utils'
 import { logActivity } from '@/lib/activityLog'
 import { TableSkeleton } from '@/components/ui/Skeleton'
+import { PaymentProofField, PaymentProofLink } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 
 const TYPE_LABELS: Record<TransactionType, string>    = { income: 'Pemasukan', expense: 'Pengeluaran' }
 const STATUS_BADGE: Record<TransactionStatus, string> = {
@@ -67,6 +69,7 @@ function getDefaultForm() {
     penjamin:         '',
     description:      '',
     transaction_date: todayJakartaISO(),
+    receipt_url:      null as string | null,
   }
 }
 
@@ -78,6 +81,7 @@ export default function TransactionsPage() {
   const [saving, setSaving]     = useState(false)
   const [rejectId, setRejectId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  const [proofUploading, setProofUploading] = useState(false)
 
   const [userId, setUserId]     = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
@@ -116,6 +120,9 @@ export default function TransactionsPage() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
+    if (proofUploading) return
+    const needsProof = requiresPaymentProof(form.payment_method)
+    if (needsProof && !form.receipt_url) { alert(PAYMENT_PROOF_REQUIRED_MSG); return }
     setSaving(true)
     const { error } = await createTransactionManual({
       type:             form.type,
@@ -128,6 +135,7 @@ export default function TransactionsPage() {
       penjamin:         isIncome ? (form.penjamin || null) : null,
       description:      form.description || null,
       transaction_date: form.transaction_date,
+      receipt_url:      needsProof ? form.receipt_url : null,
     })
     setSaving(false)
     if (error) { alert(error); return }
@@ -263,7 +271,10 @@ export default function TransactionsPage() {
                     }
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                    {r.payment_method ?? '—'}
+                    <div className="flex items-center gap-1.5">
+                      {r.payment_method ?? '—'}
+                      <PaymentProofLink path={r.receipt_url} />
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-center">
                     {r.payment_status
@@ -374,6 +385,13 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
+              <PaymentProofField
+                method={form.payment_method}
+                value={form.receipt_url}
+                onChange={(path) => setForm((f) => ({ ...f, receipt_url: path }))}
+                onUploadingChange={setProofUploading}
+              />
+
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Keterangan</label>
                 <input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -382,7 +400,7 @@ export default function TransactionsPage() {
 
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Batal</button>
-                <button type="submit" disabled={saving} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
+                <button type="submit" disabled={saving || proofUploading} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
                   {saving ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>

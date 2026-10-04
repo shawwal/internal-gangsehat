@@ -106,6 +106,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
       penjamin:          row.penjamin,
       description:       row.keterangan,
       transaction_date:  row.date,
+      receipt_url:       row.proofPath,
     })
   }
   const kodeTransaksi = extractKodeTransaksi(pkg.notes)

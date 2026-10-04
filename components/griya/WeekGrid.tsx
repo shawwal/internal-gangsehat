@@ -223,6 +223,7 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
                 <MenuBtn icon={<Move size={14} />} label="Pindahkan" onClick={() => act('move')} />
                 <MenuBtn icon={<GraduationCap size={14} />} label="Akhiri Jadwal" onClick={() => act('end')} />
                 <MenuBtn icon={<Ban size={14} />} label="Batalkan Hari Ini" danger separated onClick={() => act('cancel')} />
+                <MenuBtn icon={<Trash2 size={14} />} label="Hapus" danger onClick={() => act('deleteVisit')} />
               </>
             )}
             {m.cell.slot && m.cell.state === 'hadir' && canEdit && (

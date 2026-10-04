@@ -12,6 +12,7 @@ export interface OrderPaymentRow {
   payment_status: string | null
   penjamin: string | null
   description: string | null
+  receipt_url?: string | null
 }
 
 export interface OrderPaymentHistoryEntry {
@@ -25,6 +26,8 @@ export interface OrderPaymentHistoryEntry {
   discount: number
   paymentStatus: string | null
   penjamin: string | null
+  /** Bukti transfer path in `payment-proofs`. */
+  proofPath: string | null
 }
 
 export type OrderPaymentStatusLabel = 'Belum Bayar' | 'DP' | 'Cicilan' | 'Lunas'
@@ -66,6 +69,7 @@ export function computeOrderPaymentSummary(rows: OrderPaymentRow[]): OrderPaymen
       discount: r.discount,
       paymentStatus: r.payment_status,
       penjamin: r.penjamin,
+      proofPath: r.receipt_url ?? null,
     }
   })
 

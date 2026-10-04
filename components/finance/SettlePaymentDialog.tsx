@@ -7,6 +7,8 @@ import { addPaymentToOrder, fetchOrderPaymentHistory } from '@/app/actions/trans
 import { formatCurrency } from '@/lib/utils'
 import { PaymentHistoryTable } from './PaymentHistoryTable'
 import type { OrderPaymentSummary } from '@/lib/internal/orderPayments'
+import { PaymentProofField } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
 
@@ -37,6 +39,8 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
   const [success, setSuccess] = useState(false)
   const [error, setError]     = useState<string | null>(null)
   const [history, setHistory] = useState<OrderPaymentSummary | null>(null)
+  const [proofPath, setProofPath] = useState<string | null>(null)
+  const [proofUploading, setProofUploading] = useState(false)
 
   useEffect(() => {
     if (!transaction.order_id) return
@@ -52,10 +56,12 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
   // sebelumnya" — insert a new transactions row against the same order_id,
   // never mutate the existing one.
   async function handleConfirm() {
-    if (submitting || !transaction.order_id) return
+    if (submitting || proofUploading || !transaction.order_id) return
+    const needsProof = requiresPaymentProof(method)
+    if (needsProof && !proofPath) { setError(PAYMENT_PROOF_REQUIRED_MSG); return }
     setSubmitting(true)
     setError(null)
-    const result = await addPaymentToOrder(transaction.order_id, extraNum, method)
+    const result = await addPaymentToOrder(transaction.order_id, extraNum, method, null, needsProof ? proofPath : null)
     if (result.error) {
       setSubmitting(false)
       setError(result.error)
@@ -81,7 +87,7 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
           </div>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
           {/* Current state */}
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="rounded-xl bg-white/5 border border-white/10 px-2 py-2.5">
@@ -148,6 +154,13 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
             </div>
           </div>
 
+          <PaymentProofField
+            method={method}
+            value={proofPath}
+            onChange={setProofPath}
+            onUploadingChange={setProofUploading}
+          />
+
           {/* Live preview */}
           <div className={`rounded-xl px-4 py-3 flex items-center justify-between ${
             sisaAfter > 0 ? 'bg-destructive/8 border border-destructive/20' : 'bg-[#34C759]/8 border border-[#34C759]/20'
@@ -185,7 +198,7 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={submitting || success || extraNum <= 0 || !transaction.order_id}
+            disabled={submitting || proofUploading || success || extraNum <= 0 || !transaction.order_id}
             className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-70 transition-colors cursor-pointer"
           >
             {submitting

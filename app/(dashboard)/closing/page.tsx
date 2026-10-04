@@ -15,6 +15,9 @@ import {
 } from '@/app/actions/closing'
 import { createTransactionManual, deleteTransaction, updateTransaction } from '@/app/actions/transactions'
 import { Skeleton, SkeletonRegion, FormSkeleton, StatCardsSkeleton } from '@/components/ui/Skeleton'
+import { PaymentProofField, PaymentProofLink } from '@/components/payments/PaymentProofField'
+import { PaymentProofDialog } from '@/components/payments/PaymentProofDialog'
+import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 
 type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'admin' | null
 
@@ -63,7 +66,12 @@ export default function ClosingAdminPage() {
     amount: '',
     payment_method: PAYMENT_METHODS[0],
     description: '',
+    receipt_url: null as string | null,
   })
+  const [expenseProofUploading, setExpenseProofUploading] = useState(false)
+  // Transfer proof prompt: switching a row to a transfer method inline, or
+  // attaching a proof to an existing transfer row.
+  const [proofPrompt, setProofPrompt] = useState<{ txId: string; method: string; switchMethod: boolean } | null>(null)
 
   const [branchList, setBranchList] = useState<BranchOption[]>([])
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
@@ -125,6 +133,10 @@ export default function ClosingAdminPage() {
     field: 'category' | 'payment_method' | 'payment_status' | 'amount' | 'harga' | 'discount' | 'penjamin' | 'description',
     value: string,
   ) {
+    if (field === 'payment_method' && requiresPaymentProof(value) && !findTxProof(txId)) {
+      setProofPrompt({ txId, method: value, switchMethod: true })
+      return
+    }
     setSavingTxId(txId)
     const patch = field === 'amount' || field === 'harga' || field === 'discount'
       ? { [field]: Number(value) || 0 }
@@ -133,6 +145,24 @@ export default function ClosingAdminPage() {
     setSavingTxId(null)
     await load()
     if (error) alert(error)
+  }
+
+  function findTxProof(txId: string): string | null {
+    const tx = financial?.transactions.find((t) => t.id === txId)
+      ?? visits?.visits.flatMap((v) => v.payments).find((p) => p.id === txId)
+    return tx?.receipt_url ?? null
+  }
+
+  async function saveProofPrompt(path: string): Promise<string | null> {
+    if (!proofPrompt) return null
+    const { txId, method, switchMethod } = proofPrompt
+    setSavingTxId(txId)
+    const { error } = await updateTransaction(txId, switchMethod ? { payment_method: method, receipt_url: path } : { receipt_url: path })
+    setSavingTxId(null)
+    if (error) return error
+    setProofPrompt(null)
+    await load()
+    return null
   }
 
   async function handleDeleteTx(txId: string) {
@@ -148,6 +178,9 @@ export default function ClosingAdminPage() {
     if (!selectedBranchId) return
     const amount = Number(newExpense.amount)
     if (!amount || amount <= 0) { alert('Masukkan nominal yang valid'); return }
+    if (expenseProofUploading) return
+    const needsProof = requiresPaymentProof(newExpense.payment_method)
+    if (needsProof && !newExpense.receipt_url) { alert(PAYMENT_PROOF_REQUIRED_MSG); return }
     setAddingExpense(true)
     const { error } = await createTransactionManual({
       type: 'expense',
@@ -161,10 +194,11 @@ export default function ClosingAdminPage() {
       description: newExpense.description || null,
       transaction_date: dateTo,
       branch_id: selectedBranchId,
+      receipt_url: needsProof ? newExpense.receipt_url : null,
     })
     setAddingExpense(false)
     if (error) { alert(error); return }
-    setNewExpense({ category: EXPENSE_CATEGORIES[0], amount: '', payment_method: PAYMENT_METHODS[0], description: '' })
+    setNewExpense({ category: EXPENSE_CATEGORIES[0], amount: '', payment_method: PAYMENT_METHODS[0], description: '', receipt_url: null })
     setShowAddExpense(false)
     await load()
   }
@@ -373,6 +407,13 @@ export default function ClosingAdminPage() {
                       className="px-2 py-1.5 rounded-lg border border-border bg-input text-xs focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
+                  <PaymentProofField
+                    method={newExpense.payment_method}
+                    value={newExpense.receipt_url}
+                    onChange={(path) => setNewExpense((s) => ({ ...s, receipt_url: path }))}
+                    onUploadingChange={setExpenseProofUploading}
+                    compact
+                  />
                   <div className="flex items-center justify-end gap-2">
                     <button
                       type="button"
@@ -383,7 +424,7 @@ export default function ClosingAdminPage() {
                     </button>
                     <button
                       type="button"
-                      disabled={addingExpense}
+                      disabled={addingExpense || expenseProofUploading}
                       onClick={handleAddExpense}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50"
                     >
@@ -444,6 +485,12 @@ export default function ClosingAdminPage() {
                           <span className={`px-1.5 py-0.5 rounded-full font-semibold ${TX_STATUS_BADGE[t.status] ?? 'bg-muted text-muted-foreground'}`}>
                             {TX_STATUS_LABEL[t.status] ?? t.status}
                           </span>
+                          <ProofControl
+                            method={t.payment_method}
+                            path={t.receipt_url}
+                            canEdit={canEditCategory}
+                            onAttach={() => setProofPrompt({ txId: t.id, method: t.payment_method ?? '', switchMethod: false })}
+                          />
                         </div>
                         {t.patient_name && <p className="font-semibold text-foreground mt-1">{t.patient_name}</p>}
                         {canEditCategory ? (
@@ -620,6 +667,12 @@ export default function ClosingAdminPage() {
                                     ) : (
                                       <span className="text-muted-foreground/80 truncate">{p.description ?? ''}</span>
                                     )}
+                                    <ProofControl
+                                      method={p.payment_method}
+                                      path={p.receipt_url}
+                                      canEdit={canEditCategory}
+                                      onAttach={() => setProofPrompt({ txId: p.id, method: p.payment_method ?? '', switchMethod: false })}
+                                    />
                                     <span className={`px-1.5 py-0.5 rounded-full font-semibold ${TX_STATUS_BADGE[p.status] ?? 'bg-muted text-muted-foreground'}`}>
                                       {TX_STATUS_LABEL[p.status] ?? p.status}
                                     </span>
@@ -638,7 +691,37 @@ export default function ClosingAdminPage() {
           </div>
         </div>
       )}
+
+      {proofPrompt && (
+        <PaymentProofDialog
+          method={proofPrompt.method}
+          initialPath={findTxProof(proofPrompt.txId)}
+          subtitle={proofPrompt.switchMethod ? 'Ganti metode bayar' : undefined}
+          onCancel={() => setProofPrompt(null)}
+          onSubmit={saveProofPrompt}
+        />
+      )}
     </div>
+  )
+}
+
+/** Proof link when one exists; for transfer rows still missing one, an "add" button. */
+function ProofControl({ method, path, canEdit, onAttach }: {
+  method: string | null
+  path: string | null
+  canEdit: boolean
+  onAttach: () => void
+}) {
+  if (path) return <PaymentProofLink path={path} />
+  if (!canEdit || !requiresPaymentProof(method)) return null
+  return (
+    <button
+      type="button"
+      onClick={onAttach}
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border border-dashed border-[#FFB35C]/50 text-[#FFB35C] hover:bg-[#FFB35C]/10 transition-colors"
+    >
+      <Plus size={10} /> Bukti
+    </button>
   )
 }
 

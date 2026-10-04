@@ -45,6 +45,9 @@ export function resolveDay(week: GriyaWeek, dateIso: string): { cells: Map<strin
   for (const s of week.slots) {
     if (s.hari !== hari) continue
     const v = bySlot.get(s.id) ?? null
+    // An ended slot, or a date outside the slot's validity window, generates
+    // nothing — only a visit already recorded for that date (history) is shown.
+    if (!v && (s.status !== 'active' || dateIso < s.start_date || (s.end_date && dateIso > s.end_date))) continue
     const resolvedTherapistId = resolveTherapistForSlot(
       { discipline: s.discipline, hari: s.hari, slot_time: s.slot_time, therapist_id: s.therapist_id },
       week.therapists, week.schedules,

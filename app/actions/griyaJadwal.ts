@@ -182,13 +182,17 @@ export async function fetchGriyaWeek(weekMondayIso: string, branchId: string): P
       .select('id, therapist_id, discipline, display_order, is_active')
       .eq('branch_id', branchId)
       .order('display_order', { ascending: true }),
+    // Active open-ended slots, plus any slot (active or ended) whose end_date falls
+    // in/after this week — an ended slot's past occurrences (hadir/izin) must still
+    // render on the weeks before it ended, otherwise ending a schedule made its
+    // attendance history vanish from the grid. resolveDay() enforces the
+    // start_date/end_date window per day.
     supabase
       .from('griya_schedule_slots')
       .select('id, patient_id, therapist_id, discipline, hari, slot_time, service_type, package_id, start_date, end_date, status, notes')
       .eq('branch_id', branchId)
-      .eq('status', 'active')
       .lte('start_date', weekEndIso)
-      .or(`end_date.is.null,end_date.gte.${weekMondayIso}`),
+      .or(`and(status.eq.active,end_date.is.null),end_date.gte.${weekMondayIso}`),
     supabase
       .from('patient_visits')
       .select('id, patient_id, griya_slot_id, attending_staff_id, visit_date, visit_time, service_type, status, kehadiran, notes, package_id, layanan_id')
@@ -905,8 +909,14 @@ export interface AddSubstituteInput {
   date: string
   slot_time: string
   service_type?: string | null
+  layanan_id?: string | null
   package_id?: string | null
   coveringName?: string | null
+  /** 'once' = a standalone single session booked from "Sekali saja (1 sesi)" —
+   *  same storage as a substitute (a patient_visits row with no griya_slot_id, so
+   *  nothing recurs next week and deleting it removes it for good), just not
+   *  labelled "Pengganti". */
+  kind?: 'substitute' | 'once'
 }
 
 export async function addSubstitute(input: AddSubstituteInput): Promise<{ error: string | null }> {
@@ -928,10 +938,13 @@ export async function addSubstitute(input: AddSubstituteInput): Promise<{ error:
     visit_date: input.date,
     visit_time: input.slot_time,
     service_type: input.service_type ?? 'SESI TERAPI',
+    layanan_id: input.layanan_id ?? null,
     package_id: input.package_id ?? null,
     status: 'scheduled',
     griya_slot_id: null,
-    notes: input.coveringName ? `Pengganti untuk ${input.coveringName}` : 'Pengganti',
+    notes: input.kind === 'once'
+      ? null
+      : input.coveringName ? `Pengganti untuk ${input.coveringName}` : 'Pengganti',
     order_id: orderId,
     updated_at: new Date().toISOString(),
   })
@@ -940,7 +953,7 @@ export async function addSubstitute(input: AddSubstituteInput): Promise<{ error:
   await logActivity({
     supabase, userId, action: 'create', resourceType: 'griya_slot', resourceId: null,
     branchId: input.branch_id, patientId: input.patient_id,
-    newValues: { substitute: true, date: input.date, therapist_id: input.therapist_id, slot_time: input.slot_time },
+    newValues: { [input.kind === 'once' ? 'one_off' : 'substitute']: true, date: input.date, therapist_id: input.therapist_id, slot_time: input.slot_time },
   })
   return { error: null }
 }
@@ -965,6 +978,12 @@ export async function endEnrollment(
     .eq('id', slotId)
   if (error) return { error: error.message }
 
+  // Untouched placeholders after the end date (e.g. a future move) would otherwise
+  // keep showing as "Terjadwal" for a schedule that no longer exists.
+  await supabase.from('patient_visits').delete()
+    .eq('griya_slot_id', slotId).gt('visit_date', input.end_date)
+    .eq('status', 'scheduled').is('kehadiran', null)
+
   await logActivity({
     supabase, userId, action: 'update', resourceType: 'griya_slot', resourceId: slotId,
     branchId: slot.branch_id as string,
@@ -974,31 +993,140 @@ export async function endEnrollment(
   return { error: null }
 }
 
-// ── Remove a slot created by mistake (only if it has no realised visits) ─────
+// A visit is "realised" once it holds real data — attendance, a confirmed/pending
+// payment, or clinical notes. Unrealised rows are just placeholders a move/cancel
+// created for a date, and are safe to delete along with their slot.
+function isRealisedVisit(v: { status: string | null; kehadiran: string | null }) {
+  return v.kehadiran === 'HADIR' || v.status === 'completed'
+}
+
+function friendlyDeleteError(error: { code?: string; message: string }): string {
+  if (error.code === '23503') {
+    return 'Kunjungan ini sudah punya data terkait (pembayaran / catatan sesi / asesmen) — hapus data tersebut dulu, atau gunakan "Batalkan".'
+  }
+  return error.message
+}
+
+/** Deletes the given visits, verifying RLS actually let every row through — a
+ *  policy-filtered DELETE returns no error, just zero rows, which used to look
+ *  like success while the row silently stayed (and "came back" on reload). */
+async function deleteVisitsStrict(supabase: SupaClient, ids: string[]): Promise<string | null> {
+  if (ids.length === 0) return null
+  const { count: paidCount } = await supabase
+    .from('transactions').select('id', { count: 'exact', head: true })
+    .in('visit_id', ids).neq('status', 'rejected')
+  if ((paidCount ?? 0) > 0) {
+    return 'Kunjungan ini sudah punya pembayaran — batalkan/hapus pembayarannya dulu sebelum menghapus.'
+  }
+  const { data, error } = await supabase.from('patient_visits').delete().in('id', ids).select('id')
+  if (error) return friendlyDeleteError(error)
+  if ((data?.length ?? 0) !== ids.length) return 'Sebagian kunjungan tidak bisa dihapus (tidak memiliki akses ke data ini).'
+  return null
+}
+
+/** Stops a recurring slot so nothing is generated after `lastDate`. A slot with no
+ *  realised history left is deleted outright (e.g. one created by mistake);
+ *  otherwise it's ended (status 'stopped') so its past sessions stay visible. */
+async function stopSlotAfter(supabase: SupaClient, slotId: string, lastDate: string | null): Promise<string | null> {
+  const { data: visits } = await supabase
+    .from('patient_visits').select('id, visit_date, status, kehadiran').eq('griya_slot_id', slotId)
+  const rows = (visits ?? []) as { id: string; visit_date: string; status: string | null; kehadiran: string | null }[]
+
+  // Future placeholders (moves/cancellations already recorded after the stop date)
+  // would otherwise linger as orphans — remove them; realised ones block.
+  const after = lastDate ? rows.filter((v) => v.visit_date > lastDate) : rows
+  if (after.some(isRealisedVisit)) {
+    return 'Jadwal ini sudah punya sesi hadir setelah tanggal tersebut — ubah/hapus sesi itu dulu.'
+  }
+  const delErr = await deleteVisitsStrict(supabase, after.map((v) => v.id))
+  if (delErr) return delErr
+
+  const remaining = rows.length - after.length
+  if (remaining === 0) {
+    const { data, error } = await supabase.from('griya_schedule_slots').delete().eq('id', slotId).select('id')
+    if (error) return error.message
+    if (!data?.length) return 'Jadwal tidak bisa dihapus (tidak memiliki akses).'
+    return null
+  }
+
+  const { data, error } = await supabase
+    .from('griya_schedule_slots')
+    .update({ status: 'stopped', end_date: lastDate })
+    .eq('id', slotId).select('id')
+  if (error) return error.message
+  if (!data?.length) return 'Jadwal tidak bisa diubah (tidak memiliki akses).'
+  return null
+}
+
+// ── Remove a master slot (Jadwal Master "Hapus") ─────────────────────────────
+// Deletes it entirely when it has no realised sessions (placeholder rows from a
+// move/cancel no longer block this); otherwise it must be ended instead so the
+// attendance history is kept.
 
 export async function removeSlot(slotId: string): Promise<{ error: string | null }> {
   const a = await requireWrite()
   if ('error' in a) return { error: a.error }
   const { supabase, userId } = a
 
-  const { count } = await supabase
-    .from('patient_visits')
-    .select('id', { count: 'exact', head: true })
-    .eq('griya_slot_id', slotId)
-  if ((count ?? 0) > 0) {
-    return { error: 'Slot ini sudah punya riwayat kehadiran — akhiri jadwal, jangan hapus.' }
-  }
-
   const { data: slot } = await supabase
     .from('griya_schedule_slots').select('branch_id, patient_id, hari, slot_time').eq('id', slotId).single()
+  if (!slot) return { error: 'Slot tidak ditemukan' }
 
-  const { error } = await supabase.from('griya_schedule_slots').delete().eq('id', slotId)
-  if (error) return { error: error.message }
+  const { data: visits } = await supabase
+    .from('patient_visits').select('id, status, kehadiran').eq('griya_slot_id', slotId)
+  if ((visits ?? []).some((v) => isRealisedVisit(v as { status: string | null; kehadiran: string | null }))) {
+    return { error: 'Jadwal ini sudah punya riwayat kehadiran — gunakan "Akhiri Jadwal", jangan hapus.' }
+  }
+
+  const err = await stopSlotAfter(supabase, slotId, null)
+  if (err) return { error: err }
 
   await logActivity({
     supabase, userId, action: 'delete', resourceType: 'griya_slot', resourceId: slotId,
-    branchId: (slot?.branch_id as string) ?? null, patientId: (slot?.patient_id as string) ?? null,
-    oldValues: slot ? { hari: slot.hari, slot_time: hhmm(slot.slot_time as string) } : null,
+    branchId: slot.branch_id as string, patientId: slot.patient_id as string,
+    oldValues: { hari: slot.hari, slot_time: hhmm(slot.slot_time as string) },
+  })
+  return { error: null }
+}
+
+// ── Delete one date's occurrence of a recurring slot (grid "Hapus") ──────────
+// Deleting only the patient_visits row of a slot-backed cell can't make the cell
+// go away — the master slot regenerates a fresh "Terjadwal" occurrence for that
+// date on the next reload. So the caller must choose explicitly:
+//   stopRecurring=false → remove just this date's visit record (cell goes back to
+//                         "Terjadwal" because the weekly schedule still exists)
+//   stopRecurring=true  → also stop the weekly schedule from this date on, so the
+//                         cell (and every later week) is truly empty.
+
+export async function deleteOccurrence(
+  slotId: string, date: string, opts: { stopRecurring: boolean },
+): Promise<{ error: string | null }> {
+  const a = await requireWrite()
+  if ('error' in a) return { error: a.error }
+  const { supabase, userId } = a
+
+  const { data: slot } = await supabase
+    .from('griya_schedule_slots').select('branch_id, patient_id, start_date').eq('id', slotId).single()
+  if (!slot) return { error: 'Slot tidak ditemukan' }
+
+  const existing = await findVisitForSlotDate(supabase, slotId, date)
+  if (!existing && !opts.stopRecurring) return { error: null } // nothing recorded for this date
+
+  if (existing) {
+    const err = await deleteVisitsStrict(supabase, [existing.id])
+    if (err) return { error: err }
+  }
+
+  if (opts.stopRecurring) {
+    const lastDate = addDaysIso(date, -1)
+    const err = await stopSlotAfter(supabase, slotId, lastDate < (slot.start_date as string) ? null : lastDate)
+    if (err) return { error: err }
+  }
+
+  await logActivity({
+    supabase, userId, action: 'delete', resourceType: 'griya_slot', resourceId: slotId,
+    branchId: slot.branch_id as string, patientId: slot.patient_id as string,
+    oldValues: { date, stop_recurring: opts.stopRecurring },
   })
   return { error: null }
 }

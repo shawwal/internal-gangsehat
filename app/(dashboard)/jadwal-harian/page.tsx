@@ -24,6 +24,7 @@ import { DetachPackageDialog } from '@/components/jadwal/DetachPackageDialog'
 import { AttachPackageDialog } from '@/components/jadwal/AttachPackageDialog'
 import { ChangeTherapistDialog } from '@/components/jadwal/ChangeTherapistDialog'
 import { BuyPackageButton } from '@/components/jadwal/buy-package/BuyPackageButton'
+import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders, updateVisit } from '@/app/actions/jadwal'
 import { fetchWaConfigAll, type WaConfigAll } from '@/app/actions/reminder-template'
 import { resolveWaConfig } from '@/lib/waConfig'
@@ -65,6 +66,8 @@ export default function JadwalHarianPage() {
     (MedicalRecordSavedContext & { patientName: string; branchId: string | null; visitId: string }) | null
   >(null)
   const [refreshingCell, setRefreshingCell]         = useState<RefreshingCell | null>(null)
+  const [pendingMove, setPendingMove]               = useState<{ visit: DailyVisit; staffId: string; visitTime: string | null } | null>(null)
+  const [moving, setMoving]                         = useState(false)
 
   // Restore the date from a `?date=` param when returning here (e.g. from a
   // saved SOAP/assessment form) — otherwise a non-today view always resets
@@ -187,18 +190,29 @@ export default function JadwalHarianPage() {
     return s?.nickname || s?.full_name || 'terapis'
   }
 
-  // Drag-and-drop reassign. Keeps the visit's minutes when moving to another hour;
-  // shift follows the destination hour relative to the Pagi/Sore divider.
-  async function handleDropVisit(visitId: string, staffId: string, hour: number | null) {
+  // Drag-and-drop reassign. A drop only stages the move — it's applied after the
+  // user confirms in the dialog. Keeps the visit's minutes when moving to another
+  // hour; shift follows the destination hour relative to the Pagi/Sore divider.
+  function handleDropVisit(visitId: string, staffId: string, hour: number | null) {
     const v = visits.find((x) => x.id === visitId)
     if (!v) return
     const minutes   = v.visit_time?.split(':')[1] ?? '00'
     const visitTime = hour === null ? null : `${String(hour).padStart(2, '0')}:${minutes}`
-    const shift     = hour === null ? undefined : (hour >= soreDividerHour ? 'SORE' : 'PAGI')
-    const { error } = await handleMoveVisit(visitId, { staffId, visitTime, shift })
+    setPendingMove({ visit: v, staffId, visitTime })
+  }
+
+  async function confirmMoveVisit() {
+    if (!pendingMove) return
+    const { visit: v, staffId, visitTime } = pendingMove
+    const hour  = visitTime ? parseInt(visitTime.split(':')[0], 10) : null
+    const shift = hour === null ? undefined : (hour >= soreDividerHour ? 'SORE' : 'PAGI')
+    setMoving(true)
+    const { error } = await handleMoveVisit(v.id, { staffId, visitTime, shift })
+    setMoving(false)
+    setPendingMove(null)
     if (error) { showToast('Gagal memindahkan: ' + error, 'error'); return }
     showToast(`${v.patient_name} dipindah ke ${staffLabel(staffId)}${visitTime ? ` · ${visitTime}` : ''}`, 'success')
-    silentReload({ type: 'visit', visitId })
+    silentReload({ type: 'visit', visitId: v.id })
   }
 
   // Incomplete visits: completed but missing diagnosis/treatment/(regio, when required) and has a therapist
@@ -603,6 +617,22 @@ export default function JadwalHarianPage() {
             }
             return result
           }}
+        />
+      )}
+
+      {pendingMove && (
+        <ConfirmDialog
+          title={`Pindahkan ${pendingMove.visit.patient_name}`}
+          description={
+            `Pindahkan jadwal ${pendingMove.visit.patient_name} dari ` +
+            `${pendingMove.visit.attending_staff_id ? staffLabel(pendingMove.visit.attending_staff_id) : 'belum ditugaskan'}` +
+            `${pendingMove.visit.visit_time ? ` · ${pendingMove.visit.visit_time.slice(0, 5)}` : ''} ke ` +
+            `${staffLabel(pendingMove.staffId)}${pendingMove.visitTime ? ` · ${pendingMove.visitTime}` : ''}?`
+          }
+          confirmLabel="Pindahkan"
+          loading={moving}
+          onConfirm={confirmMoveVisit}
+          onCancel={() => { if (!moving) setPendingMove(null) }}
         />
       )}
 

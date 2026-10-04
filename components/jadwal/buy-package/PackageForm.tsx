@@ -5,6 +5,8 @@ import { createPatientPackage } from '@/app/actions/packages'
 import { createTransactionManual, fetchLayananDetail } from '@/app/actions/transactions'
 import type { CreateTransactionManualInput } from '@/app/actions/transactions'
 import { PACKAGE_CATEGORIES, type PackageCategory } from './types'
+import { PaymentProofField } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 
 interface Props {
   patientId: string
@@ -30,6 +32,8 @@ export function PackageForm({ patientId, patientName, branchId, lockedCategory, 
   const [notes, setNotes]   = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
+  const [proofPath, setProofPath] = useState<string | null>(null)
+  const [proofUploading, setProofUploading] = useState(false)
 
   const sessions = jenis === 'P1' ? 5 : 10
   const isVisit  = category === 'PAKET VISIT'
@@ -67,6 +71,10 @@ export function PackageForm({ patientId, patientName, branchId, lockedCategory, 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!harga || !amount) { setError('Isi harga dan jumlah bayar.'); return }
+    if (proofUploading) return
+    // Check before the package is created, so a missing proof never leaves an unpaid package
+    const needsProof = requiresPaymentProof(method)
+    if (needsProof && !proofPath) { setError(PAYMENT_PROOF_REQUIRED_MSG); return }
     setSaving(true)
     setError(null)
 
@@ -101,6 +109,7 @@ export function PackageForm({ patientId, patientName, branchId, lockedCategory, 
       patient_id:       patientId,
       package_id:       pkgId,
       branch_id:        branchId,
+      receipt_url:      needsProof ? proofPath : null,
     }
 
     const { error: txErr } = await createTransactionManual(txInput)
@@ -243,6 +252,13 @@ export function PackageForm({ patientId, patientName, branchId, lockedCategory, 
         </select>
       </div>
 
+      <PaymentProofField
+        method={method}
+        value={proofPath}
+        onChange={setProofPath}
+        onUploadingChange={setProofUploading}
+      />
+
       {/* Notes */}
       <div>
         <label className={labelCls}>Catatan (opsional)</label>
@@ -266,7 +282,7 @@ export function PackageForm({ patientId, patientName, branchId, lockedCategory, 
         </button>
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || proofUploading}
           className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
         >
           {saving ? 'Menyimpan...' : `Buat Paket untuk ${patientName.split(' ')[0]}`}

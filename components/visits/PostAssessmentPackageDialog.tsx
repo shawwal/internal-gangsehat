@@ -5,6 +5,8 @@ import { Package, X } from 'lucide-react'
 import { createPatientPackage } from '@/app/actions/packages'
 import { createTransactionManual, fetchLayananHarga } from '@/app/actions/transactions'
 import type { CreateTransactionManualInput } from '@/app/actions/transactions'
+import { PaymentProofField } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 
 export interface PostAssessmentPackageDialogProps {
   patientId: string
@@ -43,6 +45,8 @@ export function PostAssessmentPackageDialog({
   const [notes, setNotes]   = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
+  const [proofPath, setProofPath] = useState<string | null>(null)
+  const [proofUploading, setProofUploading] = useState(false)
 
   const category = isVisit ? 'PAKET VISIT' : 'PAKET KLINIK'
   const sessions = jenis === 'P1' ? 5 : 10
@@ -70,6 +74,10 @@ export function PostAssessmentPackageDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!harga || !amount) { setError('Isi harga dan jumlah bayar.'); return }
+    if (proofUploading) return
+    // Check before the package is created, so a missing proof never leaves an unpaid package
+    const needsProof = requiresPaymentProof(method)
+    if (needsProof && !proofPath) { setError(PAYMENT_PROOF_REQUIRED_MSG); return }
     setSaving(true)
     setError(null)
 
@@ -104,6 +112,7 @@ export function PostAssessmentPackageDialog({
       patient_id:       patientId,
       package_id:       pkgId,
       branch_id:        branchId,
+      receipt_url:      needsProof ? proofPath : null,
     }
 
     const { error: txErr } = await createTransactionManual(txInput)
@@ -120,7 +129,7 @@ export function PostAssessmentPackageDialog({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl"
+        className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -248,6 +257,13 @@ export function PostAssessmentPackageDialog({
             </select>
           </div>
 
+          <PaymentProofField
+            method={method}
+            value={proofPath}
+            onChange={setProofPath}
+            onUploadingChange={setProofUploading}
+          />
+
           {/* Notes */}
           <div>
             <label className={labelCls}>Catatan (opsional)</label>
@@ -271,7 +287,7 @@ export function PostAssessmentPackageDialog({
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || proofUploading}
               className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
             >
               {saving ? 'Menyimpan...' : 'Buat Paket & Catat Bayar'}

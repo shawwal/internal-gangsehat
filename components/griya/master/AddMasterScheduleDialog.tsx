@@ -1,17 +1,17 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { X, Search, UserPlus } from 'lucide-react'
+import { X, Search, UserPlus, Repeat, CalendarCheck } from 'lucide-react'
 import { addPatient } from '@/app/actions/patients'
 import { searchGriyaStudents, type GriyaStudentOption } from '@/app/actions/griyaStudents'
-import { assignRecurringSlot, moveSlot, type Discipline, type Hari, type GriyaTherapist } from '@/app/actions/griyaJadwal'
+import { assignRecurringSlot, addSubstitute, type Discipline, type Hari, type GriyaTherapist } from '@/app/actions/griyaJadwal'
 import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
 import { fetchPatientPackages } from '@/app/actions/packages'
 import type { PatientPackage } from '@/types'
 import { PackageSelector } from '@/components/jadwal/assign/PackageSelector'
 import { GriyaBuyPackageDialog } from '../GriyaBuyPackageDialog'
 import { CATEGORY_TO_SERVICE_TYPE } from '@/lib/serviceType'
-import { GRIYA_HOURS, HARI_ORDER, HARI_LABEL, DISCIPLINES, DISCIPLINE_LABEL, toIso } from '../constants'
+import { GRIYA_HOURS, HARI_ORDER, HARI_LABEL, DISCIPLINES, DISCIPLINE_LABEL, toIso, hariOf } from '../constants'
 import { GRIYA_SERVICE_TYPES } from '../types'
 
 function rp(n: number) {
@@ -30,14 +30,22 @@ interface Props {
   allowTherapistPin?: boolean
   therapists?: GriyaTherapist[]
   initialTherapistId?: string | null
-  /** The date currently being viewed on jadwal harian — enables "hari ini saja". */
+  /** The date of the clicked cell (jadwal harian / mingguan). Together with
+   *  `therapists` it enables "Sekali saja (1 sesi)". */
   initialDateIso?: string
 }
 
-// Weekly Schedule (MASTER): Day + Time + Patient + Service, plus therapist ONLY
-// when opened from jadwal harian (allowTherapistPin) — otherwise the therapist is
-// resolved daily by rotation (lib/griyaRotation.ts). Can be opened pre-filled from
-// a grid cell (Jadwal Griya Anak / Jadwal Mingguan) or blank from the Jadwal Master page.
+// Two kinds of booking:
+//  • Rutin mingguan — a MASTER row (griya_schedule_slots): Day + Time + Patient +
+//    Service, plus an optional therapist pin when opened from jadwal harian
+//    (allowTherapistPin) — otherwise the therapist is resolved daily by rotation
+//    (lib/griyaRotation.ts). Repeats every week until ended.
+//  • Sekali saja (1 sesi) — a single patient_visits row for one date + therapist,
+//    with NO master row, so it never repeats and deleting it removes it for good.
+//    (This used to be a "hari ini saja" pin that still created a weekly master
+//    row — the session kept coming back after being deleted.)
+// Can be opened pre-filled from a grid cell or blank from the Jadwal Master page
+// (recurring only there, since there's no date/therapist context).
 export function AddMasterScheduleDialog({
   branchId, initialHari, initialHour, initialDiscipline, onClose, onSaved,
   allowTherapistPin = false, therapists = [], initialTherapistId = null, initialDateIso,
@@ -56,23 +64,21 @@ export function AddMasterScheduleDialog({
   const [discipline, setDiscipline] = useState<Discipline>(initialDiscipline ?? 'FISIOTERAPI')
   const [hari, setHari] = useState<Hari>(initialHari ?? 'SENIN')
   const [hour, setHour] = useState(initialHour ?? GRIYA_HOURS[0])
-  const [startDate, setStartDate] = useState(toIso(new Date()))
+  // Default to the viewed date, so a booking added while looking at another day
+  // actually shows up on that day (resolveDay hides dates before start_date).
+  const [startDate, setStartDate] = useState(initialDateIso ?? toIso(new Date()))
   const [therapistId, setTherapistId] = useState<string>(initialTherapistId ?? '')
-  const [pinScope, setPinScope] = useState<'recurring' | 'once'>('recurring')
+
+  const canOnce = !!initialDateIso && therapists.length > 0
+  const [mode, setMode] = useState<'recurring' | 'once'>('recurring')
+  const [onceDate, setOnceDate] = useState(initialDateIso ?? toIso(new Date()))
+  const showTherapist = mode === 'once' || allowTherapistPin
 
   const therapistOptions = therapists.filter((t) => t.discipline === discipline && t.is_active)
   useEffect(() => {
     if (therapistId && !therapistOptions.some((t) => t.therapist_id === therapistId)) setTherapistId('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [discipline])
-
-  // "Hari ini saja" only makes sense while the day dropdown still matches the day
-  // being viewed — a pin for e.g. Wednesday can't be scoped to "today" if today's Monday.
-  const canPinOnce = !!initialDateIso && hari === (initialHari ?? hari)
-  useEffect(() => {
-    if (!canPinOnce && pinScope === 'once') setPinScope('recurring')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canPinOnce])
 
   const [serviceType, setServiceType] = useState<string>('SESI TERAPI')
   const [layanan, setLayanan] = useState<LayananRow[]>([])
@@ -129,19 +135,42 @@ export function AddMasterScheduleDialog({
   async function save() {
     setSaving(true); setError(null)
 
+    if (mode === 'once') {
+      if (!therapistId) { setError('Pilih terapis untuk sesi ini.'); setSaving(false); return }
+      if (!onceDate) { setError('Tanggal wajib diisi.'); setSaving(false); return }
+    }
+
     let patientId = picked?.id ?? null
     if (tab === 'new') {
       if (!nName.trim() || !nPhone.trim()) { setError('Nama dan No. WA wajib diisi.'); setSaving(false); return }
       const { id, error: e } = await addPatient({ name: nName.trim(), phone: nPhone.trim(), gender: nGender })
       if (e || !id) { setError(e ?? 'Gagal menambah anak.'); setSaving(false); return }
       patientId = id
+      // If the booking below fails, a retry must reuse this child, not create another.
+      setPicked({ id, name: nName.trim(), no_rm: null })
+      setTab('search')
     }
     if (!patientId) { setError('Pilih anak dulu.'); setSaving(false); return }
 
-    const pinRecurring = allowTherapistPin && therapistId && pinScope === 'recurring'
-    const pinOnce = allowTherapistPin && therapistId && pinScope === 'once' && canPinOnce
+    if (mode === 'once') {
+      const { error: e } = await addSubstitute({
+        branch_id: branchId,
+        patient_id: patientId,
+        therapist_id: therapistId,
+        date: onceDate,
+        slot_time: hour,
+        service_type: serviceType,
+        layanan_id: layananId || null,
+        package_id: selectedPkgId,
+        kind: 'once',
+      })
+      setSaving(false)
+      if (e) { setError(e); return }
+      onSaved()
+      return
+    }
 
-    const { error: e, id } = await assignRecurringSlot({
+    const { error: e } = await assignRecurringSlot({
       branch_id: branchId,
       patient_id: patientId,
       discipline,
@@ -150,17 +179,10 @@ export function AddMasterScheduleDialog({
       service_type: serviceType,
       package_id: selectedPkgId,
       start_date: startDate,
-      therapist_id: pinRecurring ? therapistId : null,
+      therapist_id: allowTherapistPin && therapistId ? therapistId : null,
     })
-    if (e) { setSaving(false); setError(e); return }
-
-    if (pinOnce && id) {
-      const { error: moveError } = await moveSlot({ slotId: id, therapist_id: therapistId, slot_time: hour, date: initialDateIso! })
-      setSaving(false)
-      if (moveError) { setError(moveError); return }
-    } else {
-      setSaving(false)
-    }
+    setSaving(false)
+    if (e) { setError(e); return }
     onSaved()
   }
 
@@ -168,11 +190,34 @@ export function AddMasterScheduleDialog({
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="glass-card w-full max-w-2xl max-h-[88vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between p-5 border-b border-border/30">
-          <h2 className="text-base font-semibold text-foreground">Tambah Jadwal Master</h2>
+          <h2 className="text-base font-semibold text-foreground">{mode === 'once' ? 'Tambah Sesi (1x)' : 'Tambah Jadwal Rutin'}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"><X size={16} /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {canOnce && (
+            <div>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { key: 'recurring', label: 'Rutin mingguan', icon: <Repeat size={14} /> },
+                  { key: 'once', label: 'Sekali saja (1 sesi)', icon: <CalendarCheck size={14} /> },
+                ] as const).map((o) => (
+                  <button key={o.key} type="button" onClick={() => setMode(o.key)}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium border cursor-pointer ${
+                      mode === o.key ? 'bg-primary/10 text-primary border-primary/40' : 'border-border text-foreground hover:bg-muted'
+                    }`}>
+                    {o.icon}{o.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                {mode === 'once'
+                  ? 'Hanya untuk tanggal ini — tidak berulang minggu depan dan tidak masuk Jadwal Master.'
+                  : 'Berulang setiap minggu di hari & jam yang sama sampai jadwal diakhiri.'}
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-2">
             {(['search', 'new'] as const).map((t) => (
               <button
@@ -245,13 +290,23 @@ export function AddMasterScheduleDialog({
 
           <div className="space-y-3 pt-3 border-t border-border/30">
             <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Hari</label>
-                <select value={hari} onChange={(e) => setHari(e.target.value as Hari)}
-                  className="w-full px-2.5 py-2 border border-border rounded-xl text-sm bg-input">
-                  {HARI_ORDER.map((h) => <option key={h} value={h}>{HARI_LABEL[h]}</option>)}
-                </select>
-              </div>
+              {mode === 'once' ? (
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">
+                    Tanggal{onceDate && <span className="font-normal"> · {HARI_LABEL[hariOf(new Date(onceDate + 'T00:00:00'))]}</span>}
+                  </label>
+                  <input type="date" value={onceDate} onChange={(e) => setOnceDate(e.target.value)}
+                    className="w-full px-2.5 py-2 border border-border rounded-xl text-sm bg-input" />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Hari</label>
+                  <select value={hari} onChange={(e) => setHari(e.target.value as Hari)}
+                    className="w-full px-2.5 py-2 border border-border rounded-xl text-sm bg-input">
+                    {HARI_ORDER.map((h) => <option key={h} value={h}>{HARI_LABEL[h]}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1">Jam</label>
                 <select value={hour} onChange={(e) => setHour(e.target.value)}
@@ -268,46 +323,31 @@ export function AddMasterScheduleDialog({
               </div>
             </div>
 
-            {allowTherapistPin && (
+            {showTherapist && (
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1">Terapis</label>
                 <select value={therapistId} onChange={(e) => setTherapistId(e.target.value)}
                   className="w-full px-2.5 py-2 border border-border rounded-xl text-sm bg-input">
-                  <option value="">Auto (ikuti rotasi)</option>
+                  <option value="">{mode === 'once' ? '— pilih terapis —' : 'Auto (ikuti rotasi)'}</option>
                   {therapistOptions.map((t) => (
                     <option key={t.therapist_id} value={t.therapist_id}>{t.nickname || t.full_name}</option>
                   ))}
                 </select>
-
-                {therapistId && (
-                  <div className="mt-2">
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Berlaku untuk</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => setPinScope('recurring')}
-                        className={`py-2 rounded-xl text-sm font-medium border cursor-pointer ${pinScope === 'recurring' ? 'bg-primary/10 text-primary border-primary/40' : 'border-border text-foreground hover:bg-muted'}`}>
-                        Rutin (semua minggu)
-                      </button>
-                      <button type="button" disabled={!canPinOnce} onClick={() => setPinScope('once')}
-                        title={canPinOnce ? undefined : 'Hanya tersedia jika Hari yang dipilih sama dengan hari yang sedang dibuka'}
-                        className={`py-2 rounded-xl text-sm font-medium border cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${pinScope === 'once' ? 'bg-primary/10 text-primary border-primary/40' : 'border-border text-foreground hover:bg-muted'}`}>
-                        Hari ini saja
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      {pinScope === 'recurring'
-                        ? 'Terapis ini akan menangani jadwal ini setiap minggu, kecuali rotasi harian menandainya cuti/tidak aktif.'
-                        : 'Jadwal tetap dibuat mengikuti rotasi harian mulai minggu berikutnya — hanya untuk hari ini yang ditangani terapis ini.'}
-                    </p>
-                  </div>
+                {mode === 'recurring' && therapistId && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Terapis ini akan menangani jadwal ini setiap minggu, kecuali rotasi harian menandainya cuti/tidak aktif.
+                  </p>
                 )}
               </div>
             )}
 
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Berlaku mulai</label>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
-            </div>
+            {mode === 'recurring' && (
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Berlaku mulai</label>
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Kategori Kunjungan</label>

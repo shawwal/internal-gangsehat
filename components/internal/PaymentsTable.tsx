@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { PAYMENT_METHODS } from '@/components/order/constants'
 import type { BookingPayment } from '@/app/actions/orders'
+import { PaymentProofField, PaymentProofLink } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_BUCKET, PAYMENT_PROOF_REQUIRED_MSG, isPaymentProofRequiredOnEdit, isValidPaymentProofPath, requiresPaymentProof } from '@/lib/paymentProof'
 
 interface Props {
   payments: BookingPayment[]
@@ -24,6 +26,8 @@ export function PaymentsTable({ payments, bookingId, canEdit, onRefresh }: Props
   async function handleSave(form: Partial<BookingPayment>) {
     setSaving(true)
     const supabase = createClient()
+    // Cash payments never keep a proof left over from an earlier transfer edit
+    const proofPath = requiresPaymentProof(form.metode) ? (form.proof_path ?? null) : null
     if (editingPayment) {
       await supabase.from('booking_payments').update({
         tanggal: form.tanggal,
@@ -31,7 +35,13 @@ export function PaymentsTable({ payments, bookingId, canEdit, onRefresh }: Props
         waktu_bayar: form.waktu_bayar || null,
         metode: form.metode || null,
         catatan: form.catatan || null,
+        proof_path: proofPath,
       }).eq('id', editingPayment.id)
+      // Replaced/removed proof → drop the old file
+      const oldProof = editingPayment.proof_path
+      if (isValidPaymentProofPath(oldProof) && oldProof !== proofPath) {
+        await supabase.storage.from(PAYMENT_PROOF_BUCKET).remove([oldProof])
+      }
     } else {
       await supabase.from('booking_payments').insert({
         booking_id: bookingId,
@@ -40,6 +50,7 @@ export function PaymentsTable({ payments, bookingId, canEdit, onRefresh }: Props
         waktu_bayar: form.waktu_bayar || null,
         metode: form.metode || null,
         catatan: form.catatan || null,
+        proof_path: proofPath,
       })
     }
     setSaving(false)
@@ -50,7 +61,10 @@ export function PaymentsTable({ payments, bookingId, canEdit, onRefresh }: Props
 
   async function handleDelete(id: string) {
     if (!confirm('Hapus pembayaran ini?')) return
-    await createClient().from('booking_payments').delete().eq('id', id)
+    const supabase = createClient()
+    const proof = payments.find((p) => p.id === id)?.proof_path
+    const { error } = await supabase.from('booking_payments').delete().eq('id', id)
+    if (!error && isValidPaymentProofPath(proof)) await supabase.storage.from(PAYMENT_PROOF_BUCKET).remove([proof])
     onRefresh()
   }
 
@@ -117,7 +131,9 @@ export function PaymentsTable({ payments, bookingId, canEdit, onRefresh }: Props
                       {formatCurrency(p.nominal)}
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{p.waktu_bayar ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{p.metode ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
+                      <div className="flex items-center gap-1.5">{p.metode ?? '—'} <PaymentProofLink path={p.proof_path} /></div>
+                    </td>
                     {canEdit && (
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
@@ -178,14 +194,26 @@ function PaymentModal({
     waktu_bayar: payment?.waktu_bayar ?? 'Booking',
     metode: payment?.metode ?? '',
     catatan: payment?.catatan ?? '',
+    proof_path: payment?.proof_path ?? null,
   })
+  const [proofUploading, setProofUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const proofRequired = payment
+    ? isPaymentProofRequiredOnEdit({ method: payment.metode, proofPath: payment.proof_path }, form.metode)
+    : requiresPaymentProof(form.metode)
+
+  function submit() {
+    if (proofUploading) return
+    if (proofRequired && !form.proof_path) { setError(PAYMENT_PROOF_REQUIRED_MSG); return }
+    onSave(form)
+  }
 
   const field = <T extends keyof typeof form>(key: T, value: (typeof form)[T]) =>
     setForm((f) => ({ ...f, [key]: value }))
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6">
+      <div className="bg-white dark:bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto">
         <h3 className="font-semibold text-gray-900 dark:text-foreground mb-4">
           {payment ? 'Edit Pembayaran' : 'Tambah Pembayaran'}
         </h3>
@@ -218,6 +246,13 @@ function PaymentModal({
               {methods.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
+          <PaymentProofField
+            method={form.metode}
+            value={form.proof_path ?? null}
+            onChange={(path) => field('proof_path', path)}
+            onUploadingChange={setProofUploading}
+            required={proofRequired}
+          />
           <div>
             <label className="block text-xs text-gray-500 mb-1">Catatan</label>
             <textarea value={form.catatan ?? ''} rows={2}
@@ -225,12 +260,13 @@ function PaymentModal({
               className="w-full border border-gray-200 dark:border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none bg-white dark:bg-background" />
           </div>
         </div>
+        {error && <p className="text-xs text-destructive mt-3">{error}</p>}
         <div className="flex gap-2 mt-5">
           <button onClick={onClose}
             className="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-border text-sm hover:bg-gray-50 dark:hover:bg-muted transition-colors">
             Batal
           </button>
-          <button onClick={() => onSave(form)} disabled={saving}
+          <button onClick={submit} disabled={saving || proofUploading}
             className="flex-1 px-4 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white text-sm transition-colors disabled:opacity-50">
             {saving ? 'Menyimpan...' : 'Simpan'}
           </button>

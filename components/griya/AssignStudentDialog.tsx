@@ -108,6 +108,9 @@ export function AssignStudentDialog({ target, onClose, onSaved }: Props) {
       if (e || !id) { setError(e ?? 'Gagal menambah anak.'); setSaving(false); return }
       patientId = id
       patientName = nName.trim()
+      // If the booking below fails, a retry must reuse this child, not create another.
+      setPicked({ id, name: patientName, no_rm: null })
+      setTab('search')
     }
     if (!patientId) { setError('Pilih anak dulu.'); setSaving(false); return }
 
@@ -118,6 +121,7 @@ export function AssignStudentDialog({ target, onClose, onSaved }: Props) {
       date: target.dateIso,
       slot_time: target.hour,
       service_type: serviceType,
+      layanan_id: layananId || null,
       package_id: selectedPkgId,
       coveringName: target.slot?.patient_name ?? null,
     })

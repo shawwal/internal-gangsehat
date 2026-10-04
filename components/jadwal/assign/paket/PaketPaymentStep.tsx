@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { CreditCard, X } from 'lucide-react'
 import { createTransactionManual } from '@/app/actions/transactions'
+import { PaymentProofField } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 
 export interface PaketPaymentStepProps {
   patientId: string
@@ -35,6 +37,8 @@ export function PaketPaymentStep({
   const [method, setMethod] = useState<'TUNAI' | 'TRANSFER BCA' | 'EDC BCA' | 'TRANSFER BANK KALBAR'>('TUNAI')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
+  const [proofPath, setProofPath] = useState<string | null>(null)
+  const [proofUploading, setProofUploading] = useState(false)
 
   const hargaNum  = parseFloat(harga.replace(/\D/g, '')) || 0
   const amountNum = parseFloat(amount.replace(/\D/g, '')) || 0
@@ -44,6 +48,9 @@ export function PaketPaymentStep({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!harga || !amount) { setError('Isi harga dan jumlah bayar.'); return }
+    if (proofUploading) return
+    const needsProof = requiresPaymentProof(method)
+    if (needsProof && !proofPath) { setError(PAYMENT_PROOF_REQUIRED_MSG); return }
     setSaving(true)
     setError(null)
 
@@ -62,6 +69,7 @@ export function PaketPaymentStep({
       patient_id:       patientId,
       package_id:       packageId,
       branch_id:        branchId,
+      receipt_url:      needsProof ? proofPath : null,
     })
 
     setSaving(false)
@@ -76,7 +84,7 @@ export function PaketPaymentStep({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[60] p-4" onClick={onDone}>
       <div
-        className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl"
+        className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -151,6 +159,13 @@ export function PaketPaymentStep({
             </select>
           </div>
 
+          <PaymentProofField
+            method={method}
+            value={proofPath}
+            onChange={setProofPath}
+            onUploadingChange={setProofUploading}
+          />
+
           {error && <p className="text-xs text-destructive">{error}</p>}
 
           <div className="flex gap-2 pt-1">
@@ -163,7 +178,7 @@ export function PaketPaymentStep({
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || proofUploading}
               className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
             >
               {saving ? 'Menyimpan...' : 'Catat Pembayaran'}

@@ -31,6 +31,7 @@ export interface VisitTransaction {
   penjamin: string | null
   description: string | null
   transaction_date: string
+  receipt_url: string | null
 }
 
 export interface DailyVisit {
@@ -142,7 +143,7 @@ export async function fetchDailyVisits(
   const visitIds = visits.map((v) => v.id)
   const { data: txns } = await supabase
     .from('transactions')
-    .select('id, visit_id, category, harga, discount, amount, payment_method, payment_status, penjamin, description, transaction_date, outstanding, status, created_at')
+    .select('id, visit_id, category, harga, discount, amount, payment_method, payment_status, penjamin, description, transaction_date, receipt_url, outstanding, status, created_at')
     .in('visit_id', visitIds)
     .neq('status', 'rejected')
     .order('created_at', { ascending: true })
@@ -182,6 +183,7 @@ export async function fetchDailyVisits(
       penjamin:         t.penjamin,
       description:      t.description,
       transaction_date: t.transaction_date,
+      receipt_url:      t.receipt_url,
     })
   }
 
@@ -347,7 +349,15 @@ export async function deleteVisit(visitId: string): Promise<{ error: string | nu
     .eq('id', visitId)
     .single()
 
-  const { error } = await supabase.from('patient_visits').delete().eq('id', visitId)
+  // .select() so a delete that RLS silently filtered out (zero rows, no error)
+  // is reported instead of looking like success while the row stays put.
+  const { data: deleted, error } = await supabase.from('patient_visits').delete().eq('id', visitId).select('id')
+  if (error?.code === '23503') {
+    return { error: 'Kunjungan ini sudah punya data terkait (pembayaran / catatan sesi / asesmen) — hapus data tersebut dulu.' }
+  }
+  if (!error && !deleted?.length) {
+    return { error: 'Kunjungan tidak bisa dihapus — data tidak ditemukan atau Anda tidak memiliki akses.' }
+  }
 
   if (!error && oldRow) {
     await logActivity({

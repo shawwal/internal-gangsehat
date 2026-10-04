@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { AlertTriangle, CheckCircle2, CreditCard, Loader2, X } from 'lucide-react'
 import { updateTransaction } from '@/app/actions/transactions'
+import { PaymentProofField } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, isPaymentProofRequiredOnEdit, requiresPaymentProof } from '@/lib/paymentProof'
 
 export interface EditableTransaction {
   id: string
@@ -15,6 +17,7 @@ export interface EditableTransaction {
   penjamin: string | null
   description: string | null
   transaction_date: string
+  receipt_url?: string | null
 }
 
 interface Props {
@@ -41,6 +44,8 @@ export function EditPackageTransactionDialog({ transaction, onClose, onSuccess }
   const [penjamin, setPenjamin]           = useState(transaction.penjamin ?? '')
   const [description, setDescription]     = useState(transaction.description ?? '')
   const [txDate, setTxDate]               = useState(transaction.transaction_date)
+  const [proofPath, setProofPath]         = useState<string | null>(transaction.receipt_url ?? null)
+  const [proofUploading, setProofUploading] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState<string | null>(null)
@@ -50,10 +55,15 @@ export function EditPackageTransactionDialog({ transaction, onClose, onSuccess }
   const d = Number(discount) || 0
   const a = Number(amount) || 0
   const sisa = Math.max(h - a - d, 0)
+  const proofRequired = isPaymentProofRequiredOnEdit(
+    { method: transaction.payment_method, proofPath: transaction.receipt_url }, paymentMethod,
+  )
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (submitting) return
+    if (submitting || proofUploading) return
+    const needsProof = requiresPaymentProof(paymentMethod)
+    if (proofRequired && !proofPath) { setError(PAYMENT_PROOF_REQUIRED_MSG); return }
     setSubmitting(true)
     setError(null)
     const result = await updateTransaction(transaction.id, {
@@ -65,6 +75,7 @@ export function EditPackageTransactionDialog({ transaction, onClose, onSuccess }
       penjamin:    penjamin    || null,
       description: description || null,
       transaction_date: txDate,
+      receipt_url: needsProof ? proofPath : null,
     })
     if (result.error) {
       setError(result.error)
@@ -178,6 +189,14 @@ export function EditPackageTransactionDialog({ transaction, onClose, onSuccess }
               </div>
             </div>
 
+            <PaymentProofField
+              method={paymentMethod}
+              value={proofPath}
+              onChange={setProofPath}
+              onUploadingChange={setProofUploading}
+              required={proofRequired}
+            />
+
             <div>
               <label className={labelCls}>
                 Penjamin <span className="text-muted-foreground font-normal">(opsional)</span>
@@ -230,7 +249,7 @@ export function EditPackageTransactionDialog({ transaction, onClose, onSuccess }
               <button
                 type="submit"
                 form="edit-package-tx-form"
-                disabled={submitting}
+                disabled={submitting || proofUploading}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-70 transition-colors"
               >
                 {submitting

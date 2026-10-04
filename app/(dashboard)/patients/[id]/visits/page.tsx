@@ -16,6 +16,7 @@ import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel } from '@/lib/excel-export'
 import { PostAssessmentPackageDialog } from '@/components/visits/PostAssessmentPackageDialog'
 import { EditPackageTransactionDialog } from '@/components/visits/EditPackageTransactionDialog'
+import { PaymentProofLink } from '@/components/payments/PaymentProofField'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { getVisitFormRoute } from '@/lib/visitRouting'
 import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
@@ -178,6 +179,7 @@ interface StandalonePackageTx {
   status: string
   transaction_date: string
   description: string | null
+  receipt_url: string | null
 }
 
 function getStandalonePackageBadge(tx: StandalonePackageTx): { label: string; cls: string } {
@@ -332,7 +334,7 @@ export default function PatientVisitsPage() {
         .order('visit_date', { ascending: false }),
       supabase
         .from('transactions')
-        .select('id, category, harga, discount, amount, outstanding, payment_method, payment_status, penjamin, status, transaction_date, description')
+        .select('id, category, harga, discount, amount, outstanding, payment_method, payment_status, penjamin, status, transaction_date, description, receipt_url')
         .eq('patient_id', id)
         .is('visit_id', null)
         .in('category', ['PAKET KLINIK', 'PAKET VISIT'])
@@ -617,6 +619,7 @@ export default function PatientVisitsPage() {
                             Sisa {formatCurrency(entry.tx.outstanding)}
                           </span>
                         )}
+                        {entry.tx.receipt_url && <span><PaymentProofLink path={entry.tx.receipt_url} /></span>}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">

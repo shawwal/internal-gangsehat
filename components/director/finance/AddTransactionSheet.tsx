@@ -6,6 +6,8 @@ import { Plus, X, Check, AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createTransactionManual } from '@/app/actions/transactions'
 import { todayJakartaISO } from '@/lib/utils'
+import { PaymentProofField } from '@/components/payments/PaymentProofField'
+import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 
 const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'TOKO', 'LAINNYA']
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
@@ -32,6 +34,7 @@ function getDefault() {
     description:      '',
     transaction_date: todayJakartaISO(),
     branch_id:        '',
+    receipt_url:      null as string | null,
   }
 }
 
@@ -48,6 +51,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
   const [status, setStatus] = useState<Status>('idle')
   const [errMsg, setErrMsg] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [proofUploading, setProofUploading] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -91,7 +95,14 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (status === 'saving') return
+    if (status === 'saving' || proofUploading) return
+    const needsProof = requiresPaymentProof(form.payment_method)
+    if (needsProof && !form.receipt_url) {
+      setStatus('error')
+      setErrMsg(PAYMENT_PROOF_REQUIRED_MSG)
+      setTimeout(() => setStatus('idle'), 600)
+      return
+    }
     if (!form.branch_id) {
       setStatus('error')
       setErrMsg('Pilih cabang terlebih dahulu.')
@@ -113,6 +124,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
       description:      form.description || null,
       transaction_date: form.transaction_date,
       branch_id:        form.branch_id,
+      receipt_url:      needsProof ? form.receipt_url : null,
     })
 
     if (error) {
@@ -339,6 +351,13 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
             </div>
           </div>
 
+          <PaymentProofField
+            method={form.payment_method}
+            value={form.receipt_url}
+            onChange={(path) => setForm(f => ({ ...f, receipt_url: path }))}
+            onUploadingChange={setProofUploading}
+          />
+
           {/* Description */}
           <div>
             <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Keterangan</label>
@@ -366,7 +385,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
             type="submit"
             form=""
             onClick={handleSubmit}
-            disabled={status === 'saving' || status === 'success'}
+            disabled={status === 'saving' || status === 'success' || proofUploading}
             className={`w-full py-3 rounded-2xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
               status === 'success'
                 ? 'bg-[#34C759] text-white'

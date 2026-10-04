@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeOrderPaymentSummary, type OrderPaymentSummary, type OrderPaymentRow } from '@/lib/internal/orderPayments'
 import { logActivity } from '@/lib/activityLog'
+import { PAYMENT_PROOF_BUCKET, PAYMENT_PROOF_REQUIRED_MSG, isPaymentProofRequiredOnEdit, isValidPaymentProofPath, paymentProofError, requiresPaymentProof } from '@/lib/paymentProof'
 
 const SERVICE_TO_CATEGORY: Record<string, string> = {
   'TERAPI AWAL':  'TA KLINIK',
@@ -25,6 +26,14 @@ function friendlyTxnError(msg: string): string {
     return 'Metode pembayaran ini belum aktif di database. Minta admin sistem menjalankan migrasi 065 (TRANSFER BANK KALBAR).'
   }
   return msg
+}
+
+type ServerClient = Awaited<ReturnType<typeof createClient>>
+
+/** Best-effort removal of proof images no longer referenced by any row. */
+async function removePaymentProofs(supabase: ServerClient, paths: (string | null | undefined)[]) {
+  const valid = paths.filter(isValidPaymentProofPath)
+  if (valid.length) await supabase.storage.from(PAYMENT_PROOF_BUCKET).remove(valid)
 }
 
 function formatRp(n: number) {
@@ -167,6 +176,8 @@ export interface CreateTransactionInput {
   description: string | null
   transaction_date: string
   category: string
+  /** Bukti transfer path in `payment-proofs`; required for transfer methods. */
+  receipt_url?: string | null
 }
 
 export async function createTransactionForVisit(
@@ -187,6 +198,9 @@ export async function createTransactionForVisit(
   if (!profile || !PAYMENT_ROLES.includes(profile.role)) {
     return { error: 'Tidak memiliki akses untuk mencatat pembayaran' }
   }
+
+  const proofErr = paymentProofError(input.payment_method, input.receipt_url)
+  if (proofErr) return { error: proofErr }
 
   const { data: visit, error: visitErr } = await supabase
     .from('patient_visits')
@@ -213,6 +227,7 @@ export async function createTransactionForVisit(
     payment_status:   input.payment_status,
     penjamin:         input.penjamin,
     description:      input.description,
+    receipt_url:      input.receipt_url ?? null,
     transaction_date: input.transaction_date,
     status:           input.payment_status === 'LUNAS' ? 'confirmed' : 'pending',
     confirmed_by:     input.payment_status === 'LUNAS' ? user.id : null,
@@ -248,7 +263,7 @@ export async function fetchOrderPaymentHistory(orderId: string): Promise<OrderPa
   const supabase = await createClient()
   const { data } = await supabase
     .from('transactions')
-    .select('id, transaction_date, amount, harga, discount, payment_method, payment_status, penjamin, description')
+    .select('id, transaction_date, amount, harga, discount, payment_method, payment_status, penjamin, description, receipt_url')
     .eq('order_id', orderId)
     .neq('status', 'rejected')
 
@@ -260,6 +275,7 @@ export async function addPaymentToOrder(
   amount: number,
   paymentMethod: string,
   keterangan?: string | null,
+  receiptUrl?: string | null,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
 
@@ -275,6 +291,9 @@ export async function addPaymentToOrder(
   if (!profile || !PAYMENT_ROLES.includes(profile.role)) {
     return { error: 'Tidak memiliki akses untuk mencatat pembayaran' }
   }
+
+  const proofErr = paymentProofError(paymentMethod, receiptUrl)
+  if (proofErr) return { error: proofErr }
 
   const { data: existingRows, error: fetchErr } = await supabase
     .from('transactions')
@@ -300,6 +319,7 @@ export async function addPaymentToOrder(
     amount,
     payment_method:   paymentMethod,
     description:      keterangan || null,
+    receipt_url:      receiptUrl ?? null,
     transaction_date: new Date().toISOString().slice(0, 10),
     status:           'pending',
     recorded_by:      user.id,
@@ -339,6 +359,7 @@ export interface UpdateTransactionInput {
   description?: string | null
   transaction_date?: string
   patient_id?: string | null
+  receipt_url?: string | null
 }
 
 export async function updateTransaction(
@@ -366,10 +387,28 @@ export async function updateTransaction(
     .eq('id', id)
     .single()
 
+  if (input.receipt_url != null && !isValidPaymentProofPath(input.receipt_url)) {
+    return { error: 'Bukti transfer tidak valid. Unggah ulang.' }
+  }
+  const nextMethod = input.payment_method !== undefined ? input.payment_method : oldRow?.payment_method
+  const nextProof  = input.receipt_url !== undefined ? input.receipt_url : oldRow?.receipt_url
+  const proofRequired = isPaymentProofRequiredOnEdit(
+    { method: oldRow?.payment_method, proofPath: oldRow?.receipt_url }, nextMethod,
+  )
+  if (proofRequired && !nextProof) return { error: PAYMENT_PROOF_REQUIRED_MSG }
+
+  // A payment switched to cash/EDC (e.g. the closing page's inline select) drops its proof
+  const patch = { ...input }
+  if (input.payment_method !== undefined && !requiresPaymentProof(input.payment_method)) patch.receipt_url = null
+
   const { error } = await supabase
     .from('transactions')
-    .update({ ...input, updated_at: new Date().toISOString() })
+    .update({ ...patch, updated_at: new Date().toISOString() })
     .eq('id', id)
+
+  if (!error && oldRow?.receipt_url && patch.receipt_url !== undefined && patch.receipt_url !== oldRow.receipt_url) {
+    await removePaymentProofs(supabase, [oldRow.receipt_url])
+  }
 
   if (!error && oldRow) {
     await logActivity({
@@ -381,7 +420,7 @@ export async function updateTransaction(
       resourceLabel: `${oldRow.category} — Rp${oldRow.amount}`,
       branchId: oldRow.branch_id,
       oldValues: oldRow,
-      newValues: { ...oldRow, ...input },
+      newValues: { ...oldRow, ...patch },
     })
   }
 
@@ -460,6 +499,8 @@ export interface CreateTransactionManualInput {
   package_id?: string | null
   branch_id?: string | null
   fisio_id?: string | null
+  /** Bukti transfer path in `payment-proofs`; required for transfer methods. */
+  receipt_url?: string | null
 }
 
 export async function createTransactionManual(
@@ -479,6 +520,9 @@ export async function createTransactionManual(
   if (!profile || !PAYMENT_ROLES.includes(profile.role)) {
     return { error: 'Tidak memiliki akses untuk mencatat transaksi' }
   }
+
+  const proofErr = paymentProofError(input.payment_method, input.receipt_url)
+  if (proofErr) return { error: proofErr }
 
   const branchId = input.branch_id ?? profile.branch_id
   if (!branchId) {
@@ -521,6 +565,7 @@ export async function createTransactionManual(
     payment_status:   input.type === 'income' ? input.payment_status : null,
     penjamin:         input.type === 'income' ? (input.penjamin || null) : null,
     description:      input.description || null,
+    receipt_url:      input.receipt_url ?? null,
     transaction_date: input.transaction_date,
     visit_id:         input.visit_id ?? null,
     patient_id:       input.patient_id ?? null,
@@ -576,6 +621,8 @@ export async function deleteTransaction(id: string): Promise<{ error: string | n
     .single()
 
   const { error } = await supabase.from('transactions').delete().eq('id', id)
+
+  if (!error) await removePaymentProofs(supabase, [oldRow?.receipt_url])
 
   if (!error && oldRow) {
     await logActivity({

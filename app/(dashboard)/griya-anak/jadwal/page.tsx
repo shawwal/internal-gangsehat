@@ -19,6 +19,7 @@ import { AddStudentButton } from '@/components/griya/AddStudentButton'
 import { EditVisitDialog } from '@/components/griya/EditVisitDialog'
 import { SessionNoteModal } from '@/components/griya/SessionNoteModal'
 import { CoverUnassignedDialog } from '@/components/griya/CoverUnassignedDialog'
+import { DeleteOccurrenceDialog } from '@/components/griya/DeleteOccurrenceDialog'
 import { AddMasterScheduleDialog } from '@/components/griya/master/AddMasterScheduleDialog'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
@@ -52,6 +53,7 @@ export default function GriyaJadwalPage() {
   const [examineVisit, setExamineVisit] = useState<ResolvedCell | null>(null)
   const [manageOpen, setManageOpen] = useState(false)
   const [confirmTarget, setConfirmTarget] = useState<{ kind: 'cancel' | 'delete'; cell: ResolvedCell } | null>(null)
+  const [deleteOcc, setDeleteOcc] = useState<ResolvedCell | null>(null)
   const [confirming, setConfirming] = useState(false)
 
   // WhatsApp templates & admin phone + branch name for the WA messages — loaded once
@@ -192,7 +194,10 @@ export default function GriyaJadwalPage() {
         else showToast('Tidak ada jadwal untuk dibatalkan di sel ini.', 'error')
         break
       case 'deleteVisit':
-        if (cell?.visit?.id) setConfirmTarget({ kind: 'delete', cell })
+        // A weekly-schedule cell can't be emptied by deleting its visit row alone
+        // (the schedule regenerates it) — ask whether to stop the schedule too.
+        if (cell?.slot) setDeleteOcc(cell)
+        else if (cell?.visit?.id) setConfirmTarget({ kind: 'delete', cell })
         else showToast('Belum ada data kunjungan untuk dihapus.', 'error')
         break
     }
@@ -215,7 +220,7 @@ export default function GriyaJadwalPage() {
   }
 
   function afterMutation() {
-    setAssign(null); setAttendance(null); setEndTarget(null); setMoveSrc(null); setMoveDialog(null); setPayVisit(null); setEditVisit(null); setExamineVisit(null); setCoverSlot(null); setAddMaster(null); setConfirmTarget(null)
+    setAssign(null); setAttendance(null); setEndTarget(null); setMoveSrc(null); setMoveDialog(null); setPayVisit(null); setEditVisit(null); setExamineVisit(null); setCoverSlot(null); setAddMaster(null); setConfirmTarget(null); setDeleteOcc(null)
     reload({ silent: true })
   }
 
@@ -326,6 +331,7 @@ export default function GriyaJadwalPage() {
             notes: editVisit.visit.notes,
             attending_staff_id: editVisit.visit.attending_staff_id,
             patient_name: editVisit.studentName,
+            griya_slot_id: editVisit.visit.griya_slot_id,
           }}
           branchId={branchId}
           onClose={() => setEditVisit(null)}
@@ -351,6 +357,15 @@ export default function GriyaJadwalPage() {
           therapists={week.therapists}
           onClose={() => setManageOpen(false)}
           onSaved={() => reload({ silent: true })}
+        />
+      )}
+      {deleteOcc?.slot && (
+        <DeleteOccurrenceDialog
+          slot={deleteOcc.slot}
+          visitId={deleteOcc.visit?.id ?? null}
+          dateIso={dateIso}
+          onClose={() => setDeleteOcc(null)}
+          onSaved={() => { showToast('Jadwal dihapus', 'success'); afterMutation() }}
         />
       )}
       {confirmTarget && (

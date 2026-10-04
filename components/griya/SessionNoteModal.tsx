@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { Copy, X } from 'lucide-react'
-import { fetchGriyaSessionNote, fetchGriyaPertemuanKe, saveGriyaSessionNote, fetchPreviousGriyaSessionNote } from '@/app/actions/griyaSessionNotes'
+import { fetchGriyaSessionNote, fetchGriyaPertemuanKe, saveGriyaSessionNote, saveGriyaSessionNoteDraft, fetchPreviousGriyaSessionNote } from '@/app/actions/griyaSessionNotes'
 import type { GriyaSessionNote } from '@/types'
+import { useAutoSave } from '@/hooks/useAutoSave'
+import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator'
 
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary resize-none'
 const labelCls = 'block text-xs font-medium text-muted-foreground mb-1'
@@ -53,6 +55,7 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [alreadyCompleted, setAlreadyCompleted] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -63,6 +66,7 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
     ]).then(([note, ke]) => {
       if (cancelled) return
       setForm(toForm(note))
+      setAlreadyCompleted(note?.status === 'completed')
       setPertemuanKe(ke)
       setLoading(false)
     })
@@ -88,6 +92,12 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
     setCopiedFrom(new Date(prev.visit_date + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }))
   }
 
+  const autoSave = useAutoSave(
+    loading ? null : form,
+    (f) => saveGriyaSessionNoteDraft(target.visitId, target.patientId, target.branchId, f),
+    { enabled: !alreadyCompleted && !saving },
+  )
+
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }))
 
   const locked = !form.sudah_diperiksa
@@ -100,9 +110,11 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
     if (locked) { setError('Centang "Sudah diperiksa" terlebih dahulu.'); return }
     if (requiredMissing) { setError('Lengkapi semua kolom sebelum menandai sudah diperiksa.'); return }
     setSaving(true); setError(null)
+    await autoSave.flush()
     const { error } = await saveGriyaSessionNote(target.visitId, target.patientId, target.branchId, form)
     setSaving(false)
     if (error) { setError(error); return }
+    setAlreadyCompleted(true)
     onSaved()
   }
 
@@ -113,6 +125,7 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
           <div>
             <h2 className="text-base font-semibold text-foreground">Periksa Pertemuan Ke-{pertemuanKe}</h2>
             <p className="text-xs text-muted-foreground mt-0.5">{target.patientName}</p>
+            {!loading && !alreadyCompleted && <AutoSaveIndicator status={autoSave.status} savedAt={autoSave.savedAt} />}
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"><X size={16} /></button>
         </div>
@@ -120,7 +133,7 @@ export function SessionNoteModal({ target, onClose, onSaved }: Props) {
         {loading ? (
           <p className="text-sm text-muted-foreground py-6 text-center">Memuat...</p>
         ) : (
-          <div className="flex-1 overflow-y-auto space-y-3">
+          <div onBlur={autoSave.onBlur} className="flex-1 overflow-y-auto space-y-3">
             <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer">
               <input
                 type="checkbox"

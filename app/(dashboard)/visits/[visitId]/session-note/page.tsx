@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { ChevronLeft, Loader2, Printer, Copy, History, Download, Share2, UserX } from 'lucide-react'
 import { fetchVisitWithPatient } from '@/app/actions/jadwal'
 import {
-  fetchSessionNote, fetchLatestCompletedAssessment, fetchPreviousSessionNote, completeSessionNote,
+  fetchSessionNote, fetchLatestCompletedAssessment, fetchPreviousSessionNote, completeSessionNote, saveSessionNoteDraft,
   fetchSessionContext, type SessionContext,
 } from '@/app/actions/sessionNotes'
 import { getOrCreateResumeLink } from '@/app/actions/resumeLinks'
@@ -22,6 +22,8 @@ import type { SessionNoteFormState } from '@/components/sessionNote/types'
 import { stripHtml } from '@/lib/richtext'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
+import { useAutoSave } from '@/hooks/useAutoSave'
+import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator'
 import SessionNoteLoading from './loading'
 
 type FormMode = 'single_step' | 'multi_step'
@@ -95,6 +97,12 @@ export default function SessionNotePage() {
     return () => { cancelled = true }
   }, [])
 
+  const autoSave = useAutoSave(
+    visit && form ? form : null,
+    (f) => saveSessionNoteDraft(visit!.id, visit!.patient_id, visit!.branch_id, toFieldsInput(f)),
+    { enabled: !alreadyCompleted && !saving },
+  )
+
   function patchForm(patch: Partial<SessionNoteFormState>) {
     setForm((f) => f ? { ...f, ...patch } : f)
   }
@@ -113,6 +121,7 @@ export default function SessionNotePage() {
 
     setSaving(true)
     setError(null)
+    await autoSave.flush()
     const { error: err } = await completeSessionNote(
       visit.id, visit.patient_id, visit.branch_id, toFieldsInput(form),
       { shift: visit.shift, kehadiran: visit.kehadiran, regio: visit.regio, sumber_pasien: visit.sumber_pasien },
@@ -178,6 +187,7 @@ export default function SessionNotePage() {
               Catatan Perawatan (SOAP) · {visit.visit_date}
               {alreadyCompleted && <span className="ml-2 text-[#34C759] font-medium">Selesai</span>}
             </p>
+            {!alreadyCompleted && <AutoSaveIndicator status={autoSave.status} savedAt={autoSave.savedAt} />}
           </div>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -257,7 +267,7 @@ export default function SessionNotePage() {
               Rekam medis ini sudah dikunci setelah disimpan. Hubungi admin/manajer untuk perubahan.
             </div>
           )}
-          <fieldset disabled={locked} className="contents border-0 m-0 p-0 min-w-0">
+          <fieldset disabled={locked} onBlur={autoSave.onBlur} className="contents border-0 m-0 p-0 min-w-0">
             {formMode === 'multi_step' ? (
               <MultiStepSessionNoteForm form={form} patchForm={patchForm} error={error} saving={saving} onSubmit={handleComplete} readOnly={locked} />
             ) : (

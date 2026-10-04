@@ -101,7 +101,7 @@ export async function loadFinanceData(params: FinanceParams) {
       let q2 = supabase
         .from('transactions')
         .select(
-          'id, branch_id, patient_id, type, category, harga, discount, amount, outstanding, payment_method, payment_status, status, transaction_date, description, penjamin, branches!branch_id(name)',
+          'id, branch_id, patient_id, type, category, harga, discount, amount, outstanding, payment_method, payment_status, status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)',
           { count: 'exact' },
         )
         .gte('transaction_date', dateFrom)

@@ -61,6 +61,7 @@ interface TransactionRow {
   description: string | null
   penjamin: string | null
   transaction_date: string
+  receipt_url: string | null
 }
 
 // Transactions that count toward the branch's TA/Sesi/Paket progress for a date
@@ -117,7 +118,7 @@ export async function fetchTargetProgressDetail(
       .from('transactions')
       .select(
         'id, patient_id, category, harga, discount, amount, payment_method, ' +
-        'payment_status, status, description, penjamin, transaction_date',
+        'payment_status, status, description, penjamin, transaction_date, receipt_url',
       )
       .eq('branch_id', branchId)
       .eq('transaction_date', visitDate)
@@ -158,6 +159,7 @@ export async function fetchTargetProgressDetail(
           payment_status: row.payment_status,
           penjamin: row.penjamin,
           description: row.description,
+          receipt_url: row.receipt_url,
           transaction_date: row.transaction_date,
           patient_id: row.patient_id,
           patient_name: name || '—',
