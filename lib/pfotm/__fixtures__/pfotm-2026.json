@@ -1,0 +1,1838 @@
+{
+ "year": 2026,
+ "sheet_weights": {
+  "hadir": 1,
+  "terlambat": -1,
+  "alfa": 2,
+  "kunjungan": 1,
+  "paket_1": 3,
+  "paket_2": 6,
+  "paket_3": 12,
+  "ta_sesi_visit": 2,
+  "paket_visit": 10,
+  "rujukan_sm": 2,
+  "kegiatan_external": 2
+ },
+ "months": [
+  {
+   "month": 1,
+   "working_days": 25,
+   "entries": [
+    {
+     "name": "HESTI",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 91,
+      "paket_1": 8,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 161.0,
+     "expected_rank": 3
+    },
+    {
+     "name": "DANRU",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 25.0,
+     "expected_rank": 9
+    },
+    {
+     "name": "NADA",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 25.0,
+     "expected_rank": 9
+    },
+    {
+     "name": "DESTY",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 69,
+      "paket_1": 8,
+      "paket_2": 3,
+      "paket_3": 0,
+      "ta_sesi_visit": 6,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 157.0,
+     "expected_rank": 4
+    },
+    {
+     "name": "PRITY",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 79,
+      "paket_1": 3,
+      "paket_2": 5,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 143.0,
+     "expected_rank": 6
+    },
+    {
+     "name": "WAHYU",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 100,
+      "paket_1": 7,
+      "paket_2": 4,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 1
+     },
+     "expected_total": 174.0,
+     "expected_rank": 1
+    },
+    {
+     "name": "ORY",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 92,
+      "paket_1": 8,
+      "paket_2": 5,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 169.0,
+     "expected_rank": 2
+    },
+    {
+     "name": "HENA",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 77,
+      "paket_1": 8,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 2,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 148.0,
+     "expected_rank": 5
+    },
+    {
+     "name": "OKTA",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 81,
+      "paket_1": 9,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 139.0,
+     "expected_rank": 8
+    },
+    {
+     "name": "AUL",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 73,
+      "paket_1": 7,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 2,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 143.0,
+     "expected_rank": 6
+    },
+    {
+     "name": "PUTRI",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 25.0,
+     "expected_rank": 9
+    }
+   ]
+  },
+  {
+   "month": 2,
+   "working_days": 25,
+   "entries": [
+    {
+     "name": "HESTI",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 72,
+      "paket_1": 6,
+      "paket_2": 2,
+      "paket_3": 1,
+      "ta_sesi_visit": 0,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 3
+     },
+     "expected_total": 154.0,
+     "expected_rank": 6
+    },
+    {
+     "name": "DANRU",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 25.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "NADA",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 25.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "DESTY",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 82,
+      "paket_1": 11,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 3
+     },
+     "expected_total": 159.0,
+     "expected_rank": 5
+    },
+    {
+     "name": "PRITY",
+     "metrics": {
+      "hadir": 22,
+      "terlambat": 5,
+      "alfa": 0,
+      "kunjungan": 65,
+      "paket_1": 3,
+      "paket_2": 3,
+      "paket_3": 0,
+      "ta_sesi_visit": 8,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 3
+     },
+     "expected_total": 131.0,
+     "expected_rank": 8
+    },
+    {
+     "name": "WAHYU",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 98,
+      "paket_1": 9,
+      "paket_2": 6,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 2,
+      "rujukan_sm": 0,
+      "kegiatan_external": 3
+     },
+     "expected_total": 214.0,
+     "expected_rank": 1
+    },
+    {
+     "name": "ORY",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 81,
+      "paket_1": 4,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 3
+     },
+     "expected_total": 127.0,
+     "expected_rank": 9
+    },
+    {
+     "name": "HENA",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 75,
+      "paket_1": 8,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 3,
+      "paket_visit": 2,
+      "rujukan_sm": 0,
+      "kegiatan_external": 3
+     },
+     "expected_total": 167.0,
+     "expected_rank": 4
+    },
+    {
+     "name": "OKTA",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 80,
+      "paket_1": 7,
+      "paket_2": 4,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 3
+     },
+     "expected_total": 168.0,
+     "expected_rank": 3
+    },
+    {
+     "name": "AUL",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 2,
+      "alfa": 0,
+      "kunjungan": 90,
+      "paket_1": 5,
+      "paket_2": 4,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 2,
+      "rujukan_sm": 0,
+      "kegiatan_external": 4
+     },
+     "expected_total": 180.0,
+     "expected_rank": 2
+    },
+    {
+     "name": "PUTRI",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 62,
+      "paket_1": 4,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 4,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 7
+     },
+     "expected_total": 141.0,
+     "expected_rank": 7
+    }
+   ]
+  },
+  {
+   "month": 3,
+   "working_days": 17,
+   "entries": [
+    {
+     "name": "HESTI",
+     "metrics": {
+      "hadir": 17,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 45,
+      "paket_1": 4,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 79.0,
+     "expected_rank": 7
+    },
+    {
+     "name": "DANRU",
+     "metrics": {
+      "hadir": 17,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 17.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "NADA",
+     "metrics": {
+      "hadir": 17,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 17.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "DESTY",
+     "metrics": {
+      "hadir": 17,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 44,
+      "paket_1": 5,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 79.0,
+     "expected_rank": 7
+    },
+    {
+     "name": "PRITY",
+     "metrics": {
+      "hadir": 17,
+      "terlambat": 3,
+      "alfa": 0,
+      "kunjungan": 51,
+      "paket_1": 4,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 81.0,
+     "expected_rank": 6
+    },
+    {
+     "name": "WAHYU",
+     "metrics": {
+      "hadir": 16,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 69,
+      "paket_1": 2,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 115.0,
+     "expected_rank": 2
+    },
+    {
+     "name": "ORY",
+     "metrics": {
+      "hadir": 17,
+      "terlambat": 3,
+      "alfa": 0,
+      "kunjungan": 51,
+      "paket_1": 3,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 86.0,
+     "expected_rank": 4
+    },
+    {
+     "name": "HENA",
+     "metrics": {
+      "hadir": 16,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 46,
+      "paket_1": 5,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 83.0,
+     "expected_rank": 5
+    },
+    {
+     "name": "OKTA",
+     "metrics": {
+      "hadir": 17,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 46,
+      "paket_1": 3,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 78.0,
+     "expected_rank": 9
+    },
+    {
+     "name": "AUL",
+     "metrics": {
+      "hadir": 17,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 56,
+      "paket_1": 3,
+      "paket_2": 2,
+      "paket_3": 1,
+      "ta_sesi_visit": 2,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 119.0,
+     "expected_rank": 1
+    },
+    {
+     "name": "PUTRI",
+     "metrics": {
+      "hadir": 17,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 52,
+      "paket_1": 6,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 89.0,
+     "expected_rank": 3
+    }
+   ]
+  },
+  {
+   "month": 4,
+   "working_days": 27,
+   "entries": [
+    {
+     "name": "HESTI",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 78,
+      "paket_1": 6,
+      "paket_2": 1,
+      "paket_3": 1,
+      "ta_sesi_visit": 0,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 147.0,
+     "expected_rank": 7
+    },
+    {
+     "name": "DANRU",
+     "metrics": {
+      "hadir": 27,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 27.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "NADA",
+     "metrics": {
+      "hadir": 27,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 27.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "DESTY",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 62,
+      "paket_1": 8,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 3,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 131.0,
+     "expected_rank": 9
+    },
+    {
+     "name": "PRITY",
+     "metrics": {
+      "hadir": 26,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 82,
+      "paket_1": 8,
+      "paket_2": 4,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 2
+     },
+     "expected_total": 171.0,
+     "expected_rank": 1
+    },
+    {
+     "name": "WAHYU",
+     "metrics": {
+      "hadir": 19,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 69,
+      "paket_1": 5,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 3,
+      "rujukan_sm": 0,
+      "kegiatan_external": 6
+     },
+     "expected_total": 159.0,
+     "expected_rank": 5
+    },
+    {
+     "name": "ORY",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 1,
+      "kunjungan": 76,
+      "paket_1": 4,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 2
+     },
+     "expected_total": 135.0,
+     "expected_rank": 8
+    },
+    {
+     "name": "HENA",
+     "metrics": {
+      "hadir": 27,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 80,
+      "paket_1": 3,
+      "paket_2": 3,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 3,
+      "rujukan_sm": 0,
+      "kegiatan_external": 2
+     },
+     "expected_total": 170.0,
+     "expected_rank": 2
+    },
+    {
+     "name": "OKTA",
+     "metrics": {
+      "hadir": 26,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 82,
+      "paket_1": 4,
+      "paket_2": 4,
+      "paket_3": 0,
+      "ta_sesi_visit": 5,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 2
+     },
+     "expected_total": 157.0,
+     "expected_rank": 6
+    },
+    {
+     "name": "AUL",
+     "metrics": {
+      "hadir": 27,
+      "terlambat": 2,
+      "alfa": 0,
+      "kunjungan": 74,
+      "paket_1": 7,
+      "paket_2": 4,
+      "paket_3": 0,
+      "ta_sesi_visit": 5,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 2
+     },
+     "expected_total": 168.0,
+     "expected_rank": 4
+    },
+    {
+     "name": "PUTRI",
+     "metrics": {
+      "hadir": 27,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 91,
+      "paket_1": 9,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 4,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 2
+     },
+     "expected_total": 169.0,
+     "expected_rank": 3
+    }
+   ]
+  },
+  {
+   "month": 5,
+   "working_days": 24,
+   "entries": [
+    {
+     "name": "HESTI",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 71,
+      "paket_1": 2,
+      "paket_2": 1,
+      "paket_3": 2,
+      "ta_sesi_visit": 1,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 142.0,
+     "expected_rank": 4
+    },
+    {
+     "name": "DANRU",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 24.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "NADA",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 24.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "DESTY",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 67,
+      "paket_1": 8,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 119.0,
+     "expected_rank": 7
+    },
+    {
+     "name": "PRITY",
+     "metrics": {
+      "hadir": 22,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 67,
+      "paket_1": 9,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 4
+     },
+     "expected_total": 123.0,
+     "expected_rank": 5
+    },
+    {
+     "name": "WAHYU",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 82,
+      "paket_1": 6,
+      "paket_2": 4,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 2,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 170.0,
+     "expected_rank": 1
+    },
+    {
+     "name": "ORY",
+     "metrics": {
+      "hadir": 19,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 48,
+      "paket_1": 1,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 95.0,
+     "expected_rank": 9
+    },
+    {
+     "name": "HENA",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 2,
+      "alfa": 0,
+      "kunjungan": 57,
+      "paket_1": 3,
+      "paket_2": 5,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 117.0,
+     "expected_rank": 8
+    },
+    {
+     "name": "OKTA",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 63,
+      "paket_1": 6,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 4
+     },
+     "expected_total": 121.0,
+     "expected_rank": 6
+    },
+    {
+     "name": "AUL",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 4,
+      "alfa": 0,
+      "kunjungan": 77,
+      "paket_1": 4,
+      "paket_2": 3,
+      "paket_3": 0,
+      "ta_sesi_visit": 3,
+      "paket_visit": 2,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 153.0,
+     "expected_rank": 2
+    },
+    {
+     "name": "PUTRI",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 68,
+      "paket_1": 6,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 3,
+      "paket_visit": 3,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 146.0,
+     "expected_rank": 3
+    }
+   ]
+  },
+  {
+   "month": 6,
+   "working_days": 23,
+   "entries": [
+    {
+     "name": "HESTI",
+     "metrics": {
+      "hadir": 20,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 79,
+      "paket_1": 6,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 2,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 150.0,
+     "expected_rank": 7
+    },
+    {
+     "name": "DANRU",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 23.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "NADA",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 23.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "DESTY",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 79,
+      "paket_1": 9,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 133.0,
+     "expected_rank": 8
+    },
+    {
+     "name": "PRITY",
+     "metrics": {
+      "hadir": 20,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 74,
+      "paket_1": 7,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 3,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 127.0,
+     "expected_rank": 9
+    },
+    {
+     "name": "WAHYU",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 98,
+      "paket_1": 3,
+      "paket_2": 2,
+      "paket_3": 1,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 154.0,
+     "expected_rank": 5
+    },
+    {
+     "name": "ORY",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 76,
+      "paket_1": 8,
+      "paket_2": 4,
+      "paket_3": 0,
+      "ta_sesi_visit": 3,
+      "paket_visit": 0,
+      "rujukan_sm": 1,
+      "kegiatan_external": 0
+     },
+     "expected_total": 155.0,
+     "expected_rank": 4
+    },
+    {
+     "name": "HENA",
+     "metrics": {
+      "hadir": 21,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 74,
+      "paket_1": 5,
+      "paket_2": 3,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 3,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 162.0,
+     "expected_rank": 2
+    },
+    {
+     "name": "OKTA",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 79,
+      "paket_1": 5,
+      "paket_2": 4,
+      "paket_3": 0,
+      "ta_sesi_visit": 4,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 159.0,
+     "expected_rank": 3
+    },
+    {
+     "name": "AUL",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 2,
+      "alfa": 0,
+      "kunjungan": 78,
+      "paket_1": 5,
+      "paket_2": 6,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 3,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 184.0,
+     "expected_rank": 1
+    },
+    {
+     "name": "PUTRI",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 78,
+      "paket_1": 5,
+      "paket_2": 4,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 154.0,
+     "expected_rank": 5
+    }
+   ]
+  },
+  {
+   "month": 7,
+   "working_days": 26,
+   "entries": [
+    {
+     "name": "HESTI",
+     "metrics": {
+      "hadir": 26,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 90,
+      "paket_1": 7,
+      "paket_2": 3,
+      "paket_3": 0,
+      "ta_sesi_visit": 4,
+      "paket_visit": 2,
+      "rujukan_sm": 3,
+      "kegiatan_external": 0
+     },
+     "expected_total": 188.0,
+     "expected_rank": 1
+    },
+    {
+     "name": "NADA",
+     "metrics": {
+      "hadir": 26,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 26.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "DESTY",
+     "metrics": {
+      "hadir": 26,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 61,
+      "paket_1": 5,
+      "paket_2": 0,
+      "paket_3": 1,
+      "ta_sesi_visit": 2,
+      "paket_visit": 0,
+      "rujukan_sm": 1,
+      "kegiatan_external": 0
+     },
+     "expected_total": 120.0,
+     "expected_rank": 8
+    },
+    {
+     "name": "PRITY",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 67,
+      "paket_1": 7,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 3,
+      "paket_visit": 1,
+      "rujukan_sm": 1,
+      "kegiatan_external": 0
+     },
+     "expected_total": 141.0,
+     "expected_rank": 6
+    },
+    {
+     "name": "WAHYU",
+     "metrics": {
+      "hadir": 26,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 97,
+      "paket_1": 4,
+      "paket_2": 4,
+      "paket_3": 1,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 171.0,
+     "expected_rank": 4
+    },
+    {
+     "name": "ORY",
+     "metrics": {
+      "hadir": 26,
+      "terlambat": 3,
+      "alfa": 0,
+      "kunjungan": 70,
+      "paket_1": 4,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 0,
+      "rujukan_sm": 2,
+      "kegiatan_external": 0
+     },
+     "expected_total": 119.0,
+     "expected_rank": 9
+    },
+    {
+     "name": "HENA",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 83,
+      "paket_1": 7,
+      "paket_2": 5,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 2,
+      "rujukan_sm": 1,
+      "kegiatan_external": 0
+     },
+     "expected_total": 181.0,
+     "expected_rank": 2
+    },
+    {
+     "name": "OKTA",
+     "metrics": {
+      "hadir": 26,
+      "terlambat": 2,
+      "alfa": 0,
+      "kunjungan": 79,
+      "paket_1": 5,
+      "paket_2": 3,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 0,
+      "rujukan_sm": 1,
+      "kegiatan_external": 0
+     },
+     "expected_total": 140.0,
+     "expected_rank": 7
+    },
+    {
+     "name": "AUL",
+     "metrics": {
+      "hadir": 26,
+      "terlambat": 2,
+      "alfa": 0,
+      "kunjungan": 80,
+      "paket_1": 7,
+      "paket_2": 4,
+      "paket_3": 1,
+      "ta_sesi_visit": 1,
+      "paket_visit": 1,
+      "rujukan_sm": 1,
+      "kegiatan_external": 0
+     },
+     "expected_total": 175.0,
+     "expected_rank": 3
+    },
+    {
+     "name": "PUTRI",
+     "metrics": {
+      "hadir": 26,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 81,
+      "paket_1": 6,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 4,
+      "paket_visit": 1,
+      "rujukan_sm": 1,
+      "kegiatan_external": 0
+     },
+     "expected_total": 157.0,
+     "expected_rank": 5
+    }
+   ]
+  },
+  {
+   "month": 8,
+   "working_days": 25,
+   "entries": [
+    {
+     "name": "HESTI",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 90,
+      "paket_1": 6,
+      "paket_2": 2,
+      "paket_3": 1,
+      "ta_sesi_visit": 2,
+      "paket_visit": 0,
+      "rujukan_sm": 3,
+      "kegiatan_external": 0
+     },
+     "expected_total": 166.0,
+     "expected_rank": 5
+    },
+    {
+     "name": "NADA",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 25.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "DESTY",
+     "metrics": {
+      "hadir": 22,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 60,
+      "paket_1": 4,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 0,
+      "rujukan_sm": 1,
+      "kegiatan_external": 0
+     },
+     "expected_total": 106.0,
+     "expected_rank": 9
+    },
+    {
+     "name": "PRITY",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 3,
+      "alfa": 0,
+      "kunjungan": 70,
+      "paket_1": 7,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 1,
+      "rujukan_sm": 2,
+      "kegiatan_external": 0
+     },
+     "expected_total": 133.0,
+     "expected_rank": 7
+    },
+    {
+     "name": "WAHYU",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 96,
+      "paket_1": 5,
+      "paket_2": 6,
+      "paket_3": 1,
+      "ta_sesi_visit": 4,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 192.0,
+     "expected_rank": 1
+    },
+    {
+     "name": "ORY",
+     "metrics": {
+      "hadir": 22,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 64,
+      "paket_1": 7,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 0,
+      "rujukan_sm": 2,
+      "kegiatan_external": 0
+     },
+     "expected_total": 119.0,
+     "expected_rank": 8
+    },
+    {
+     "name": "HENA",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 77,
+      "paket_1": 8,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 3,
+      "paket_visit": 1,
+      "rujukan_sm": 6,
+      "kegiatan_external": 0
+     },
+     "expected_total": 164.0,
+     "expected_rank": 6
+    },
+    {
+     "name": "OKTA",
+     "metrics": {
+      "hadir": 24,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 78,
+      "paket_1": 4,
+      "paket_2": 3,
+      "paket_3": 1,
+      "ta_sesi_visit": 11,
+      "paket_visit": 0,
+      "rujukan_sm": 1,
+      "kegiatan_external": 0
+     },
+     "expected_total": 168.0,
+     "expected_rank": 4
+    },
+    {
+     "name": "AUL",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 4,
+      "alfa": 0,
+      "kunjungan": 80,
+      "paket_1": 7,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 4,
+      "paket_visit": 4,
+      "rujukan_sm": 1,
+      "kegiatan_external": 0
+     },
+     "expected_total": 178.0,
+     "expected_rank": 3
+    },
+    {
+     "name": "PUTRI",
+     "metrics": {
+      "hadir": 25,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 88,
+      "paket_1": 8,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 4,
+      "paket_visit": 3,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 181.0,
+     "expected_rank": 2
+    }
+   ]
+  },
+  {
+   "month": 9,
+   "working_days": 23,
+   "entries": [
+    {
+     "name": "HESTI",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 2,
+      "alfa": 0,
+      "kunjungan": 76,
+      "paket_1": 5,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 1,
+      "rujukan_sm": 4,
+      "kegiatan_external": 0
+     },
+     "expected_total": 138.0,
+     "expected_rank": 3
+    },
+    {
+     "name": "NADA",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 0,
+      "paket_1": 0,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 23.0,
+     "expected_rank": 10
+    },
+    {
+     "name": "DESTY",
+     "metrics": {
+      "hadir": 21,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 69,
+      "paket_1": 4,
+      "paket_2": 3,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 122.0,
+     "expected_rank": 6
+    },
+    {
+     "name": "PRITY",
+     "metrics": {
+      "hadir": 20,
+      "terlambat": 1,
+      "alfa": 0,
+      "kunjungan": 68,
+      "paket_1": 6,
+      "paket_2": 0,
+      "paket_3": 1,
+      "ta_sesi_visit": 1,
+      "paket_visit": 0,
+      "rujukan_sm": 3,
+      "kegiatan_external": 0
+     },
+     "expected_total": 125.0,
+     "expected_rank": 4
+    },
+    {
+     "name": "WAHYU",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 77,
+      "paket_1": 3,
+      "paket_2": 4,
+      "paket_3": 2,
+      "ta_sesi_visit": 1,
+      "paket_visit": 0,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 159.0,
+     "expected_rank": 1
+    },
+    {
+     "name": "ORY",
+     "metrics": {
+      "hadir": 23,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 68,
+      "paket_1": 6,
+      "paket_2": 0,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 0,
+      "rujukan_sm": 2,
+      "kegiatan_external": 0
+     },
+     "expected_total": 117.0,
+     "expected_rank": 8
+    },
+    {
+     "name": "HENA",
+     "metrics": {
+      "hadir": 20,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 63,
+      "paket_1": 5,
+      "paket_2": 3,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 0,
+      "rujukan_sm": 3,
+      "kegiatan_external": 0
+     },
+     "expected_total": 124.0,
+     "expected_rank": 5
+    },
+    {
+     "name": "OKTA",
+     "metrics": {
+      "hadir": 19,
+      "terlambat": 2,
+      "alfa": 1,
+      "kunjungan": 65,
+      "paket_1": 9,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 2,
+      "paket_visit": 1,
+      "rujukan_sm": 2,
+      "kegiatan_external": 0
+     },
+     "expected_total": 141.0,
+     "expected_rank": 2
+    },
+    {
+     "name": "AUL",
+     "metrics": {
+      "hadir": 21,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 70,
+      "paket_1": 3,
+      "paket_2": 1,
+      "paket_3": 0,
+      "ta_sesi_visit": 1,
+      "paket_visit": 1,
+      "rujukan_sm": 0,
+      "kegiatan_external": 0
+     },
+     "expected_total": 118.0,
+     "expected_rank": 7
+    },
+    {
+     "name": "PUTRI",
+     "metrics": {
+      "hadir": 21,
+      "terlambat": 0,
+      "alfa": 0,
+      "kunjungan": 62,
+      "paket_1": 6,
+      "paket_2": 2,
+      "paket_3": 0,
+      "ta_sesi_visit": 0,
+      "paket_visit": 0,
+      "rujukan_sm": 1,
+      "kegiatan_external": 0
+     },
+     "expected_total": 115.0,
+     "expected_rank": 9
+    }
+   ]
+  }
+ ],
+ "champions": [
+  {
+   "month": "Jan",
+   "champ": "WAHYU"
+  },
+  {
+   "month": "Feb",
+   "champ": "WAHYU"
+  },
+  {
+   "month": "Mar",
+   "champ": "AUL"
+  },
+  {
+   "month": "Apr",
+   "champ": "PRITY"
+  },
+  {
+   "month": "Mei",
+   "champ": "WAHYU"
+  },
+  {
+   "month": "Jun",
+   "champ": "AUL"
+  },
+  {
+   "month": "Jul",
+   "champ": "HESTI"
+  },
+  {
+   "month": "Agu",
+   "champ": "WAHYU"
+  },
+  {
+   "month": "Sep",
+   "champ": "WAHYU"
+  }
+ ]
+}

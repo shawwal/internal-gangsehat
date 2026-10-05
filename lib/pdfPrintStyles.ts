@@ -1,6 +1,6 @@
 // Shared inline CSS for browser print-to-PDF documents (clinical record exports).
 // Follows the same window.open + document.write + window.print() pattern as
-// components/salary/generateInvoice.ts. Kept as a plain string (not a CSS module)
+// the old payroll invoice. Kept as a plain string (not a CSS module)
 // since window.document.write() needs a fully self-contained HTML document.
 import { downloadHtmlAsPdf } from '@/lib/downloadHtmlAsPdf'
 

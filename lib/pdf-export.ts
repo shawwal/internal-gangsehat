@@ -1,5 +1,5 @@
 // Generic "print to PDF" report generator, following the same
-// styled-HTML-in-new-window pattern as components/salary/generateInvoice.ts.
+// styled-HTML-in-new-window pattern the old payroll invoice used.
 // Opens a new window with a printable table + a "Cetak / Simpan PDF" button
 // that calls window.print() — no PDF library dependency needed.
 

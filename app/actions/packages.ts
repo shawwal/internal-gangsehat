@@ -220,6 +220,9 @@ export async function createPackageFromLayanan(input: {
   branch_id: string | null
   layanan_id: string
   category: 'PAKET KLINIK' | 'PAKET VISIT'
+  /** Package already in progress (and paid) in the old system: starts at
+   *  `used_sessions` and has no order, so the payment gate treats it as legacy. */
+  carry_over?: { used_sessions: number }
 }): Promise<{ id: string | null; order_id: string | null; error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -236,7 +239,8 @@ export async function createPackageFromLayanan(input: {
 
   const total_sessions = layanan.jumlah_sesi || 1
   const jenis_paket = total_sessions === 5 ? 'P1' : total_sessions === 10 ? 'P2' : null
-  const orderId = await generateOrderId(supabase)
+  const carryOver = input.carry_over
+  const orderId = carryOver ? null : await generateOrderId(supabase)
 
   const { data, error } = await supabase
     .from('patient_packages')
@@ -247,9 +251,10 @@ export async function createPackageFromLayanan(input: {
       package_type:   'fixed',
       total_sessions,
       jenis_paket,
-      mulai_paket:    'NEW',
+      mulai_paket:    carryOver ? 'EXT.' : 'NEW',
       category:       input.category,
       order_id:       orderId,
+      legacy_used_sessions: carryOver ? Math.max(0, Math.floor(carryOver.used_sessions)) : 0,
       purchased_at:   new Date().toISOString().slice(0, 10),
       created_by:     user?.id ?? null,
       updated_at:     new Date().toISOString(),

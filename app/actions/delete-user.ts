@@ -59,6 +59,11 @@ const OWNED_TABLES = [
   { table: 'schedule_overrides', column: 'staff_id' },
   { table: 'employee_salaries', column: 'staff_id' },
   { table: 'payroll_records', column: 'staff_id' },
+  { table: 'payroll_adjustments', column: 'staff_id' },
+  { table: 'payroll_activity_counts', column: 'staff_id' },
+  { table: 'payroll_period_staff', column: 'staff_id' },
+  { table: 'employee_compensation', column: 'staff_id' },
+  { table: 'employee_payroll_profiles', column: 'staff_id' },
   { table: 'user_notifications', column: 'user_id' },
 ] as const
 
@@ -84,6 +89,25 @@ const AUDIT_COLUMNS = [
   { table: 'patient_packages', column: 'created_by' },
   { table: 'booking_payments', column: 'created_by' },
   { table: 'schedule_overrides', column: 'created_by' },
+  // Payslips are financial records: keep them (name is denormalised), drop the link.
+  { table: 'payroll_slips', column: 'staff_id' },
+  { table: 'pfotm_entries', column: 'staff_id' },
+  { table: 'patients', column: 'referred_by_staff_id' },
+  { table: 'payroll_periods', column: 'created_by' },
+  { table: 'payroll_periods', column: 'submitted_by' },
+  { table: 'payroll_periods', column: 'locked_by' },
+  { table: 'payroll_periods', column: 'paid_by' },
+  { table: 'payroll_adjustments', column: 'created_by' },
+  { table: 'payroll_activity_counts', column: 'updated_by' },
+  { table: 'employee_compensation', column: 'created_by' },
+  { table: 'employee_payroll_profiles', column: 'updated_by' },
+  { table: 'payroll_settings', column: 'updated_by' },
+  { table: 'payroll_deduction_rules', column: 'updated_by' },
+  { table: 'payroll_holidays', column: 'created_by' },
+  { table: 'pfotm_periods', column: 'created_by' },
+  { table: 'pfotm_periods', column: 'locked_by' },
+  { table: 'pfotm_entries', column: 'updated_by' },
+  { table: 'pfotm_point_rules', column: 'updated_by' },
 ] as const
 
 /** Extract the storage object path from a Supabase public URL for the leave-proofs bucket. */

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { formatIDR, toHumanIDR } from './types'
+import { formatIDR, toHumanIDR } from './format'
 
 interface Props {
   value: number

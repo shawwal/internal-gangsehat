@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getGriyaVisitFormRoute, disciplineToRmType, type GriyaRmType } from '@/lib/griyaVisitRouting'
 import { fetchVisitDisciplines } from '@/lib/griyaDiscipline'
+import { fetchPackagePositions } from '@/lib/internal/visitInsights'
 import type { GriyaSessionNote, GriyaTerapiAwal } from '@/types'
 
 export interface GriyaRecordEntry {
@@ -31,7 +32,7 @@ export async function fetchGriyaMedicalRecords(patientId: string): Promise<Griya
   const supabase = await createClient()
   const { data: visits } = await supabase
     .from('patient_visits')
-    .select('id, branch_id, visit_date, visit_time, service_type, status, kehadiran, attending_staff_id, griya_slot_id')
+    .select('id, branch_id, visit_date, visit_time, service_type, status, kehadiran, attending_staff_id, griya_slot_id, package_id')
     .eq('patient_id', patientId)
     .neq('status', 'cancelled')
     .order('visit_date', { ascending: true })
@@ -44,9 +45,11 @@ export async function fetchGriyaMedicalRecords(patientId: string): Promise<Griya
   if (rec.length === 0) return { branchId: visits?.[0]?.branch_id ?? null, entries: [] }
 
   const ids = rec.map((v) => v.id as string)
-  const [notes, intakes] = await Promise.all([
+  const packageIds = [...new Set(rec.map((v) => v.package_id as string | null).filter((p): p is string => !!p))]
+  const [notes, intakes, positions] = await Promise.all([
     supabase.from('griya_session_notes').select('*').in('visit_id', ids),
     supabase.from('griya_terapi_awal').select('*').in('visit_id', ids),
+    fetchPackagePositions(supabase, packageIds),
   ])
   const noteMap = new Map((notes.data ?? []).map((n) => [n.visit_id as string, n as GriyaSessionNote]))
   const intakeMap = new Map((intakes.data ?? []).map((n) => [n.visit_id as string, n as GriyaTerapiAwal]))
@@ -62,10 +65,13 @@ export async function fetchGriyaMedicalRecords(patientId: string): Promise<Griya
     for (const p of profs ?? []) names.set(p.id, p.nickname || p.full_name)
   }
 
+  // Packaged sessions are numbered within their package (resets per package);
+  // the running count only covers sessions not on a package.
   let ke = 0
   const entries: GriyaRecordEntry[] = rec.map((v) => {
     const kind = routeOf(v) as 'terapi-awal' | 'session-note'
-    if (kind === 'session-note') ke++
+    const pkgPos = positions.get(v.id as string)?.pertemuan ?? null
+    if (kind === 'session-note' && pkgPos === null) ke++
     const intake = intakeMap.get(v.id as string) ?? null
     return {
       visitId: v.id as string,
@@ -77,7 +83,7 @@ export async function fetchGriyaMedicalRecords(patientId: string): Promise<Griya
       assessorName: intake?.assessor_si_id ? names.get(intake.assessor_si_id) ?? null : null,
       therapistName: v.attending_staff_id ? names.get(v.attending_staff_id as string) ?? null : null,
       griyaSlotId: (v.griya_slot_id as string) ?? null,
-      pertemuanKe: kind === 'session-note' ? ke : null,
+      pertemuanKe: kind === 'session-note' ? (pkgPos ?? ke) : null,
       attended: v.kehadiran === 'HADIR' || v.status === 'completed',
       terapiAwal: intake,
       note: noteMap.get(v.id as string) ?? null,

@@ -9,6 +9,8 @@ import type { UserRole, PatientPackage } from '@/types'
 import { PatientHero } from '@/components/patients/detail/PatientHero'
 import { PatientInfoSections } from '@/components/patients/detail/PatientInfoSections'
 import { PatientVisitHistory } from '@/components/patients/detail/PatientVisitHistory'
+import { ReferredByCard } from '@/components/patients/detail/ReferredByCard'
+import { getPatientReferral } from '@/app/actions/patientReferral'
 
 export const dynamic = 'force-dynamic'
 
@@ -108,7 +110,7 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
 
   if (!patient) notFound()
 
-  const [{ data: profile }, { data: visits }, { count: totalVisits }, packages, latestComplaints] = await Promise.all([
+  const [{ data: profile }, { data: visits }, { count: totalVisits }, packages, latestComplaints, referral] = await Promise.all([
     supabase.from('internal_profiles').select('role').eq('id', user?.id ?? '').single(),
     supabase
       .from('patient_visits')
@@ -122,6 +124,7 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
       .eq('patient_id', id),
     fetchPatientPackages(id),
     fetchLatestComplaints(supabase, [id]),
+    getPatientReferral(id),
   ])
 
   const canEdit = CAN_EDIT.includes(profile?.role as UserRole)
@@ -154,6 +157,7 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
 
       <PatientHero patient={patient} totalVisits={totalVisits ?? 0} canEdit={canEdit} latestComplaint={latestComplaints.get(id) ?? null} />
       <PatientInfoSections patient={patient} />
+      {referral && <ReferredByCard patientId={id} info={referral} />}
       <PatientPackagesSummary packages={packages} patientId={id} />
       <PatientVisitHistory visits={visits ?? []} totalVisits={totalVisits ?? 0} patientId={id} />
     </div>

@@ -207,6 +207,7 @@ export interface GriyaStudentSlot {
   slot_time: string
   therapist_name: string
   service_type: string | null
+  package_id: string | null
   status: string
   start_date: string
   end_date: string | null
@@ -260,7 +261,7 @@ export async function fetchGriyaStudentDetail(patientId: string): Promise<GriyaS
   const [slotsRes, visitsRes] = await Promise.all([
     supabase
       .from('griya_schedule_slots')
-      .select('id, discipline, hari, slot_time, service_type, status, start_date, end_date, internal_profiles!therapist_id(full_name, nickname)')
+      .select('id, discipline, hari, slot_time, service_type, package_id, status, start_date, end_date, internal_profiles!therapist_id(full_name, nickname)')
       .eq('patient_id', patientId)
       .order('hari', { ascending: true }),
     supabase
@@ -280,6 +281,7 @@ export async function fetchGriyaStudentDetail(patientId: string): Promise<GriyaS
       slot_time: hhmm(s.slot_time as string),
       therapist_name: p?.nickname || p?.full_name || 'Terapis',
       service_type: (s.service_type as string) ?? null,
+      package_id: (s.package_id as string) ?? null,
       status: s.status as string,
       start_date: s.start_date as string,
       end_date: (s.end_date as string) ?? null,

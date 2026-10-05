@@ -111,12 +111,22 @@ export const navigation: NavItem[] = [
     group: 'operations',
   },
   {
-    key: 'director-payroll',
+    key: 'payroll',
     label: 'Penggajian',
-    href: '/director/payroll',
+    href: '/payroll',
     icon: 'Wallet',
-    roles: ['director', 'manager'],
-    group: 'operations',
+    // hr/manager prepare (own branch), director/manager approve & lock, finance marks paid.
+    roles: ['director', 'manager', 'hr', 'finance'],
+    group: 'hr',
+  },
+  {
+    key: 'pfotm',
+    label: 'PFOTM',
+    href: '/pfotm',
+    icon: 'Trophy',
+    // Board visible to the branch team (gamification); hr/manager/admin enter data.
+    roles: ['director', 'manager', 'hr', 'admin', 'therapist', 'staff'],
+    group: 'hr',
   },
   {
     key: 'director-import',
@@ -386,6 +396,14 @@ export const navigation: NavItem[] = [
     href: '/my-targets',
     icon: 'Target',
     roles: ['finance', 'hr', 'marketing', 'staff', 'manager'],
+    group: 'hr',
+  },
+  {
+    key: 'my-payslips',
+    label: 'Slip Gaji Saya',
+    href: '/my-payslips',
+    icon: 'ReceiptText',
+    roles: ['manager', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'admin', 'sport_massage_therapist'],
     group: 'hr',
   },
   {

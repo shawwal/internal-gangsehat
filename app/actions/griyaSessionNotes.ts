@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { fetchPackagePositions } from '@/lib/internal/visitInsights'
 import type { GriyaSessionNote, VisitStatus } from '@/types'
 
 export type GriyaSessionNoteFieldsInput = Partial<Omit<GriyaSessionNote,
@@ -20,11 +21,20 @@ export async function fetchGriyaSessionNote(visitId: string): Promise<GriyaSessi
   return data as GriyaSessionNote
 }
 
-// ── "Pertemuan Ke-N": this visit's rank among visits sharing the same recurring
+// ── "Pertemuan Ke-N": a packaged visit's position inside its package (incl.
+// sessions carried over from the old system), so starting a new package resets
+// it to 1. Without a package: its rank among visits sharing the same recurring
 // slot (or, for ad-hoc/no-slot visits, among the patient's own visits), ordered
-// by date — derived, not stored, same approach as package session numbering.
+// by date — derived, not stored.
 export async function fetchGriyaPertemuanKe(visitId: string, patientId: string, griyaSlotId: string | null): Promise<number> {
   const supabase = await createClient()
+
+  const { data: visit } = await supabase.from('patient_visits').select('package_id').eq('id', visitId).maybeSingle()
+  if (visit?.package_id) {
+    const positions = await fetchPackagePositions(supabase, [visit.package_id as string])
+    const pos = positions.get(visitId)
+    if (pos) return pos.pertemuan
+  }
 
   const query = griyaSlotId
     ? supabase.from('patient_visits').select('id, visit_date, visit_time').eq('griya_slot_id', griyaSlotId).neq('status', 'cancelled')

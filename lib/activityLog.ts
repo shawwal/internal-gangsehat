@@ -18,6 +18,16 @@ export const ACTIVITY_RESOURCE_TYPES = {
   griya_product: 'Produk Toko Griya Anak',
   griya_sale: 'Penjualan Toko Griya Anak',
   patient_registration: 'Pendaftaran Pasien',
+  patient_package: 'Paket Pasien',
+  payroll_period: 'Periode Penggajian',
+  payroll_activity: 'Aktivitas Insentif',
+  payroll_adjustment: 'Penyesuaian Gaji',
+  payroll_employee: 'Data Karyawan (Gaji)',
+  payroll_compensation: 'Kompensasi Karyawan',
+  payroll_setting: 'Pengaturan Penggajian',
+  pfotm_period: 'Periode PFOTM',
+  pfotm_entry: 'Data Performa PFOTM',
+  pfotm_rule: 'Aturan Poin PFOTM',
 } as const
 
 export type ActivityResourceType = keyof typeof ACTIVITY_RESOURCE_TYPES
@@ -41,6 +51,7 @@ const PATIENT_LINKED_TABLES: Partial<Record<ActivityResourceType, string>> = {
   patient_visit: 'patient_visits',
   transaction: 'transactions',
   griya_slot: 'griya_schedule_slots',
+  patient_package: 'patient_packages',
 }
 
 /**

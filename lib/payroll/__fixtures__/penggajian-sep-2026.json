@@ -1,0 +1,1343 @@
+{
+ "period": {
+  "year": 2026,
+  "month": 9,
+  "start": "2026-08-27",
+  "end": "2026-09-26",
+  "workdays": 23
+ },
+ "days": [
+  {
+   "date": "2026-08-27",
+   "workday": true
+  },
+  {
+   "date": "2026-08-28",
+   "workday": false
+  },
+  {
+   "date": "2026-08-29",
+   "workday": true
+  },
+  {
+   "date": "2026-08-30",
+   "workday": true
+  },
+  {
+   "date": "2026-08-31",
+   "workday": true
+  },
+  {
+   "date": "2026-09-01",
+   "workday": false
+  },
+  {
+   "date": "2026-09-02",
+   "workday": false
+  },
+  {
+   "date": "2026-09-03",
+   "workday": false
+  },
+  {
+   "date": "2026-09-04",
+   "workday": false
+  },
+  {
+   "date": "2026-09-05",
+   "workday": true
+  },
+  {
+   "date": "2026-09-06",
+   "workday": true
+  },
+  {
+   "date": "2026-09-07",
+   "workday": true
+  },
+  {
+   "date": "2026-09-08",
+   "workday": true
+  },
+  {
+   "date": "2026-09-09",
+   "workday": true
+  },
+  {
+   "date": "2026-09-10",
+   "workday": true
+  },
+  {
+   "date": "2026-09-11",
+   "workday": false
+  },
+  {
+   "date": "2026-09-12",
+   "workday": true
+  },
+  {
+   "date": "2026-09-13",
+   "workday": true
+  },
+  {
+   "date": "2026-09-14",
+   "workday": true
+  },
+  {
+   "date": "2026-09-15",
+   "workday": true
+  },
+  {
+   "date": "2026-09-16",
+   "workday": true
+  },
+  {
+   "date": "2026-09-17",
+   "workday": true
+  },
+  {
+   "date": "2026-09-18",
+   "workday": false
+  },
+  {
+   "date": "2026-09-19",
+   "workday": true
+  },
+  {
+   "date": "2026-09-20",
+   "workday": true
+  },
+  {
+   "date": "2026-09-21",
+   "workday": true
+  },
+  {
+   "date": "2026-09-22",
+   "workday": true
+  },
+  {
+   "date": "2026-09-23",
+   "workday": true
+  },
+  {
+   "date": "2026-09-24",
+   "workday": true
+  },
+  {
+   "date": "2026-09-25",
+   "workday": false
+  },
+  {
+   "date": "2026-09-26",
+   "workday": true
+  }
+ ],
+ "employees": [
+  {
+   "employee_no": "A1260201",
+   "full_name": "DHEA NANDA KHAIRUNNISA",
+   "alias": "DHEA",
+   "jabatan": "STAF ADMINISTRASI",
+   "compensation": {
+    "gaji_pokok": 1000000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 500000.0,
+    "incentive_target": 110,
+    "incentive_activity_codes": [
+     "ADMIN_TA"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {}
+   },
+   "activity": {
+    "ADMIN_TA": 161.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    1
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 23,
+    "tlbt": 1,
+    "izin": 0,
+    "sakit": 0,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 500000,
+    "late_fine": 5000,
+    "alfa_fine": 0,
+    "insentif": 500000,
+    "visit": 0,
+    "klinik": 2000000,
+    "total_gaji": 1995000
+   }
+  },
+  {
+   "employee_no": "A1260601",
+   "full_name": "NOVRITA INDRIASWARI",
+   "alias": "ICA",
+   "jabatan": "STAF ADMINISTRASI PUSAT",
+   "compensation": {
+    "gaji_pokok": 1300000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.9,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 700000.0,
+    "incentive_target": 20,
+    "incentive_activity_codes": [
+     "KONTEN"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {}
+   },
+   "activity": {
+    "KONTEN": 20.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 23,
+    "tlbt": 0,
+    "izin": 0,
+    "sakit": 0,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 500000,
+    "late_fine": 0,
+    "alfa_fine": 0,
+    "insentif": 700000,
+    "visit": 0,
+    "klinik": 2500000,
+    "total_gaji": 2500000
+   }
+  },
+  {
+   "employee_no": "B1220101",
+   "full_name": "HESTI SUFRESHTRI",
+   "alias": "HESTI",
+   "jabatan": "FISIOTERAPIS",
+   "compensation": {
+    "gaji_pokok": 1500000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 1500000.0,
+    "incentive_target": 60,
+    "incentive_activity_codes": [
+     "KLINIK_PT",
+     "KLINIK_ST",
+     "KLINIK_TA"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {
+     "VISIT_PT": 900000.0,
+     "VISIT_ST": 100000.0,
+     "VISIT_TA": 150000.0,
+     "VISIT_JARAK": 50000.0
+    }
+   },
+   "activity": {
+    "KLINIK_PT": 55.0,
+    "KLINIK_ST": 6.0,
+    "KLINIK_TA": 15.0,
+    "VISIT_PT": 1.0,
+    "VISIT_ST": 0.0,
+    "VISIT_TA": 1.0,
+    "VISIT_JARAK": 1.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    2,
+    "H",
+    "H",
+    "H",
+    1,
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 23,
+    "tlbt": 3,
+    "izin": 0,
+    "sakit": 0,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 500000,
+    "late_fine": 15000,
+    "alfa_fine": 0,
+    "insentif": 1500000,
+    "visit": 1100000,
+    "klinik": 3500000,
+    "total_gaji": 4585000
+   }
+  },
+  {
+   "employee_no": "B1221101",
+   "full_name": "SHOFIANADA NABILLA",
+   "alias": "NADA",
+   "jabatan": "FISIOTERAPIS",
+   "compensation": {
+    "gaji_pokok": 1000000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 0.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 0.0,
+    "incentive_target": 60,
+    "incentive_activity_codes": [
+     "KLINIK_PT",
+     "KLINIK_ST",
+     "KLINIK_TA"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {
+     "VISIT_PT": 900000.0,
+     "VISIT_ST": 100000.0,
+     "VISIT_TA": 150000.0,
+     "VISIT_JARAK": 50000.0
+    }
+   },
+   "activity": {
+    "KLINIK_PT": 0.0,
+    "KLINIK_ST": 0.0,
+    "KLINIK_TA": 0.0,
+    "VISIT_PT": 0.0,
+    "VISIT_ST": 0.0,
+    "VISIT_TA": 0.0,
+    "VISIT_JARAK": 0.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 23,
+    "tlbt": 0,
+    "izin": 0,
+    "sakit": 0,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 0,
+    "late_fine": 0,
+    "alfa_fine": 0,
+    "insentif": 0,
+    "visit": 0,
+    "klinik": 1000000,
+    "total_gaji": 1000000
+   }
+  },
+  {
+   "employee_no": "B1240101",
+   "full_name": "DESTY TRI RAHMADHANI",
+   "alias": "DESTY",
+   "jabatan": "FISIOTERAPIS",
+   "compensation": {
+    "gaji_pokok": 1200000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 1500000.0,
+    "incentive_target": 60,
+    "incentive_activity_codes": [
+     "KLINIK_PT",
+     "KLINIK_ST",
+     "KLINIK_TA"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {
+     "VISIT_PT": 900000.0,
+     "VISIT_ST": 100000.0,
+     "VISIT_TA": 150000.0,
+     "VISIT_JARAK": 50000.0
+    }
+   },
+   "activity": {
+    "KLINIK_PT": 34.0,
+    "KLINIK_ST": 15.0,
+    "KLINIK_TA": 20.0,
+    "VISIT_PT": 0.0,
+    "VISIT_ST": 0.0,
+    "VISIT_TA": 1.0,
+    "VISIT_JARAK": 1.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "S",
+    "S",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 21,
+    "tlbt": 0,
+    "izin": 0,
+    "sakit": 2,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 500000,
+    "late_fine": 0,
+    "alfa_fine": 0,
+    "insentif": 1500000,
+    "visit": 200000,
+    "klinik": 3200000,
+    "total_gaji": 3400000
+   }
+  },
+  {
+   "employee_no": "B1241001",
+   "full_name": "JOHANA PRITY",
+   "alias": "PRITY",
+   "jabatan": "FISIOTERAPIS",
+   "compensation": {
+    "gaji_pokok": 1000000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 1500000.0,
+    "incentive_target": 60,
+    "incentive_activity_codes": [
+     "KLINIK_PT",
+     "KLINIK_ST",
+     "KLINIK_TA"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {
+     "VISIT_PT": 900000.0,
+     "VISIT_ST": 100000.0,
+     "VISIT_TA": 150000.0,
+     "VISIT_JARAK": 50000.0
+    }
+   },
+   "activity": {
+    "KLINIK_PT": 52.0,
+    "KLINIK_ST": 4.0,
+    "KLINIK_TA": 12.0,
+    "VISIT_PT": 0.0,
+    "VISIT_ST": 1.0,
+    "VISIT_TA": 0.0,
+    "VISIT_JARAK": 1.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "S",
+    "S",
+    "S",
+    1,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 20,
+    "tlbt": 1,
+    "izin": 0,
+    "sakit": 3,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 500000,
+    "late_fine": 5000,
+    "alfa_fine": 0,
+    "insentif": 1500000,
+    "visit": 150000,
+    "klinik": 3000000,
+    "total_gaji": 3145000
+   }
+  },
+  {
+   "employee_no": "B1250101",
+   "full_name": "WAHYU TRI SETYO NUGROHO",
+   "alias": "WAHYU",
+   "jabatan": "FISIOTERAPIS",
+   "compensation": {
+    "gaji_pokok": 1000000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 1500000.0,
+    "incentive_target": 60,
+    "incentive_activity_codes": [
+     "KLINIK_PT",
+     "KLINIK_ST",
+     "KLINIK_TA"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {
+     "VISIT_PT": 900000.0,
+     "VISIT_ST": 100000.0,
+     "VISIT_TA": 150000.0,
+     "VISIT_JARAK": 50000.0
+    }
+   },
+   "activity": {
+    "KLINIK_PT": 61.0,
+    "KLINIK_ST": 1.0,
+    "KLINIK_TA": 15.0,
+    "VISIT_PT": 0.0,
+    "VISIT_ST": 1.0,
+    "VISIT_TA": 0.0,
+    "VISIT_JARAK": 0.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 23,
+    "tlbt": 0,
+    "izin": 0,
+    "sakit": 0,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 500000,
+    "late_fine": 0,
+    "alfa_fine": 0,
+    "insentif": 1500000,
+    "visit": 100000,
+    "klinik": 3000000,
+    "total_gaji": 3100000
+   }
+  },
+  {
+   "employee_no": "B1250102",
+   "full_name": "ORY KUSTI OVIANDAR",
+   "alias": "ORY",
+   "jabatan": "FISIOTERAPIS",
+   "compensation": {
+    "gaji_pokok": 1000000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 1500000.0,
+    "incentive_target": 60,
+    "incentive_activity_codes": [
+     "KLINIK_PT",
+     "KLINIK_ST",
+     "KLINIK_TA"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {
+     "VISIT_PT": 900000.0,
+     "VISIT_ST": 100000.0,
+     "VISIT_TA": 150000.0,
+     "VISIT_JARAK": 50000.0
+    }
+   },
+   "activity": {
+    "KLINIK_PT": 39.0,
+    "KLINIK_ST": 7.0,
+    "KLINIK_TA": 22.0,
+    "VISIT_PT": 0.0,
+    "VISIT_ST": 0.0,
+    "VISIT_TA": 2.0,
+    "VISIT_JARAK": 2.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [
+    {
+     "direction": "debit",
+     "category": "DENDA",
+     "amount": 600000.0,
+     "keterangan": "DENDA TIDAK MENGIKUTI FAMILY GATHERING"
+    }
+   ],
+   "expected": {
+    "hadir": 23,
+    "tlbt": 0,
+    "izin": 0,
+    "sakit": 0,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 500000,
+    "late_fine": 0,
+    "alfa_fine": 0,
+    "insentif": 1500000,
+    "visit": 400000,
+    "klinik": 3000000,
+    "total_gaji": 2800000
+   }
+  },
+  {
+   "employee_no": "B1250501",
+   "full_name": "HENA AURA PUTRI",
+   "alias": "HENA",
+   "jabatan": "FISIOTERAPIS",
+   "compensation": {
+    "gaji_pokok": 1000000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 1500000.0,
+    "incentive_target": 60,
+    "incentive_activity_codes": [
+     "KLINIK_PT",
+     "KLINIK_ST",
+     "KLINIK_TA"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {
+     "VISIT_PT": 900000.0,
+     "VISIT_ST": 100000.0,
+     "VISIT_TA": 150000.0,
+     "VISIT_JARAK": 50000.0
+    }
+   },
+   "activity": {
+    "KLINIK_PT": 53.0,
+    "KLINIK_ST": 1.0,
+    "KLINIK_TA": 9.0,
+    "VISIT_PT": 0.0,
+    "VISIT_ST": 0.0,
+    "VISIT_TA": 1.0,
+    "VISIT_JARAK": 1.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "C",
+    "C",
+    null,
+    "H",
+    "S",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 20,
+    "tlbt": 0,
+    "izin": 0,
+    "sakit": 1,
+    "cuti": 2,
+    "alfa": 0,
+    "operasional": 500000,
+    "late_fine": 0,
+    "alfa_fine": 0,
+    "insentif": 1500000,
+    "visit": 200000,
+    "klinik": 3000000,
+    "total_gaji": 3200000
+   }
+  },
+  {
+   "employee_no": "B1250601",
+   "full_name": "SRI OKTAVIA MADANI",
+   "alias": "OKTA",
+   "jabatan": "FISIOTERAPIS",
+   "compensation": {
+    "gaji_pokok": 1000000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 1500000.0,
+    "incentive_target": 60,
+    "incentive_activity_codes": [
+     "KLINIK_PT",
+     "KLINIK_ST",
+     "KLINIK_TA"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {
+     "VISIT_PT": 900000.0,
+     "VISIT_ST": 100000.0,
+     "VISIT_TA": 150000.0,
+     "VISIT_JARAK": 50000.0
+    }
+   },
+   "activity": {
+    "KLINIK_PT": 43.0,
+    "KLINIK_ST": 9.0,
+    "KLINIK_TA": 13.0,
+    "VISIT_PT": 1.0,
+    "VISIT_ST": 1.0,
+    "VISIT_TA": 1.0,
+    "VISIT_JARAK": 2.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    1,
+    "A",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "S",
+    "C",
+    "C",
+    null,
+    "H",
+    3,
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 19,
+    "tlbt": 4,
+    "izin": 0,
+    "sakit": 1,
+    "cuti": 2,
+    "alfa": 1,
+    "operasional": 500000,
+    "late_fine": 20000,
+    "alfa_fine": 100000,
+    "insentif": 1500000,
+    "visit": 1250000,
+    "klinik": 3000000,
+    "total_gaji": 4130000
+   }
+  },
+  {
+   "employee_no": "B1251001",
+   "full_name": "AULIA SRI RAMADANTI",
+   "alias": "AUL",
+   "jabatan": "FISIOTERAPIS",
+   "compensation": {
+    "gaji_pokok": 1000000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 1500000.0,
+    "incentive_target": 60,
+    "incentive_activity_codes": [
+     "KLINIK_PT",
+     "KLINIK_ST",
+     "KLINIK_TA"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {
+     "VISIT_PT": 900000.0,
+     "VISIT_ST": 100000.0,
+     "VISIT_TA": 150000.0,
+     "VISIT_JARAK": 50000.0
+    }
+   },
+   "activity": {
+    "KLINIK_PT": 43.0,
+    "KLINIK_ST": 9.0,
+    "KLINIK_TA": 18.0,
+    "VISIT_PT": 1.0,
+    "VISIT_ST": 0.0,
+    "VISIT_TA": 1.0,
+    "VISIT_JARAK": 11.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "S",
+    "S",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 21,
+    "tlbt": 0,
+    "izin": 0,
+    "sakit": 2,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 500000,
+    "late_fine": 0,
+    "alfa_fine": 0,
+    "insentif": 1500000,
+    "visit": 1600000,
+    "klinik": 3000000,
+    "total_gaji": 4600000
+   }
+  },
+  {
+   "employee_no": "B1251201",
+   "full_name": "PUTRI QADAR RAMA DANIA",
+   "alias": "PUTRI",
+   "jabatan": "FISIOTERAPIS",
+   "compensation": {
+    "gaji_pokok": 1000000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 1500000.0,
+    "incentive_target": 60,
+    "incentive_activity_codes": [
+     "KLINIK_PT",
+     "KLINIK_ST",
+     "KLINIK_TA"
+    ],
+    "bonus_tiers": [],
+    "activity_rates": {
+     "VISIT_PT": 900000.0,
+     "VISIT_ST": 100000.0,
+     "VISIT_TA": 150000.0,
+     "VISIT_JARAK": 50000.0
+    }
+   },
+   "activity": {
+    "KLINIK_PT": 33.0,
+    "KLINIK_ST": 9.0,
+    "KLINIK_TA": 20.0,
+    "VISIT_PT": 0.0,
+    "VISIT_ST": 0.0,
+    "VISIT_TA": 0.0,
+    "VISIT_JARAK": 0.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "S",
+    "S",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 21,
+    "tlbt": 0,
+    "izin": 0,
+    "sakit": 2,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 500000,
+    "late_fine": 0,
+    "alfa_fine": 0,
+    "insentif": 1500000,
+    "visit": 0,
+    "klinik": 3000000,
+    "total_gaji": 3000000
+   }
+  },
+  {
+   "employee_no": "C1260501",
+   "full_name": "ALAMSYAH",
+   "alias": "ALAM",
+   "jabatan": "MASSEUR",
+   "compensation": {
+    "gaji_pokok": 1000000.0,
+    "tj_jabatan": 0.0,
+    "operasional": 0.0,
+    "operasional_mode": "daily_deduction",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 1400000.0,
+    "incentive_target": 39,
+    "incentive_activity_codes": [
+     "SM_FB",
+     "SM_SG"
+    ],
+    "bonus_tiers": [
+     {
+      "min_qty": 40,
+      "amount": 200000.0,
+      "label": "Bonus Insentif 1"
+     },
+     {
+      "min_qty": 70,
+      "amount": 200000.0,
+      "label": "Bonus Insentif 2"
+     }
+    ],
+    "activity_rates": {
+     "VISIT_SM_FB": 150000.0,
+     "VISIT_SM_SG": 95000.0,
+     "VISIT_SM_PAKET_FB": 285000.0,
+     "VISIT_SM_PAKET_SG": 270000.0,
+     "VISIT_SM_JARAK": 50000.0
+    }
+   },
+   "activity": {
+    "SM_FB": 23.0,
+    "SM_SG": 11.0,
+    "VISIT_SM_FB": 0.0,
+    "VISIT_SM_SG": 0.0,
+    "VISIT_SM_PAKET_FB": 0.0,
+    "VISIT_SM_PAKET_SG": 0.0
+   },
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [],
+   "expected": {
+    "hadir": 23,
+    "tlbt": 0,
+    "izin": 0,
+    "sakit": 0,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 0,
+    "late_fine": 0,
+    "alfa_fine": 0,
+    "insentif": 1220000,
+    "visit": 0,
+    "klinik": 2220000,
+    "total_gaji": 2220000
+   }
+  },
+  {
+   "employee_no": "D1260501",
+   "full_name": "IBNU K. A. PURNAMAWANGSA",
+   "alias": "IBNU",
+   "jabatan": "STAF HR",
+   "compensation": {
+    "gaji_pokok": 1000000.0,
+    "tj_jabatan": 500000.0,
+    "operasional": 1500000.0,
+    "operasional_mode": "prorata",
+    "operasional_threshold": 0.75,
+    "operasional_daily_rate": 100000,
+    "insentif_base": 0.0,
+    "incentive_target": 0,
+    "incentive_activity_codes": [],
+    "bonus_tiers": [],
+    "activity_rates": {}
+   },
+   "activity": {},
+   "attendance": [
+    "H",
+    null,
+    "H",
+    "H",
+    7,
+    null,
+    null,
+    null,
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    "H",
+    null,
+    "H"
+   ],
+   "adjustments": [
+    {
+     "direction": "debit",
+     "category": "DENDA",
+     "amount": 600000.0,
+     "keterangan": "DENDA TIDAK MENGIKUTI FAMILY GATHERING"
+    }
+   ],
+   "expected": {
+    "hadir": 23,
+    "tlbt": 7,
+    "izin": 0,
+    "sakit": 0,
+    "cuti": 0,
+    "alfa": 0,
+    "operasional": 1500000,
+    "late_fine": 35000,
+    "alfa_fine": 0,
+    "insentif": 0.0,
+    "visit": 0.0,
+    "klinik": 3000000,
+    "total_gaji": 2365000
+   }
+  }
+ ],
+ "expected_total": 42040000,
+ "deduction_rules": [
+  {
+   "code": "LATE",
+   "label": "Terlambat",
+   "basis": "late_minutes",
+   "calc_type": "fixed",
+   "amount": 5000,
+   "is_active": true,
+   "sort_order": 1
+  },
+  {
+   "code": "ALFA",
+   "label": "Tidak absen",
+   "basis": "alfa_days",
+   "calc_type": "fixed",
+   "amount": 100000,
+   "is_active": true,
+   "sort_order": 2
+  }
+ ]
+}

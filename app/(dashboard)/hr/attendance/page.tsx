@@ -12,14 +12,15 @@ import { TableSkeleton } from '@/components/ui/Skeleton'
 interface StaffRow { id: string; full_name: string }
 interface AttendanceRow { id: string; staff_id: string; date: string; status: AttendanceStatus }
 
-const STATUS_OPTIONS: AttendanceStatus[] = ['present', 'absent', 'late', 'leave', 'sick']
+const STATUS_OPTIONS: AttendanceStatus[] = ['present', 'absent', 'late', 'izin', 'leave', 'sick']
 const STATUS_LABEL: Record<AttendanceStatus, string> = {
-  present: 'Hadir', absent: 'Absen', late: 'Terlambat', leave: 'Cuti', sick: 'Sakit',
+  present: 'Hadir', absent: 'Alfa', late: 'Terlambat', izin: 'Izin', leave: 'Cuti', sick: 'Sakit',
 }
 const STATUS_COLOR: Record<AttendanceStatus, string> = {
   present: 'bg-chart-4/15 text-chart-4',
   absent:  'bg-destructive/10 text-destructive',
   late:    'bg-secondary/20 text-secondary-foreground',
+  izin:    'bg-primary/10 text-primary',
   leave:   'bg-chart-5/15 text-chart-5',
   sick:    'bg-muted text-muted-foreground',
 }

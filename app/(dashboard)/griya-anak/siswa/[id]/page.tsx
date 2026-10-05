@@ -14,9 +14,10 @@ import { fetchPatient, type PatientPlain } from '@/app/actions/patients'
 import { fetchPatientPackages, fetchPackageSessions } from '@/app/actions/packages'
 import { deleteVisit } from '@/app/actions/jadwal'
 import { SessionList } from '@/components/packages/SessionList'
-import { ChevronDown, ChevronRight as ChevronRightIcon, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight as ChevronRightIcon, Plus, Square } from 'lucide-react'
 import type { PatientPackage, PackageSession } from '@/types'
 import { fetchGriyaStudentDetail, setGriyaStudentStatus, type GriyaStudentDetail } from '@/app/actions/griyaStudents'
+import { stopGriyaPackage } from '@/app/actions/griyaPackages'
 import { GENDER_LABEL, calcAge } from '@/components/patients/detail/constants'
 import { HARI_LABEL, DISCIPLINE_LABEL } from '@/components/griya/constants'
 import { useToast } from '@/context/ToastContext'
@@ -29,6 +30,7 @@ const STATUS_CLS: Record<string, string> = {
   graduated: 'bg-primary/15 text-primary',
   inactive: 'bg-muted text-muted-foreground',
 }
+const PKG_STATUS_LABEL: Record<string, string> = { active: 'Aktif', completed: 'Selesai', stopped: 'Dihentikan', cancelled: 'Dibatalkan' }
 function fmtDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 }
@@ -227,6 +229,9 @@ export default function GriyaSiswaDetailPage() {
                   <td className="px-4 py-2">{HARI_LABEL[s.hari as Hari] ?? s.hari} · {s.slot_time}</td>
                   <td className="px-4 py-2 text-muted-foreground">{s.therapist_name}</td>
                   <td className="px-4 py-2 text-muted-foreground hidden sm:table-cell">{s.service_type ?? ''}</td>
+                  <td className="px-4 py-2 text-xs text-muted-foreground hidden md:table-cell">
+                    {s.status === 'active' && (packages.find((p) => p.id === s.package_id)?.package_name ?? 'Tanpa paket')}
+                  </td>
                   <td className="px-4 py-2 text-right text-xs text-muted-foreground">
                     {s.status === 'active' ? `sejak ${fmtDate(s.start_date)}` : `${STATUS_LABEL[s.status] ?? s.status}${s.end_date ? ` ${fmtDate(s.end_date)}` : ''}`}
                   </td>
@@ -256,6 +261,7 @@ export default function GriyaSiswaDetailPage() {
               <PackagePanel
                 key={p.id}
                 pkg={p}
+                disciplines={[...new Set(activeSlots.filter((s) => s.package_id === p.id).map((s) => DISCIPLINE_LABEL[s.discipline as Discipline] ?? s.discipline))]}
                 canEdit={canEdit}
                 onEditVisit={(vid) => setEditVisitId(vid)}
                 onChanged={load}
@@ -270,6 +276,8 @@ export default function GriyaSiswaDetailPage() {
           patientId={id}
           patientName={patient.name}
           branchId={detail.branchId}
+          slots={activeSlots}
+          packages={packages}
           onClose={() => setBuyingPkg(false)}
           onDone={() => { setBuyingPkg(false); showToast('Paket ditambahkan', 'success'); load() }}
         />
@@ -368,8 +376,9 @@ export default function GriyaSiswaDetailPage() {
   )
 }
 
-function PackagePanel({ pkg, canEdit, onEditVisit, onChanged }: {
+function PackagePanel({ pkg, disciplines, canEdit, onEditVisit, onChanged }: {
   pkg: PatientPackage
+  disciplines: string[]
   canEdit: boolean
   onEditVisit: (visitId: string) => void
   onChanged: () => void
@@ -378,6 +387,8 @@ function PackagePanel({ pkg, canEdit, onEditVisit, onChanged }: {
   const [sessions, setSessions] = useState<PackageSession[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [editingPkg, setEditingPkg] = useState(false)
+  const [stopping, setStopping] = useState(false)
+  const { showToast } = useToast()
 
   const remaining = pkg.total_sessions - pkg.used_sessions
 
@@ -400,12 +411,27 @@ function PackagePanel({ pkg, canEdit, onEditVisit, onChanged }: {
     onChanged()
   }
 
+  // Ends the package early (legacy "stop" step); the next package started on
+  // these slots restarts Pertemuan at 1.
+  async function handleStop() {
+    if (!confirm(`Hentikan paket "${pkg.package_name}"? Sesi berikutnya tidak lagi dihitung ke paket ini.`)) return
+    setStopping(true)
+    const { error } = await stopGriyaPackage(pkg.id)
+    setStopping(false)
+    if (error) { showToast(error, 'error'); return }
+    showToast('Paket dihentikan', 'success')
+    onChanged()
+  }
+
   return (
     <div>
       <div className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-muted/40">
         <button onClick={toggle} className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer text-left">
           {open ? <ChevronDown size={14} className="text-muted-foreground shrink-0" /> : <ChevronRightIcon size={14} className="text-muted-foreground shrink-0" />}
-          <span className="font-medium text-foreground truncate flex-1">{pkg.package_name}</span>
+          <span className="font-medium text-foreground truncate flex-1">
+            {pkg.package_name}
+            {disciplines.length > 0 && <span className="font-normal text-muted-foreground"> · {disciplines.join(', ')}</span>}
+          </span>
         </button>
         <span className="text-muted-foreground shrink-0">
           {pkg.used_sessions}/{pkg.total_sessions} sesi
@@ -415,8 +441,14 @@ function PackagePanel({ pkg, canEdit, onEditVisit, onChanged }: {
           {remaining > 0 ? `${remaining} tersisa` : '⚠ habis'}
         </span>
         <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${pkg.status === 'active' ? 'bg-[#34C759]/15 text-[#34C759]' : 'bg-muted text-muted-foreground'}`}>
-          {pkg.status === 'active' ? 'Aktif' : pkg.status}
+          {PKG_STATUS_LABEL[pkg.status] ?? pkg.status}
         </span>
+        {canEdit && pkg.status === 'active' && (
+          <button onClick={handleStop} disabled={stopping}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted disabled:opacity-60 cursor-pointer shrink-0" title="Hentikan paket">
+            <Square size={11} /> {stopping ? '...' : 'Hentikan'}
+          </button>
+        )}
         {canEdit && (
           <button onClick={() => setEditingPkg(true)}
             className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground cursor-pointer shrink-0" title="Ubah paket">

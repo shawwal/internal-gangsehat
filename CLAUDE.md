@@ -67,6 +67,24 @@ All tables: `id uuid PK DEFAULT gen_random_uuid()`, `created_at timestamptz DEFA
 | `leave_requests` | staff_id, branch_id, start_date, end_date, reason, proof_url, status(pending/approved/rejected), rejection_note, reviewed_by |
 | `staff_targets` | staff_id, branch_id, bulan(1-12), tahun, target_ta, target_paket_klinik, target_kunjungan, target_visit, status(pending/approved/rejected) — UNIQUE(staff_id, bulan, tahun) |
 
+### Payroll (migration 095 — replaces `payroll_records` / `salary_settings` / `employee_salaries`)
+| Table | Key columns |
+|-------|-------------|
+| `employee_payroll_profiles` | staff_id PK, employee_no (UNIQUE, "NO. KARYAWAN"), jabatan, hire_date, termination_date, include_in_payroll |
+| `employee_compensation` | staff_id, effective_from (UNIQUE pair), gaji_pokok, tj_jabatan, operasional + operasional_mode(prorata/daily_deduction/none) + threshold + daily_rate, insentif_base, incentive_target, incentive_activity_codes[], bonus_tiers jsonb, activity_rates jsonb. **Append-only** (trigger) — a change = new version |
+| `payroll_settings` | per branch (NULL = global fallback): period_start_day(27), weekly_off_days, rounding_unit, slip header |
+| `payroll_deduction_rules` | code, label, basis(late_minutes/late_days/alfa_days/izin_days/sakit_days), calc_type(fixed/percent_base), amount — branch row overrides global code |
+| `payroll_holidays` · `payroll_activity_types` | holidays (branch NULL = all); activity catalogue (count_mode session/package/manual, source service types / layanan) |
+| `payroll_periods` | branch_id, period_year/month (UNIQUE), start/end_date, days jsonb, workdays, status(draft/submitted/locked/paid), settings_snapshot |
+| `payroll_period_staff` · `payroll_activity_counts` · `payroll_adjustments` | period inputs (auto_qty + override_qty; DENDA/BONUS ledger) — read-only once locked (trigger) |
+| `payroll_slips` | immutable result per staff (lines jsonb, net…) written at lock; staff read own |
+
+`attendance` gained `izin` status + `late_minutes` (ABS codes H / minutes / I / S / C / A). Attendance inside a locked payroll period is read-only (trigger).
+Engine: `lib/payroll/engine.ts` (pure, tested against the Excel in `reference/`). Workflow: HR/manager prepare → director/manager "Setujui & Kunci" → finance "Tandai dibayar".
+
+### PFOTM leaderboard (migration 096)
+`pfotm_point_rules` (metric_key, weight — never hardcode weights), `pfotm_periods` (is_locked, rules_snapshot), `pfotm_entries` (auto_metrics, override_metrics; metrics/total_points/rank/kpis frozen at lock). `patients.referred_by_staff_id` feeds Rujukan SM. Engine: `lib/pfotm/engine.ts`. Only director may edit/unlock a locked period.
+
 ### Marketing
 `campaigns`: branch_id, title, description, channel(social_media/whatsapp/email/flyer/other), start_date, end_date, budget, actual_spend, target_reach, actual_reach, status(draft/active/completed/cancelled), created_by
 
@@ -127,7 +145,9 @@ app/(dashboard)/
   marketing/campaigns/
   patients/[id]/visits/
   my-targets/  leave/  notifications/  settings/
+  payroll/ (workspace) payroll/settings/   my-payslips/   pfotm/
 ```
+`/director/payroll` redirects to `/payroll`.
 
 ## Middleware — `proxy.ts` (NOT `middleware.ts`)
 - Named export `proxy`, not default export. `proxy.ts` at repo root IS the middleware.

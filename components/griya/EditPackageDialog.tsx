@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X, Trash2 } from 'lucide-react'
 import { updatePatientPackage, deletePatientPackage } from '@/app/actions/packages'
+import { stopGriyaPackage } from '@/app/actions/griyaPackages'
 import type { PatientPackage } from '@/types'
 import { inputCls, labelCls } from './StudentFormFields'
 
@@ -38,11 +39,17 @@ export function EditPackageDialog({ pkg, onClose, onSaved }: Props) {
     if (totalNum < 1) { setError('Total sesi minimal 1.'); return }
     if (legacyNum < 0) { setError('Sesi terpakai tidak boleh negatif.'); return }
     setSaving(true); setError(null)
+    // Stopping an active package also unlinks it from its recurring slots.
+    const stopping = pkg.status === 'active' && status === 'stopped'
+    if (stopping) {
+      const { error } = await stopGriyaPackage(pkg.id)
+      if (error) { setSaving(false); setError(error); return }
+    }
     const { error } = await updatePatientPackage(pkg.id, {
       package_name: name.trim() || pkg.package_name,
       total_sessions: totalNum,
       legacy_used_sessions: legacyNum,
-      status,
+      ...(!stopping && { status }),
       notes: notes.trim() || null,
     })
     setSaving(false)
