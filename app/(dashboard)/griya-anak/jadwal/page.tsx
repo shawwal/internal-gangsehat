@@ -23,7 +23,7 @@ import { DeleteOccurrenceDialog } from '@/components/griya/DeleteOccurrenceDialo
 import { AddMasterScheduleDialog } from '@/components/griya/master/AddMasterScheduleDialog'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
-import { markAttendance, resetAttendance, markVisitAttendance, resetVisitAttendance, cancelOccurrence } from '@/app/actions/griyaJadwal'
+import { markAttendance, resetAttendance, markVisitAttendance, resetVisitAttendance, cancelOccurrence, ensureSlotVisit } from '@/app/actions/griyaJadwal'
 import { updateVisitStatus, deleteVisit } from '@/app/actions/jadwal'
 import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
 import { fetchWaConfigAll, type WaConfigAll } from '@/app/actions/reminder-template'
@@ -164,7 +164,14 @@ export default function GriyaJadwalPage() {
       }
       case 'pay':
         if (cell?.visit?.id) setPayVisit(cell)
-        else showToast('Tandai hadir dulu sebelum mencatat pembayaran.', 'info')
+        else if (cell?.slot) {
+          // Not marked yet — create the scheduled visit row so the payment has something to attach to
+          const { error, visit } = await ensureSlotVisit(cell.slot.id, dateIso)
+          if (error || !visit) { showToast(error ?? 'Gagal menyiapkan kunjungan.', 'error'); break }
+          setPayVisit({ ...cell, visit: { ...(cell.visit ?? {}), ...visit } as NonNullable<ResolvedCell['visit']> })
+          reload({ silent: true })
+        }
+        else showToast('Tidak ada jadwal untuk dibayar di sel ini.', 'error')
         break
       case 'editVisit':
         if (cell?.visit?.id) setEditVisit(cell)

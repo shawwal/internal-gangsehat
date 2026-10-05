@@ -634,6 +634,80 @@ export async function moveVisit(input: MoveVisitInput): Promise<{ error: string 
   return { error: null }
 }
 
+type SlotRow = {
+  branch_id: unknown; patient_id: unknown; discipline: unknown; hari: unknown
+  service_type: unknown; slot_time: unknown; package_id: unknown; therapist_id: unknown
+}
+
+// Same inputs as the grid (incl. the slot's therapist pin and the admin-read
+// branch schedule), so the child stays in the column it was shown in — resolving
+// without the pin attributed a pinned slot to whoever rotation picked instead,
+// and the card jumped columns the moment it was marked.
+async function resolveSlotTherapist(
+  supabase: SupaClient,
+  slot: SlotRow,
+): Promise<string | null> {
+  const [{ data: therapists }, { data: schedules }] = await Promise.all([
+    supabase.from('griya_therapists').select('therapist_id, discipline, display_order, is_active').eq('branch_id', slot.branch_id as string).eq('is_active', true),
+    readBranchSchedules(supabase, slot.branch_id as string),
+  ])
+  return resolveTherapistForSlot(
+    {
+      discipline: slot.discipline as Discipline, hari: slot.hari as string,
+      slot_time: hhmm(slot.slot_time as string) ?? '', therapist_id: (slot.therapist_id as string) ?? null,
+    },
+    (therapists ?? []) as { therapist_id: string; discipline: Discipline; display_order: number; is_active: boolean }[],
+    ((schedules ?? []) as { staff_id: string; hari: string; jam_mulai: string; jam_selesai: string; status: string }[])
+      .filter((r) => r.hari === slot.hari && r.status === 'AKTIF'),
+  )
+}
+
+// ── Materialize a still-scheduled occurrence (no attendance) ─────────────────
+// Lets a payment be recorded before the child is marked Hadir — the visit row is
+// created as "scheduled" with kehadiran left empty.
+
+export async function ensureSlotVisit(
+  slotId: string,
+  date: string,
+): Promise<{ error: string | null; visit?: { id: string; patient_id: string; visit_date: string; service_type: string } }> {
+  const a = await requireWrite()
+  if ('error' in a) return { error: a.error }
+  const { supabase } = a
+
+  const existing = await findVisitForSlotDate(supabase, slotId, date)
+  if (existing) {
+    const { data, error } = await supabase
+      .from('patient_visits').select('id, patient_id, visit_date, service_type').eq('id', existing.id).single()
+    if (error || !data) return { error: error?.message ?? 'Kunjungan tidak ditemukan' }
+    return { error: null, visit: data as { id: string; patient_id: string; visit_date: string; service_type: string } }
+  }
+
+  const { data: slot } = await supabase
+    .from('griya_schedule_slots')
+    .select('branch_id, patient_id, discipline, hari, service_type, slot_time, package_id, therapist_id')
+    .eq('id', slotId)
+    .single()
+  if (!slot) return { error: 'Slot tidak ditemukan' }
+
+  const orderId = await generateOrderId(supabase)
+  const { data, error } = await supabase.from('patient_visits').insert({
+    griya_slot_id: slotId,
+    patient_id: slot.patient_id as string,
+    branch_id: slot.branch_id as string,
+    attending_staff_id: await resolveSlotTherapist(supabase, slot),
+    visit_date: date,
+    visit_time: hhmm(slot.slot_time as string),
+    service_type: (slot.service_type as string) ?? 'SESI TERAPI',
+    package_id: (slot.package_id as string) ?? null,
+    order_id: orderId,
+    status: 'scheduled',
+    kehadiran: null,
+    updated_at: new Date().toISOString(),
+  }).select('id, patient_id, visit_date, service_type').single()
+  if (error || !data) return { error: error?.message ?? 'Gagal membuat kunjungan' }
+  return { error: null, visit: data as { id: string; patient_id: string; visit_date: string; service_type: string } }
+}
+
 // ── Mark attendance for one occurrence ───────────────────────────────────────
 
 export async function markAttendance(
@@ -656,26 +730,7 @@ export async function markAttendance(
 
   // Resolving who's actually on duty is only needed the first time this occurrence
   // is materialized (an existing row already has attending_staff_id set).
-  let resolvedTherapistId: string | null = null
-  if (!existing) {
-    // Same inputs as the grid (incl. the slot's therapist pin and the admin-read
-    // branch schedule), so the child stays in the column it was shown in — resolving
-    // without the pin attributed a pinned slot to whoever rotation picked instead,
-    // and the card jumped columns the moment it was marked.
-    const [{ data: therapists }, { data: schedules }] = await Promise.all([
-      supabase.from('griya_therapists').select('therapist_id, discipline, display_order, is_active').eq('branch_id', slot.branch_id).eq('is_active', true),
-      readBranchSchedules(supabase, slot.branch_id as string),
-    ])
-    resolvedTherapistId = resolveTherapistForSlot(
-      {
-        discipline: slot.discipline as Discipline, hari: slot.hari as string,
-        slot_time: hhmm(slot.slot_time as string) ?? '', therapist_id: (slot.therapist_id as string) ?? null,
-      },
-      (therapists ?? []) as { therapist_id: string; discipline: Discipline; display_order: number; is_active: boolean }[],
-      ((schedules ?? []) as { staff_id: string; hari: string; jam_mulai: string; jam_selesai: string; status: string }[])
-        .filter((r) => r.hari === slot.hari && r.status === 'AKTIF'),
-    )
-  }
+  const resolvedTherapistId = existing ? null : await resolveSlotTherapist(supabase, slot)
 
   const patch = input.present
     ? { kehadiran: 'HADIR', status: 'completed', notes: null as string | null }
