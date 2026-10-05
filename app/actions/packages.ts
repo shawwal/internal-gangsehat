@@ -20,6 +20,10 @@ export async function fetchPatientPackages(
 
   if (error || !data?.length) return []
 
+  // used_sessions is payment-gated (0 until a payment exists), so an unpaid
+  // package would look empty forever. Capacity checks use this raw count.
+  const bookedCounts = await countBookedSessions(supabase, data.map((p) => p.id))
+
   return data.map((p) => ({
     id:                 p.id,
     patient_id:         p.patient_id,
@@ -31,6 +35,7 @@ export async function fetchPatientPackages(
     used_sessions:      Number(p.used_sessions ?? 0),
     remaining_sessions: Number(p.remaining_sessions ?? p.total_sessions),
     scheduled_sessions: Number(p.scheduled_sessions ?? 0),
+    booked_sessions:    Number(p.legacy_used_sessions ?? 0) + (bookedCounts.get(p.id) ?? 0),
     payment_ok:         p.payment_ok ?? p.order_id == null,
     notes:              p.notes ?? null,
     status:             p.status as PatientPackage['status'],
@@ -46,6 +51,24 @@ export async function fetchPatientPackages(
     created_at:         p.created_at,
     updated_at:         p.updated_at,
   }))
+}
+
+// Live linked visits per package (attended or still scheduled), ignoring payment.
+export async function countBookedSessions(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  packageIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>()
+  if (packageIds.length === 0) return counts
+  const { data } = await supabase
+    .from('patient_visits')
+    .select('package_id')
+    .in('package_id', packageIds)
+    .not('status', 'in', '(cancelled,rescheduled,no_show)')
+  for (const v of data ?? []) {
+    if (v.package_id) counts.set(v.package_id, (counts.get(v.package_id) ?? 0) + 1)
+  }
+  return counts
 }
 
 // ── Fetch packages with their payment info ──────────────────────────────────────

@@ -7,6 +7,7 @@ import type { VisitStatus } from '@/types'
 import { isRegioRequired } from '@/lib/visitRouting'
 import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
+import { countBookedSessions } from '@/app/actions/packages'
 import { fetchFirstSesiAfterTa, fetchPackagePositions, isTaServiceType } from '@/lib/internal/visitInsights'
 
 async function decryptedPatientName(supabase: Awaited<ReturnType<typeof createClient>>, patientId: string | null | undefined): Promise<string> {
@@ -79,6 +80,34 @@ const NO_PACKAGE_SERVICE_TYPES = new Set(['TERAPI AWAL', 'TA VISIT'])
 function resolvePackageId(serviceType: string | null | undefined, packageId: string | null | undefined) {
   if (NO_PACKAGE_SERVICE_TYPES.has(serviceType ?? '')) return null
   return packageId ?? null
+}
+
+// Rejects linking more visits to a package than it has sessions. Counts every
+// live linked visit regardless of payment — the view's used_sessions stays 0
+// for unpaid packages, which let one P1 absorb 12 sessions.
+async function checkPackageCapacity(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  inputs: { service_type?: string | null; package_id?: string | null }[],
+): Promise<string | null> {
+  const wanted = new Map<string, number>()
+  for (const i of inputs) {
+    const id = resolvePackageId(i.service_type, i.package_id)
+    if (id) wanted.set(id, (wanted.get(id) ?? 0) + 1)
+  }
+  if (wanted.size === 0) return null
+
+  const ids = [...wanted.keys()]
+  const [{ data: pkgs }, booked] = await Promise.all([
+    supabase.from('patient_packages').select('id, package_name, total_sessions, legacy_used_sessions').in('id', ids),
+    countBookedSessions(supabase, ids),
+  ])
+  for (const p of pkgs ?? []) {
+    const remaining = p.total_sessions - (p.legacy_used_sessions ?? 0) - (booked.get(p.id) ?? 0)
+    if ((wanted.get(p.id) ?? 0) > remaining) {
+      return `Paket "${p.package_name}" hanya tersisa ${Math.max(0, remaining)} sesi. Buat paket baru untuk pasien ini terlebih dahulu.`
+    }
+  }
+  return null
 }
 
 export interface CreateVisitInput {
@@ -265,6 +294,8 @@ export async function fetchDailyVisits(
 export async function createVisit(input: CreateVisitInput): Promise<{ error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const capacityError = await checkPackageCapacity(supabase, [input])
+  if (capacityError) return { error: capacityError }
   const orderId = await generateOrderId(supabase)
 
   const { data, error } = await supabase.from('patient_visits').insert({
@@ -595,6 +626,8 @@ export async function createBulkVisits(
   if (inputs.length === 0) return { error: null, created: 0 }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const capacityError = await checkPackageCapacity(supabase, inputs)
+  if (capacityError) return { error: capacityError, created: 0 }
 
   // Every scheduled session is its own jadwal/order — generate one order_id per row.
   const rows = []
