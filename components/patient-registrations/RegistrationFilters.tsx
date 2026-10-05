@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { Search } from 'lucide-react'
-import type { RegistrationFilterState, StatusFilter } from './types'
+import { TYPE_LABEL, type RegistrationFilterState, type StatusFilter, type TypeFilter } from './types'
 
 interface Props {
   filters: RegistrationFilterState
@@ -56,10 +56,17 @@ export function RegistrationFilters({ filters, branches, showBranch, pendingCoun
           <input
             defaultValue={filters.search}
             onChange={e => handleSearch(e.target.value)}
-            placeholder="Cari nama, No. HP, atau keluhan..."
+            placeholder="Cari nama, No. HP, orang tua, atau keluhan..."
             className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
+        <select
+          value={filters.type}
+          onChange={e => onChange({ ...filters, type: e.target.value as TypeFilter })}
+          className="px-3 py-2 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+        >
+          {(Object.keys(TYPE_LABEL) as TypeFilter[]).map(t => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+        </select>
         {showBranch && (
           <select
             value={filters.branchId}

@@ -9,6 +9,7 @@ export const labelCls = 'block text-xs font-medium text-muted-foreground mb-1'
 /** Every editable "PASIEN" field for a Griya Anak child. Subset of UpdatePatientInput. */
 export interface StudentFormValue {
   name: string
+  nama_panggilan?: string
   phone: string
   no_rm?: string
   birthDate?: string
@@ -42,9 +43,13 @@ export function StudentFormFields({ value, onChange, showRm }: Props) {
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <div className="sm:col-span-2">
+      <div>
         <label className={labelCls}>Nama Anak *</label>
         <input value={v('name')} onChange={set('name')} className={inputCls} />
+      </div>
+      <div>
+        <label className={labelCls}>Nama Panggilan</label>
+        <input value={v('nama_panggilan')} onChange={set('nama_panggilan')} className={inputCls} />
       </div>
       <div>
         <label className={labelCls}>No. WA Orang Tua *</label>

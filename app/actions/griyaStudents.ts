@@ -369,6 +369,7 @@ export interface CreateGriyaStudentInput {
   nama_ayah?: string
   pekerjaan_ayah?: string
   sumber?: string
+  nama_panggilan?: string
   address?: string
   kelurahan?: string
   kecamatan?: string
@@ -401,6 +402,7 @@ export async function createGriyaStudent(
     nama_ayah: t(input.nama_ayah),
     pekerjaan_ayah: t(input.pekerjaan_ayah),
     sumber: t(input.sumber),
+    nama_panggilan: t(input.nama_panggilan),
     address: t(input.address),
     kelurahan: t(input.kelurahan),
     kecamatan: t(input.kecamatan),

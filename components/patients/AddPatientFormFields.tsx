@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { RegionSelect } from '@/components/ui/RegionSelect'
 import { PROVINSI, KABUPATEN_KOTA, getKabupatenByProvinsi, getKecamatanByKabupaten } from '@/lib/indonesia-regions'
+import { SUMBER_OPTIONS } from '@/lib/griyaSumber'
 
 export interface AddPatientFormData {
   name: string
@@ -18,16 +19,30 @@ export interface AddPatientFormData {
   pekerjaan: string
   keluhan: string
   hobi: string
+  // Griya Anak variant only
+  namaPanggilan: string
+  namaIbu: string
+  pekerjaanIbu: string
+  namaAyah: string
+  pekerjaanAyah: string
+  sumber: string
 }
+
+/** 'griya' = Griya Anak child: parent + source fields instead of pekerjaan/hobi. */
+export type PatientFormVariant = 'umum' | 'griya'
 
 export const DEFAULT_ADD_PATIENT_FORM: AddPatientFormData = {
   name: '', phone: '', gender: null, birthDate: '', address: '',
   provinsi: '', kabupatenKota: '', kecamatan: '', kelurahan: '',
   agama: '', pekerjaan: '', keluhan: '', hobi: '',
+  namaPanggilan: '', namaIbu: '', pekerjaanIbu: '', namaAyah: '', pekerjaanAyah: '', sumber: '',
 }
 
-export function validateAddPatientForm(form: AddPatientFormData): string | null {
-  if (!form.name.trim())           return 'Nama lengkap wajib diisi.'
+export function validateAddPatientForm(
+  form: AddPatientFormData,
+  variant: PatientFormVariant = 'umum',
+): string | null {
+  if (!form.name.trim())           return variant === 'griya' ? 'Nama lengkap anak wajib diisi.' : 'Nama lengkap wajib diisi.'
   if (!form.phone.trim())          return 'Nomor HP/WhatsApp wajib diisi.'
   if (!form.gender)                return 'Jenis kelamin wajib dipilih.'
   if (!form.birthDate)             return 'Tanggal lahir wajib diisi.'
@@ -37,6 +52,15 @@ export function validateAddPatientForm(form: AddPatientFormData): string | null 
   if (!form.kecamatan.trim())      return 'Kecamatan wajib diisi.'
   if (!form.kelurahan.trim())      return 'Kelurahan/Desa wajib diisi.'
   if (!form.agama)                 return 'Agama wajib dipilih.'
+  if (variant === 'griya') {
+    if (!form.namaIbu.trim())       return 'Nama ibu wajib diisi.'
+    if (!form.pekerjaanIbu.trim())  return 'Pekerjaan ibu wajib diisi.'
+    if (!form.namaAyah.trim())      return 'Nama ayah wajib diisi.'
+    if (!form.pekerjaanAyah.trim()) return 'Pekerjaan ayah wajib diisi.'
+    if (!form.sumber)               return 'Sumber informasi wajib dipilih.'
+    if (!form.keluhan.trim())       return 'Keluhan wajib diisi.'
+    return null
+  }
   if (!form.pekerjaan.trim())      return 'Pekerjaan wajib diisi.'
   if (!form.keluhan.trim())        return 'Keluhan wajib diisi.'
   if (!form.hobi.trim())           return 'Hobi/Aktivitas wajib diisi.'
@@ -60,9 +84,11 @@ const labelCls = 'block text-sm font-medium text-foreground mb-1.5'
 interface Props {
   form: AddPatientFormData
   onChange: (form: AddPatientFormData) => void
+  variant?: PatientFormVariant
 }
 
-export function AddPatientFormFields({ form, onChange }: Props) {
+export function AddPatientFormFields({ form, onChange, variant = 'umum' }: Props) {
+  const isGriya = variant === 'griya'
   const set = <K extends keyof AddPatientFormData>(k: K, v: AddPatientFormData[K]) =>
     onChange({ ...form, [k]: v })
 
@@ -111,8 +137,10 @@ export function AddPatientFormFields({ form, onChange }: Props) {
         <div className="space-y-4">
           <div>
             <label className={labelCls}>
-              Nama Lengkap <span className="text-destructive">*</span>
-              <span className="text-xs font-normal text-muted-foreground ml-1">— sesuai KTP, huruf kapital</span>
+              {isGriya ? 'Nama Lengkap Anak' : 'Nama Lengkap'} <span className="text-destructive">*</span>
+              <span className="text-xs font-normal text-muted-foreground ml-1">
+                — {isGriya ? 'sesuai akta' : 'sesuai KTP'}, huruf kapital
+              </span>
             </label>
             <input
               value={form.name}
@@ -121,6 +149,18 @@ export function AddPatientFormFields({ form, onChange }: Props) {
               className={inputCls}
             />
           </div>
+
+          {isGriya && (
+            <div>
+              <label className={labelCls}>Nama Panggilan Anak</label>
+              <input
+                value={form.namaPanggilan}
+                onChange={(e) => set('namaPanggilan', e.target.value)}
+                placeholder="Contoh: BUDI"
+                className={inputCls}
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -164,7 +204,7 @@ export function AddPatientFormFields({ form, onChange }: Props) {
 
           <div>
             <label className={labelCls}>
-              No. HP/WhatsApp <span className="text-destructive">*</span>
+              {isGriya ? 'No. HP/WhatsApp Orang Tua' : 'No. HP/WhatsApp'} <span className="text-destructive">*</span>
               <span className="text-xs font-normal text-muted-foreground ml-1">— angka saja tanpa spasi/pemisah</span>
             </label>
             <input
@@ -278,23 +318,61 @@ export function AddPatientFormFields({ form, onChange }: Props) {
                 ))}
               </select>
             </div>
-            <div>
-              <label className={labelCls}>
-                Pekerjaan <span className="text-destructive">*</span>
-              </label>
-              <input
-                value={form.pekerjaan}
-                onChange={(e) => set('pekerjaan', e.target.value)}
-                placeholder="Contoh: WIRASWASTA"
-                className={inputCls}
-              />
-            </div>
+            {isGriya ? (
+              <div>
+                <label className={labelCls}>
+                  Tahu Griya Anak dari <span className="text-destructive">*</span>
+                </label>
+                <select
+                  value={form.sumber}
+                  onChange={(e) => set('sumber', e.target.value)}
+                  className={inputCls + ' cursor-pointer'}
+                >
+                  <option value="">Pilih sumber...</option>
+                  {SUMBER_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className={labelCls}>
+                  Pekerjaan <span className="text-destructive">*</span>
+                </label>
+                <input
+                  value={form.pekerjaan}
+                  onChange={(e) => set('pekerjaan', e.target.value)}
+                  placeholder="Contoh: WIRASWASTA"
+                  className={inputCls}
+                />
+              </div>
+            )}
           </div>
+
+          {isGriya && (
+            <div className="grid grid-cols-2 gap-4">
+              {([
+                ['namaIbu', 'Nama Ibu'], ['pekerjaanIbu', 'Pekerjaan Ibu'],
+                ['namaAyah', 'Nama Ayah'], ['pekerjaanAyah', 'Pekerjaan Ayah'],
+              ] as const).map(([key, label]) => (
+                <div key={key}>
+                  <label className={labelCls}>
+                    {label} <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    value={form[key]}
+                    onChange={(e) => set(key, e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           <div>
             <label className={labelCls}>
               Keluhan <span className="text-destructive">*</span>
-              <span className="text-xs font-normal text-muted-foreground ml-1">— keluhan utama yang membawa pasien datang</span>
+              <span className="text-xs font-normal text-muted-foreground ml-1">— keluhan utama yang membawa {isGriya ? 'anak' : 'pasien'} datang</span>
             </label>
             <textarea
               value={form.keluhan}
@@ -305,7 +383,7 @@ export function AddPatientFormFields({ form, onChange }: Props) {
             />
           </div>
 
-          <div>
+          {!isGriya && <div>
             <label className={labelCls}>
               Hobi/Aktivitas Sehari-hari <span className="text-destructive">*</span>
               <span className="text-xs font-normal text-muted-foreground ml-1">— yang mungkin berhubungan dengan keluhan</span>
@@ -316,7 +394,7 @@ export function AddPatientFormFields({ form, onChange }: Props) {
               placeholder="Contoh: BEROLAHRAGA, DUDUK LAMA"
               className={inputCls}
             />
-          </div>
+          </div>}
         </div>
       </div>
 

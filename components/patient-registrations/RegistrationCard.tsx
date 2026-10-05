@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import {
-  AlertTriangle, Baby, Building2, Check, Clock, ExternalLink, MapPin, Pencil, Phone, Trash2, XCircle,
+  AlertTriangle, Baby, Building2, Check, Clock, ExternalLink, MapPin, Megaphone, Pencil, Phone, Trash2, Users, XCircle,
 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import type { RegistrationRow } from '@/app/actions/patientRegistrations'
@@ -75,7 +75,12 @@ export function RegistrationCard({ row, showBranch, onReview, onReject, onDelete
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground leading-tight">{row.name || '—'}</p>
+              <p className="text-sm font-semibold text-foreground leading-tight">
+                {row.name || '—'}
+                {row.isGriya && row.namaPanggilan && (
+                  <span className="font-normal text-muted-foreground"> ({row.namaPanggilan})</span>
+                )}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {row.gender ? GENDER_LABEL[row.gender] : '—'} · {formatBirthDate(row.birthDate)}
               </p>
@@ -117,6 +122,25 @@ export function RegistrationCard({ row, showBranch, onReview, onReject, onDelete
               <Clock size={11} /> {formatDateTime(row.createdAt)}
             </span>
           </div>
+
+          {row.isGriya && (row.namaIbu || row.namaAyah || row.sumber) && (
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+              {(row.namaIbu || row.namaAyah) && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Users size={11} />
+                  {[
+                    row.namaIbu && `Ibu: ${row.namaIbu}${row.pekerjaanIbu ? ` (${row.pekerjaanIbu})` : ''}`,
+                    row.namaAyah && `Ayah: ${row.namaAyah}${row.pekerjaanAyah ? ` (${row.pekerjaanAyah})` : ''}`,
+                  ].filter(Boolean).join(' · ')}
+                </span>
+              )}
+              {row.sumber && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Megaphone size={11} /> {row.sumber}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -131,7 +155,9 @@ export function RegistrationCard({ row, showBranch, onReview, onReject, onDelete
         <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary/15 border border-secondary/30">
           <AlertTriangle size={14} className="text-secondary-foreground mt-0.5 shrink-0" />
           <p className="text-xs text-foreground">
-            No. HP ini sudah terdaftar pada pasien lain.{' '}
+            {row.isGriya
+              ? 'No. HP orang tua ini sudah terdaftar pada pasien lain (bisa jadi saudara kandung).'
+              : 'No. HP ini sudah terdaftar pada pasien lain.'}{' '}
             <Link href={`/patients/${row.duplicatePatientId}`} target="_blank" className="font-medium text-primary underline">
               Lihat pasien
             </Link>

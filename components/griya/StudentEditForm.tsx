@@ -38,6 +38,7 @@ export function StudentEditForm({ patient, onCancel, onSaved }: Props) {
     nama_ayah: patient.nama_ayah ?? '',
     pekerjaan_ayah: patient.pekerjaan_ayah ?? '',
     sumber: normalizeSumber(patient.sumber) ?? '',
+    nama_panggilan: patient.nama_panggilan ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

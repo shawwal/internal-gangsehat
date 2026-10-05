@@ -145,7 +145,8 @@ export default function PatientRegistrationsPage() {
           Pendaftaran Pasien
         </h1>
         <p className="text-sm text-muted-foreground">
-          Pendaftaran online dari gangsehat.com — tinjau, perbaiki, lalu setujui menjadi pasien.
+          Pendaftaran online dari gangsehat.com — tinjau, perbaiki, lalu setujui menjadi pasien
+          (pendaftaran Griya Anak otomatis masuk daftar siswa).
         </p>
       </div>
         {!loading && rows.length > 0 && (
@@ -244,7 +245,7 @@ export default function PatientRegistrationsPage() {
           title={bulkConfirm === 'approve' ? 'Setujui Pendaftaran' : 'Hapus Pendaftaran'}
           description={bulkConfirm === 'approve'
             ? `${pendingSelected.length} pendaftaran akan disetujui apa adanya (tanpa No. RM) dan ditambahkan sebagai pasien.` +
-              (pendingSelected.some(r => r.isGriya) ? ' Pendaftaran cabang Griya Anak juga didaftarkan sebagai siswa Griya Anak.' : '') +
+              (pendingSelected.some(r => r.isGriya) ? ' Pendaftaran Griya Anak juga otomatis masuk daftar siswa Griya Anak.' : '') +
               (pendingSelected.some(r => r.duplicatePatientId) ? ' Perhatian: sebagian No. HP sudah terdaftar pada pasien lain.' : '')
             : `${selected.size} pendaftaran akan dihapus permanen. Data pasien yang sudah dibuat tidak ikut terhapus.`}
           confirmLabel={bulkConfirm === 'approve' ? `Setujui ${pendingSelected.length}` : `Hapus ${selected.size}`}

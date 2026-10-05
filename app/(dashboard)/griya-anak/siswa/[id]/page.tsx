@@ -177,6 +177,7 @@ export default function GriyaSiswaDetailPage() {
         /* info + stats */
         <div className="grid gap-4 md:grid-cols-3">
           <div className="glass-card p-4 md:col-span-2 space-y-2 text-sm">
+            {patient.nama_panggilan && <p><span className="text-muted-foreground">Nama Panggilan:</span> {patient.nama_panggilan}</p>}
             {patient.no_rm && <p><span className="text-muted-foreground">No. RM:</span> {patient.no_rm}</p>}
             {patient.agama && <p><span className="text-muted-foreground">Agama:</span> {patient.agama}</p>}
             {patient.sumber && <p><span className="text-muted-foreground">Sumber:</span> {patient.sumber}</p>}

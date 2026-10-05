@@ -1,18 +1,21 @@
-import type { RegistrationStatus } from '@/app/actions/patientRegistrations'
+import type { RegistrationStatus, RegistrationType } from '@/app/actions/patientRegistrations'
 
 export const PAGE_SIZE = 10
 
 export type StatusFilter = RegistrationStatus | 'all'
+export type TypeFilter = RegistrationType | 'all'
 
 export interface RegistrationFilterState {
   search: string
   status: StatusFilter
+  type: TypeFilter
   branchId: string // 'all' or uuid (director only)
 }
 
 export const DEFAULT_FILTERS: RegistrationFilterState = {
   search: '',
   status: 'pending',
+  type: 'all',
   branchId: 'all',
 }
 
@@ -20,6 +23,12 @@ export const STATUS_LABEL: Record<RegistrationStatus, string> = {
   pending: 'Menunggu',
   approved: 'Disetujui',
   rejected: 'Ditolak',
+}
+
+export const TYPE_LABEL: Record<TypeFilter, string> = {
+  all: 'Semua Jenis',
+  umum: 'Pasien Umum',
+  griya: 'Griya Anak',
 }
 
 export const STATUS_COLOR: Record<RegistrationStatus, string> = {

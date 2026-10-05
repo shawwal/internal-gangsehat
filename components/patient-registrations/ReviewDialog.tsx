@@ -28,6 +28,8 @@ function toForm(row: RegistrationRow): AddPatientFormData {
     address: row.address, provinsi: row.provinsi, kabupatenKota: row.kabupatenKota,
     kecamatan: row.kecamatan, kelurahan: row.kelurahan, agama: row.agama,
     pekerjaan: row.pekerjaan, keluhan: row.keluhan, hobi: row.hobi,
+    namaPanggilan: row.namaPanggilan, namaIbu: row.namaIbu, pekerjaanIbu: row.pekerjaanIbu,
+    namaAyah: row.namaAyah, pekerjaanAyah: row.pekerjaanAyah, sumber: row.sumber,
   }
 }
 
@@ -38,6 +40,8 @@ function toFields(form: AddPatientFormData): RegistrationFields {
     address: t(form.address), provinsi: t(form.provinsi), kabupatenKota: t(form.kabupatenKota),
     kecamatan: t(form.kecamatan), kelurahan: t(form.kelurahan), agama: form.agama,
     pekerjaan: t(form.pekerjaan), keluhan: t(form.keluhan), hobi: t(form.hobi),
+    namaPanggilan: t(form.namaPanggilan), namaIbu: t(form.namaIbu), pekerjaanIbu: t(form.pekerjaanIbu),
+    namaAyah: t(form.namaAyah), pekerjaanAyah: t(form.pekerjaanAyah), sumber: form.sumber,
   }
 }
 
@@ -64,7 +68,7 @@ export function ReviewDialog({ row, onClose, onDone }: Props) {
   }
 
   function requestApprove() {
-    const err = validateAddPatientForm(form)
+    const err = validateAddPatientForm(form, row.type)
     if (err) { setError(err); return }
     setError(null)
     setConfirm(true)
@@ -84,13 +88,15 @@ export function ReviewDialog({ row, onClose, onDone }: Props) {
       <div className="bg-background w-full sm:max-w-2xl max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-3xl border border-border shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200">
         <div className="flex items-start justify-between gap-3 p-5 border-b border-border">
           <div>
-            <h2 className="text-lg font-bold text-foreground">Tinjau Pendaftaran</h2>
+            <h2 className="text-lg font-bold text-foreground">
+              {row.isGriya ? 'Tinjau Pendaftaran Griya Anak' : 'Tinjau Pendaftaran'}
+            </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               Periksa & perbaiki data sebelum dijadikan pasien.{row.branchName ? ` Cabang: ${row.branchName}.` : ''}
             </p>
             {row.isGriya && (
               <p className="text-xs text-primary font-medium mt-1">
-                Cabang Griya Anak — pasien juga akan didaftarkan sebagai siswa Griya Anak.
+                Pendaftaran anak — setelah disetujui, otomatis masuk daftar Siswa Griya Anak.
               </p>
             )}
           </div>
@@ -116,7 +122,7 @@ export function ReviewDialog({ row, onClose, onDone }: Props) {
             />
           </div>
 
-          <AddPatientFormFields form={form} onChange={setForm} />
+          <AddPatientFormFields form={form} onChange={setForm} variant={row.type} />
 
           {error && (
             <p className="text-sm text-destructive bg-destructive/10 px-4 py-3 rounded-xl border border-destructive/20">
@@ -140,7 +146,7 @@ export function ReviewDialog({ row, onClose, onDone }: Props) {
             className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
           >
             <CheckCircle2 size={14} />
-            Setujui & Jadikan Pasien
+            {row.isGriya ? 'Setujui & Jadikan Siswa' : 'Setujui & Jadikan Pasien'}
           </button>
         </div>
       </div>

@@ -40,6 +40,8 @@ export interface PatientPlain {
   nama_ayah: string | null
   pekerjaan_ayah: string | null
   sumber: string | null
+  // Griya Anak nickname (migration 094)
+  nama_panggilan: string | null
 }
 
 const SELECT_COLS =
@@ -47,7 +49,7 @@ const SELECT_COLS =
   'encrypted_id_number, encrypted_emergency_contact, ' +
   'gender, blood_type, allergies, medical_notes, is_active, created_at, updated_at, ' +
   'no_rm, pekerjaan, agama, hobi, kelurahan, kecamatan, kabupaten_kota, provinsi, keluhan, ' +
-  'nama_ibu, pekerjaan_ibu, nama_ayah, pekerjaan_ayah, sumber'
+  'nama_ibu, pekerjaan_ibu, nama_ayah, pekerjaan_ayah, sumber, nama_panggilan'
 
 function toPlain(row: Record<string, unknown>): PatientPlain {
   const pii = decryptPatientPII({
@@ -90,6 +92,7 @@ function toPlain(row: Record<string, unknown>): PatientPlain {
     nama_ayah:        (row.nama_ayah as string | null)       ?? null,
     pekerjaan_ayah:   (row.pekerjaan_ayah as string | null)  ?? null,
     sumber:           (row.sumber as string | null)          ?? null,
+    nama_panggilan:   (row.nama_panggilan as string | null)  ?? null,
   }
 }
 
@@ -474,6 +477,7 @@ export async function addPatient(input: {
   nama_ayah?: string
   pekerjaan_ayah?: string
   sumber?: string
+  nama_panggilan?: string
 }): Promise<{ error: string | null; id: string | null }> {
   const supabase = await createClient()
   const enc = encryptPatientPII({
@@ -506,6 +510,7 @@ export async function addPatient(input: {
     nama_ayah:            input.nama_ayah      ?? null,
     pekerjaan_ayah:       input.pekerjaan_ayah ?? null,
     sumber:               input.sumber         ?? null,
+    ...(input.nama_panggilan && { nama_panggilan: input.nama_panggilan }),
   }).select('id').single()
 
   if (!error && data?.id) {
@@ -550,6 +555,8 @@ export interface UpdatePatientInput {
   nama_ayah?: string
   pekerjaan_ayah?: string
   sumber?: string
+  /** Only written when provided, so forms without the field don't clear it. */
+  nama_panggilan?: string
 }
 
 const PATIENT_EDIT_ROLES = ['director', 'manager', 'admin', 'hr']
@@ -610,6 +617,7 @@ export async function updatePatient(
     nama_ayah:     nz(input.nama_ayah),
     pekerjaan_ayah: nz(input.pekerjaan_ayah),
     sumber:        nz(input.sumber),
+    ...(input.nama_panggilan !== undefined && { nama_panggilan: nz(input.nama_panggilan) }),
   }).eq('id', id).select('id')
 
   if (!error && (!updated || updated.length === 0)) {
@@ -632,6 +640,7 @@ export async function updatePatient(
         nama_ibu: input.nama_ibu ?? null, pekerjaan_ibu: input.pekerjaan_ibu ?? null,
         nama_ayah: input.nama_ayah ?? null, pekerjaan_ayah: input.pekerjaan_ayah ?? null,
         sumber: input.sumber ?? null,
+        ...(input.nama_panggilan !== undefined && { nama_panggilan: input.nama_panggilan || null }),
       },
     })
   }

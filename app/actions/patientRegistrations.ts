@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { decrypt, encrypt, encryptPatientPII, hashPhone } from '@/lib/encryption'
 import { phoneHashIfFree } from '@/lib/patientPhoneHash'
 import { logActivity } from '@/lib/activityLog'
+import { normalizeSumber } from '@/lib/griyaSumber'
 
 // Public self-registrations from gangsehat.com/daftar (migration 093).
 // PII is encrypted at rest, so all reads/writes go through these server actions:
@@ -15,6 +16,8 @@ const REVIEW_ROLES = ['director', 'manager', 'admin']
 const PAGE_SIZE = 10
 
 export type RegistrationStatus = 'pending' | 'approved' | 'rejected'
+/** 'griya' = Griya Anak child form (approval also enrols in griya_students). */
+export type RegistrationType = 'umum' | 'griya'
 
 export interface RegistrationFields {
   name: string
@@ -30,6 +33,13 @@ export interface RegistrationFields {
   pekerjaan: string
   keluhan: string
   hobi: string
+  // Griya Anak only (empty for 'umum')
+  namaPanggilan: string
+  namaIbu: string
+  pekerjaanIbu: string
+  namaAyah: string
+  pekerjaanAyah: string
+  sumber: string
 }
 
 export interface RegistrationRow extends RegistrationFields {
@@ -42,7 +52,8 @@ export interface RegistrationRow extends RegistrationFields {
   reviewedAt: string | null
   reviewerName: string | null
   patientId: string | null
-  /** Branch has Griya Anak enabled — approval also enrols the child in griya_students. */
+  type: RegistrationType
+  /** Griya Anak registration — approval also enrols the child in griya_students. */
   isGriya: boolean
   /** Existing patient with the same phone number, if any. */
   duplicatePatientId: string | null
@@ -80,7 +91,7 @@ async function getReviewer(): Promise<Reviewer | null> {
 async function getScopedRegistration(reviewer: Reviewer, id: string) {
   const { data } = await createAdminClient()
     .from('patient_registrations')
-    .select('id, branch_id, status, patient_id')
+    .select('id, branch_id, status, patient_id, registration_type')
     .eq('id', id)
     .single()
   if (!data) return null
@@ -94,12 +105,6 @@ function safeDecrypt(v: string | null): string {
 }
 
 type AdminClient = ReturnType<typeof createAdminClient>
-
-/** Branch ids with Griya Anak enabled (branch_griya_settings, migration 066). */
-async function griyaBranchIds(admin: AdminClient): Promise<Set<string>> {
-  const { data } = await admin.from('branch_griya_settings').select('branch_id').eq('enabled', true)
-  return new Set((data ?? []).map((b) => b.branch_id as string))
-}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function decryptFields(r: any): RegistrationFields {
@@ -117,11 +122,18 @@ function decryptFields(r: any): RegistrationFields {
     kecamatan: r.kecamatan ?? '',
     kabupatenKota: r.kabupaten_kota ?? '',
     provinsi: r.provinsi ?? '',
+    namaPanggilan: r.nama_panggilan ?? '',
+    namaIbu: r.nama_ibu ?? '',
+    pekerjaanIbu: r.pekerjaan_ibu ?? '',
+    namaAyah: r.nama_ayah ?? '',
+    pekerjaanAyah: r.pekerjaan_ayah ?? '',
+    sumber: r.sumber ?? '',
   }
 }
 
 export async function fetchRegistrationsPage(params: {
   status: RegistrationStatus | 'all'
+  type: RegistrationType | 'all'
   branchId: string
   search: string
   page: number
@@ -145,6 +157,7 @@ export async function fetchRegistrationsPage(params: {
   const countFor = async (status?: RegistrationStatus) => {
     let q = admin.from('patient_registrations').select('id', { count: 'exact', head: true })
     if (branchFilter) q = q.eq('branch_id', branchFilter)
+    if (params.type !== 'all') q = q.eq('registration_type', params.type)
     if (status) q = q.eq('status', status)
     const { count } = await q
     return count ?? 0
@@ -158,6 +171,7 @@ export async function fetchRegistrationsPage(params: {
     )
     .order('created_at', { ascending: false })
   if (branchFilter) query = query.eq('branch_id', branchFilter)
+  if (params.type !== 'all') query = query.eq('registration_type', params.type)
   if (params.status !== 'all') query = query.eq('status', params.status)
 
   // Name/phone are encrypted, so a search decrypts the (small) filtered set and
@@ -168,7 +182,7 @@ export async function fetchRegistrationsPage(params: {
   if (!term) query = query.range(from, to)
   else query = query.limit(1000)
 
-  const [{ data, count, error }, total, pending, approved, rejected, branchRes, griyaIds] = await Promise.all([
+  const [{ data, count, error }, total, pending, approved, rejected, branchRes] = await Promise.all([
     query,
     countFor(),
     countFor('pending'),
@@ -177,7 +191,6 @@ export async function fetchRegistrationsPage(params: {
     isDirector
       ? admin.from('branches').select('id, name').eq('is_active', true).order('name')
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-    griyaBranchIds(admin),
   ])
   if (error) return { ...empty, isDirector, error: error.message }
 
@@ -191,7 +204,8 @@ export async function fetchRegistrationsPage(params: {
     reviewedAt: r.reviewed_at,
     reviewerName: r.internal_profiles?.full_name ?? null,
     patientId: r.patient_id,
-    isGriya: griyaIds.has(r.branch_id),
+    type: r.registration_type === 'griya' ? 'griya' : 'umum',
+    isGriya: r.registration_type === 'griya',
     duplicatePatientId: null,
     ...decryptFields(r),
   }))
@@ -201,6 +215,9 @@ export async function fetchRegistrationsPage(params: {
     rows = rows.filter((r) =>
       r.name.toLowerCase().includes(term) ||
       r.phone.includes(term) ||
+      r.namaPanggilan.toLowerCase().includes(term) ||
+      r.namaIbu.toLowerCase().includes(term) ||
+      r.namaAyah.toLowerCase().includes(term) ||
       r.keluhan.toLowerCase().includes(term),
     )
     filteredTotal = rows.length
@@ -244,6 +261,12 @@ function encryptedColumns(f: RegistrationFields) {
     kecamatan:            nz(f.kecamatan),
     kabupaten_kota:       nz(f.kabupatenKota),
     provinsi:             nz(f.provinsi),
+    nama_panggilan:       nz(f.namaPanggilan),
+    nama_ibu:             nz(f.namaIbu),
+    pekerjaan_ibu:        nz(f.pekerjaanIbu),
+    nama_ayah:            nz(f.namaAyah),
+    pekerjaan_ayah:       nz(f.pekerjaanAyah),
+    sumber:               normalizeSumber(f.sumber),
   }
 }
 
@@ -270,7 +293,7 @@ type ScopedRegistration = NonNullable<Awaited<ReturnType<typeof getScopedRegistr
 
 /**
  * Creates the patient for one pending registration. Shared by single and bulk
- * approval. Griya Anak branches also get a griya_students roster row so the
+ * approval. Griya Anak registrations also get a griya_students roster row so the
  * child shows up in /griya-anak/siswa and the Griya jadwal search.
  */
 async function approveOne(
@@ -278,11 +301,14 @@ async function approveOne(
   reviewer: Reviewer,
   reg: ScopedRegistration,
   fields: RegistrationFields & { no_rm?: string },
-  griyaIds: Set<string>,
 ): Promise<{ error: string | null; patientId: string | null }> {
+  const isGriya = reg.registration_type === 'griya'
   if (reg.status !== 'pending') return { error: 'Pendaftaran sudah diproses.', patientId: null }
   if (!fields.name.trim() || !fields.phone.trim() || !fields.gender) {
     return { error: 'Nama, No. HP, dan jenis kelamin wajib diisi.', patientId: null }
+  }
+  if (isGriya && (!fields.namaIbu.trim() || !fields.namaAyah.trim())) {
+    return { error: 'Nama ibu dan nama ayah wajib diisi.', patientId: null }
   }
 
   // Claim the registration first so two reviewers can't both create a patient.
@@ -322,6 +348,14 @@ async function approveOne(
     kabupaten_kota:       nz(fields.kabupatenKota),
     provinsi:             nz(fields.provinsi),
     keluhan:              nz(fields.keluhan),
+    ...(isGriya && {
+      nama_panggilan:     nz(fields.namaPanggilan),
+      nama_ibu:           nz(fields.namaIbu),
+      pekerjaan_ibu:      nz(fields.pekerjaanIbu),
+      nama_ayah:          nz(fields.namaAyah),
+      pekerjaan_ayah:     nz(fields.pekerjaanAyah),
+      sumber:             normalizeSumber(fields.sumber),
+    }),
   }).select('id').single()
 
   if (error || !patient) {
@@ -333,7 +367,6 @@ async function approveOne(
     return { error: msg, patientId: null }
   }
 
-  const isGriya = griyaIds.has(reg.branch_id)
   if (isGriya) {
     const { error: enrollErr } = await admin.from('griya_students').upsert(
       { patient_id: patient.id, branch_id: reg.branch_id, source: 'online-registration', created_by: reviewer.id },
@@ -367,8 +400,7 @@ export async function approveRegistration(
   if (!reviewer) return { error: 'Tidak memiliki akses.', patientId: null }
   const reg = await getScopedRegistration(reviewer, id)
   if (!reg) return { error: 'Pendaftaran tidak ditemukan.', patientId: null }
-  const admin = createAdminClient()
-  return approveOne(admin, reviewer, reg, fields, await griyaBranchIds(admin))
+  return approveOne(createAdminClient(), reviewer, reg, fields)
 }
 
 /** Approves each selected pending registration as submitted (no edits, no No. RM). */
@@ -384,7 +416,7 @@ export async function bulkApproveRegistrations(ids: string[]): Promise<{
   const admin = createAdminClient()
   let q = admin.from('patient_registrations').select('*').in('id', ids).eq('status', 'pending')
   if (reviewer.role !== 'director') q = q.eq('branch_id', reviewer.branchId)
-  const [{ data, error }, griyaIds] = await Promise.all([q, griyaBranchIds(admin)])
+  const { data, error } = await q
   if (error) return { error: error.message, approved: 0, failed: [] }
 
   let approved = 0
@@ -392,7 +424,7 @@ export async function bulkApproveRegistrations(ids: string[]): Promise<{
   // Sequential: each approval claims its row and checks phone_hash uniqueness.
   for (const r of data ?? []) {
     const fields = decryptFields(r)
-    const res = await approveOne(admin, reviewer, r, fields, griyaIds)
+    const res = await approveOne(admin, reviewer, r, fields)
     if (res.error) failed.push({ name: fields.name || '—', error: res.error })
     else approved++
   }
