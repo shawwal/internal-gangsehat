@@ -88,6 +88,11 @@ export function ReviewDialog({ row, onClose, onDone }: Props) {
             <p className="text-xs text-muted-foreground mt-0.5">
               Periksa & perbaiki data sebelum dijadikan pasien.{row.branchName ? ` Cabang: ${row.branchName}.` : ''}
             </p>
+            {row.isGriya && (
+              <p className="text-xs text-primary font-medium mt-1">
+                Cabang Griya Anak — pasien juga akan didaftarkan sebagai siswa Griya Anak.
+              </p>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -143,7 +148,7 @@ export function ReviewDialog({ row, onClose, onDone }: Props) {
       {confirm && (
         <ConfirmDialog
           title="Setujui Pendaftaran"
-          description={`"${form.name.trim()}" akan ditambahkan sebagai pasien baru${noRm.trim() ? ` dengan No. RM ${noRm.trim()}` : ''}. Lanjutkan?`}
+          description={`"${form.name.trim()}" akan ditambahkan sebagai pasien baru${row.isGriya ? ' dan siswa Griya Anak' : ''}${noRm.trim() ? ` dengan No. RM ${noRm.trim()}` : ''}. Lanjutkan?`}
           confirmLabel="Setujui"
           loading={busy === 'approve'}
           onConfirm={handleApprove}

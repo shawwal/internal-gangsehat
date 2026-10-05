@@ -42,6 +42,8 @@ export interface RegistrationRow extends RegistrationFields {
   reviewedAt: string | null
   reviewerName: string | null
   patientId: string | null
+  /** Branch has Griya Anak enabled — approval also enrols the child in griya_students. */
+  isGriya: boolean
   /** Existing patient with the same phone number, if any. */
   duplicatePatientId: string | null
 }
@@ -89,6 +91,33 @@ async function getScopedRegistration(reviewer: Reviewer, id: string) {
 function safeDecrypt(v: string | null): string {
   if (!v) return ''
   try { return decrypt(v) } catch { return '' }
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>
+
+/** Branch ids with Griya Anak enabled (branch_griya_settings, migration 066). */
+async function griyaBranchIds(admin: AdminClient): Promise<Set<string>> {
+  const { data } = await admin.from('branch_griya_settings').select('branch_id').eq('enabled', true)
+  return new Set((data ?? []).map((b) => b.branch_id as string))
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function decryptFields(r: any): RegistrationFields {
+  return {
+    name: safeDecrypt(r.encrypted_name),
+    phone: safeDecrypt(r.encrypted_phone),
+    address: safeDecrypt(r.encrypted_address),
+    birthDate: safeDecrypt(r.encrypted_birth_date),
+    gender: r.gender,
+    agama: r.agama ?? '',
+    pekerjaan: r.pekerjaan ?? '',
+    hobi: r.hobi ?? '',
+    keluhan: r.keluhan ?? '',
+    kelurahan: r.kelurahan ?? '',
+    kecamatan: r.kecamatan ?? '',
+    kabupatenKota: r.kabupaten_kota ?? '',
+    provinsi: r.provinsi ?? '',
+  }
 }
 
 export async function fetchRegistrationsPage(params: {
@@ -139,7 +168,7 @@ export async function fetchRegistrationsPage(params: {
   if (!term) query = query.range(from, to)
   else query = query.limit(1000)
 
-  const [{ data, count, error }, total, pending, approved, rejected, branchRes] = await Promise.all([
+  const [{ data, count, error }, total, pending, approved, rejected, branchRes, griyaIds] = await Promise.all([
     query,
     countFor(),
     countFor('pending'),
@@ -148,6 +177,7 @@ export async function fetchRegistrationsPage(params: {
     isDirector
       ? admin.from('branches').select('id, name').eq('is_active', true).order('name')
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    griyaBranchIds(admin),
   ])
   if (error) return { ...empty, isDirector, error: error.message }
 
@@ -161,20 +191,9 @@ export async function fetchRegistrationsPage(params: {
     reviewedAt: r.reviewed_at,
     reviewerName: r.internal_profiles?.full_name ?? null,
     patientId: r.patient_id,
+    isGriya: griyaIds.has(r.branch_id),
     duplicatePatientId: null,
-    name: safeDecrypt(r.encrypted_name),
-    phone: safeDecrypt(r.encrypted_phone),
-    address: safeDecrypt(r.encrypted_address),
-    birthDate: safeDecrypt(r.encrypted_birth_date),
-    gender: r.gender,
-    agama: r.agama ?? '',
-    pekerjaan: r.pekerjaan ?? '',
-    hobi: r.hobi ?? '',
-    keluhan: r.keluhan ?? '',
-    kelurahan: r.kelurahan ?? '',
-    kecamatan: r.kecamatan ?? '',
-    kabupatenKota: r.kabupaten_kota ?? '',
-    provinsi: r.provinsi ?? '',
+    ...decryptFields(r),
   }))
 
   let filteredTotal = count ?? 0
@@ -247,29 +266,38 @@ export async function updateRegistration(
   return { error: error?.message ?? null }
 }
 
-export async function approveRegistration(
-  id: string,
+type ScopedRegistration = NonNullable<Awaited<ReturnType<typeof getScopedRegistration>>>
+
+/**
+ * Creates the patient for one pending registration. Shared by single and bulk
+ * approval. Griya Anak branches also get a griya_students roster row so the
+ * child shows up in /griya-anak/siswa and the Griya jadwal search.
+ */
+async function approveOne(
+  admin: AdminClient,
+  reviewer: Reviewer,
+  reg: ScopedRegistration,
   fields: RegistrationFields & { no_rm?: string },
+  griyaIds: Set<string>,
 ): Promise<{ error: string | null; patientId: string | null }> {
-  const reviewer = await getReviewer()
-  if (!reviewer) return { error: 'Tidak memiliki akses.', patientId: null }
-  const reg = await getScopedRegistration(reviewer, id)
-  if (!reg) return { error: 'Pendaftaran tidak ditemukan.', patientId: null }
   if (reg.status !== 'pending') return { error: 'Pendaftaran sudah diproses.', patientId: null }
   if (!fields.name.trim() || !fields.phone.trim() || !fields.gender) {
     return { error: 'Nama, No. HP, dan jenis kelamin wajib diisi.', patientId: null }
   }
 
-  const admin = createAdminClient()
-
   // Claim the registration first so two reviewers can't both create a patient.
   const { data: claimed } = await admin
     .from('patient_registrations')
     .update({ ...encryptedColumns(fields), status: 'approved', reviewed_by: reviewer.id, reviewed_at: new Date().toISOString() })
-    .eq('id', id)
+    .eq('id', reg.id)
     .eq('status', 'pending')
     .select('id')
   if (!claimed || claimed.length === 0) return { error: 'Pendaftaran sudah diproses.', patientId: null }
+
+  const release = () => admin
+    .from('patient_registrations')
+    .update({ status: 'pending', reviewed_by: null, reviewed_at: null })
+    .eq('id', reg.id)
 
   const enc = encryptPatientPII({
     name:      fields.name.trim(),
@@ -298,26 +326,98 @@ export async function approveRegistration(
 
   if (error || !patient) {
     // Release the claim so the registration can be fixed and approved again.
-    await admin
-      .from('patient_registrations')
-      .update({ status: 'pending', reviewed_by: null, reviewed_at: null })
-      .eq('id', id)
+    await release()
     const msg = error?.code === '23505' && error.message.includes('no_rm')
       ? `No. RM "${nz(fields.no_rm)}" sudah dipakai pasien lain.`
       : (error?.message ?? 'Gagal membuat pasien.')
     return { error: msg, patientId: null }
   }
 
-  await admin.from('patient_registrations').update({ patient_id: patient.id }).eq('id', id)
+  const isGriya = griyaIds.has(reg.branch_id)
+  if (isGriya) {
+    const { error: enrollErr } = await admin.from('griya_students').upsert(
+      { patient_id: patient.id, branch_id: reg.branch_id, source: 'online-registration', created_by: reviewer.id },
+      { onConflict: 'patient_id' },
+    )
+    if (enrollErr) {
+      // Don't leave a patient that isn't on the Griya roster — undo and let them retry.
+      await admin.from('patients').delete().eq('id', patient.id)
+      await release()
+      return { error: `Gagal mendaftarkan ke Griya Anak: ${enrollErr.message}`, patientId: null }
+    }
+  }
+
+  await admin.from('patient_registrations').update({ patient_id: patient.id }).eq('id', reg.id)
 
   const supabase = await createClient()
   await logActivity({
     supabase, userId: reviewer.id, action: 'create', resourceType: 'patient',
     resourceId: patient.id, resourceLabel: fields.name.trim(), branchId: reg.branch_id,
-    newValues: { source: 'patient_registration', registration_id: id, no_rm: nz(fields.no_rm) },
+    newValues: { source: 'patient_registration', registration_id: reg.id, no_rm: nz(fields.no_rm), griya_anak: isGriya },
   })
 
   return { error: null, patientId: patient.id }
+}
+
+export async function approveRegistration(
+  id: string,
+  fields: RegistrationFields & { no_rm?: string },
+): Promise<{ error: string | null; patientId: string | null }> {
+  const reviewer = await getReviewer()
+  if (!reviewer) return { error: 'Tidak memiliki akses.', patientId: null }
+  const reg = await getScopedRegistration(reviewer, id)
+  if (!reg) return { error: 'Pendaftaran tidak ditemukan.', patientId: null }
+  const admin = createAdminClient()
+  return approveOne(admin, reviewer, reg, fields, await griyaBranchIds(admin))
+}
+
+/** Approves each selected pending registration as submitted (no edits, no No. RM). */
+export async function bulkApproveRegistrations(ids: string[]): Promise<{
+  error: string | null
+  approved: number
+  failed: { name: string; error: string }[]
+}> {
+  const reviewer = await getReviewer()
+  if (!reviewer) return { error: 'Tidak memiliki akses.', approved: 0, failed: [] }
+  if (ids.length === 0) return { error: null, approved: 0, failed: [] }
+
+  const admin = createAdminClient()
+  let q = admin.from('patient_registrations').select('*').in('id', ids).eq('status', 'pending')
+  if (reviewer.role !== 'director') q = q.eq('branch_id', reviewer.branchId)
+  const [{ data, error }, griyaIds] = await Promise.all([q, griyaBranchIds(admin)])
+  if (error) return { error: error.message, approved: 0, failed: [] }
+
+  let approved = 0
+  const failed: { name: string; error: string }[] = []
+  // Sequential: each approval claims its row and checks phone_hash uniqueness.
+  for (const r of data ?? []) {
+    const fields = decryptFields(r)
+    const res = await approveOne(admin, reviewer, r, fields, griyaIds)
+    if (res.error) failed.push({ name: fields.name || '—', error: res.error })
+    else approved++
+  }
+  return { error: null, approved, failed }
+}
+
+/** Removes registrations from the queue. Patients already created are kept. */
+export async function deleteRegistrations(ids: string[]): Promise<{ error: string | null; deleted: number }> {
+  const reviewer = await getReviewer()
+  if (!reviewer) return { error: 'Tidak memiliki akses.', deleted: 0 }
+  if (ids.length === 0) return { error: null, deleted: 0 }
+
+  let q = createAdminClient().from('patient_registrations').delete().in('id', ids)
+  if (reviewer.role !== 'director') q = q.eq('branch_id', reviewer.branchId)
+  const { data, error } = await q.select('id, branch_id, status')
+  if (error) return { error: error.message, deleted: 0 }
+
+  const supabase = await createClient()
+  for (const r of data ?? []) {
+    await logActivity({
+      supabase, userId: reviewer.id, action: 'delete', resourceType: 'patient_registration',
+      resourceId: r.id, branchId: r.branch_id, oldValues: { status: r.status },
+    })
+  }
+  return { error: null, deleted: data?.length ?? 0 }
 }
 
 export async function rejectRegistration(

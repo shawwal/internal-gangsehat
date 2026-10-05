@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import {
-  AlertTriangle, Building2, Clock, ExternalLink, MapPin, Pencil, Phone, XCircle,
+  AlertTriangle, Baby, Building2, Check, Clock, ExternalLink, MapPin, Pencil, Phone, Trash2, XCircle,
 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import type { RegistrationRow } from '@/app/actions/patientRegistrations'
 import {
   STATUS_BORDER, STATUS_COLOR, STATUS_LABEL, GENDER_LABEL, formatBirthDate, formatDateTime,
@@ -15,12 +16,16 @@ interface Props {
   showBranch: boolean
   onReview: (row: RegistrationRow) => void
   onReject: (id: string, note: string) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+  isSelected?: boolean
+  onToggle?: (id: string) => void
 }
 
-export function RegistrationCard({ row, showBranch, onReview, onReject }: Props) {
-  const [rejecting, setRejecting]   = useState(false)
-  const [rejectNote, setRejectNote] = useState('')
-  const [loading, setLoading]       = useState(false)
+export function RegistrationCard({ row, showBranch, onReview, onReject, onDelete, isSelected, onToggle }: Props) {
+  const [rejecting, setRejecting]         = useState(false)
+  const [rejectNote, setRejectNote]       = useState('')
+  const [loading, setLoading]             = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
 
   const isPending = row.status === 'pending'
   const initials  = row.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?'
@@ -35,9 +40,34 @@ export function RegistrationCard({ row, showBranch, onReview, onReject }: Props)
     setRejectNote('')
   }
 
+  async function handleDelete() {
+    setLoading(true)
+    await onDelete(row.id)
+    setLoading(false)
+    setDeleteConfirm(false)
+  }
+
+  const patientHref = row.patientId
+    ? (row.isGriya ? `/griya-anak/siswa/${row.patientId}` : `/patients/${row.patientId}`)
+    : null
+
   return (
-    <div className={`glass-card border-l-4 ${STATUS_BORDER[row.status]} p-4 space-y-3`}>
+    <>
+    <div className={`glass-card border-l-4 ${STATUS_BORDER[row.status]} p-4 space-y-3 transition-all ${
+      isSelected ? 'ring-2 ring-primary/40 bg-primary/5' : ''
+    }`}>
       <div className="flex items-start gap-3">
+        {onToggle && (
+          <button
+            onClick={() => onToggle(row.id)}
+            aria-label={isSelected ? 'Batal pilih' : 'Pilih'}
+            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+              isSelected ? 'bg-primary border-primary' : 'border-border hover:border-primary/60'
+            }`}
+          >
+            {isSelected && <Check size={11} className="text-white" strokeWidth={3} />}
+          </button>
+        )}
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
           <span className="text-sm font-bold text-primary">{initials}</span>
         </div>
@@ -50,9 +80,23 @@ export function RegistrationCard({ row, showBranch, onReview, onReject }: Props)
                 {row.gender ? GENDER_LABEL[row.gender] : '—'} · {formatBirthDate(row.birthDate)}
               </p>
             </div>
-            <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full shrink-0 ${STATUS_COLOR[row.status]}`}>
-              {STATUS_LABEL[row.status]}
-            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {row.isGriya && (
+                <span className="flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                  <Baby size={11} /> Griya Anak
+                </span>
+              )}
+              <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${STATUS_COLOR[row.status]}`}>
+                {STATUS_LABEL[row.status]}
+              </span>
+              <button
+                onClick={() => setDeleteConfirm(true)}
+                className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                title="Hapus pendaftaran"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
@@ -111,12 +155,12 @@ export function RegistrationCard({ row, showBranch, onReview, onReject }: Props)
             Disetujui{row.reviewerName ? ` oleh ${row.reviewerName}` : ''}
             {row.reviewedAt ? ` · ${formatDateTime(row.reviewedAt)}` : ''}
           </p>
-          {row.patientId && (
+          {patientHref && (
             <Link
-              href={`/patients/${row.patientId}`}
+              href={patientHref}
               className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
-              Lihat Pasien <ExternalLink size={11} />
+              {row.isGriya ? 'Lihat Siswa' : 'Lihat Pasien'} <ExternalLink size={11} />
             </Link>
           )}
         </div>
@@ -167,5 +211,18 @@ export function RegistrationCard({ row, showBranch, onReview, onReject }: Props)
         </div>
       )}
     </div>
+
+    {deleteConfirm && (
+      <ConfirmDialog
+        title="Hapus Pendaftaran"
+        description={`Pendaftaran "${row.name}" akan dihapus permanen.${row.patientId ? ' Data pasien yang sudah dibuat tidak ikut terhapus.' : ''}`}
+        confirmLabel="Hapus"
+        danger
+        loading={loading}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirm(false)}
+      />
+    )}
+    </>
   )
 }
