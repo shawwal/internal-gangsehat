@@ -713,7 +713,9 @@ export async function sendMedicalRecordReminder(
     user_id: visit.attending_staff_id,
     title:   'Rekam Medis Belum Diisi',
     message: `[${visit.id}] Kunjungan ${dateStr} perlu dilengkapi: ${missing.join(', ')}`,
-    link:    visit.service_type === 'SPORT MASSAGE' ? '/jadwal-sport-massage' : '/jadwal-harian',
+    link:    visit.service_type === 'SPORT MASSAGE' ? '/jadwal-sport-massage'
+           : visit.service_type?.endsWith(' VISIT') ? '/home-visit'
+           : '/jadwal-harian',
   })
 
   return { error: null }

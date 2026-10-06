@@ -131,7 +131,8 @@ export function useJadwalHarian() {
         .lte('start_date', isoDate)
         .gte('end_date', isoDate),
       fetchDailyVisits(isoDate, selectedBranchId, {
-        serviceTypes: ['TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA'],
+        // Home visits (TA/SESI/PAKET VISIT) live on /home-visit; sport massage on /jadwal-sport-massage.
+        serviceTypes: ['TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI', 'LAINNYA'],
       }),
       supabase
         .from('schedule_overrides')
