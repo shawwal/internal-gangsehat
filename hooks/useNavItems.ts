@@ -30,7 +30,7 @@ export function useNavItems(allowedNavKeys: string[], branchId: string | null) {
     () =>
       navForKeys(allowedNavKeys).filter(
         (i) =>
-          (i.key !== 'jadwal-sport-massage' || sportMassageEnabled) &&
+          ((i.key !== 'jadwal-sport-massage' && i.key !== 'sport-massage-performance') || sportMassageEnabled) &&
           (!i.key.startsWith('griya-') || griyaEnabled),
       ),
     [allowedNavKeys, sportMassageEnabled, griyaEnabled],

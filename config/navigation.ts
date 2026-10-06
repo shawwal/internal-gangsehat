@@ -349,13 +349,13 @@ export const navigation: NavItem[] = [
     group: 'schedule',
   },
 
-  // Sport Massage therapist performance — branch-scoped for admin, cross-branch for director
+  // Sport Massage therapist performance — branch-scoped for admin/manager, cross-branch for director
   {
     key: 'sport-massage-performance',
     label: 'Performa Sport Massage',
     href: '/jadwal-sport-massage/performa',
     icon: 'Trophy',
-    roles: ['director', 'admin'],
+    roles: ['director', 'manager', 'admin'],
     group: 'schedule',
   },
 

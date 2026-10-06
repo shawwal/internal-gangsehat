@@ -12,11 +12,12 @@ import { PodiumSkeleton, TableSkeleton } from '@/components/performance/Skeleton
 import { SportMassagePodium } from '@/components/sport-massage/performa/Podium'
 import { SportMassageBarChart } from '@/components/sport-massage/performa/BarChart'
 import { SportMassageLeaderboardTable } from '@/components/sport-massage/performa/LeaderboardTable'
+import { TherapistVisitsModal } from '@/components/sport-massage/performa/TherapistVisitsModal'
 import { defaultThisMonth, defaultLastMonth } from '@/components/sport-massage/performa/utils'
 import type { TherapistPerforma, DateRangeState } from '@/components/sport-massage/performa/types'
 import PerformaLoading from './loading'
 
-const ALLOWED_ROLES = ['director', 'admin']
+const ALLOWED_ROLES = ['director', 'manager', 'admin']
 
 const presetBtnCls =
   'px-3 py-2 rounded-xl border border-border text-xs font-medium hover:bg-muted cursor-pointer transition-colors'
@@ -38,6 +39,7 @@ export default function SportMassagePerformaPage() {
   const [rows, setRows] = useState<TherapistPerforma[]>([])
   const [dataLoading, setDataLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedTherapist, setSelectedTherapist] = useState<TherapistPerforma | null>(null)
 
   // Resolve caller role, branch, and the branch list.
   useEffect(() => {
@@ -203,7 +205,7 @@ export default function SportMassagePerformaPage() {
     return <PerformaLoading />
   }
   if (!role || !ALLOWED_ROLES.includes(role)) {
-    return <div className="glass-card p-8 text-sm text-muted-foreground">Halaman ini hanya untuk admin dan direktur.</div>
+    return <div className="glass-card p-8 text-sm text-muted-foreground">Halaman ini hanya untuk admin, manajer, dan direktur.</div>
   }
   if (!selectedBranchId) {
     return <div className="glass-card p-8 text-sm text-muted-foreground">Tidak ada cabang yang tersedia.</div>
@@ -301,11 +303,21 @@ export default function SportMassagePerformaPage() {
         </>
       ) : (
         <>
-          <SportMassagePodium top3={rows.slice(0, 3)} />
+          <SportMassagePodium top3={rows.slice(0, 3)} onSelectTherapist={setSelectedTherapist} />
           <SportMassageBarChart data={rows} />
-          <SportMassageLeaderboardTable rows={rows} />
+          <SportMassageLeaderboardTable rows={rows} onSelectTherapist={setSelectedTherapist} />
         </>
       )}
+
+      <TherapistVisitsModal
+        open={!!selectedTherapist}
+        onClose={() => setSelectedTherapist(null)}
+        branchId={selectedBranchId}
+        therapistId={selectedTherapist?.therapist_id ?? null}
+        therapistName={selectedTherapist ? (selectedTherapist.nickname || selectedTherapist.name) : ''}
+        from={range.from}
+        to={range.to}
+      />
     </div>
   )
 }
