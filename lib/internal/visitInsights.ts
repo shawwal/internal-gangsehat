@@ -92,7 +92,7 @@ export async function fetchPackagePositions(
   const [{ data: pkgVisits }, { data: pkgs }] = await Promise.all([
     supabase
       .from('patient_visits')
-      .select('id, package_id, visit_date, visit_time')
+      .select('id, package_id, visit_date, visit_time, status, kehadiran')
       .in('package_id', packageIds)
       .neq('status', 'cancelled'),
     supabase
@@ -106,17 +106,26 @@ export async function fetchPackagePositions(
     pkgMap.set(p.id, { total: p.total_sessions ?? null, legacy: p.legacy_used_sessions ?? 0 })
   }
 
-  const byPackage = new Map<string, { id: string; key: string }[]>()
+  // Only visits that consume quota advance the counter — HADIR, or still
+  // scheduled (same rule as patient_packages_with_stats, migration 098). A
+  // TIDAK HADIR / unrecorded visit gets the number of the slot it would have
+  // filled, so the count never runs past the package size.
+  const byPackage = new Map<string, { id: string; key: string; consumes: boolean }[]>()
   for (const v of pkgVisits ?? []) {
     const pid = v.package_id as string
     const list = byPackage.get(pid) ?? []
-    list.push({ id: v.id, key: `${v.visit_date} ${v.visit_time ?? '00:00'}` })
+    const consumes = v.kehadiran === 'HADIR' || (v.status === 'scheduled' && v.kehadiran == null)
+    list.push({ id: v.id, key: `${v.visit_date} ${v.visit_time ?? '00:00'}`, consumes })
     byPackage.set(pid, list)
   }
   for (const [pid, list] of byPackage) {
     list.sort((a, b) => a.key.localeCompare(b.key))
     const info = pkgMap.get(pid)
-    list.forEach((v, i) => result.set(v.id, { pertemuan: (info?.legacy ?? 0) + i + 1, total: info?.total ?? null }))
+    let consumed = info?.legacy ?? 0
+    for (const v of list) {
+      result.set(v.id, { pertemuan: consumed + 1, total: info?.total ?? null })
+      if (v.consumes) consumed++
+    }
   }
   return result
 }

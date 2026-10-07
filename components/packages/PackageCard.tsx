@@ -350,6 +350,11 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
           <span className="text-muted-foreground">
             {pkg.used_sessions} dari {pkg.total_sessions} sesi digunakan
             {pkg.scheduled_sessions > 0 && ` · ${pkg.scheduled_sessions} terjadwal`}
+            {!!pkg.unrecorded_sessions && (
+              <span className="text-[#FFB35C]" title="Kunjungan selesai tanpa catatan kehadiran — tidak memotong kuota. Atur Hadir / Tidak Hadir di Riwayat Sesi.">
+                {` · ${pkg.unrecorded_sessions} belum dicatat kehadiran`}
+              </span>
+            )}
           </span>
           <span className={`font-semibold ${sessionTextColor(pkg.remaining_sessions)}`}>
             {pkg.remaining_sessions} sesi tersisa

@@ -352,9 +352,6 @@ export async function updateVisitStatus(
   // no_show is recorded on the visit/patient history even though the slot is
   // freed up on the daily grid — see DailyGrid, which hides no_show visits.
   if (status === 'no_show') update.kehadiran = 'TIDAK HADIR'
-  // Completing without an explicit kehadiran means the patient came — record it
-  // so package counts don't treat the visit as still "terjadwal".
-  if (status === 'completed' && !oldRow?.kehadiran) update.kehadiran = 'HADIR'
   const { error } = await supabase
     .from('patient_visits')
     .update(update)

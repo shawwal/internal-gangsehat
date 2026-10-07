@@ -9,6 +9,25 @@ interface SessionListProps {
   canDelete:      boolean
 }
 
+// Empty kehadiran is NOT "Tidak Hadir": a scheduled visit is still upcoming,
+// and a completed one was closed without attendance being recorded (pre
+// "Tandai Hadir" flow). Neither consumes quota.
+function attendance(s: PackageSession) {
+  if (s.kehadiran === 'HADIR') {
+    return { label: 'HADIR', dot: 'bg-[#34C759]', text: 'text-muted-foreground', seqLabel: '', hint: undefined }
+  }
+  if (s.kehadiran === 'TIDAK HADIR') {
+    return { label: 'TIDAK HADIR', dot: 'bg-destructive', text: 'text-muted-foreground', seqLabel: 'Tidak memotong kuota', hint: undefined }
+  }
+  if (s.status === 'scheduled') {
+    return { label: 'TERJADWAL', dot: 'bg-muted-foreground/50', text: 'text-muted-foreground', seqLabel: 'Belum berlangsung', hint: undefined }
+  }
+  return {
+    label: 'BELUM DICATAT', dot: 'bg-[#FFB35C]', text: 'text-[#FFB35C]', seqLabel: 'Tidak memotong kuota',
+    hint: 'Kunjungan selesai tanpa catatan kehadiran — edit sesi untuk mengatur Hadir / Tidak Hadir.',
+  }
+}
+
 export function SessionList({ sessions, loading, onEdit, onDelete, canDelete }: SessionListProps) {
   if (loading) {
     return (
@@ -32,29 +51,36 @@ export function SessionList({ sessions, loading, onEdit, onDelete, canDelete }: 
     )
   }
 
+  // `sessions` is already ordered oldest-first (fetchPackageSessions sorts by
+  // visit_date ascending). Only HADIR rows consume quota (see
+  // patient_packages_with_stats, migration 098), so only they get a
+  // "Pertemuan N" number — TIDAK HADIR / unrecorded rows would otherwise push
+  // the numbering past the package size (e.g. Pertemuan 22 of 20).
+  let attendedSeq = 0
+  const rows = sessions.map((s) => ({
+    s,
+    att:  attendance(s),
+    seq:  s.kehadiran === 'HADIR' ? ++attendedSeq : null,
+  }))
+
   return (
     <div className="divide-y divide-border">
-      {sessions.map((s, i) => (
+      {rows.map(({ s, att, seq }, i) => (
         <div key={s.id} className={`px-3 py-2 text-xs ${i % 2 === 1 ? 'bg-muted/30' : ''}`}>
           <div className="flex items-center justify-between gap-2">
             <span className="text-muted-foreground shrink-0">
               {new Date(s.visit_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' })}
             </span>
             <span className="text-foreground font-medium truncate flex-1 text-center">{s.service_type}</span>
-            <span className="shrink-0 flex items-center gap-1">
-              <span className={`inline-block w-1.5 h-1.5 rounded-full ${s.kehadiran === 'HADIR' ? 'bg-[#34C759]' : 'bg-destructive'}`} />
-              <span className="text-muted-foreground">{s.kehadiran ?? '—'}</span>
+            <span className="shrink-0 flex items-center gap-1" title={att.hint}>
+              <span className={`inline-block w-1.5 h-1.5 rounded-full ${att.dot}`} />
+              <span className={att.text}>{att.label}</span>
             </span>
           </div>
           <div className="flex items-center justify-between mt-0.5">
-            {/* `sessions` is already ordered oldest-first (fetchPackageSessions
-                sorts by visit_date ascending), so the row index doubles as the
-                session's sequence number within this package — no separate
-                "Ke-N"/session_number column to track like the unrelated
-                booking_sessions system has. */}
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-muted-foreground/60 text-[10px] font-medium shrink-0">
-                Pertemuan {i + 1}
+                {seq !== null ? `Pertemuan ${seq}` : att.seqLabel}
               </span>
               <span className="text-muted-foreground/60 text-[10px] truncate">
                 · {s.therapist_name ?? 'Terapis tidak tercatat'}
