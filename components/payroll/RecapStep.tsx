@@ -38,7 +38,9 @@ export function RecapStep({ ws, rows }: Props) {
       net: r.result?.net ?? 0,
     }
   })
-  const sum = (k: 'klinik' | 'visit' | 'late' | 'alfa' | 'denda' | 'net') => cols.reduce((s, c) => s + c[k], 0)
+  type Col = 'klinik' | 'visit' | 'late' | 'alfa' | 'denda' | 'net'
+  const sum = (k: Col) => cols.reduce((s, c) => s + c[k], 0)
+  const avg = (k: Col) => (cols.length ? Math.round(sum(k) / cols.length) : 0)
   const warnCount = rows.reduce((s, r) => s + r.warnings.length, 0)
 
   function handleExport() {
@@ -148,6 +150,16 @@ export function RecapStep({ ws, rows }: Props) {
               <td className="px-3 py-2 text-right">{formatIDR(sum('alfa'))}</td>
               <td className="px-3 py-2 text-right">{formatIDR(sum('denda'))}</td>
               <td className="px-3 py-2 text-right text-primary border-l border-border">{formatIDR(sum('net'))}</td>
+              <td />
+            </tr>
+            <tr className="bg-muted/40 font-semibold text-foreground border-t border-border">
+              <td colSpan={3} className="px-3 py-2">Rata-rata</td>
+              <td className="px-3 py-2 text-right border-l border-border">{formatIDR(avg('klinik'))}</td>
+              <td className="px-3 py-2 text-right">{formatIDR(avg('visit'))}</td>
+              <td className="px-3 py-2 text-right border-l border-border">{formatIDR(avg('late'))}</td>
+              <td className="px-3 py-2 text-right">{formatIDR(avg('alfa'))}</td>
+              <td className="px-3 py-2 text-right">{formatIDR(avg('denda'))}</td>
+              <td className="px-3 py-2 text-right text-primary border-l border-border">{formatIDR(avg('net'))}</td>
               <td />
             </tr>
           </tfoot>

@@ -5,6 +5,7 @@ import { EyeOff, RefreshCw, RotateCcw, UserPlus } from 'lucide-react'
 import type { PfotmEntry } from '@/app/actions/pfotm'
 import type { BoardRow, PointRule } from '@/lib/pfotm/engine'
 import { btn } from '@/components/payroll/Modal'
+import { avgOf, formatStat, sumOf } from '@/lib/tableStats'
 
 interface Props {
   entries: PfotmEntry[]
@@ -27,6 +28,8 @@ export function PfotmInput(p: Props) {
   const [wd, setWd] = useState<string | null>(null)
   const rules = p.rules.filter((r) => r.is_active !== false)
   const rowByKey = new Map(p.board.map((r) => [r.key, r]))
+  const statEntries = p.entries.filter((e) => !e.excluded)
+  const metricValue = (e: PfotmEntry, key: string) => Number(e.override_metrics[key] ?? e.auto_metrics[key] ?? 0)
 
   function commit(e: PfotmEntry, key: string, raw: string) {
     const k = `${e.id}|${key}`
@@ -128,9 +131,31 @@ export function PfotmInput(p: Props) {
               )
             })}
           </tbody>
+          {statEntries.length > 0 && (
+            <tfoot className="border-t-2 border-border bg-muted/30 font-semibold text-foreground">
+              {(['Jumlah', 'Rata-rata'] as const).map((label) => {
+                const stat = label === 'Jumlah' ? sumOf : avgOf
+                return (
+                  <tr key={label} className="border-b border-border last:border-0">
+                    <td className="sticky left-0 z-10 bg-card px-3 py-1.5 border-r border-border">{label}</td>
+                    {rules.map((r) => (
+                      <td key={r.metric_key} className="px-1 py-1.5 text-center">
+                        {formatStat(stat(statEntries.map((e) => metricValue(e, r.metric_key))))}
+                      </td>
+                    ))}
+                    <td className="px-2 text-right text-primary border-l border-border">
+                      {formatStat(stat(statEntries.map((e) => rowByKey.get(e.id)?.total ?? 0)))}
+                    </td>
+                    <td colSpan={2} />
+                  </tr>
+                )
+              })}
+            </tfoot>
+          )}
         </table>
       </div>
       <p className="text-xs text-muted-foreground">
+        Jumlah &amp; rata-rata dihitung dari peserta yang ikut peringkat (yang dikeluarkan tidak dihitung).
         Angka otomatis: Hadir/Terlambat/Alfa dari absensi, Jumlah Kunjungan dari rekam medis yang sudah lengkap, Paket &amp; TA/Sesi Visit dari transaksi masuk LUNAS/DP, Rujukan SM dari kolom &quot;Dirujuk oleh&quot; pasien.
         Ketik untuk mengoreksi (kuning). Total & peringkat langsung dihitung ulang sebelum disimpan.
       </p>

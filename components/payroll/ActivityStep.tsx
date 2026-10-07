@@ -5,6 +5,7 @@ import { RefreshCw, RotateCcw } from 'lucide-react'
 import { staffDisplayName, type PayrollWorkspace, type WorkspaceRow } from '@/lib/payroll/workspace'
 import { formatIDR } from './format'
 import { btn } from './Modal'
+import { avgOf, formatStat, sumOf } from '@/lib/tableStats'
 
 interface Props {
   ws: PayrollWorkspace
@@ -13,6 +14,8 @@ interface Props {
   onRefresh: () => void
   onOverride: (staffId: string, code: string, value: number | null) => void
 }
+
+const insentifOf = (row: WorkspaceRow) => row.result?.lines.find((l) => l.code === 'INSENTIF')?.amount ?? 0
 
 export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Props) {
   const [showAll, setShowAll] = useState(false)
@@ -39,6 +42,11 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
     }
     return out
   }, [columns])
+
+  const activityValue = (staffId: string, code: string) => {
+    const cell = ws.activity[staffId]?.[code]
+    return cell?.override ?? cell?.auto ?? 0
+  }
 
   function commit(staffId: string, code: string, raw: string, auto: number) {
     const k = `${staffId}|${code}`
@@ -96,7 +104,7 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
             {rows.map((row) => {
               const s = row.staff
               const comp = s.compensation
-              const insentif = row.result?.lines.find((l) => l.code === 'INSENTIF')?.amount ?? 0
+              const insentif = insentifOf(row)
               return (
                 <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/20">
                   <td className="sticky left-0 z-10 bg-card px-3 py-1.5 border-r border-border">
@@ -150,6 +158,26 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
               )
             })}
           </tbody>
+          {rows.length > 0 && (
+            <tfoot className="border-t-2 border-border bg-muted/30 font-semibold text-foreground">
+              {(['Jumlah', 'Rata-rata'] as const).map((label) => {
+                const stat = label === 'Jumlah' ? sumOf : avgOf
+                return (
+                  <tr key={label} className="border-b border-border last:border-0">
+                    <td className="sticky left-0 z-10 bg-card px-3 py-1.5 border-r border-border">{label}</td>
+                    {columns.map((t) => (
+                      <td key={t.code} className="px-1 py-1.5 text-center border-l border-border">
+                        {formatStat(stat(rows.map((r) => activityValue(r.staff.id, t.code))))}
+                      </td>
+                    ))}
+                    <td className="border-l border-border" />
+                    <td className="px-2 text-right whitespace-nowrap">{formatIDR(Math.round(stat(rows.map(insentifOf))))}</td>
+                    <td className="px-2 text-right whitespace-nowrap">{formatIDR(Math.round(stat(rows.map((r) => r.result?.visit ?? 0))))}</td>
+                  </tr>
+                )
+              })}
+            </tfoot>
+          )}
         </table>
       </div>
       <p className="text-xs text-muted-foreground">

@@ -7,6 +7,7 @@ import { shortDayLabel } from '@/lib/payroll/period'
 import type { AttendanceCode } from '@/lib/payroll/types'
 import { staffDisplayName, type PayrollWorkspace, type WorkspaceRow } from '@/lib/payroll/workspace'
 import { CODE_STYLE } from './format'
+import { avgOf, formatStat, sumOf } from '@/lib/tableStats'
 import { btn } from './Modal'
 
 export interface CellChange {
@@ -170,6 +171,24 @@ export function AttendanceGrid({ ws, rows, onChange }: Props) {
               )
             })}
           </tbody>
+          {rows.length > 0 && (
+            <tfoot className="border-t-2 border-border bg-muted/30 font-semibold text-foreground">
+              {(['Jumlah', 'Rata-rata'] as const).map((label) => {
+                const stat = label === 'Jumlah' ? sumOf : avgOf
+                return (
+                  <tr key={label} className="border-b border-border last:border-0">
+                    <td className="sticky left-0 z-10 bg-card px-3 py-1.5 border-r border-border">{label}</td>
+                    <td colSpan={period.days.length} />
+                    {(['hadir', 'lateMinutes', 'izin', 'sakit', 'cuti', 'alfa'] as const).map((k) => (
+                      <td key={k} className="px-2 py-1.5 text-center border-l border-border">
+                        {formatStat(stat(rows.map((r) => r.attendance[k])))}
+                      </td>
+                    ))}
+                  </tr>
+                )
+              })}
+            </tfoot>
+          )}
         </table>
       </div>
       {invalid && (
