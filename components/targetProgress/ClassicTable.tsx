@@ -20,6 +20,7 @@ interface ClassicTableProps {
 
 interface DetailTarget {
   date: string
+  endDate?: string
   category: CategoryKey
   label: string
 }
@@ -31,6 +32,12 @@ export function ClassicTable({ summaries, days, monthLabel, branchId, month, yea
   function openDetail(category: CategoryKey, label: string, day: number) {
     const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     setDetail({ date, category, label })
+  }
+
+  // Capaian = the whole month's list for that category.
+  function openMonthDetail(category: CategoryKey, label: string) {
+    const ym = `${year}-${String(month).padStart(2, '0')}`
+    setDetail({ date: `${ym}-01`, endDate: `${ym}-${String(days).padStart(2, '0')}`, category, label })
   }
 
   function handleExport() {
@@ -86,7 +93,13 @@ export function ClassicTable({ summaries, days, monthLabel, branchId, month, yea
                     {s.label}
                   </td>
                   <td className="px-2 py-2 text-right text-foreground">{s.target.toLocaleString('id-ID')}</td>
-                  <td className="px-2 py-2 text-right text-foreground">{s.actual.toLocaleString('id-ID')}</td>
+                  <td
+                    onClick={s.actual > 0 ? () => openMonthDetail(s.key, s.label) : undefined}
+                    className={`px-2 py-2 text-right ${s.actual > 0 ? 'cursor-pointer hover:underline font-semibold' : 'text-foreground'}`}
+                    style={s.actual > 0 ? { color: 'var(--chart-5)' } : undefined}
+                  >
+                    {s.actual.toLocaleString('id-ID')}
+                  </td>
                   <td
                     className="px-2 py-2 text-right font-semibold"
                     style={{ color: s.selisih < 0 ? 'var(--destructive)' : 'var(--chart-4)' }}
@@ -118,6 +131,7 @@ export function ClassicTable({ summaries, days, monthLabel, branchId, month, yea
         onClose={() => setDetail(null)}
         branchId={branchId}
         date={detail?.date ?? null}
+        endDate={detail?.endDate ?? null}
         category={detail?.category ?? null}
         label={detail?.label ?? ''}
         canEdit={canEdit}

@@ -30,6 +30,7 @@ import type { AssessmentFormState } from '@/components/assessment/types'
 import { SingleStepAssessmentForm } from '@/components/assessment/SingleStepAssessmentForm'
 import { createClient } from '@/lib/supabase/client'
 import { useAutoSave } from '@/hooks/useAutoSave'
+import { RecordNavButtons } from '@/components/sessionNote/RecordNavButtons'
 import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator'
 import AssessmentLoading from './loading'
 
@@ -261,40 +262,43 @@ export default function TerapiAwalAssessmentPage() {
             {!alreadyCompleted && <AutoSaveIndicator status={autoSave.status} savedAt={autoSave.savedAt} />}
           </div>
         </div>
-        {alreadyCompleted && (
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
-            <button
-              type="button"
-              onClick={handleDownloadPdf}
-              disabled={downloadingPdf}
-              title="Unduh PDF asesmen klinis"
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-60"
-            >
-              {downloadingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
-              <span className="hidden sm:inline">Download PDF</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleDownloadResume}
-              disabled={downloadingResume}
-              title="Unduh resume PDF untuk pasien"
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-60"
-            >
-              {downloadingResume ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-              <span className="hidden sm:inline">Download Resume</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleShareResume}
-              disabled={sharing}
-              title="Salin link resume untuk dibagikan ke pasien"
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-60"
-            >
-              {sharing ? <Loader2 size={13} className="animate-spin" /> : <Share2 size={13} />}
-              <span className="hidden sm:inline">Bagikan ke Pasien</span>
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <RecordNavButtons visitId={visit.id} backTo={backTo} onBeforeNavigate={alreadyCompleted ? undefined : autoSave.flush} />
+          {alreadyCompleted && (
+            <>
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={downloadingPdf}
+                title="Unduh PDF asesmen klinis"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-60"
+              >
+                {downloadingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+                <span className="hidden sm:inline">Download PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadResume}
+                disabled={downloadingResume}
+                title="Unduh resume PDF untuk pasien"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-60"
+              >
+                {downloadingResume ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                <span className="hidden sm:inline">Download Resume</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleShareResume}
+                disabled={sharing}
+                title="Salin link resume untuk dibagikan ke pasien"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-60"
+              >
+                {sharing ? <Loader2 size={13} className="animate-spin" /> : <Share2 size={13} />}
+                <span className="hidden sm:inline">Bagikan ke Pasien</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {notCheckedIn ? (

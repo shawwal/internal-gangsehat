@@ -20,7 +20,7 @@ const KUNJUNGAN_EXPORT_COLUMNS: ExportColumn<TargetProgressDetailRow>[] = [
   { header: 'Tanggal',          value: (r) => (r.visitDate ? formatExportDate(r.visitDate) : '') },
   { header: 'Jam',              value: (r) => r.visitTime?.slice(0, 5) },
   { header: 'Nama Pasien',      value: (r) => r.patientName },
-  { header: 'Nama Terapis',     value: (r) => r.fisioName },
+  { header: 'Nama Terapis',     value: (r) => r.fisioNickname ?? r.fisioName },
   { header: 'Layanan',          value: (r) => r.serviceType },
   { header: 'Pertemuan Ke',     value: (r) => r.pertemuanKe },
   // Rows with no recorded kehadiran are past visits the target counts as attended.
@@ -33,13 +33,15 @@ interface DetailModalProps {
   onClose: () => void
   branchId: string
   date: string | null
+  // Set for a whole-period list (Capaian column); omitted for a single day.
+  endDate?: string | null
   category: CategoryKey | null
   label: string
   canEdit: boolean
   onDataChanged?: () => void
 }
 
-export function DetailModal({ open, onClose, branchId, date, category, label, canEdit, onDataChanged }: DetailModalProps) {
+export function DetailModal({ open, onClose, branchId, date, endDate, category, label, canEdit, onDataChanged }: DetailModalProps) {
   const [rows, setRows] = useState<TargetProgressDetailRow[]>([])
   const [loading, setLoading] = useState(false)
   const [editingRow, setEditingRow] = useState<TargetProgressDetailRow | null>(null)
@@ -47,7 +49,7 @@ export function DetailModal({ open, onClose, branchId, date, category, label, ca
   function refetch() {
     if (!date || !category) return
     setLoading(true)
-    fetchTargetProgressDetail(branchId, date, category)
+    fetchTargetProgressDetail(branchId, date, category, endDate ?? date)
       .then(setRows)
       .finally(() => setLoading(false))
   }
@@ -56,16 +58,19 @@ export function DetailModal({ open, onClose, branchId, date, category, label, ca
     if (!open || !date || !category) return
     refetch()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, date, category, branchId])
+  }, [open, date, endDate, category, branchId])
 
   if (!open) return null
 
-  const dateLabel = date
-    ? new Date(date + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
-    : ''
+  const isRange = !!endDate && endDate !== date
+  const fmtLong = (d: string) =>
+    new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+  const dateLabel = date ? (isRange ? `${fmtLong(date)} – ${fmtLong(endDate!)}` : fmtLong(date)) : ''
+  const fmtShort = (d?: string) =>
+    d ? new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '—'
 
   function handleExport() {
-    exportToExcel(rows, KUNJUNGAN_EXPORT_COLUMNS, `kunjungan_${date}`)
+    exportToExcel(rows, KUNJUNGAN_EXPORT_COLUMNS, isRange ? `kunjungan_${date}_${endDate}` : `kunjungan_${date}`)
     return Promise.resolve()
   }
 
@@ -107,13 +112,19 @@ export function DetailModal({ open, onClose, branchId, date, category, label, ca
             </div>
           ) : rows.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              Tidak ada data pada tanggal ini
+              {isRange ? 'Tidak ada data pada periode ini' : 'Tidak ada data pada tanggal ini'}
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/40">
-                  {['No.', 'Nama Pasien', 'Layanan', category === 'kunjungan' ? 'Waktu' : 'Nominal', category === 'kunjungan' ? 'Fisio' : 'Pembayaran'].map((h) => (
+                  {[
+                    'No.',
+                    ...(isRange ? ['Tanggal'] : []),
+                    'Nama Pasien',
+                    'Layanan',
+                    ...(category === 'kunjungan' ? ['Waktu', 'Fisio'] : rows.some((r) => r.tx) ? ['Nominal', 'Pembayaran'] : []),
+                  ].map((h) => (
                     <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
                       {h}
                     </th>
@@ -130,6 +141,9 @@ export function DetailModal({ open, onClose, branchId, date, category, label, ca
                     onClick={canEdit && r.tx ? () => setEditingRow(r) : undefined}
                   >
                     <td className="px-4 py-2.5 text-xs text-muted-foreground w-10">{i + 1}</td>
+                    {isRange && (
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{fmtShort(r.visitDate)}</td>
+                    )}
                     <td className="px-4 py-2.5 text-xs font-medium text-foreground">{r.patientName}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">
                       {r.packageName ? `${r.packageName}${r.jenisPaket ? ` (${r.jenisPaket})` : ''}` : (r.serviceType ?? '—')}
@@ -145,7 +159,7 @@ export function DetailModal({ open, onClose, branchId, date, category, label, ca
                           )}
                         </td>
                       </>
-                    ) : (
+                    ) : category === 'kunjungan' && (
                       <>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.visitTime ?? '—'}</td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.fisioName}</td>

@@ -8,9 +8,9 @@ import { downloadPatientResumePdf } from '@/lib/downloadPatientResumePdf'
 // lib/downloadPatientResumePdf.ts. Shares its markup with the public
 // app/resume/[token] page via lib/patientResumeStyles.ts.
 export async function generatePatientResumePdf(visit: VisitWithPatient, assessment: TerapiAwalAssessment) {
-  const chiefComplaint = [assessment.icf_body_functions_notes, assessment.icf_activity_notes]
-    .filter(Boolean)
-    .join('') || assessment.history_moi || visit.chief_complaint
+  // Body Functions & Structures only — Activity Limitations stay out of the
+  // patient-facing resume.
+  const chiefComplaint = assessment.icf_body_functions_notes || assessment.history_moi || visit.chief_complaint
 
   const plan = [assessment.short_term_goals, assessment.long_term_goals]
     .filter(Boolean)

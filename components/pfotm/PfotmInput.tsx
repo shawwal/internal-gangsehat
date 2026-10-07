@@ -131,7 +131,7 @@ export function PfotmInput(p: Props) {
         </table>
       </div>
       <p className="text-xs text-muted-foreground">
-        Angka otomatis: Hadir/Terlambat/Alfa dari absensi, kunjungan & paket dari jadwal harian, Rujukan SM dari kolom &quot;Dirujuk oleh&quot; pasien.
+        Angka otomatis: Hadir/Terlambat/Alfa dari absensi, Jumlah Kunjungan dari rekam medis yang sudah lengkap, Paket &amp; TA/Sesi Visit dari transaksi masuk LUNAS/DP, Rujukan SM dari kolom &quot;Dirujuk oleh&quot; pasien.
         Ketik untuk mengoreksi (kuning). Total & peringkat langsung dihitung ulang sebelum disimpan.
       </p>
     </div>

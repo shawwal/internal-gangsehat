@@ -1,7 +1,9 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { stripHtml } from '@/lib/richtext'
+import { getVisitFormRoute } from '@/lib/visitRouting'
 import { TREATMENTS_PERFORMED_LABEL } from '@/components/sessionNote/types'
 import type { SessionNote, TerapiAwalAssessment, VisitStatus } from '@/types'
 
@@ -100,12 +102,23 @@ export async function fetchSessionContext(
 }
 
 // ── Copy-from-previous: most recent completed session note for this patient ────
+// Read with the service role once the caller has proven (through RLS) that they
+// can open the current visit — therapists otherwise miss notes their branch
+// policy doesn't surface (e.g. sessions recorded under another branch), which
+// left the button disabled for them while admin/management could use it.
 export async function fetchPreviousSessionNote(
   patientId: string,
   excludeVisitId: string,
 ): Promise<SessionNote | null> {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { data: visit } = await supabase
+    .from('patient_visits')
+    .select('id, patient_id')
+    .eq('id', excludeVisitId)
+    .maybeSingle()
+  if (!visit || visit.patient_id !== patientId) return null
+
+  const { data, error } = await createAdminClient()
     .from('session_notes')
     .select('*')
     .eq('patient_id', patientId)
@@ -237,4 +250,52 @@ export async function completeSessionNote(
     .eq('id', visitId)
 
   return { error: visitErr?.message ?? null }
+}
+
+// ── Prev/next medical record of the same patient (RM navigation buttons) ──────
+export interface AdjacentRecord {
+  visitId: string
+  route: 'assessment' | 'session-note'
+  visitDate: string
+}
+
+export async function fetchAdjacentRecords(
+  visitId: string,
+): Promise<{ prev: AdjacentRecord | null; next: AdjacentRecord | null }> {
+  const none = { prev: null, next: null }
+  const supabase = await createClient()
+  const { data: current } = await supabase
+    .from('patient_visits')
+    .select('patient_id')
+    .eq('id', visitId)
+    .maybeSingle()
+  if (!current) return none
+
+  // Same order as the patient's visit history table, oldest → newest.
+  const { data: visits } = await supabase
+    .from('patient_visits')
+    .select('id, branch_id, visit_date, visit_time, created_at, service_type, status')
+    .eq('patient_id', current.patient_id)
+    .neq('status', 'cancelled')
+    .order('visit_date', { ascending: true })
+    .order('visit_time', { ascending: true, nullsFirst: true })
+    .order('created_at', { ascending: true })
+  if (!visits?.length) return none
+
+  // Griya Anak branches use their own forms — never step into those here.
+  const branchIds = [...new Set(visits.map((v) => v.branch_id as string))]
+  const { data: griya } = await supabase
+    .from('branch_griya_settings').select('branch_id').eq('enabled', true).in('branch_id', branchIds)
+  const griyaBranches = new Set((griya ?? []).map((g) => g.branch_id as string))
+
+  const records = visits
+    .map((v) => ({ v, route: getVisitFormRoute(v.service_type) }))
+    .filter((r): r is { v: typeof visits[number]; route: 'assessment' | 'session-note' } =>
+      !!r.route && !griyaBranches.has(r.v.branch_id as string))
+  const idx = records.findIndex((r) => r.v.id === visitId)
+  if (idx === -1) return none
+
+  const toAdjacent = (r: (typeof records)[number] | undefined): AdjacentRecord | null =>
+    r ? { visitId: r.v.id as string, route: r.route, visitDate: r.v.visit_date as string } : null
+  return { prev: toAdjacent(records[idx - 1]), next: toAdjacent(records[idx + 1]) }
 }

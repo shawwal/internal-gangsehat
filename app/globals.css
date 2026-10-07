@@ -299,3 +299,45 @@ html {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ── Frozen table headers ──────────────────────────────────────────────────
+   Every <table> header stays visible while its rows scroll (same feel as the
+   Jadwal Harian grid header). Header cells are sticky; the nearest scroll
+   container decides what they stick to:
+   - wrappers that scroll horizontally (overflow-x-auto / overflow-auto) are
+     already scroll containers, so they get a viewport-bounded height and the
+     rows scroll inside them;
+   - overflow-hidden wrappers (only there for rounded corners) become
+     overflow: clip, which clips the same way without being a scroll
+     container — the header then sticks to the page (<main>) instead. */
+@layer base {
+  @media screen {
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      /* Opaque so rows never show through; a light muted tint keeps the
+         header row distinguishable from the body. */
+      background-color: var(--card);
+      background-image: linear-gradient(
+        color-mix(in oklab, var(--muted) 45%, transparent),
+        color-mix(in oklab, var(--muted) 45%, transparent)
+      );
+    }
+    :where(.overflow-x-auto, .overflow-auto):has(> table) {
+      max-height: calc(100dvh - 9rem);
+    }
+  }
+}
+
+@media screen {
+  /* Unlayered: must beat the .overflow-hidden / .z-10 utilities. */
+  table.overflow-hidden,
+  .overflow-hidden:has(> table) {
+    overflow: clip;
+  }
+  /* Sticky first-column header cells sit above both scrolling axes. */
+  thead th.sticky {
+    z-index: 30;
+  }
+}

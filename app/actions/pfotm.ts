@@ -5,11 +5,15 @@
 // edits to locked periods for everyone but the director.
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activityLog'
 import { buildPeriodDays, MONTH_NAMES } from '@/lib/payroll/period'
-import type { VisitForPayroll } from '@/lib/payroll/autoActivity'
+import { VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
 import type { Weekday } from '@/lib/payroll/types'
-import { computePfotmAutoMetrics, CLINIC_VISIT_TYPES, HOME_SESSION_TYPES, type AttendanceForPfotm, type PackageInfo } from '@/lib/pfotm/autoMetrics'
+import {
+  computePfotmAutoMetrics, CLINIC_VISIT_TYPES, SALES_CATEGORIES, SALES_PAYMENT_STATUSES,
+  type AttendanceForPfotm, type PackageInfo, type SaleForPfotm,
+} from '@/lib/pfotm/autoMetrics'
 import { mergeMetrics, rankBoard, sanitizeMetricValue, type Metrics, type PointRule } from '@/lib/pfotm/engine'
 
 type Ok<T> = { ok: true; data: T }
@@ -119,40 +123,64 @@ async function loadWorkingWindow(supabase: ServerClient, branchId: string, year:
   return { start: built.start, end: built.end, workdays: built.workdays }
 }
 
-async function collectAutoMetrics(supabase: ServerClient, staffIds: string[], start: string, end: string) {
+async function collectAutoMetrics(supabase: ServerClient, branchId: string, staffIds: string[], start: string, end: string) {
   if (!staffIds.length) return {}
   const today = todayJakarta()
-  const [attRes, visitRes, refRes] = await Promise.all([
+  // `transactions` is RLS-limited to finance-capable roles, but HR prepares
+  // PFOTM too — callers have already checked INPUT_ROLES, so the sales read
+  // uses the service role, scoped to this branch and period.
+  const admin = createAdminClient()
+  const [attRes, visitRes, refRes, txRes] = await Promise.all([
     supabase.from('attendance').select('staff_id, status').in('staff_id', staffIds).gte('date', start).lte('date', end),
     supabase.from('patient_visits')
-      .select('id, attending_staff_id, service_type, layanan_id, visit_date, kehadiran, package_id')
+      .select(VISIT_FOR_PAYROLL_COLUMNS)
       .in('attending_staff_id', staffIds)
-      .in('service_type', [...CLINIC_VISIT_TYPES, ...HOME_SESSION_TYPES, 'PAKET VISIT'])
-      .in('status', ['scheduled', 'completed'])
+      .in('service_type', CLINIC_VISIT_TYPES)
+      .eq('status', 'completed')
       .gte('visit_date', start).lte('visit_date', end)
       .limit(20000),
     supabase.from('patients').select('id, referred_by_staff_id, created_at').in('referred_by_staff_id', staffIds),
+    admin.from('transactions')
+      .select('id, fisio_id, visit_id, order_id, category')
+      .eq('branch_id', branchId)
+      .eq('type', 'income')
+      .neq('status', 'rejected')
+      .in('payment_status', SALES_PAYMENT_STATUSES)
+      .in('category', SALES_CATEGORIES)
+      .gte('transaction_date', start).lte('transaction_date', end)
+      .limit(20000),
   ])
-  const periodVisits = (visitRes.data ?? []) as VisitForPayroll[]
+  const periodVisits = (visitRes.data ?? []) as unknown as VisitForPayroll[]
+  const txRows = (txRes.data ?? []) as { id: string; fisio_id: string | null; visit_id: string | null; order_id: string | null; category: string }[]
 
-  const packageIds = [...new Set(periodVisits.filter((v) => v.package_id && (v.service_type === 'PAKET TERAPI' || v.service_type === 'PAKET VISIT')).map((v) => v.package_id!))]
-  const firstPackageVisit = new Map<string, VisitForPayroll>()
-  const packages = new Map<string, PackageInfo>()
-  for (let i = 0; i < packageIds.length; i += 300) {
-    const chunk = packageIds.slice(i, i + 300)
-    const [{ data: pv }, { data: pk }] = await Promise.all([
-      supabase.from('patient_visits')
-        .select('id, attending_staff_id, service_type, layanan_id, visit_date, kehadiran, package_id')
-        .in('package_id', chunk).in('status', ['scheduled', 'completed']).lte('visit_date', end)
-        .order('visit_date', { ascending: true }),
-      supabase.from('patient_packages').select('id, jenis_paket, total_sessions').in('id', chunk),
-    ])
-    for (const v of (pv ?? []) as VisitForPayroll[]) {
-      if (!v.package_id || firstPackageVisit.has(v.package_id)) continue
-      if (v.kehadiran === 'HADIR' || (v.kehadiran == null && v.visit_date < today)) firstPackageVisit.set(v.package_id, v)
-    }
-    for (const p of (pk ?? []) as PackageInfo[]) packages.set(p.id, p)
+  // Attribute each sale: the transaction's Fisio, else the linked visit's
+  // therapist. PAKET KLINIK also needs its package (by order_id or via the
+  // linked visit) to tell P1 / P2 / P3 apart.
+  const visitIds = [...new Set(txRows.map((t) => t.visit_id).filter((x): x is string => !!x))]
+  const orderIds = [...new Set(txRows.map((t) => t.order_id).filter((x): x is string => !!x))]
+  const visitById = new Map<string, { attending_staff_id: string | null; package_id: string | null }>()
+  const packageById = new Map<string, PackageInfo>()
+  const packageByOrder = new Map<string, PackageInfo>()
+  for (let i = 0; i < visitIds.length; i += 300) {
+    const { data } = await admin.from('patient_visits').select('id, attending_staff_id, package_id').in('id', visitIds.slice(i, i + 300))
+    for (const v of data ?? []) visitById.set(v.id, v)
   }
+  const pkgIds = [...new Set([...visitById.values()].map((v) => v.package_id).filter((x): x is string => !!x))]
+  for (let i = 0; i < pkgIds.length; i += 300) {
+    const { data } = await admin.from('patient_packages').select('id, jenis_paket, total_sessions').in('id', pkgIds.slice(i, i + 300))
+    for (const p of (data ?? []) as PackageInfo[]) packageById.set(p.id, p)
+  }
+  for (let i = 0; i < orderIds.length; i += 300) {
+    const { data } = await admin.from('patient_packages').select('id, jenis_paket, total_sessions, order_id').in('order_id', orderIds.slice(i, i + 300))
+    for (const p of (data ?? []) as (PackageInfo & { order_id: string })[]) packageByOrder.set(p.order_id, p)
+  }
+  const sales: SaleForPfotm[] = txRows.map((t) => {
+    const visit = t.visit_id ? visitById.get(t.visit_id) : undefined
+    const pkg = (t.order_id ? packageByOrder.get(t.order_id) : undefined)
+      ?? (visit?.package_id ? packageById.get(visit.package_id) : undefined)
+      ?? null
+    return { staff_id: t.fisio_id ?? visit?.attending_staff_id ?? null, category: t.category, package: pkg }
+  })
 
   // Referral date = the referred patient's first visit (fallback: registration date).
   const referred = (refRes.data ?? []) as { id: string; referred_by_staff_id: string; created_at: string }[]
@@ -172,7 +200,7 @@ async function collectAutoMetrics(supabase: ServerClient, staffIds: string[], st
   return computePfotmAutoMetrics({
     staffIds, start, end, todayISO: today,
     attendance: (attRes.data ?? []) as AttendanceForPfotm[],
-    periodVisits, firstPackageVisit, packages, referrals,
+    periodVisits, sales, referrals,
   })
 }
 
@@ -241,6 +269,7 @@ export async function openPfotmPeriod(branchId: string, year: number, month: num
   const actor = await getActor()
   if (isErr(actor)) return actor
   if (!INPUT_ROLES.includes(actor.role)) return fail('Anda tidak memiliki akses.')
+  if (actor.role !== 'director' && branchId !== actor.branchId) return fail('Anda tidak memiliki akses.')
   const { supabase } = actor
 
   const win = await loadWorkingWindow(supabase, branchId, year, month)
@@ -256,7 +285,7 @@ export async function openPfotmPeriod(branchId: string, year: number, month: num
     .select('id, full_name, nickname, role')
     .eq('branch_id', branchId).eq('is_active', true).in('role', PARTICIPANT_ROLES)
   const staffList = staff ?? []
-  const auto = await collectAutoMetrics(supabase, staffList.map((s) => s.id), win.start, win.end)
+  const auto = await collectAutoMetrics(supabase, branchId, staffList.map((s) => s.id), win.start, win.end)
   if (staffList.length) {
     await supabase.from('pfotm_entries').insert(staffList.map((s) => ({
       period_id: period.id,
@@ -285,7 +314,7 @@ export async function refreshPfotmAuto(periodId: string): Promise<Result> {
 
   const { data: entries } = await supabase.from('pfotm_entries').select('id, staff_id').eq('period_id', periodId)
   const staffIds = (entries ?? []).map((e) => e.staff_id).filter((x): x is string => !!x)
-  const auto = await collectAutoMetrics(supabase, staffIds, period.start_date, period.end_date)
+  const auto = await collectAutoMetrics(supabase, period.branch_id, staffIds, period.start_date, period.end_date)
   for (const e of entries ?? []) {
     if (!e.staff_id) continue
     await supabase.from('pfotm_entries').update({ auto_metrics: auto[e.staff_id] ?? {}, updated_by: actor.userId }).eq('id', e.id)
@@ -371,7 +400,7 @@ export async function addPfotmParticipant(periodId: string, staffId: string): Pr
     supabase.from('internal_profiles').select('id, full_name, nickname').eq('id', staffId).maybeSingle(),
   ])
   if (!period || !staff) return fail('Data tidak ditemukan.')
-  const auto = await collectAutoMetrics(supabase, [staffId], period.start_date, period.end_date)
+  const auto = await collectAutoMetrics(supabase, period.branch_id, [staffId], period.start_date, period.end_date)
   const { error } = await supabase.from('pfotm_entries').insert({
     period_id: periodId, staff_id: staffId, display_name: (staff.nickname?.trim() || staff.full_name).toUpperCase(),
     auto_metrics: auto[staffId] ?? {}, updated_by: actor.userId,

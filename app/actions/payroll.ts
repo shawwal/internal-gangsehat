@@ -11,7 +11,7 @@ import { logActivity } from '@/lib/activityLog'
 import { buildPeriodDays, countWorkdays, MONTH_NAMES } from '@/lib/payroll/period'
 import { codeFromRow, rowFromCode, type AttendanceDbRow } from '@/lib/payroll/attendance'
 import { pickCompensation } from '@/lib/payroll/engine'
-import { computeAutoActivity, type VisitForPayroll } from '@/lib/payroll/autoActivity'
+import { computeAutoActivity, VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
 import {
   computeWorkspaceRows, type ActivityCell, type PayrollWorkspace, type SlipRecord, type WorkspaceAdjustment,
   type WorkspaceSettings, type WorkspaceStaff,
@@ -235,6 +235,23 @@ export async function listPayrollPeriods(branchId: string): Promise<Result<Payro
 
 // ── Period initialization ───────────────────────────────────────────────────
 
+// Staff that must not appear in a period: deactivated accounts, and anyone
+// marked "tidak diikutkan penggajian" (or terminated before the period) on
+// the Pengaturan Penggajian page.
+async function excludedFromPayroll(supabase: ServerClient, staffIds: string[], start: string): Promise<Set<string>> {
+  if (!staffIds.length) return new Set()
+  const [{ data: staff }, { data: profiles }] = await Promise.all([
+    supabase.from('internal_profiles').select('id, is_active').in('id', staffIds),
+    supabase.from('employee_payroll_profiles').select('staff_id, include_in_payroll, termination_date').in('staff_id', staffIds),
+  ])
+  return new Set([
+    ...(staff ?? []).filter((s) => !s.is_active).map((s) => s.id),
+    ...(profiles ?? [])
+      .filter((p) => !p.include_in_payroll || (p.termination_date && p.termination_date < start))
+      .map((p) => p.staff_id),
+  ])
+}
+
 async function eligibleStaffIds(supabase: ServerClient, branchId: string, start: string): Promise<string[]> {
   const { data: staff } = await supabase
     .from('internal_profiles')
@@ -242,16 +259,7 @@ async function eligibleStaffIds(supabase: ServerClient, branchId: string, start:
     .eq('branch_id', branchId)
     .eq('is_active', true)
   const candidates = (staff ?? []).filter((s) => !NON_PAYROLL_ROLES.includes(s.role)).map((s) => s.id)
-  if (!candidates.length) return []
-  const { data: profiles } = await supabase
-    .from('employee_payroll_profiles')
-    .select('staff_id, include_in_payroll, termination_date')
-    .in('staff_id', candidates)
-  const excluded = new Set(
-    (profiles ?? [])
-      .filter((p) => !p.include_in_payroll || (p.termination_date && p.termination_date < start))
-      .map((p) => p.staff_id),
-  )
+  const excluded = await excludedFromPayroll(supabase, candidates, start)
   return candidates.filter((id) => !excluded.has(id))
 }
 
@@ -322,7 +330,22 @@ export async function getPayrollWorkspace(periodId: string): Promise<Result<Payr
   if (!period) return fail('Periode tidak ditemukan.')
 
   const { data: bound } = await supabase.from('payroll_period_staff').select('staff_id').eq('period_id', periodId)
-  const staffIds = (bound ?? []).map((b) => b.staff_id)
+  let staffIds = (bound ?? []).map((b) => b.staff_id)
+
+  // An open period follows the current settings: staff deactivated or switched
+  // to "tidak diikutkan penggajian" after it was opened drop out (and are
+  // unbound so lock/activity refresh skip them too). Locked periods keep the
+  // roster their slips were written for.
+  const open = period.status === 'draft' || period.status === 'submitted'
+  if (open) {
+    const excluded = await excludedFromPayroll(supabase, staffIds, period.start_date)
+    if (excluded.size) {
+      staffIds = staffIds.filter((id) => !excluded.has(id))
+      if (PREP_ROLES.includes(actor.role) || APPROVE_ROLES.includes(actor.role)) {
+        await supabase.from('payroll_period_staff').delete().eq('period_id', periodId).in('staff_id', [...excluded])
+      }
+    }
+  }
 
   const [settings, deductionRules, activityTypes, profilesRes, payrollProfilesRes, compRes, attendanceRes, countsRes, adjRes, slipsRes] =
     await Promise.all([
@@ -393,7 +416,6 @@ export async function getPayrollWorkspace(periodId: string): Promise<Result<Payr
     ...s, gross: Number(s.gross), total_deductions: Number(s.total_deductions), net: Number(s.net),
   }))
 
-  const open = period.status === 'draft' || period.status === 'submitted'
   return ok({
     period: {
       id: period.id,
@@ -524,7 +546,7 @@ async function refreshActivityFor(supabase: ServerClient, periodId: string, user
   const serviceTypes = [...new Set(autoTypes.flatMap((t) => t.source_service_types))]
   const { data: visits, error } = await supabase
     .from('patient_visits')
-    .select('id, attending_staff_id, service_type, layanan_id, visit_date, kehadiran, package_id')
+    .select(VISIT_FOR_PAYROLL_COLUMNS)
     .in('attending_staff_id', staffIds)
     .in('service_type', serviceTypes)
     .in('status', ['scheduled', 'completed'])
@@ -542,7 +564,7 @@ async function refreshActivityFor(supabase: ServerClient, periodId: string, user
   for (let i = 0; i < packageIds.length; i += 300) {
     const { data: pv } = await supabase
       .from('patient_visits')
-      .select('id, attending_staff_id, service_type, layanan_id, visit_date, kehadiran, package_id')
+      .select(VISIT_FOR_PAYROLL_COLUMNS)
       .in('package_id', packageIds.slice(i, i + 300))
       .in('status', ['scheduled', 'completed'])
       .lte('visit_date', period.end_date)
@@ -686,7 +708,9 @@ export async function listBindableStaff(periodId: string): Promise<Result<{ id: 
     .eq('branch_id', period.branch_id)
     .eq('is_active', true)
     .order('full_name')
-  return ok((data ?? []).filter((s) => !boundIds.has(s.id) && s.role !== 'non-staff').map((s) => ({ id: s.id, full_name: s.full_name })))
+  const candidates = (data ?? []).filter((s) => !boundIds.has(s.id) && s.role !== 'non-staff')
+  const excluded = await excludedFromPayroll(actor.supabase, candidates.map((s) => s.id), period.start_date)
+  return ok(candidates.filter((s) => !excluded.has(s.id)).map((s) => ({ id: s.id, full_name: s.full_name })))
 }
 
 export async function setPeriodStaff(periodId: string, staffId: string, include: boolean): Promise<Result> {

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import { VISIT_STATUS_FILTER, isAttended } from '@/components/performance/utils'
-import { CATEGORY_TO_TRANSACTION_TYPES, TRANSACTION_CATEGORY_MAP } from '@/components/targetProgress/types'
+import { CATEGORY_TO_TRANSACTION_TYPES, EDITABLE_ROLES, TRANSACTION_CATEGORY_MAP } from '@/components/targetProgress/types'
 import type { CategoryKey, TransactionForProgress } from '@/components/targetProgress/types'
 import type { TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
 import { deriveAdminStatus, fetchPackagePositions } from '@/lib/internal/visitInsights'
@@ -16,6 +16,8 @@ export interface TargetProgressDetailRow {
   serviceType: string | null
   visitTime: string | null
   fisioName: string
+  // Nickname ("panggilan") when set, else full name — used by the Excel export.
+  fisioNickname?: string
   packageName?: string
   jenisPaket?: string | null
   tx?: TransactionForEdit
@@ -101,10 +103,13 @@ export async function fetchTargetProgressTransactions(
   return data as TransactionForProgress[]
 }
 
+// `endDate` defaults to `startDate` (a single day cell); the Capaian column
+// passes the whole month.
 export async function fetchTargetProgressDetail(
   branchId: string,
-  visitDate: string,
+  startDate: string,
   category: CategoryKey,
+  endDate: string = startDate,
 ): Promise<TargetProgressDetailRow[]> {
   const supabase = await createClient()
 
@@ -113,25 +118,42 @@ export async function fetchTargetProgressDetail(
     // (Kategori match + Pembayaran LUNAS/DP) — the same source the summary
     // table now uses, so this list always matches the day cell exactly, and
     // the rows returned are real transactions that can be edited/deleted.
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+    const { data: profile } = await supabase
+      .from('internal_profiles')
+      .select('role, branch_id')
+      .eq('id', user.id)
+      .single()
+    if (!profile || profile.role === 'non-staff') return []
+    if (profile.role !== 'director' && profile.branch_id !== branchId) return []
+    // Roles without `transactions` RLS access (therapist, hr, …) still get the
+    // list, read with the service role — but without the editable tx payload
+    // (amounts / payment detail), same as fetchTargetProgressTransactions.
+    const canReadTx = (EDITABLE_ROLES as readonly string[]).includes(profile.role)
+    const db = canReadTx ? supabase : createAdminClient()
+
     const txCategories = CATEGORY_TO_TRANSACTION_TYPES[category] ?? []
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('transactions')
       .select(
         'id, patient_id, category, harga, discount, amount, payment_method, ' +
         'payment_status, status, description, penjamin, transaction_date, receipt_url',
       )
       .eq('branch_id', branchId)
-      .eq('transaction_date', visitDate)
+      .gte('transaction_date', startDate)
+      .lte('transaction_date', endDate)
       .eq('type', 'income')
       .neq('status', 'rejected')
       .in('payment_status', ['LUNAS', 'DP'])
       .in('category', txCategories)
 
     if (error || !data) return []
-    const rows = data as unknown as TransactionRow[]
+    const rows = (data as unknown as TransactionRow[])
+      .sort((a, b) => a.transaction_date.localeCompare(b.transaction_date))
 
     const patientIds = [...new Set(rows.map((row) => row.patient_id).filter((id): id is string => !!id))]
-    const { data: patients } = await supabase
+    const { data: patients } = await db
       .from('patients')
       .select('id, encrypted_name')
       .in('id', patientIds)
@@ -148,7 +170,8 @@ export async function fetchTargetProgressDetail(
         serviceType: row.category,
         visitTime: null,
         fisioName: '—',
-        tx: {
+        visitDate: row.transaction_date,
+        tx: canReadTx ? {
           id: row.id,
           type: 'income',
           category: row.category,
@@ -163,7 +186,7 @@ export async function fetchTargetProgressDetail(
           transaction_date: row.transaction_date,
           patient_id: row.patient_id,
           patient_name: name || '—',
-        },
+        } : undefined,
       }
     })
   }
@@ -174,10 +197,11 @@ export async function fetchTargetProgressDetail(
     .from('patient_visits')
     .select(
       'id, patient_id, visit_date, visit_time, kehadiran, service_type, package_id, ' +
-      'diagnosis, treatment, regio, internal_profiles!attending_staff_id(full_name)',
+      'diagnosis, treatment, regio, internal_profiles!attending_staff_id(full_name, nickname)',
     )
     .eq('branch_id', branchId)
-    .eq('visit_date', visitDate)
+    .gte('visit_date', startDate)
+    .lte('visit_date', endDate)
     .in('status', [...VISIT_STATUS_FILTER])
     // Sport massage is tracked separately — not a "kunjungan" (matches target-progress page)
     .or('service_type.is.null,service_type.neq."SPORT MASSAGE"')
@@ -186,7 +210,8 @@ export async function fetchTargetProgressDetail(
 
   const allVisits = data as unknown as VisitRow[]
   const rows = allVisits.filter((v) => isAttended(v))
-  rows.sort((a, b) => (a.visit_time ?? '').localeCompare(b.visit_time ?? ''))
+  rows.sort((a, b) =>
+    a.visit_date.localeCompare(b.visit_date) || (a.visit_time ?? '').localeCompare(b.visit_time ?? ''))
 
   // patient_visits has no FK relationship registered for `patient_id` in the
   // PostgREST schema cache, so `patients!patient_id(...)` embedding silently
@@ -241,6 +266,7 @@ export async function fetchTargetProgressDetail(
       serviceType: layanan,
       visitTime: row.visit_time,
       fisioName: row.internal_profiles?.full_name ?? '—',
+      fisioNickname: row.internal_profiles?.nickname?.trim() || row.internal_profiles?.full_name || '—',
       visitDate: row.visit_date,
       pertemuanKe: row.package_id ? (packagePositions.get(row.id)?.pertemuan ?? 1) : 1,
       kehadiran: row.kehadiran,

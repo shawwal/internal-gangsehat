@@ -17,13 +17,14 @@ import { SingleStepSessionNoteForm } from '@/components/sessionNote/SingleStepSe
 import { MultiStepSessionNoteForm } from '@/components/sessionNote/MultiStepSessionNoteForm'
 import { generateSessionNotePdf } from '@/components/sessionNote/generateSessionNotePdf'
 import { generateSessionNoteResumePdf } from '@/components/sessionNote/generateSessionNoteResumePdf'
-import { fromSessionNote, toFieldsInput } from '@/components/sessionNote/types'
+import { fromAssessment, fromSessionNote, toFieldsInput } from '@/components/sessionNote/types'
 import type { SessionNoteFormState } from '@/components/sessionNote/types'
 import { stripHtml } from '@/lib/richtext'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator'
+import { RecordNavButtons } from '@/components/sessionNote/RecordNavButtons'
 import SessionNoteLoading from './loading'
 
 type FormMode = 'single_step' | 'multi_step'
@@ -107,12 +108,16 @@ export default function SessionNotePage() {
     setForm((f) => f ? { ...f, ...patch } : f)
   }
 
+  // Previous session note first; for a patient with no earlier note (e.g. the
+  // first SESI after the Terapi Awal) fall back to the TA itself.
+  const copySource = previousNote ?? priorAssessment
   function handleCopyPrevious() {
-    if (!previousNote) return
-    const prevDate = new Date(previousNote.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-    const ok = window.confirm(`Salin data dari sesi tanggal ${prevDate}? Ini akan menimpa isian saat ini.`)
+    if (!copySource) return
+    const prevDate = new Date(copySource.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    const what = previousNote ? 'sesi' : 'Terapi Awal'
+    const ok = window.confirm(`Salin data dari ${what} tanggal ${prevDate}? Ini akan menimpa isian saat ini.`)
     if (!ok) return
-    setForm(fromSessionNote(previousNote))
+    setForm(previousNote ? fromSessionNote(previousNote) : fromAssessment(priorAssessment!))
   }
 
   async function handleComplete() {
@@ -191,6 +196,7 @@ export default function SessionNotePage() {
           </div>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <RecordNavButtons visitId={visit.id} backTo={backTo} onBeforeNavigate={alreadyCompleted ? undefined : autoSave.flush} />
           <Link
             href={`/patients/${visit.patient_id}/visits`}
             title="Riwayat Pasien"
@@ -201,8 +207,8 @@ export default function SessionNotePage() {
           <button
             type="button"
             onClick={handleCopyPrevious}
-            disabled={!previousNote}
-            title={previousNote ? 'Salin dari Sesi Sebelumnya' : 'Belum ada sesi sebelumnya'}
+            disabled={!copySource || locked || notCheckedIn}
+            title={previousNote ? 'Salin dari Sesi Sebelumnya' : priorAssessment ? 'Salin dari Terapi Awal' : 'Belum ada sesi sebelumnya'}
             className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
           >
             <Copy size={13} /> <span className="hidden sm:inline">Salin dari Sesi Sebelumnya</span>

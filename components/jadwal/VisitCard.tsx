@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/utils'
 import { isRegioRequired } from '@/lib/visitRouting'
 
 const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
-const REMIND_ROLES  = ['admin', 'director', 'manager']
+const REMIND_ROLES  = ['admin', 'director', 'manager', 'hr']
 
 const ALL_STATUSES: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
 

@@ -84,7 +84,7 @@ export function PfotmBoard({ board, rules, wins, live }: Props) {
                 <span>Disiplin {pct(row.kpis.disiplin)}</span>
                 <span>{row.kpis.jumlah_paket} paket</span>
               </div>
-              {row.tiedOnPoints && <span className="text-[10px] text-muted-foreground">seri poin — ditentukan tie-breaker</span>}
+              {row.tiedOnPoints && <span className="text-[10px] text-muted-foreground">seri poin — diurutkan dari jumlah kunjungan</span>}
             </button>
           )
         })}

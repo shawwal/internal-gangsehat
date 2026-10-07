@@ -1,7 +1,7 @@
 // PFOTM point engine (replaces the Data / Rank / Rekap sheets). Pure module.
 //
 // Total Points = Σ metric_i × weight_i   (weights come from pfotm_point_rules)
-// Ranking: total points ↓, then package sales ↓, late incidents ↑,
+// Ranking: total points ↓, then Jumlah Kunjungan ↓, package sales ↓, late incidents ↑,
 //          discipline rate ↓, then name (so ranks are always unique ordinals).
 
 export interface PointRule {
@@ -77,6 +77,7 @@ export function rankBoard(inputs: BoardInput[], rules: PointRule[], workingDays:
   })
   rows.sort((a, b) =>
     b.total - a.total
+    || m(b.metrics, 'kunjungan') - m(a.metrics, 'kunjungan')
     || b.kpis.jumlah_paket - a.kpis.jumlah_paket
     || m(a.metrics, 'terlambat') - m(b.metrics, 'terlambat')
     || b.kpis.disiplin - a.kpis.disiplin

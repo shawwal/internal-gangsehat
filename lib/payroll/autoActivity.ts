@@ -2,6 +2,7 @@
 // Pure — the server action does the querying and hands rows in.
 
 import type { ActivityType } from './types'
+import { isRegioRequired } from '@/lib/visitRouting'
 
 export interface VisitForPayroll {
   id: string
@@ -11,7 +12,16 @@ export interface VisitForPayroll {
   visit_date: string
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
   package_id: string | null
+  // Medical-record fields — session counts only credit complete records.
+  status?: string | null
+  diagnosis?: string | null
+  treatment?: string | null
+  regio?: string | null
 }
+
+/** Columns to select from patient_visits for VisitForPayroll rows. */
+export const VISIT_FOR_PAYROLL_COLUMNS =
+  'id, attending_staff_id, service_type, layanan_id, visit_date, kehadiran, package_id, status, diagnosis, treatment, regio'
 
 /**
  * Same convention as the performance dashboards (components/performance/utils
@@ -21,6 +31,17 @@ export interface VisitForPayroll {
 export function visitAttended(v: Pick<VisitForPayroll, 'kehadiran' | 'visit_date'>, todayISO: string): boolean {
   if (v.kehadiran === 'HADIR') return true
   return v.kehadiran == null && v.visit_date < todayISO
+}
+
+/**
+ * "Lengkap" on the Rekam Medis page (app/actions/medicalRecords.ts): a
+ * completed visit with diagnosis + treatment, plus regio for TERAPI AWAL /
+ * TA VISIT. Visit counts for incentives and PFOTM only credit these.
+ */
+export function isRecordComplete(v: Pick<VisitForPayroll, 'status' | 'diagnosis' | 'treatment' | 'regio' | 'service_type' | 'kehadiran'>): boolean {
+  if (v.status !== 'completed' || v.kehadiran === 'TIDAK HADIR') return false
+  if (!v.diagnosis || !v.treatment) return false
+  return !isRegioRequired(v.service_type) || !!v.regio
 }
 
 function matchesType(t: ActivityType, v: VisitForPayroll): boolean {
@@ -56,7 +77,7 @@ export function computeAutoActivity(params: {
   for (const t of types) {
     if (!t.is_active || t.count_mode === 'manual' || t.source_service_types.length === 0) continue
     if (t.count_mode === 'session') {
-      for (const v of attended) if (matchesType(t, v)) bump(v.attending_staff_id!, t.code)
+      for (const v of attended) if (matchesType(t, v) && isRecordComplete(v)) bump(v.attending_staff_id!, t.code)
       continue
     }
     // package: one sale per package, credited to whoever ran its first attended

@@ -68,6 +68,31 @@ export function toFormState(a: Partial<SessionNoteFormState> | null | undefined)
   return { ...EMPTY_SESSION_NOTE_FORM, ...(a ?? {}) }
 }
 
+// Seed a follow-up note from the patient's Terapi Awal when there is no earlier
+// session note to copy (e.g. the first SESI after the TA).
+export function fromAssessment(a: {
+  pain_severity_vas: number | null
+  history_moi: string | null
+  palpation: string | null
+  special_ortho_tests: string | null
+  diagnosis_primer: string | null
+  diagnosis_sekunder: string | null
+  treatment_plan_today: string | null
+  short_term_goals: string | null
+}): SessionNoteFormState {
+  const diagnosis = [a.diagnosis_primer, a.diagnosis_sekunder].filter(Boolean).join(', ')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return {
+    ...EMPTY_SESSION_NOTE_FORM,
+    pain_scale: a.pain_severity_vas ?? 0,
+    subjective_notes: a.history_moi ?? '',
+    objective_findings: [a.palpation, a.special_ortho_tests].filter(Boolean).join(''),
+    clinical_impression: diagnosis ? `<p>${diagnosis}</p>` : '',
+    treatment_notes: a.treatment_plan_today ?? '',
+    next_plan: a.short_term_goals ?? '',
+  }
+}
+
 export function toFieldsInput(f: SessionNoteFormState): SessionNoteFieldsInput {
   return {
     pain_scale: f.pain_scale,

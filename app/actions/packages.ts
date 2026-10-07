@@ -54,6 +54,8 @@ export async function fetchPatientPackages(
 }
 
 // Live linked visits per package (attended or still scheduled), ignoring payment.
+// Same rules as patient_packages_with_stats (098): TIDAK HADIR never consumes a
+// session; completed with no kehadiran counts as attended.
 export async function countBookedSessions(
   supabase: Awaited<ReturnType<typeof createClient>>,
   packageIds: string[],
@@ -64,7 +66,8 @@ export async function countBookedSessions(
     .from('patient_visits')
     .select('package_id')
     .in('package_id', packageIds)
-    .not('status', 'in', '(cancelled,rescheduled,no_show)')
+    .in('status', ['scheduled', 'completed'])
+    .or('kehadiran.is.null,kehadiran.eq.HADIR')
   for (const v of data ?? []) {
     if (v.package_id) counts.set(v.package_id, (counts.get(v.package_id) ?? 0) + 1)
   }

@@ -124,7 +124,7 @@ export interface RecordFilterOptions {
 // Roles that supervise a clinic team and can see every therapist's records —
 // mirrors REMIND_ROLES in app/actions/jadwal.ts, the existing convention for
 // who may act on someone else's medical-record completeness.
-const TEAM_ROLES: UserRole[] = ['admin', 'director', 'manager']
+const TEAM_ROLES: UserRole[] = ['admin', 'director', 'manager', 'hr']
 
 interface ViewerContext {
   userId: string

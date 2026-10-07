@@ -34,7 +34,7 @@ import type { AssignTarget, RefreshingCell } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 
-const REMIND_ROLES = ['admin', 'director', 'manager']
+const REMIND_ROLES = ['admin', 'director', 'manager', 'hr']
 
 const LS_KEY = 'jadwal_showInactive'
 const LS_SHIFT_KEY = 'jadwal_shiftFilter'

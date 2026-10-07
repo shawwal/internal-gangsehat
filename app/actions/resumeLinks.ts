@@ -213,7 +213,7 @@ async function buildResumeData(admin: AdminClient, visitId: string): Promise<Pub
 
   const { data: assessment } = await admin
     .from('terapi_awal_assessments')
-    .select('history_moi, diagnosis_primer, icf_body_functions_notes, icf_activity_notes, short_term_goals, long_term_goals, created_by')
+    .select('history_moi, diagnosis_primer, icf_body_functions_notes, short_term_goals, long_term_goals, created_by')
     .eq('visit_id', visitId)
     .maybeSingle()
 
@@ -245,7 +245,8 @@ async function buildResumeData(admin: AdminClient, visitId: string): Promise<Pub
     : [sessionNote?.next_plan, sessionNote?.hep_given].filter(Boolean).join('') || visit.treatment
 
   const chiefComplaint = assessment
-    ? [assessment.icf_body_functions_notes, assessment.icf_activity_notes].filter(Boolean).join('') || assessment.history_moi || visit.chief_complaint
+    // Body Functions & Structures only — Activity Limitations stay out of the resume.
+    ? assessment.icf_body_functions_notes || assessment.history_moi || visit.chief_complaint
     : sessionNote?.subjective_notes || visit.chief_complaint
 
   const therapistName = await resolveResumeTherapistName(
