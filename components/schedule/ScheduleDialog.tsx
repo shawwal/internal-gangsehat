@@ -13,6 +13,7 @@ interface Props {
   staffList: StaffOption[]
   branches: BranchOption[]
   morningSlots: string[]
+  middleSlots?: string[]
   afternoonSlots: string[]
   saving: boolean
   onChange: (patch: Partial<ScheduleForm>) => void
@@ -53,12 +54,19 @@ function slotsFromJamMulai(jamMulai: string, allSlots: string[]): string[] {
   return match ? [match] : []
 }
 
-function deriveFromSlots(slots: string[]): { jam_mulai: string; jam_selesai: string; shift: string } {
+// The shift follows the earliest picked slot's own shift on the Slot Jadwal page.
+function deriveFromSlots(
+  slots: string[],
+  groups: { middle: string[]; sore: string[] },
+): { jam_mulai: string; jam_selesai: string; shift: string } {
   const sorted = [...slots].sort()
+  const first = sorted[0]
   return {
-    jam_mulai:   sorted[0],
+    jam_mulai:   first,
     jam_selesai: addOneHour(sorted[sorted.length - 1]),
-    shift:       sorted[0] < '13:00' ? 'PAGI' : 'SORE',
+    shift:       groups.sore.includes(first) ? 'SORE'
+               : groups.middle.includes(first) ? 'MIDDLE'
+               : first < '13:00' ? 'PAGI' : 'SORE',
   }
 }
 
@@ -259,6 +267,7 @@ function StaffCheckboxList({ selectedIds, options, onChange }: StaffCheckboxList
 interface TimeSlotAccordionProps {
   selectedSlots: string[]
   morningSlots: string[]
+  middleSlots?: string[]
   afternoonSlots: string[]
   allSlots: string[]
   onToggle: (slot: string) => void
@@ -266,7 +275,7 @@ interface TimeSlotAccordionProps {
   onReset: () => void
 }
 
-function TimeSlotAccordion({ selectedSlots, morningSlots, afternoonSlots, allSlots, onToggle, onSelectAll, onReset }: TimeSlotAccordionProps) {
+function TimeSlotAccordion({ selectedSlots, morningSlots, middleSlots = [], afternoonSlots, allSlots, onToggle, onSelectAll, onReset }: TimeSlotAccordionProps) {
   const [open, setOpen] = useState(false)
   const count = selectedSlots.length
   const sorted = [...selectedSlots].sort()
@@ -335,6 +344,29 @@ function TimeSlotAccordion({ selectedSlots, morningSlots, afternoonSlots, allSlo
             </div>
           </div>
 
+          {middleSlots.length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold text-chart-4 uppercase tracking-wider mb-1.5">Middle</p>
+            <div className="flex flex-wrap gap-1.5">
+              {middleSlots.map((slot) => (
+                <button
+                  key={slot}
+                  type="button"
+                  onClick={() => onToggle(slot)}
+                  className={[
+                    'px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer border',
+                    selectedSlots.includes(slot)
+                      ? 'bg-primary text-white border-primary shadow-sm'
+                      : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+                  ].join(' ')}
+                >
+                  {slot}
+                </button>
+              ))}
+            </div>
+          </div>
+          )}
+
           <div>
             <p className="text-[10px] font-semibold text-primary uppercase tracking-wider mb-1.5">Sore</p>
             <div className="flex flex-wrap gap-1.5">
@@ -364,10 +396,11 @@ function TimeSlotAccordion({ selectedSlots, morningSlots, afternoonSlots, allSlo
 // ── Main Dialog ────────────────────────────────────────────────────────────────
 
 export function ScheduleDialog({
-  open, editId, form, staffList, branches, morningSlots, afternoonSlots, saving,
+  open, editId, form, staffList, branches, morningSlots, middleSlots = [], afternoonSlots, saving,
   onChange, onSave, onClose,
 }: Props) {
-  const allSlots = [...morningSlots, ...afternoonSlots]
+  const allSlots = [...morningSlots, ...middleSlots, ...afternoonSlots]
+  const slotGroups = { middle: middleSlots, sore: afternoonSlots }
   const [selectedSlots, setSelectedSlots] = useState<string[]>(() =>
     slotsFromJamMulai(form.jam_mulai, allSlots),
   )
@@ -399,12 +432,12 @@ export function ScheduleDialog({
       ? selectedSlots.filter((s) => s !== slot)
       : [...selectedSlots, slot]
     setSelectedSlots(next)
-    if (next.length > 0) onChange(deriveFromSlots(next))
+    if (next.length > 0) onChange(deriveFromSlots(next, slotGroups))
   }
 
   function selectAllSlots() {
     setSelectedSlots(allSlots)
-    onChange(deriveFromSlots(allSlots))
+    onChange(deriveFromSlots(allSlots, slotGroups))
   }
 
   function resetSlots() { setSelectedSlots([]) }
@@ -567,6 +600,7 @@ export function ScheduleDialog({
             <TimeSlotAccordion
               selectedSlots={selectedSlots}
               morningSlots={morningSlots}
+              middleSlots={middleSlots}
               afternoonSlots={afternoonSlots}
               allSlots={allSlots}
               onToggle={toggleSlot}

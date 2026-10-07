@@ -14,13 +14,15 @@ interface Props {
   recurDates: string[]
   recurDayTimes: Record<number, string>
   pagiHours: number[]
+  /** Middle-shift slot hours; the row is hidden when the branch has none */
+  middleHours?: number[]
   soreHours: number[]
   onToggleDay: (dow: number) => void
   onSetEnd: (d: string) => void
   onSetDayTime: (dow: number, time: string) => void
 }
 
-export function RecurringConfig({ targetDate, recurDays, recurEnd, recurDates, recurDayTimes, pagiHours, soreHours, onToggleDay, onSetEnd, onSetDayTime }: Props) {
+export function RecurringConfig({ targetDate, recurDays, recurEnd, recurDates, recurDayTimes, pagiHours, middleHours = [], soreHours, onToggleDay, onSetEnd, onSetDayTime }: Props) {
   const minEnd = toIso(addDays(new Date(targetDate + 'T00:00:00'), 1))
   const dayLabels = DAY_CHIPS.filter((c) => recurDays.includes(c.dow)).map((c) => c.label).join(' & ')
 
@@ -82,6 +84,31 @@ export function RecurringConfig({ targetDate, recurDays, recurEnd, recurDates, r
                     ))}
                   </div>
                 </div>
+
+                {middleHours.length > 0 && (
+                  <>
+                {/* MIDDLE row */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-semibold text-muted-foreground/60 uppercase tracking-widest w-7 shrink-0">Mid</span>
+                  <div className="flex gap-1 flex-wrap">
+                    {middleHours.map((h) => (
+                      <button
+                        key={h}
+                        onClick={() => onSetDayTime(dow, toHHMM(h))}
+                        className={[
+                          'w-9 h-7 rounded-lg text-[11px] font-mono font-semibold transition-all duration-150 cursor-pointer border',
+                          selHour === h
+                            ? 'bg-chart-4 text-white border-chart-4 shadow-sm'
+                            : 'border-border/50 text-muted-foreground hover:bg-white/10 hover:text-foreground hover:border-border',
+                        ].join(' ')}
+                      >
+                        {String(h).padStart(2, '0')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                  </>
+                )}
 
                 {/* SORE row */}
                 <div className="flex items-center gap-1.5">

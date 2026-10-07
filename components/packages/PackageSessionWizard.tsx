@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { CalendarDays, Plus, Trash2, X } from 'lucide-react'
 import { createBulkVisits } from '@/app/actions/jadwal'
 import type { PatientPackage } from './types'
+import type { Shift } from '@/lib/shifts'
 
 interface Props {
   pkg: PatientPackage
@@ -15,7 +16,7 @@ interface Props {
 
 interface SessionRow {
   date: string
-  shift: 'PAGI' | 'SORE' | ''
+  shift: Shift | ''
   kehadiran: 'HADIR' | 'TIDAK HADIR' | ''
 }
 
@@ -138,11 +139,12 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
                 />
                 <select
                   value={s.shift}
-                  onChange={(e) => updateRow(i, { shift: e.target.value as 'PAGI' | 'SORE' | '' })}
+                  onChange={(e) => updateRow(i, { shift: e.target.value as Shift | '' })}
                   className={inputCls}
                 >
                   <option value="">—</option>
                   <option value="PAGI">PAGI</option>
+                  <option value="MIDDLE">MIDDLE</option>
                   <option value="SORE">SORE</option>
                 </select>
                 <select

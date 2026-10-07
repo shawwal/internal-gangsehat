@@ -63,6 +63,7 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
   }))
   const [pagiHours, setPagiHours] = useState<number[]>([8, 9, 10, 11, 12, 13])
   const [soreHours, setSoreHours] = useState<number[]>([14, 15, 16, 17, 18, 19, 20])
+  const [middleHours, setMiddleHours] = useState<number[]>([])
 
   // ── Packages ─────────────────────────────────────────────────────────────────
   const [packages, setPackages]          = useState<PatientPackage[]>([])
@@ -102,6 +103,8 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
       const toHour = (t: string) => parseInt(t.split(':')[0], 10)
       const pagi = [...new Set(data.filter((s) => s.shift === 'PAGI').map((s) => toHour(s.slot_time)))]
       const sore = [...new Set(data.filter((s) => s.shift === 'SORE').map((s) => toHour(s.slot_time)))]
+      const middle = [...new Set(data.filter((s) => s.shift === 'MIDDLE').map((s) => toHour(s.slot_time)))]
+      setMiddleHours(middle)
       if (pagi.length > 0) setPagiHours(pagi)
       if (sore.length > 0) setSoreHours(sore)
     }
@@ -388,6 +391,7 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
                     recurDates={recurDates}
                     recurDayTimes={recurDayTimes}
                     pagiHours={pagiHours}
+                    middleHours={middleHours}
                     soreHours={soreHours}
                     onToggleDay={toggleDay}
                     onSetEnd={setRecurEnd}

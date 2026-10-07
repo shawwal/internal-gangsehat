@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, X, Loader2, Sunrise, Sunset } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Loader2, Sunrise, Sun, Sunset } from 'lucide-react'
+import { SHIFTS, type Shift } from '@/lib/shifts'
 import { createClient } from '@/lib/supabase/client'
 import type { ScheduleSlot } from '@/components/schedule/types'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
@@ -10,8 +11,9 @@ import { RowsSkeleton } from '@/components/ui/Skeleton'
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
 const SHIFT_META = {
-  PAGI: { label: 'Pagi', icon: Sunrise, accent: 'text-secondary' },
-  SORE: { label: 'Sore', icon: Sunset,  accent: 'text-primary' },
+  PAGI:   { label: 'Pagi',   icon: Sunrise, accent: 'text-secondary' },
+  MIDDLE: { label: 'Middle', icon: Sun,     accent: 'text-chart-4' },
+  SORE:   { label: 'Sore',   icon: Sunset,  accent: 'text-primary' },
 } as const
 
 export default function ScheduleSlotsPage() {
@@ -24,13 +26,14 @@ export default function ScheduleSlotsPage() {
 
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing]   = useState<ScheduleSlot | null>(null)
-  const [form, setForm]         = useState<{ shift: 'PAGI' | 'SORE'; slot_time: string }>({ shift: 'PAGI', slot_time: '' })
+  const [form, setForm]         = useState<{ shift: Shift; slot_time: string }>({ shift: 'PAGI', slot_time: '' })
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   function sortSlots(list: ScheduleSlot[]) {
-    return [...list].sort((a, b) => a.shift.localeCompare(b.shift) || a.slot_time.localeCompare(b.slot_time))
+    return [...list].sort((a, b) =>
+      SHIFTS.indexOf(a.shift) - SHIFTS.indexOf(b.shift) || a.slot_time.localeCompare(b.slot_time))
   }
 
   async function load(bId: string) {
@@ -67,7 +70,7 @@ export default function ScheduleSlotsPage() {
     if (branchId) load(branchId)
   }, [branchId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function openNew(shift?: 'PAGI' | 'SORE') {
+  function openNew(shift?: Shift) {
     setEditing(null)
     setForm({ shift: shift ?? 'PAGI', slot_time: '' })
     setError('')
@@ -148,8 +151,6 @@ export default function ScheduleSlotsPage() {
     }
   }
 
-  const morning   = slots.filter((s) => s.shift === 'PAGI')
-  const afternoon = slots.filter((s) => s.shift === 'SORE')
 
   return (
     <div className="space-y-6">
@@ -158,7 +159,7 @@ export default function ScheduleSlotsPage() {
         <div>
           <h1 className="text-xl font-semibold text-foreground">Slot Jadwal</h1>
           <p className="text-sm text-muted-foreground">
-            Kelola pilihan waktu Pagi/Sore per cabang yang muncul pada dialog Tambah Jadwal
+            Kelola pilihan waktu Pagi/Middle/Sore per cabang yang muncul pada dialog Tambah Jadwal
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -184,11 +185,11 @@ export default function ScheduleSlotsPage() {
       </div>
 
       {/* Panels */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {(['PAGI', 'SORE'] as const).map((shift) => {
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {SHIFTS.map((shift) => {
           const meta  = SHIFT_META[shift]
           const Icon  = meta.icon
-          const group = shift === 'PAGI' ? morning : afternoon
+          const group = slots.filter((s) => s.shift === shift)
 
           return (
             <div key={shift} className="glass-card overflow-hidden">
@@ -302,8 +303,8 @@ export default function ScheduleSlotsPage() {
                 <div className="p-5 space-y-4">
                   <div>
                     <label className="block text-xs font-medium text-foreground mb-1.5">Shift</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['PAGI', 'SORE'] as const).map((s) => {
+                    <div className="grid grid-cols-3 gap-2">
+                      {SHIFTS.map((s) => {
                         const meta = SHIFT_META[s]
                         const Icon = meta.icon
                         const sel  = form.shift === s

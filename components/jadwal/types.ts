@@ -1,5 +1,6 @@
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { VisitStatus } from '@/types'
+import type { Shift } from '@/lib/shifts'
 
 export type { DailyVisit }
 
@@ -17,7 +18,7 @@ export interface DayStaffEntry {
   avatar_url: string | null
   branch_id: string | null
   gender: 'male' | 'female' | null
-  shift: string           // 'PAGI' | 'SORE' | ''
+  shift: string           // Shift | ''
   jam_mulai: string       // 'HH:MM'
   jam_selesai: string     // 'HH:MM'
   isOnLeave: boolean      // approved leave covers this date
@@ -34,7 +35,7 @@ export interface AssignTarget {
   branchId: string | null
   hour: number     // 8..19
   date: string     // ISO yyyy-mm-dd
-  shift?: string   // 'PAGI' | 'SORE'
+  shift?: string   // Shift
 }
 
 // Identifies the single cell/card mid-refresh after a dialog save, so only

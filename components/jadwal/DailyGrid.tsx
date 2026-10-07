@@ -8,6 +8,7 @@ import {
   SLOT_H, TIME_COL_W, STAFF_COL_W,
 } from './types'
 import type { VisitStatus } from '@/types'
+import { hourInFilter, type ShiftFilter } from '@/lib/shifts'
 import { VisitCard } from './VisitCard'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -101,11 +102,13 @@ interface Props {
   date: string           // ISO yyyy-mm-dd
   userRole?: string | null
   soreDividerHour?: number
+  /** First hour of the Middle shift; null when the branch has no Middle slots */
+  middleDividerHour?: number | null
   gridStart?: number
   gridEnd?: number
   /** Hours of the branch's active schedule_slots — when set, the grid shows exactly these rows */
   slotHours?: number[] | null
-  shiftFilter?: 'all' | 'pagi' | 'sore'
+  shiftFilter?: ShiftFilter
   onAssign: (target: AssignTarget) => void
   onStatusChange: (visitId: string, status: VisitStatus) => void
   onDelete: (visitId: string) => void
@@ -128,7 +131,7 @@ interface Props {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, middleDividerHour = null, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const canDrop = !!onMoveVisit
 
@@ -177,12 +180,13 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
   // slots, fall back to the gridStart–gridEnd range minus the default breaks.
   const SKIP_HOURS = new Set([12, 18])
   const bookedHours = [...visitMap.values()].flatMap((hourMap) => [...hourMap.keys()])
+  const dividers = { sore: soreDividerHour, middle: middleDividerHour }
   const baseHours = slotHours && slotHours.length > 0
     ? slotHours
     : Array.from({ length: gridEnd - gridStart }, (_, i) => gridStart + i).filter((h) => !SKIP_HOURS.has(h))
   const HOURS_VISIBLE = [...new Set([...baseHours, ...bookedHours])]
     .sort((a, b) => a - b)
-    .filter(h => shiftFilter === 'all' ? true : shiftFilter === 'pagi' ? h < soreDividerHour : h >= soreDividerHour)
+    .filter(h => hourInFilter(h, shiftFilter, dividers))
   const effectiveStart = HOURS_VISIBLE[0] ?? gridStart
   const effectiveEnd   = (HOURS_VISIBLE[HOURS_VISIBLE.length - 1] ?? gridEnd - 1) + 1
 
@@ -220,7 +224,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
 
   // Current time line
   const showNow = date === today && curH >= effectiveStart && curH < effectiveEnd
-    && (shiftFilter === 'all' ? true : shiftFilter === 'pagi' ? curH < soreDividerHour : curH >= soreDividerHour)
+    && hourInFilter(Math.floor(curH), shiftFilter, dividers)
   const nowTop  = hourToPx(curH)
 
   if (staff.length === 0) {
@@ -431,6 +435,19 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                       }}
                     >
                       ☀ Shift Sore
+                    </span>
+                  </div>
+                </div>
+              ) : shiftFilter === 'all' && h === middleDividerHour ? (
+                <div
+                  key={h}
+                  className="absolute inset-x-0 pointer-events-none"
+                  style={{ top: rowOffsets[i] }}
+                >
+                  <div className="h-px w-full bg-chart-4/60" />
+                  <div className="absolute inset-x-0 flex justify-center" style={{ top: 0, transform: 'translateY(-50%)' }}>
+                    <span className="text-[9px] font-bold uppercase tracking-widest px-3 py-0.5 rounded-full border border-chart-4/40 bg-card/80 text-chart-4 backdrop-blur-sm">
+                      Shift Middle
                     </span>
                   </div>
                 </div>

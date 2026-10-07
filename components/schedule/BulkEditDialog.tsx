@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import { Loader2, Pencil, X } from 'lucide-react'
 import { WEEK_GROUP_LIST, WEEK_GROUP_LABEL, type WeekGroup } from '@/lib/schedule/weekGroup'
+import { SHIFTS, type Shift } from '@/lib/shifts'
 
 interface BulkEditPatch {
-  shift: 'PAGI' | 'SORE'
+  shift: Shift
   jam_mulai: string
   jam_selesai: string
   status: 'AKTIF' | 'OFF'
@@ -71,7 +72,7 @@ export function BulkEditDialog({ open, count, saving, onSave, onClose }: Props) 
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Shift</label>
             <div className="flex gap-2">
-              {(['PAGI', 'SORE'] as const).map((s) => (
+              {SHIFTS.map((s) => (
                 <button
                   key={s}
                   onClick={() => patch('shift', s)}

@@ -15,6 +15,7 @@ import { ScheduleCalendarView } from '@/components/schedule/ScheduleCalendarView
 import { BulkEditDialog } from '@/components/schedule/BulkEditDialog'
 import { StatusListModal } from '@/components/schedule/StatusListModal'
 import type { WeekGroup } from '@/lib/schedule/weekGroup'
+import type { Shift } from '@/lib/shifts'
 
 type ViewMode = 'table' | 'calendar'
 
@@ -29,6 +30,7 @@ export default function SchedulesPage() {
   const [branches, setBranches]     = useState<BranchOption[]>([])
   const [morningSlots, setMorningSlots]     = useState<string[]>([])
   const [afternoonSlots, setAfternoonSlots] = useState<string[]>([])
+  const [middleSlots, setMiddleSlots] = useState<string[]>([])
   const [viewMode, setViewMode]     = useState<ViewMode>('table')
 
   // ── Filters + pagination ─────────────────────────────────────────────────────
@@ -84,7 +86,7 @@ export default function SchedulesPage() {
   // dialog for a director, or the user's own branch otherwise.
   useEffect(() => {
     const slotBranchId = form.branch_id || userBranchId
-    if (!slotBranchId) { setMorningSlots([]); setAfternoonSlots([]); return }
+    if (!slotBranchId) { setMorningSlots([]); setMiddleSlots([]); setAfternoonSlots([]); return }
     let cancelled = false
     createClient()
       .from('schedule_slots')
@@ -95,6 +97,7 @@ export default function SchedulesPage() {
       .then(({ data }) => {
         if (cancelled) return
         setMorningSlots((data ?? []).filter((s) => s.shift === 'PAGI').map((s) => s.slot_time))
+        setMiddleSlots((data ?? []).filter((s) => s.shift === 'MIDDLE').map((s) => s.slot_time))
         setAfternoonSlots((data ?? []).filter((s) => s.shift === 'SORE').map((s) => s.slot_time))
       })
     return () => { cancelled = true }
@@ -249,7 +252,7 @@ export default function SchedulesPage() {
   }
 
   // ── Bulk edit ────────────────────────────────────────────────────────────────
-  async function handleBulkEdit(patch: { shift: 'PAGI' | 'SORE'; jam_mulai: string; jam_selesai: string; status: 'AKTIF' | 'OFF'; week_group?: WeekGroup }) {
+  async function handleBulkEdit(patch: { shift: Shift; jam_mulai: string; jam_selesai: string; status: 'AKTIF' | 'OFF'; week_group?: WeekGroup }) {
     setSaving(true)
     await createClient().from('schedules').update(patch).in('id', selectedIds)
     setSaving(false)
@@ -417,6 +420,7 @@ export default function SchedulesPage() {
         staffList={staffList}
         branches={branches}
         morningSlots={morningSlots}
+        middleSlots={middleSlots}
         afternoonSlots={afternoonSlots}
         saving={saving}
         onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}

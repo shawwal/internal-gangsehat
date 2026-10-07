@@ -1,3 +1,4 @@
+import type { Shift } from '@/lib/shifts'
 export type UserRole = 'director' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'manager' | 'admin' | 'non-staff' | 'sport_massage_therapist'
 
 export interface Branch {
@@ -80,7 +81,7 @@ export interface PatientVisit {
   updated_at: string
   // Clinical enrichment fields (migration 021)
   service_type: ServiceType | null
-  shift: 'PAGI' | 'SORE' | null
+  shift: Shift | null
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null  // attendance — distinct from `status` workflow
   regio: BodyRegion | null
   sumber_pasien: string | null
@@ -477,7 +478,7 @@ export interface PackageSession {
   id: string
   visit_date: string
   service_type: string
-  shift: 'PAGI' | 'SORE' | null
+  shift: Shift | null
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
   status: string
   therapist_name: string | null

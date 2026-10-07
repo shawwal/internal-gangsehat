@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, CalendarRange, Sun, Moon, RotateCcw, Loader2, Check, Repeat, CalendarClock } from 'lucide-react'
+import { X, CalendarRange, Sun, Moon, SunMedium, RotateCcw, Loader2, Check, Repeat, CalendarClock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { StaffOption, BranchOption, WeeklyPattern } from './types'
 import { HARI_LIST, SHIFT_HOURS, buildEmptyWeekly } from './constants'
 import type { WeekGroup } from '@/lib/schedule/weekGroup'
+import { SHIFTS, type Shift } from '@/lib/shifts'
 
 interface Props {
   open: boolean
@@ -140,7 +141,7 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
     })
   }
 
-  function applyShiftToChecked(shift: 'PAGI' | 'SORE') {
+  function applyShiftToChecked(shift: Shift) {
     const hours = SHIFT_HOURS[shift]
     setPattern((prev) => {
       const next = { ...prev }
@@ -320,6 +321,13 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
                   </button>
                   <button
                     type="button"
+                    onClick={() => applyShiftToChecked('MIDDLE')}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-chart-4/15 text-chart-4 hover:bg-chart-4/25 transition-colors cursor-pointer"
+                  >
+                    <SunMedium size={11} /> Semua MIDDLE
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => applyShiftToChecked('SORE')}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
                   >
@@ -453,7 +461,7 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
 
                       {/* Shift selector */}
                       <div className="flex gap-1 shrink-0">
-                        {(['PAGI', 'SORE'] as const).map((s) => (
+                        {SHIFTS.map((s) => (
                           <button
                             key={s}
                             type="button"
@@ -465,13 +473,17 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
                               day.shift === s && active
                                 ? s === 'PAGI'
                                   ? 'bg-[color:var(--secondary)] text-white'
-                                  : 'bg-primary text-white'
+                                  : s === 'MIDDLE'
+                                    ? 'bg-chart-4 text-white'
+                                    : 'bg-primary text-white'
                                 : 'bg-muted/50 text-muted-foreground hover:bg-muted disabled:opacity-50'
                             }`}
                           >
                             {s === 'PAGI'
                               ? <span className="flex items-center gap-0.5"><Sun size={10} /> PAGI</span>
-                              : <span className="flex items-center gap-0.5"><Moon size={10} /> SORE</span>
+                              : s === 'MIDDLE'
+                                ? <span className="flex items-center gap-0.5"><SunMedium size={10} /> MID</span>
+                                : <span className="flex items-center gap-0.5"><Moon size={10} /> SORE</span>
                             }
                           </button>
                         ))}

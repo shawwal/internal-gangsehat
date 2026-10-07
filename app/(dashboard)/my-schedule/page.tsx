@@ -25,7 +25,7 @@ interface BranchOption { id: string; name: string }
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const HARI_LIST  = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU', 'AHAD']
-const SHIFT_LIST = ['PAGI', 'SORE']
+const SHIFT_LIST = ['PAGI', 'MIDDLE', 'SORE']
 
 const EMPTY_FORM = {
   branch_id:   '',

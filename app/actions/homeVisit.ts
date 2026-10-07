@@ -6,6 +6,7 @@ import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
 import type { BodyRegion, ServiceType, UserRole, VisitStatus } from '@/types'
 import type { HomeVisitSessionRow, HomeVisitStatsData } from '@/components/homeVisit/types'
+import type { Shift } from '@/lib/shifts'
 
 const HOME_VISIT_TYPES: ServiceType[] = ['TA VISIT', 'SESI VISIT', 'PAKET VISIT']
 
@@ -227,7 +228,7 @@ export interface CreateHomeVisitSessionInput {
   attending_staff_id: string | null
   visit_date: string
   service_type: ServiceType
-  shift: 'PAGI' | 'SORE' | null
+  shift: Shift | null
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
   regio: BodyRegion | null
   sumber_pasien: string | null

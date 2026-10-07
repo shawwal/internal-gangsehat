@@ -8,6 +8,7 @@ import {
   cancelScheduleOverride,
 } from '@/app/actions/schedule-overrides'
 import type { ScheduleOverride } from '@/app/actions/schedule-overrides'
+import type { Shift } from '@/lib/shifts'
 
 const HARI_OPTIONS = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU', 'AHAD'] as const
 const HARI_LABELS: Record<string, string> = {
@@ -42,7 +43,7 @@ export function ScheduleOverrideDialog({ staffId, staffName, branchId, onClose, 
   const [startDate, setStartDate]   = useState(today)
   const [endDate, setEndDate]       = useState(today)
   const [hari, setHari]             = useState<string>('SENIN')
-  const [shift, setShift]           = useState<'PAGI' | 'SORE'>('PAGI')
+  const [shift, setShift]           = useState<Shift>('PAGI')
   const [jamMulai, setJamMulai]     = useState('09:00')
   const [jamSelesai, setJamSelesai] = useState('17:00')
   const [reason, setReason]         = useState('')
@@ -202,8 +203,9 @@ export function ScheduleOverrideDialog({ staffId, staffName, branchId, onClose, 
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">Shift</label>
-                  <select value={shift} onChange={(e) => setShift(e.target.value as 'PAGI' | 'SORE')} className={inputCls}>
+                  <select value={shift} onChange={(e) => setShift(e.target.value as Shift)} className={inputCls}>
                     <option value="PAGI">Pagi</option>
+                    <option value="MIDDLE">Middle</option>
                     <option value="SORE">Sore</option>
                   </select>
                 </div>

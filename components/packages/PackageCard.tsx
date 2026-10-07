@@ -18,6 +18,7 @@ import {
 import { formatDate, formatCurrency, sessionBarColor, sessionTextColor, extractKodeTransaksi } from './helpers'
 import type { PatientPackage, PackageSession } from './types'
 import type { ServiceType, UserRole } from '@/types'
+import type { Shift } from '@/lib/shifts'
 
 const SESSION_SERVICE_TYPES: ServiceType[] = [
   'TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI',
@@ -28,7 +29,7 @@ type EditSessionForm = {
   visit_date:          string
   attending_staff_id:  string
   service_type:        ServiceType | ''
-  shift:                'PAGI' | 'SORE' | ''
+  shift:                Shift | ''
   kehadiran:            'HADIR' | 'TIDAK HADIR' | ''
   sumber_pasien:        string
 }
@@ -487,6 +488,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
                   >
                     <option value="">— Pilih —</option>
                     <option value="PAGI">PAGI</option>
+                    <option value="MIDDLE">MIDDLE</option>
                     <option value="SORE">SORE</option>
                   </select>
                 </div>
@@ -579,6 +581,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
                   >
                     <option value="">— Pilih —</option>
                     <option value="PAGI">PAGI</option>
+                    <option value="MIDDLE">MIDDLE</option>
                     <option value="SORE">SORE</option>
                   </select>
                 </div>

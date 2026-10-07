@@ -28,6 +28,7 @@ import type { PaymentVisitInfo } from '@/components/visits/PaymentDialog'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 import type { PatientVisit, VisitStatus, ServiceType, BodyRegion, UserRole } from '@/types'
 import { logActivity } from '@/lib/activityLog'
+import type { Shift } from '@/lib/shifts'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const STATUS_OPTIONS: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
@@ -72,7 +73,7 @@ const DEFAULT_FORM = {
   visit_date:         new Date().toISOString().split('T')[0],
   attending_staff_id: '',
   service_type:       '' as ServiceType | '',
-  shift:              '' as 'PAGI' | 'SORE' | '',
+  shift:              '' as Shift | '',
   kehadiran:       '' as 'HADIR' | 'TIDAK HADIR' | '',
   regio:           '' as BodyRegion | '',
   sumber_pasien:   '',
@@ -90,7 +91,7 @@ type EditVisitForm = {
   visit_date:         string
   attending_staff_id: string
   service_type:       ServiceType | ''
-  shift:              'PAGI' | 'SORE' | ''
+  shift:              Shift | ''
   kehadiran:          'HADIR' | 'TIDAK HADIR' | ''
   sumber_pasien:      string
 }
@@ -874,6 +875,7 @@ export default function PatientVisitsPage() {
                   >
                     <option value="">— Pilih —</option>
                     <option value="PAGI">PAGI</option>
+                    <option value="MIDDLE">MIDDLE</option>
                     <option value="SORE">SORE</option>
                   </select>
                 </div>
@@ -997,6 +999,7 @@ export default function PatientVisitsPage() {
                   >
                     <option value="">— Pilih —</option>
                     <option value="PAGI">PAGI</option>
+                    <option value="MIDDLE">MIDDLE</option>
                     <option value="SORE">SORE</option>
                   </select>
                 </div>

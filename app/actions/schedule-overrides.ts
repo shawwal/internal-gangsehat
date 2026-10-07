@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import type { Shift } from '@/lib/shifts'
 
 export interface ScheduleOverride {
   id: string
@@ -34,7 +35,7 @@ export async function createScheduleOverride(input: {
   start_date: string
   end_date: string
   hari: string
-  shift: 'PAGI' | 'SORE'
+  shift: Shift
   jam_mulai: string
   jam_selesai: string
   reason?: string

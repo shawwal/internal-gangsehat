@@ -1,4 +1,5 @@
 import type { WeekGroup } from '@/lib/schedule/weekGroup'
+import type { Shift } from '@/lib/shifts'
 
 export interface ScheduleRow {
   id: string
@@ -30,7 +31,7 @@ export interface BranchOption {
 export interface ScheduleSlot {
   id: string
   branch_id: string
-  shift: 'PAGI' | 'SORE'
+  shift: Shift
   slot_time: string
   is_active: boolean
 }

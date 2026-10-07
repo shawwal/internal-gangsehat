@@ -201,6 +201,7 @@ export function MedicalRecordModal({ visitId, contextShift, contextServiceType, 
                   <select value={form.shift} onChange={(e) => set('shift', e.target.value)} className={inputCls}>
                     <option value="">— Pilih —</option>
                     <option value="PAGI">PAGI</option>
+                    <option value="MIDDLE">MIDDLE</option>
                     <option value="SORE">SORE</option>
                   </select>
                 </div>

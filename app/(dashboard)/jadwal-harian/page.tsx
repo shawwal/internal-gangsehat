@@ -33,6 +33,7 @@ import { fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/util
 import type { AssignTarget, RefreshingCell } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
+import { hourInFilter, rangeInFilter, shiftForHour, type ShiftFilter } from '@/lib/shifts'
 
 const REMIND_ROLES = ['admin', 'director', 'manager', 'hr']
 
@@ -48,7 +49,7 @@ export default function JadwalHarianPage() {
     leavePopover, setLeavePopover,
     leaveSaving, canApproveLeave,
     userRole,
-    soreDividerHour, gridStart, gridEnd, slotHours,
+    soreDividerHour, middleDividerHour, gridStart, gridEnd, slotHours,
     branches, selectedBranchId, setSelectedBranchId,
     loadAll, handleStatusChange, handleDelete, handleMoveVisit, handleLeaveAction,
   } = useJadwalHarian()
@@ -111,15 +112,15 @@ export default function JadwalHarianPage() {
   const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all')
   const [sortOrder, setSortOrder]       = useState<'asc' | 'desc'>('asc')
   const [isFocused, setIsFocused]       = useState(true)
-  const [shiftFilter, setShiftFilter]   = useState<'all' | 'pagi' | 'sore'>('all')
+  const [shiftFilter, setShiftFilter]   = useState<ShiftFilter>('all')
 
   useEffect(() => {
     setShowInactive(localStorage.getItem(LS_KEY) === 'true')
     const v = localStorage.getItem(LS_SHIFT_KEY)
-    if (v === 'pagi' || v === 'sore') setShiftFilter(v)
+    if (v === 'pagi' || v === 'middle' || v === 'sore') setShiftFilter(v)
   }, [])
 
-  function handleSetShiftFilter(v: 'all' | 'pagi' | 'sore') {
+  function handleSetShiftFilter(v: ShiftFilter) {
     setShiftFilter(v)
     localStorage.setItem(LS_SHIFT_KEY, v)
   }
@@ -142,14 +143,15 @@ export default function JadwalHarianPage() {
   // With a shift filter on, hide therapists whose working hours don't overlap
   // that shift — unless they still have a visit booked inside it.
   const toHour = (t: string | null | undefined) => (t ? parseInt(t.split(':')[0], 10) : NaN)
-  const inShift = (h: number) => (shiftFilter === 'pagi' ? h < soreDividerHour : h >= soreDividerHour)
+  const shiftDividers = { sore: soreDividerHour, middle: middleDividerHour }
+  const inShift = (h: number) => hourInFilter(h, shiftFilter, shiftDividers)
   const filteredStaff = shiftFilter === 'all'
     ? genderStaff
     : genderStaff.filter((s) => {
         const start = toHour(s.jam_mulai)
         const end   = toHour(s.jam_selesai)
         const worksShift = s.hasSchedule && !s.isOnLeave && !isNaN(start) && !isNaN(end)
-          && (shiftFilter === 'pagi' ? start < soreDividerHour : end > soreDividerHour)
+          && rangeInFilter(start, end, shiftFilter, shiftDividers)
         return worksShift || visits.some((v) =>
           v.attending_staff_id === s.staff_id && !!v.visit_time && inShift(toHour(v.visit_time)))
       })
@@ -205,7 +207,7 @@ export default function JadwalHarianPage() {
     if (!pendingMove) return
     const { visit: v, staffId, visitTime } = pendingMove
     const hour  = visitTime ? parseInt(visitTime.split(':')[0], 10) : null
-    const shift = hour === null ? undefined : (hour >= soreDividerHour ? 'SORE' : 'PAGI')
+    const shift = hour === null ? undefined : shiftForHour(hour, shiftDividers)
     setMoving(true)
     const { error } = await handleMoveVisit(v.id, { staffId, visitTime, shift })
     setMoving(false)
@@ -326,6 +328,7 @@ export default function JadwalHarianPage() {
     showInactive, toggleShowInactive,
     inactiveStaff,
     shiftFilter, setShiftFilter: handleSetShiftFilter,
+    hasMiddleShift: middleDividerHour !== null,
   }
 
   return (
@@ -447,6 +450,7 @@ export default function JadwalHarianPage() {
                 date={toIso(selectedDate)}
                 userRole={userRole}
                 soreDividerHour={soreDividerHour}
+                middleDividerHour={middleDividerHour}
                 gridStart={gridStart}
                 gridEnd={gridEnd}
                 slotHours={slotHours}
@@ -609,7 +613,7 @@ export default function JadwalHarianPage() {
           onSave={async (staffId, visitTime) => {
             const visitId = changeTherapistVisit.id
             const hour    = visitTime ? parseInt(visitTime.split(':')[0], 10) : null
-            const shift   = hour === null ? undefined : (hour >= soreDividerHour ? 'SORE' : 'PAGI')
+            const shift   = hour === null ? undefined : shiftForHour(hour, shiftDividers)
             const result  = await handleMoveVisit(visitId, { staffId, visitTime, shift })
             if (!result.error) {
               showToast(`Terapis diubah ke ${staffLabel(staffId)}`, 'success')

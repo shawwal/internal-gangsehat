@@ -21,6 +21,7 @@ import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { updateVisit } from '@/app/actions/jadwal'
 import type { AssignTarget, RefreshingCell } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
+import type { ShiftFilter } from '@/lib/shifts'
 
 const LS_KEY = 'jadwal_sm_showInactive'
 const LS_SHIFT_KEY = 'jadwal_sm_shiftFilter'
@@ -34,7 +35,7 @@ export default function JadwalSportMassagePage() {
     leavePopover, setLeavePopover,
     leaveSaving, canApproveLeave,
     userRole,
-    soreDividerHour, gridStart, gridEnd, slotHours,
+    soreDividerHour, middleDividerHour, gridStart, gridEnd, slotHours,
     branches, selectedBranchId, setSelectedBranchId,
     loadAll, handleStatusChange, handleDelete, handleLeaveAction,
   } = useJadwalSportMassage()
@@ -82,15 +83,15 @@ export default function JadwalSportMassagePage() {
   const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all')
   const [sortOrder, setSortOrder]       = useState<'asc' | 'desc'>('asc')
   const [isFocused, setIsFocused]       = useState(true)
-  const [shiftFilter, setShiftFilter]   = useState<'all' | 'pagi' | 'sore'>('all')
+  const [shiftFilter, setShiftFilter]   = useState<ShiftFilter>('all')
 
   useEffect(() => {
     setShowInactive(localStorage.getItem(LS_KEY) === 'true')
     const v = localStorage.getItem(LS_SHIFT_KEY)
-    if (v === 'pagi' || v === 'sore') setShiftFilter(v)
+    if (v === 'pagi' || v === 'middle' || v === 'sore') setShiftFilter(v)
   }, [])
 
-  function handleSetShiftFilter(v: 'all' | 'pagi' | 'sore') {
+  function handleSetShiftFilter(v: ShiftFilter) {
     setShiftFilter(v)
     localStorage.setItem(LS_SHIFT_KEY, v)
   }
@@ -138,6 +139,7 @@ export default function JadwalSportMassagePage() {
     showInactive, toggleShowInactive,
     inactiveStaff,
     shiftFilter, setShiftFilter: handleSetShiftFilter,
+    hasMiddleShift: middleDividerHour !== null,
   }
 
   const gateBlocked = branchEnabled === false && !isDirector
@@ -226,6 +228,7 @@ export default function JadwalSportMassagePage() {
                     date={toIso(selectedDate)}
                     userRole={userRole}
                     soreDividerHour={soreDividerHour}
+                    middleDividerHour={middleDividerHour}
                     gridStart={gridStart}
                     gridEnd={gridEnd}
                     slotHours={slotHours}

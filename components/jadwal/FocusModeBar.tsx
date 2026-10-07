@@ -1,10 +1,11 @@
 'use client'
 
 import { useRef } from 'react'
-import { Users, User, ArrowUpAZ, ArrowDownAZ, ChevronLeft, ChevronRight, Calendar, Plus, X, Sun, Sunset } from 'lucide-react'
+import { Users, User, ArrowUpAZ, ArrowDownAZ, ChevronLeft, ChevronRight, Calendar, Plus, X, Sun, Sunset, SunMedium } from 'lucide-react'
 import { addDays, toIso, isSameDay, JS_DAY_TO_HARI, HARI_LABEL, MONTH_FULL } from './utils'
 import { BuyPackageButton } from './buy-package/BuyPackageButton'
 import type { DayStaffEntry } from './types'
+import type { ShiftFilter } from '@/lib/shifts'
 
 interface Branch {
   id: string
@@ -25,8 +26,10 @@ interface Props {
   showInactive: boolean
   toggleShowInactive: () => void
   inactiveStaff: DayStaffEntry[]
-  shiftFilter: 'all' | 'pagi' | 'sore'
-  setShiftFilter: (v: 'all' | 'pagi' | 'sore') => void
+  shiftFilter: ShiftFilter
+  setShiftFilter: (v: ShiftFilter) => void
+  /** Branch has Middle slots — shows the Middle pill */
+  hasMiddleShift?: boolean
   onExit: () => void
   canCreateOrder?: boolean
   orderNewHref?: string
@@ -41,7 +44,7 @@ export function FocusModeBar({
   sortOrder, setSortOrder,
   showInactive, toggleShowInactive,
   inactiveStaff,
-  shiftFilter, setShiftFilter,
+  shiftFilter, setShiftFilter, hasMiddleShift,
   onExit,
   canCreateOrder,
   orderNewHref,
@@ -177,6 +180,7 @@ export function FocusModeBar({
           {([
             { value: 'all',  label: 'Shift',  icon: null },
             { value: 'pagi', label: 'Pagi',   icon: <Sun    size={12} /> },
+            ...(hasMiddleShift ? [{ value: 'middle', label: 'Middle', icon: <SunMedium size={12} /> }] as const : []),
             { value: 'sore', label: 'Sore',   icon: <Sunset size={12} /> },
           ] as const).map(({ value, label, icon }) => (
             <button

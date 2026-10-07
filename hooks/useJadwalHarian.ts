@@ -8,6 +8,7 @@ import { getWeekGroupForDate } from '@/lib/schedule/weekGroup'
 import type { DayStaffEntry, PendingLeaveInfo } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { VisitStatus } from '@/types'
+import { dividersFromSlots } from '@/lib/shifts'
 
 const HIDDEN_ROLES = ['director', 'sport_massage_therapist']
 
@@ -28,6 +29,7 @@ export function useJadwalHarian() {
   const [selectedBranchId, setSelectedBranchId] = useState<string | null | undefined>(undefined)
   const [userRole, setUserRole]               = useState<string | null>(null)
   const [soreDividerHour, setSoreDividerHour] = useState(14)
+  const [middleDividerHour, setMiddleDividerHour] = useState<number | null>(null)
   const [gridStart, setGridStart]             = useState(8)
   const [gridEnd, setGridEnd]                 = useState(21)
   // Hours of the branch's active schedule_slots; null = branch has none configured
@@ -76,13 +78,15 @@ export function useJadwalHarian() {
       setSlotHours(hours)
       setGridStart(hours[0])
       setGridEnd(hours[hours.length - 1] + 1)
-      const soreHours = data.filter((s) => s.shift === 'SORE').map((s) => toHour(s.slot_time))
-      setSoreDividerHour(soreHours.length > 0 ? Math.min(...soreHours) : 14)
+      const dividers = dividersFromSlots(data)
+      setSoreDividerHour(dividers.sore)
+      setMiddleDividerHour(dividers.middle)
     } else {
       setSlotHours(null)
       setGridStart(8)
       setGridEnd(21)
       setSoreDividerHour(14)
+      setMiddleDividerHour(null)
     }
   }
 
@@ -396,6 +400,7 @@ export function useJadwalHarian() {
     canApproveLeave,
     userRole,
     soreDividerHour,
+    middleDividerHour,
     gridStart,
     gridEnd,
     slotHours,
