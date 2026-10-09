@@ -13,6 +13,7 @@ import { formatCurrency, formatWaNumber } from '@/lib/utils'
 import { useToast } from '@/context/ToastContext'
 import { MethodBadge, PaymentLinkStatusBadge } from './PaymentLinkStatusBadge'
 import { effectiveStatus, type PaymentLinkView } from './types'
+import { ModalPortal } from './ModalPortal'
 
 const POLL_MS = 5000
 
@@ -144,9 +145,10 @@ export function PaymentLinkPanel({ link: initial, onClose, onChange }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4" onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border">
+    <ModalPortal>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-3 sm:p-4" onClick={onClose}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl max-h-[calc(100dvh-1.5rem)] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="text-sm font-semibold text-foreground truncate">{link.customer_name}</p>
@@ -159,7 +161,7 @@ export function PaymentLinkPanel({ link: initial, onClose, onChange }: Props) {
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground cursor-pointer"><X size={16} /></button>
         </div>
 
-        <div className="p-5 space-y-4 overflow-y-auto">
+        <div className="p-5 space-y-4 overflow-y-auto overscroll-contain min-h-0 flex-1">
           <div className="text-center space-y-1.5">
             <p className="text-3xl font-bold text-foreground">{formatCurrency(link.amount)}</p>
             <p className="text-xs text-muted-foreground">{link.category}{link.description ? ` · ${link.description}` : ''}</p>
@@ -245,7 +247,7 @@ export function PaymentLinkPanel({ link: initial, onClose, onChange }: Props) {
           </dl>
         </div>
 
-        <div className="flex gap-2 px-5 py-4 border-t border-border">
+        <div className="flex gap-2 px-5 py-4 border-t border-border shrink-0">
           {pending && (
             <button onClick={cancel} className="px-3 py-2 rounded-xl border border-border text-xs font-medium text-muted-foreground hover:bg-muted cursor-pointer">
               Batalkan
@@ -264,5 +266,6 @@ export function PaymentLinkPanel({ link: initial, onClose, onChange }: Props) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }

@@ -32,6 +32,7 @@ import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 import { fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/utils'
 import type { AssignTarget, RefreshingCell } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
+import { PayOnlineFlow } from '@/components/payment-links/PayOnlineFlow'
 import type { MedicalRecordSavedContext } from '@/components/jadwal/MedicalRecordModal'
 import { hourInFilter, rangeInFilter, shiftForHour, type ShiftFilter } from '@/lib/shifts'
 
@@ -60,6 +61,7 @@ export default function JadwalHarianPage() {
   const [selectedVisitShift, setSelectedVisitShift] = useState<string | null>(null)
   const [selectedStaffId, setSelectedStaffId]       = useState<string | null>(null)
   const [paymentVisit, setPaymentVisit]             = useState<DailyVisit | null>(null)
+  const [payOnlineVisit, setPayOnlineVisit]         = useState<DailyVisit | null>(null)
   const [detachVisit, setDetachVisit]               = useState<DailyVisit | null>(null)
   const [attachVisit, setAttachVisit]               = useState<DailyVisit | null>(null)
   const [changeTherapistVisit, setChangeTherapistVisit] = useState<DailyVisit | null>(null)
@@ -170,6 +172,10 @@ export default function JadwalHarianPage() {
 
   function handleOpenPayment(visitId: string) {
     setPaymentVisit(visits.find((v) => v.id === visitId) ?? null)
+  }
+
+  function handleOpenPayOnline(visitId: string) {
+    setPayOnlineVisit(visits.find((v) => v.id === visitId) ?? null)
   }
 
   function handleDetachPackage(visitId: string) {
@@ -474,6 +480,7 @@ export default function JadwalHarianPage() {
                 onPendingLeaveClick={(staffName, leave) => setLeavePopover({ staffName, leave })}
                 onStaffClick={setSelectedStaffId}
                 onPayment={handleOpenPayment}
+                onPayOnline={handleOpenPayOnline}
                 onRemind={canSendReminders ? handleRemind : undefined}
                 onWhatsApp={handleWhatsAppReminder}
                 onWhatsAppConfirmation={handleWhatsAppConfirmation}
@@ -549,6 +556,17 @@ export default function JadwalHarianPage() {
           entry={staff.find((s) => s.staff_id === selectedStaffId)!}
           onClose={() => setSelectedStaffId(null)}
           onSaved={() => silentReload({ type: 'staff', staffId: selectedStaffId })}
+        />
+      )}
+
+      {payOnlineVisit && (
+        <PayOnlineFlow
+          target={{ visitId: payOnlineVisit.id, patientId: payOnlineVisit.patient_id, patientName: payOnlineVisit.patient_name }}
+          onClose={() => setPayOnlineVisit(null)}
+          onChange={(l) => {
+            // A paid link records the transaction itself — flip the card to paid.
+            if (l.status === 'paid') silentReload({ type: 'visit', visitId: payOnlineVisit.id })
+          }}
         />
       )}
 

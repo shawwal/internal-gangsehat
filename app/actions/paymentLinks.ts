@@ -9,6 +9,10 @@ import { DEFAULT_DUE_MINUTES, paymentMethodTypes, type PaymentLinkMethod } from 
 import { newInvoiceNumber } from '@/lib/doku/invoice'
 import { findLink, syncPaymentLink } from '@/lib/doku/settle'
 import { PAYMENT_RECEIPT_BUCKET } from '@/lib/paymentProof'
+import { orderBills, visitBill, type BillOption } from '@/lib/doku/bills'
+import { SERVICE_TO_CATEGORY } from '@/lib/serviceType'
+import { fetchLayananHarga, getPatientOutstanding } from '@/app/actions/transactions'
+import type { ServiceType } from '@/types'
 import type { PaymentLinkView, PaymentLinkFilters, PaymentLinkStatus } from '@/components/payment-links/types'
 
 const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
@@ -214,6 +218,103 @@ export async function createPaymentLink(
   })
 
   return { data: await fetchView(supabase, inserted.id), error: null }
+}
+
+// ── Defaults (smart prefill) ─────────────────────────────────────────────────
+
+export interface PaymentLinkDefaults {
+  patient: { id: string; name: string; phone: string | null; no_rm: string | null } | null
+  branchId: string | null
+  bills: BillOption[]
+  /** An open link for the same visit/order — offer to reopen instead of duplicating. */
+  openLink: PaymentLinkView | null
+}
+
+/**
+ * Everything the create dialog can fill in by itself from a visit / order /
+ * patient: who pays, and what they're paying for (this visit's price-list
+ * price + the patient's outstanding order balances).
+ */
+export async function getPaymentLinkDefaults(target: {
+  visitId?: string | null
+  orderId?: string | null
+  patientId?: string | null
+}): Promise<PaymentLinkDefaults> {
+  const empty: PaymentLinkDefaults = { patient: null, branchId: null, bills: [], openLink: null }
+  const auth = await requirePaymentRole()
+  if ('error' in auth) return empty
+  const { supabase } = auth
+
+  let patientId = target.patientId ?? null
+  let branchId: string | null = null
+  let visit: BillOption | null = null
+
+  if (target.visitId) {
+    const [{ data: v }, { count: paidCount }] = await Promise.all([
+      supabase.from('patient_visits')
+        .select('patient_id, branch_id, service_type, layanan_id, package_id')
+        .eq('id', target.visitId).maybeSingle(),
+      supabase.from('transactions').select('id', { count: 'exact', head: true })
+        .eq('visit_id', target.visitId).neq('status', 'rejected'),
+    ])
+    if (v) {
+      patientId = patientId ?? v.patient_id
+      branchId = v.branch_id
+      // Package sessions are billed through the package order, not per visit.
+      if (!paidCount && !v.package_id && v.service_type) {
+        const category = SERVICE_TO_CATEGORY[v.service_type as ServiceType] ?? 'LAINNYA'
+        let price: number | null = null
+        let description: string | null = null
+        if (v.service_type === 'SPORT MASSAGE' && v.layanan_id) {
+          const { data: l } = await supabase.from('internal_layanan').select('nama, harga').eq('id', v.layanan_id).maybeSingle()
+          if (l) { price = Number(l.harga); description = l.nama }
+        } else if (v.service_type !== 'SPORT MASSAGE') {
+          price = await fetchLayananHarga(v.service_type, v.branch_id)
+        }
+        visit = visitBill({ visitId: target.visitId, category, price, description })
+      }
+    }
+  } else if (target.orderId) {
+    const { data: t } = await supabase.from('transactions').select('patient_id, branch_id')
+      .eq('order_id', target.orderId).neq('status', 'rejected').limit(1).maybeSingle()
+    if (t) { patientId = patientId ?? t.patient_id; branchId = t.branch_id }
+  }
+
+  let patient: PaymentLinkDefaults['patient'] = null
+  let outstanding: Awaited<ReturnType<typeof getPatientOutstanding>> = []
+  if (patientId) {
+    const [{ data: p }, out] = await Promise.all([
+      supabase.from('patients').select('id, encrypted_name, encrypted_phone, no_rm').eq('id', patientId).maybeSingle(),
+      getPatientOutstanding(patientId),
+    ])
+    outstanding = out
+    if (p) {
+      const pii = decryptPatientPII({ encrypted_name: p.encrypted_name, encrypted_phone: p.encrypted_phone ?? '' })
+      patient = { id: p.id, name: pii.name, phone: pii.phone || null, no_rm: p.no_rm ?? null }
+    }
+  }
+
+  const bills = orderBills(visit, outstanding.map((o) => ({
+    order_id: o.order_id, category: o.category,
+    harga: Number(o.harga), discount: Number(o.discount), outstanding: Number(o.outstanding),
+  })), target.orderId)
+
+  // An open link for any of these bills.
+  let openLink: PaymentLinkView | null = null
+  const orderIds = bills.map((b) => b.orderId).filter((x): x is string => !!x)
+  const ors = [
+    ...(target.visitId ? [`visit_id.eq.${target.visitId}`] : []),
+    ...(orderIds.length ? [`order_id.in.(${orderIds.map((id) => `"${id}"`).join(',')})`] : []),
+  ]
+  if (ors.length) {
+    const { data } = await supabase.from('payment_links').select(VIEW_COLS)
+      .eq('status', 'pending').gt('expires_at', new Date().toISOString())
+      .or(ors.join(','))
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (data) openLink = toView(data as unknown as Record<string, unknown>)
+  }
+
+  return { patient, branchId, bills, openLink }
 }
 
 // ── Status / lifecycle ───────────────────────────────────────────────────────

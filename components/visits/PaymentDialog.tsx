@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import {
   AlertTriangle, Calendar, CheckCircle2, ChevronDown, ChevronUp,
-  CreditCard, Loader2, Stethoscope, User, X,
+  CreditCard, Landmark, Loader2, QrCode, Stethoscope, User, X,
 } from 'lucide-react'
 import { createTransactionForVisit, updateTransaction, getPatientOutstanding, fetchLayananHarga } from '@/app/actions/transactions'
 import type { OutstandingTransaction } from '@/app/actions/transactions'
@@ -14,7 +14,10 @@ import type { ServiceType } from '@/types'
 import { SettlePaymentDialog } from '@/components/finance/SettlePaymentDialog'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, isPaymentProofRequiredOnEdit, requiresPaymentProof } from '@/lib/paymentProof'
-import { PayOnlineButton } from '@/components/payment-links/PayOnlineButton'
+import { createPaymentLink } from '@/app/actions/paymentLinks'
+import { PaymentLinkPanel } from '@/components/payment-links/PaymentLinkPanel'
+import type { PaymentLinkView } from '@/components/payment-links/types'
+import type { PaymentLinkMethod } from '@/lib/doku/channels'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface PaymentVisitInfo {
@@ -61,6 +64,10 @@ function fmtShortDate(d: string) {
   })
 }
 
+// Metode Bayar sentinel: not a transactions.payment_method — selecting it sends a
+// DOKU link instead, and the paid link records 'DOKU QRIS' / 'DOKU VA' itself.
+const ONLINE = 'ONLINE'
+
 const inputCls = 'w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -78,6 +85,10 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   const [harga, setHarga]                 = useState(existingTransaction?.harga != null ? String(existingTransaction.harga) : '')
   const [discount, setDiscount]           = useState(existingTransaction?.discount != null ? String(existingTransaction.discount) : '')
   const [amount, setAmount]               = useState(existingTransaction?.amount != null ? String(existingTransaction.amount) : '')
+  // Jumlah Bayar follows Harga − Diskon until the admin types their own amount
+  // (e.g. a DP); changing Harga or Diskon again re-syncs it. An existing payment
+  // starts on its saved amount.
+  const [amountManual, setAmountManual]   = useState(!!existingTransaction)
   const [paymentMethod, setPaymentMethod] = useState(existingTransaction?.payment_method ?? 'TUNAI')
   const [paymentStatus, setPaymentStatus] = useState(existingTransaction?.payment_status ?? 'LUNAS')
   const [penjamin, setPenjamin]           = useState(existingTransaction?.penjamin ?? '')
@@ -94,6 +105,9 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState<string | null>(null)
+  const [onlineMethod, setOnlineMethod] = useState<PaymentLinkMethod>('QRIS')
+  const [onlineLink, setOnlineLink]     = useState<PaymentLinkView | null>(null)
+  const isOnline = paymentMethod === ONLINE
   const [success, setSuccess]       = useState(false)
   const [shakeBtn, setShakeBtn]     = useState(false)
 
@@ -103,7 +117,8 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
 
   const h = Number(harga) || 0
   const d = Number(discount) || 0
-  const a = Number(amount) || 0
+  const amountValue = amountManual ? amount : (h > 0 ? String(Math.max(h - d, 0)) : '')
+  const a = Number(amountValue) || 0
 
   // Auto-suggest payment status based on amounts
   useEffect(() => {
@@ -157,7 +172,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   function handleSelectSmLayanan(id: string) {
     setSmLayananId(id)
     const row = smLayanan.find((l) => l.id === id)
-    if (row) setHarga(String(row.harga))
+    if (row) { setHarga(String(row.harga)); setAmountManual(false) }
   }
 
   function handleClose() {
@@ -177,6 +192,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
       setError(PAYMENT_PROOF_REQUIRED_MSG)
       return
     }
+    if (isOnline) { await handleCreateOnlineLink(); return }
     setSubmitting(true)
     setError(null)
     const payload = {
@@ -202,19 +218,48 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
       setTimeout(() => setShakeBtn(false), 400)
       setSubmitting(false)
     } else {
-      // Keep the visit's own service_type in sync with whatever Layanan/Kategori
-      // ended up being saved here, so the jadwal-harian grid card (which reads
-      // service_type directly) reflects the same correction the user just made.
-      const nextLayananId = isSportMassage ? (smSelected?.id ?? visit.layanan_id ?? null) : null
-      const visitPatch: { service_type?: string; layanan_id?: string | null } = {}
-      if (serviceType !== visit.service_type) visitPatch.service_type = serviceType
-      if (nextLayananId !== (visit.layanan_id ?? null)) visitPatch.layanan_id = nextLayananId
-      if (Object.keys(visitPatch).length > 0) {
-        await updateVisit(visit.id, visitPatch)
-      }
+      await syncVisitServiceType()
       setSuccess(true)
       setTimeout(() => { onSuccess(); onClose() }, 1400)
     }
+  }
+
+  // Keep the visit's own service_type in sync with whatever Layanan/Kategori
+  // ended up being saved here, so the jadwal-harian grid card (which reads
+  // service_type directly) reflects the same correction the user just made.
+  async function syncVisitServiceType() {
+    const nextLayananId = isSportMassage ? (smSelected?.id ?? visit.layanan_id ?? null) : null
+    const visitPatch: { service_type?: string; layanan_id?: string | null } = {}
+    if (serviceType !== visit.service_type) visitPatch.service_type = serviceType
+    if (nextLayananId !== (visit.layanan_id ?? null)) visitPatch.layanan_id = nextLayananId
+    if (Object.keys(visitPatch).length > 0) await updateVisit(visit.id, visitPatch)
+  }
+
+  // "Pembayaran Online": create a DOKU link from this form's values, then show
+  // the share/QR panel. The transaction is recorded when DOKU confirms payment.
+  async function handleCreateOnlineLink() {
+    if (a < 1000) { setError('Nominal minimal Rp1.000 untuk pembayaran online'); return }
+    setSubmitting(true)
+    setError(null)
+    const res = await createPaymentLink({
+      method: onlineMethod,
+      amount: a,
+      harga: h || null,
+      discount: d || null,
+      category: SERVICE_TO_CATEGORY[serviceType],
+      description: description || (isSportMassage && smSelected ? smSelected.nama : null),
+      visitId: visit.id,
+      patientId: visit.patient_id,
+    })
+    setSubmitting(false)
+    if (res.error || !res.data) {
+      setError(res.error ?? 'Gagal membuat link pembayaran')
+      setShakeBtn(true)
+      setTimeout(() => setShakeBtn(false), 400)
+      return
+    }
+    await syncVisitServiceType()
+    setOnlineLink(res.data)
   }
 
   const category = SERVICE_TO_CATEGORY[serviceType]
@@ -431,7 +476,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                     min="0"
                     required
                     value={harga}
-                    onChange={(e) => setHarga(e.target.value)}
+                    onChange={(e) => { setHarga(e.target.value); setAmountManual(false) }}
                     placeholder="0"
                     className={inputCls}
                   />
@@ -442,7 +487,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                     type="number"
                     min="0"
                     value={discount}
-                    onChange={(e) => setDiscount(e.target.value)}
+                    onChange={(e) => { setDiscount(e.target.value); setAmountManual(false) }}
                     placeholder="0"
                     className={inputCls}
                   />
@@ -456,8 +501,8 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                   type="number"
                   min="0"
                   required
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  value={amountValue}
+                  onChange={(e) => { setAmount(e.target.value); setAmountManual(true) }}
                   placeholder="0"
                   className={inputCls}
                 />
@@ -476,6 +521,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                     <option value="TRANSFER BCA">TRANSFER BCA</option>
                     <option value="EDC BCA">EDC BCA</option>
                     <option value="TRANSFER BANK KALBAR">TRANSFER BANK KALBAR</option>
+                    {!isEditing && <option value={ONLINE}>PEMBAYARAN ONLINE</option>}
                   </select>
                 </div>
                 <div>
@@ -483,7 +529,9 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                   <select
                     value={paymentStatus}
                     onChange={(e) => setPaymentStatus(e.target.value)}
-                    className={inputCls + ' cursor-pointer'}
+                    // Online: LUNAS / DP is derived from the amount when DOKU confirms payment.
+                    disabled={isOnline}
+                    className={inputCls + ' cursor-pointer disabled:opacity-50'}
                   >
                     <option value="LUNAS">LUNAS</option>
                     <option value="DP">DP</option>
@@ -491,6 +539,31 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                   </select>
                 </div>
               </div>
+
+              {isOnline && (
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { m: 'QRIS' as const, icon: QrCode, title: 'QRIS', sub: 'Scan di klinik / e-wallet' },
+                    { m: 'VA' as const, icon: Landmark, title: 'Virtual Account', sub: 'Transfer via bank' },
+                  ]).map(({ m, icon: Icon, title, sub }) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setOnlineMethod(m)}
+                      className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        onlineMethod === m ? 'bg-primary/15 border-primary/50' : 'border-border hover:bg-white/5'
+                      }`}
+                    >
+                      <Icon size={18} className={onlineMethod === m ? 'text-primary' : 'text-muted-foreground'} />
+                      <span className={`text-sm font-semibold ${onlineMethod === m ? 'text-primary' : 'text-foreground'}`}>{title}</span>
+                      <span className="text-[11px] text-muted-foreground">{sub}</span>
+                    </button>
+                  ))}
+                  <p className="col-span-2 text-[11px] text-muted-foreground">
+                    Link DOKU dibuat dari nominal di atas. Pembayaran tercatat otomatis (beserta kwitansi) setelah pasien membayar.
+                  </p>
+                </div>
+              )}
 
               <PaymentProofField
                 method={paymentMethod}
@@ -547,27 +620,6 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                 <span className="text-sm font-semibold text-[#34C759]">{isEditing ? 'Pembayaran berhasil diperbarui!' : 'Pembayaran berhasil dicatat!'}</span>
               </div>
             ) : (
-              <div className="space-y-2">
-              {!isEditing && (
-                <PayOnlineButton
-                  label="Bayar Online (QRIS / VA)"
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-primary/40 text-primary text-xs font-semibold hover:bg-primary/10 transition-colors cursor-pointer"
-                  target={{
-                    visitId: visit.id,
-                    patientId: visit.patient_id,
-                    patientName: visit.patient_name,
-                    harga: h || null,
-                    discount: d || null,
-                    amount: a || Math.max(h - d, 0) || null,
-                    category,
-                    description: description || (isSportMassage && smSelected ? smSelected.nama : null),
-                  }}
-                  onChange={(l) => {
-                    // The paid link records the transaction itself — close like a manual save.
-                    if (l.status === 'paid') { onSuccess(); onClose() }
-                  }}
-                />
-              )}
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -586,15 +638,27 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                 >
                   {submitting
                     ? <><Loader2 size={14} className="animate-spin" /> Menyimpan...</>
-                    : <><CreditCard size={14} /> Simpan Pembayaran</>
+                    : isOnline
+                      ? <>{onlineMethod === 'QRIS' ? <QrCode size={14} /> : <Landmark size={14} />} Buat Link {onlineMethod} · {fmt(a)}</>
+                      : <><CreditCard size={14} /> Simpan Pembayaran</>
                   }
                 </button>
-              </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {onlineLink && (
+        <PaymentLinkPanel
+          link={onlineLink}
+          onClose={() => setOnlineLink(null)}
+          onChange={(l) => {
+            // The paid link records the transaction itself — finish like a manual save.
+            if (l.status === 'paid') { setOnlineLink(null); onSuccess(); onClose() }
+          }}
+        />
+      )}
 
       {settleTarget && (
         <SettlePaymentDialog

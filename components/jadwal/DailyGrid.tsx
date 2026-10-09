@@ -117,6 +117,7 @@ interface Props {
   onPendingLeaveClick: (staffName: string, leave: PendingLeaveInfo) => void
   onStaffClick: (staffId: string) => void
   onPayment?: (visitId: string) => void
+  onPayOnline?: (visitId: string) => void
   onRemind?: (visitId: string) => void
   onWhatsApp?: (visitId: string) => void
   onWhatsAppConfirmation?: (visitId: string) => void
@@ -131,7 +132,7 @@ interface Props {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, middleDividerHour = null, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, middleDividerHour = null, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onPayOnline, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const canDrop = !!onMoveVisit
 
@@ -355,6 +356,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                       onOpen={onOpen}
                       onOpenRecord={(id) => onOpenRecord(id, s.shift || undefined)}
                       onPayment={onPayment}
+                      onPayOnline={onPayOnline}
                       onRemind={onRemind}
                       onWhatsApp={onWhatsApp}
                       onWhatsAppConfirmation={onWhatsAppConfirmation}
@@ -572,6 +574,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                           onOpen={onOpen}
                           onOpenRecord={(id) => onOpenRecord(id, s.shift || undefined)}
                           onPayment={onPayment}
+                          onPayOnline={onPayOnline}
                           onRemind={onRemind}
                           onWhatsApp={onWhatsApp}
                           onWhatsAppConfirmation={onWhatsAppConfirmation}

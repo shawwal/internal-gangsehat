@@ -1,12 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Landmark, Loader2, QrCode, Search, Wallet, X } from 'lucide-react'
-import { createPaymentLink, listBranchesForPaymentLinks } from '@/app/actions/paymentLinks'
+import { AlertTriangle, ExternalLink, Landmark, Loader2, QrCode, Search, Wallet, X } from 'lucide-react'
+import {
+  createPaymentLink, getPaymentLinkDefaults, listBranchesForPaymentLinks, type PaymentLinkDefaults,
+} from '@/app/actions/paymentLinks'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { DEFAULT_DUE_MINUTES, type PaymentLinkMethod } from '@/lib/doku/channels'
+import type { BillOption } from '@/lib/doku/bills'
 import { formatCurrency } from '@/lib/utils'
 import type { PaymentLinkTarget, PaymentLinkView } from './types'
+import { ModalPortal } from './ModalPortal'
 
 // Income categories aligned with Excel KATEGORI PEMBELIAN (finance/transactions)
 const INCOME_CATEGORIES = [
@@ -36,7 +40,9 @@ interface Props {
 }
 
 /** Generate a DOKU payment link (QRIS / VA). Works standalone (pick a patient)
- *  or prefilled from a visit / order / outstanding balance. */
+ *  or from a visit / order / patient, where it fills in the payer and offers the
+ *  bills (this visit's price, outstanding order balances) as one-tap chips — so
+ *  the admin only picks QRIS or VA. */
 export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Props) {
   const locked = !!(target.visitId || target.orderId)
   const [method, setMethod] = useState<PaymentLinkMethod>('QRIS')
@@ -56,6 +62,35 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
   const [searching, setSearching] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Smart prefill: payer + bill options derived server-side from the target.
+  const wantsDefaults = !!(target.visitId || target.orderId || target.patientId)
+  const [defaults, setDefaults] = useState<PaymentLinkDefaults | null>(null)
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const loadingDefaults = wantsDefaults && !defaults
+  const bills = defaults?.bills ?? []
+  const selectedBill: BillOption | null = bills.find((b) => b.key === selectedKey) ?? null
+
+  function applyBill(b: BillOption) {
+    setSelectedKey(b.key)
+    setAmount(String(b.amount))
+    setCategory(b.category)
+    setDescription(b.description ?? '')
+  }
+
+  useEffect(() => {
+    if (!wantsDefaults) return
+    let cancelled = false
+    getPaymentLinkDefaults({ visitId: target.visitId, orderId: target.orderId, patientId: target.patientId }).then((d) => {
+      if (cancelled) return
+      setDefaults(d)
+      if (d.patient) setPatient({ id: d.patient.id, name: d.patient.name })
+      // A value the admin already typed on the host form wins over the default.
+      const first = d.bills[0]
+      if (first && !target.amount) applyBill(first)
+    })
+    return () => { cancelled = true }
+  }, [target.visitId, target.orderId, target.patientId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (locked) return
@@ -99,10 +134,11 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
       category,
       description: description || null,
       patientId: patient?.id ?? null,
-      visitId: target.visitId ?? null,
-      orderId: target.orderId ?? null,
-      harga: target.harga ?? null,
-      discount: target.discount ?? null,
+      // A chosen bill decides what the payment attaches to (visit vs order installment).
+      visitId: selectedBill ? (selectedBill.visitId ?? null) : (target.visitId ?? null),
+      orderId: selectedBill ? (selectedBill.orderId ?? null) : (target.orderId ?? null),
+      harga: selectedBill ? selectedBill.harga : (target.harga ?? null),
+      discount: selectedBill ? selectedBill.discount : (target.discount ?? null),
       customerName: patient ? null : customerName,
       customerPhone: patient ? null : customerPhone,
       branchId: branchId || null,
@@ -114,9 +150,10 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4" onClick={submitting ? undefined : onClose}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+    <ModalPortal>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-3 sm:p-4" onClick={submitting ? undefined : onClose}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl max-h-[calc(100dvh-1.5rem)] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
             <Wallet size={16} className="text-primary" />
             <div>
@@ -127,34 +164,18 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
           <button onClick={onClose} disabled={submitting} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground cursor-pointer"><X size={16} /></button>
         </div>
 
-        <div className="p-5 space-y-4 overflow-y-auto">
-          {/* Method */}
-          <div className="grid grid-cols-2 gap-2">
-            {([
-              { m: 'QRIS' as const, icon: QrCode, title: 'QRIS', sub: 'Scan di klinik / e-wallet' },
-              { m: 'VA' as const, icon: Landmark, title: 'Virtual Account', sub: 'Transfer via bank' },
-            ]).map(({ m, icon: Icon, title, sub }) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => pickMethod(m)}
-                className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                  method === m ? 'bg-primary/15 border-primary/50' : 'border-border hover:bg-white/5'
-                }`}
-              >
-                <Icon size={18} className={method === m ? 'text-primary' : 'text-muted-foreground'} />
-                <span className={`text-sm font-semibold ${method === m ? 'text-primary' : 'text-foreground'}`}>{title}</span>
-                <span className="text-[11px] text-muted-foreground">{sub}</span>
-              </button>
-            ))}
-          </div>
-
+        <div className="p-5 space-y-4 overflow-y-auto overscroll-contain min-h-0 flex-1">
           {/* Patient / payer */}
           <div>
             <label className="block text-xs font-medium text-foreground mb-1.5">Pasien</label>
-            {patient ? (
+            {loadingDefaults ? (
+              <div className="h-[42px] rounded-xl bg-white/5 animate-pulse" />
+            ) : patient ? (
               <div className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-border bg-white/5">
-                <span className="text-sm text-foreground truncate">{patient.name}</span>
+                <span className="text-sm text-foreground truncate">
+                  {patient.name}
+                  {defaults?.patient?.no_rm && <span className="ml-1.5 text-[11px] text-muted-foreground font-mono">{defaults.patient.no_rm}</span>}
+                </span>
                 {!target.patientId && (
                   <button type="button" onClick={() => setPatient(null)} className="text-xs text-muted-foreground hover:text-foreground cursor-pointer">Ganti</button>
                 )}
@@ -190,6 +211,73 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
             )}
           </div>
 
+          {defaults?.openLink && (
+            <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-[#FFB35C]/10 border border-[#FFB35C]/30">
+              <p className="text-xs text-foreground">
+                Link aktif sudah ada · {defaults.openLink.method} {formatCurrency(defaults.openLink.amount)}
+              </p>
+              <button
+                type="button"
+                onClick={() => onCreated(defaults.openLink!)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#FFB35C]/20 text-[#FFB35C] text-xs font-semibold hover:bg-[#FFB35C]/30 cursor-pointer"
+              >
+                Buka <ExternalLink size={11} />
+              </button>
+            </div>
+          )}
+
+          {/* Bills — what is being paid */}
+          {loadingDefaults ? (
+            <div className="space-y-1.5">
+              <div className="h-3 w-16 rounded bg-white/5 animate-pulse" />
+              <div className="h-14 rounded-xl bg-white/5 animate-pulse" />
+            </div>
+          ) : bills.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">Tagihan</label>
+              <div className="space-y-1.5">
+                {bills.map((b) => (
+                  <button
+                    key={b.key}
+                    type="button"
+                    onClick={() => applyBill(b)}
+                    className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      selectedKey === b.key ? 'bg-primary/15 border-primary/50' : 'border-border hover:bg-white/5'
+                    }`}
+                  >
+                    <span className={`text-xs font-medium ${selectedKey === b.key ? 'text-primary' : 'text-foreground'}`}>
+                      {b.label}{b.description && b.orderId == null ? ` · ${b.description}` : ''}
+                    </span>
+                    <span className={`text-sm font-semibold font-mono ${selectedKey === b.key ? 'text-primary' : 'text-foreground'}`}>
+                      {formatCurrency(b.amount)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Method */}
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { m: 'QRIS' as const, icon: QrCode, title: 'QRIS', sub: 'Scan di klinik / e-wallet' },
+              { m: 'VA' as const, icon: Landmark, title: 'Virtual Account', sub: 'Transfer via bank' },
+            ]).map(({ m, icon: Icon, title, sub }) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => pickMethod(m)}
+                className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  method === m ? 'bg-primary/15 border-primary/50' : 'border-border hover:bg-white/5'
+                }`}
+              >
+                <Icon size={18} className={method === m ? 'text-primary' : 'text-muted-foreground'} />
+                <span className={`text-sm font-semibold ${method === m ? 'text-primary' : 'text-foreground'}`}>{title}</span>
+                <span className="text-[11px] text-muted-foreground">{sub}</span>
+              </button>
+            ))}
+          </div>
+
           {!locked && branches.length > 1 && (
             <div>
               <label className="block text-xs font-medium text-foreground mb-1.5">Cabang</label>
@@ -203,11 +291,19 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-foreground mb-1.5">Nominal (Rp)</label>
-              <input type="number" min="1000" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className={inputCls} />
+              <input
+                type="number"
+                min="1000"
+                value={amount}
+                // A custom amount keeps the chosen bill's link, e.g. a partial pelunasan on a package order.
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0"
+                className={inputCls}
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-foreground mb-1.5">Kategori</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} disabled={!!target.orderId} className={inputCls + ' cursor-pointer disabled:opacity-60'}>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} disabled={!!(selectedBill?.orderId ?? target.orderId)} className={inputCls + ' cursor-pointer disabled:opacity-60'}>
                 {INCOME_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 {!INCOME_CATEGORIES.includes(category) && <option value={category}>{category}</option>}
               </select>
@@ -254,13 +350,13 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
           )}
         </div>
 
-        <div className="flex gap-2 px-5 py-4 border-t border-border">
+        <div className="flex gap-2 px-5 py-4 border-t border-border shrink-0">
           <button onClick={onClose} disabled={submitting} className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted disabled:opacity-50 cursor-pointer">
             Batal
           </button>
           <button
             onClick={submit}
-            disabled={submitting}
+            disabled={submitting || loadingDefaults}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-70 cursor-pointer"
           >
             {submitting ? <><Loader2 size={14} className="animate-spin" /> Membuat link…</> : <>Buat link {method} · {formatCurrency(amountNum)}</>}
@@ -268,5 +364,6 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }

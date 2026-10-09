@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { QrCode } from 'lucide-react'
-import { CreatePaymentLinkDialog } from './CreatePaymentLinkDialog'
-import { PaymentLinkPanel } from './PaymentLinkPanel'
+import { PayOnlineFlow } from './PayOnlineFlow'
 import type { PaymentLinkTarget, PaymentLinkView } from './types'
 
 interface Props {
@@ -16,27 +15,19 @@ interface Props {
 
 /** Drop-in trigger: create dialog → share/track panel. Embed on any finance surface. */
 export function PayOnlineButton({ target, label = 'Bayar Online (QRIS/VA)', className, onChange }: Props) {
-  const [creating, setCreating] = useState(false)
-  const [link, setLink] = useState<PaymentLinkView | null>(null)
+  const [open, setOpen] = useState(false)
 
   return (
     <>
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); setCreating(true) }}
+        onClick={(e) => { e.stopPropagation(); setOpen(true) }}
         className={className ?? 'flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-primary/40 text-primary text-xs font-semibold hover:bg-primary/10 transition-colors cursor-pointer whitespace-nowrap'}
       >
         <QrCode size={14} /> {label}
       </button>
 
-      {creating && (
-        <CreatePaymentLinkDialog
-          target={target}
-          onClose={() => setCreating(false)}
-          onCreated={(l) => { setCreating(false); setLink(l); onChange?.(l) }}
-        />
-      )}
-      {link && <PaymentLinkPanel link={link} onClose={() => setLink(null)} onChange={onChange} />}
+      {open && <PayOnlineFlow target={target} onClose={() => setOpen(false)} onChange={onChange} />}
     </>
   )
 }

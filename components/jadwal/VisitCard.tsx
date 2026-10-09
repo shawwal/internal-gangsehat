@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useDraggable } from '@dnd-kit/core'
-import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink, Link2, UserCheck, UserCog, Star } from 'lucide-react'
+import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink, Link2, UserCheck, UserCog, Star, QrCode } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
@@ -34,6 +34,8 @@ interface Props {
   /** Opens the visit's session note / medical record */
   onOpenRecord: (id: string) => void
   onPayment?: (id: string) => void
+  /** Send a DOKU payment link (QRIS / VA) for this visit */
+  onPayOnline?: (id: string) => void
   onRemind?: (id: string) => void
   onWhatsApp?: (id: string) => void
   onWhatsAppConfirmation?: (id: string) => void
@@ -46,7 +48,7 @@ interface Props {
   onChangeTherapist?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onPayOnline, onRemind, onWhatsApp, onWhatsAppConfirmation, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const [menuReady, setMenuReady] = useState(false)
@@ -59,6 +61,10 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const canManageVisit   = !!userRole && !['therapist', 'staff', 'sport_massage_therapist'].includes(userRole)
   const canRecordPayment = !!userRole && PAYMENT_ROLES.includes(userRole)
   const showPaymentItem  = canRecordPayment && visit.status === 'completed'
+  // Online link also before the session (pay upfront) — hidden once settled.
+  const showPayOnlineItem = !!onPayOnline && canRecordPayment
+    && (visit.status === 'scheduled' || visit.status === 'completed')
+    && (!visit.has_payment || visit.visit_payment_status === 'DP' || visit.package_payment_ok === false)
   const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && (!visit.package_id || visit.package_payment_ok === false)
   const isIncomplete     = visit.status === 'completed' && (!visit.diagnosis || !visit.treatment || (isRegioRequired(visit.service_type) && !visit.regio))
   const canRemind        = !!userRole && REMIND_ROLES.includes(userRole) && isIncomplete && !!onRemind
@@ -374,6 +380,20 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
                     : <CreditCard size={13} />
                   }
                   {visit.has_payment ? 'Edit Pembayaran' : 'Catat Pembayaran'}
+                </button>
+              </>
+            )}
+
+            {showPayOnlineItem && (
+              <>
+                {!showPaymentItem && <hr className="border-white/10 my-1.5" />}
+                <button
+                  onClick={() => { onPayOnline?.(visit.id); setMenuOpen(false) }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                  role="menuitem"
+                >
+                  <QrCode size={13} />
+                  Kirim Link Bayar (QRIS/VA)
                 </button>
               </>
             )}
