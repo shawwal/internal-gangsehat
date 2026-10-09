@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import {
-  AlertTriangle, Baby, Building2, Check, Clock, ExternalLink, MapPin, Megaphone, Pencil, Phone, Trash2, Users, XCircle,
+  AlertTriangle, Baby, Building2, Check, Clock, ExternalLink, Handshake, MapPin, Megaphone, Pencil, Phone, Trash2, Users, XCircle,
 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import type { RegistrationRow } from '@/app/actions/patientRegistrations'
@@ -121,6 +121,11 @@ export function RegistrationCard({ row, showBranch, onReview, onReject, onDelete
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Clock size={11} /> {formatDateTime(row.createdAt)}
             </span>
+            {row.affiliateCode && (
+              <span className="flex items-center gap-1 text-xs font-medium text-primary" title="Kode afiliasi">
+                <Handshake size={11} /> {row.affiliateCode}
+              </span>
+            )}
           </div>
 
           {row.isGriya && (row.namaIbu || row.namaAyah || row.sumber) && (

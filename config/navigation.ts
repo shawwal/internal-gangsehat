@@ -502,6 +502,14 @@ export const navigation: NavItem[] = [
     group: 'clinic',
   },
   {
+    key: 'affiliates',
+    label: 'Afiliasi',
+    href: '/affiliates',
+    icon: 'Handshake',
+    roles: ['director'],
+    group: 'clinic',
+  },
+  {
     key: 'home-visit',
     label: 'Home Visit',
     href: '/home-visit',

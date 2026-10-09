@@ -19,6 +19,7 @@ export const ACTIVITY_RESOURCE_TYPES = {
   griya_product: 'Produk Toko Griya Anak',
   griya_sale: 'Penjualan Toko Griya Anak',
   patient_registration: 'Pendaftaran Pasien',
+  affiliate: 'Afiliasi',
   patient_package: 'Paket Pasien',
   payroll_period: 'Periode Penggajian',
   payroll_activity: 'Aktivitas Insentif',

@@ -57,6 +57,8 @@ export interface RegistrationRow extends RegistrationFields {
   isGriya: boolean
   /** Existing patient with the same phone number, if any. */
   duplicatePatientId: string | null
+  /** Affiliate code the patient registered with (gangsehat.com/daftar?ref=). */
+  affiliateCode: string | null
 }
 
 export interface RegistrationStats {
@@ -207,6 +209,7 @@ export async function fetchRegistrationsPage(params: {
     type: r.registration_type === 'griya' ? 'griya' : 'umum',
     isGriya: r.registration_type === 'griya',
     duplicatePatientId: null,
+    affiliateCode: r.affiliate_code ?? null,
     ...decryptFields(r),
   }))
 
