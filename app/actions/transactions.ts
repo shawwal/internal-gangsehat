@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeOrderPaymentSummary, type OrderPaymentSummary, type OrderPaymentRow } from '@/lib/internal/orderPayments'
 import { logActivity } from '@/lib/activityLog'
-import { PAYMENT_PROOF_BUCKET, PAYMENT_PROOF_REQUIRED_MSG, isPaymentProofRequiredOnEdit, isValidPaymentProofPath, paymentProofError, requiresPaymentProof } from '@/lib/paymentProof'
+import { PAYMENT_PROOF_BUCKET, PAYMENT_PROOF_REQUIRED_MSG, isGatewayPayment, isPaymentProofRequiredOnEdit, isValidPaymentProofPath, paymentProofError, requiresPaymentProof } from '@/lib/paymentProof'
 
 const SERVICE_TO_CATEGORY: Record<string, string> = {
   'TERAPI AWAL':  'TA KLINIK',
@@ -386,6 +386,15 @@ export async function updateTransaction(
     .select('*')
     .eq('id', id)
     .single()
+
+  // DOKU-recorded payments: amount, method and receipt are gateway-verified —
+  // keep them, whatever the edit form sends back.
+  if (isGatewayPayment(oldRow?.payment_method)) {
+    input = { ...input }
+    delete input.payment_method
+    delete input.amount
+    delete input.receipt_url
+  }
 
   if (input.receipt_url != null && !isValidPaymentProofPath(input.receipt_url)) {
     return { error: 'Bukti transfer tidak valid. Unggah ulang.' }

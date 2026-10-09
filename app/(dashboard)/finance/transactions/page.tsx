@@ -12,6 +12,7 @@ import { logActivity } from '@/lib/activityLog'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 import { PaymentProofField, PaymentProofLink } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
+import { PayOnlineButton } from '@/components/payment-links/PayOnlineButton'
 
 const TYPE_LABELS: Record<TransactionType, string>    = { income: 'Pemasukan', expense: 'Pengeluaran' }
 const STATUS_BADGE: Record<TransactionStatus, string> = {
@@ -223,6 +224,7 @@ export default function TransactionsPage() {
         </div>
         <div className="flex items-center gap-2">
           <ExportButton onExport={handleExportTransactions} disabled={rows.length === 0} />
+          <PayOnlineButton label="Bayar Online" onChange={(l) => { if (l.status === 'paid') load() }} />
           <button
             onClick={() => { setForm(getDefaultForm()); setShowForm(true) }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"

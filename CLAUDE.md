@@ -60,6 +60,13 @@ All tables: `id uuid PK DEFAULT gen_random_uuid()`, `created_at timestamptz DEFA
 
 `status` = approval workflow; `payment_status` = payment detail — independent fields.
 
+### Online payments — DOKU (migration 101)
+| Table | Key columns |
+|-------|-------------|
+| `payment_links` | branch_id, patient_id, visit_id, order_id, transaction_id (set on paid), method(QRIS/VA), amount, harga, discount, category, customer_name/phone, invoice_number (UNIQUE, `GS`+YYMMDD+8), checkout_url, environment(development/production), status(pending/paid/expired/failed/cancelled), expires_at, sent_at/sent_via(whatsapp/copy/screen), paid_at, payment_channel, doku_reference, receipt_path, raw_status, last_notification, created_by. RLS: director ALL; finance/manager/admin own branch |
+
+DOKU Checkout (hosted page; merchant shared with human-atlas/bansa-web). Code: `lib/doku/` (client = signature/checkout/status, settle = idempotent paid transition → auto-confirmed `transactions` row with payment_method `DOKU QRIS`/`DOKU VA` + PDF receipt in private `payment-receipts` bucket at `doku/YYYY/MM/<invoice>.pdf`, stored in `transactions.receipt_url`). Webhook `POST /api/payments/doku/notify` (exempted in `proxy.ts`, verifies HMAC, re-fetches status — never trusts the body). Fallback: panel polls every 5s; `/finance/payment-links` re-syncs open links on load (only path on localhost). UI: `components/payment-links/` — `PayOnlineButton` (embed anywhere, takes a `PaymentLinkTarget`), `PaymentLinkPanel`, `PaymentLinksTable`. DOKU rows are not hand-editable (amount/method/receipt) — see `isGatewayPayment()` in `lib/paymentProof.ts`. VA channels: `lib/doku/channels.ts` (BCA excluded until activated) or `DOKU_VA_CHANNELS`.
+
 ### HR
 | Table | Key columns |
 |-------|-------------|
@@ -128,6 +135,7 @@ get_my_branch()        → uuid   -- branch_id of auth.uid(); NULL for director
 | leave_requests | ALL own rows; ALL own branch (hr) | ALL |
 | staff_targets | ALL own rows | ALL |
 | campaigns | ALL own branch (marketing) | ALL |
+| payment_links | ALL own branch (finance/manager/admin) | ALL |
 | user_notifications | SELECT user_id=uid OR target_role matches | — |
 
 ## Supabase Clients
@@ -140,7 +148,7 @@ app/(auth)/login/  complete-profile/
 app/(dashboard)/
   layout.tsx                    ← sidebar + role guard + notifications
   director/overview/ branches/ reports/ users/ leave/ targets/
-  finance/transactions/ reports/
+  finance/transactions/ reports/ payment-links/
   hr/staff/ attendance/ leave/
   marketing/campaigns/
   patients/[id]/visits/
@@ -196,4 +204,10 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SERVICE_ROLE_KEY=        # server-only
 ENCRYPTION_KEY=                   # 32-byte hex
+PAYMENT_GATEWAY_MODE=             # development (DOKU sandbox) | production
+DOKU_CLIENT_ID_DEVELOPMENT= / DOKU_SECRET_KEY_DEVELOPMENT=
+DOKU_CLIENT_ID_PRODUCTION=  / DOKU_SECRET_KEY_PRODUCTION=
+APP_URL=                          # public https origin → DOKU notify URL
+DOKU_VA_CHANNELS=                 # optional comma list override
+PAYMENT_RETURN_URL=               # optional; DOKU "back to merchant" (default https://gangsehat.com)
 ```

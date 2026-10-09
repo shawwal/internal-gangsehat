@@ -11,10 +11,12 @@ import { PatientInfoSections } from '@/components/patients/detail/PatientInfoSec
 import { PatientVisitHistory } from '@/components/patients/detail/PatientVisitHistory'
 import { ReferredByCard } from '@/components/patients/detail/ReferredByCard'
 import { getPatientReferral } from '@/app/actions/patientReferral'
+import { PatientPaymentLinks } from '@/components/payment-links/PatientPaymentLinks'
 
 export const dynamic = 'force-dynamic'
 
 const CAN_EDIT: UserRole[] = ['director', 'manager']
+const PAYMENT_ROLES: UserRole[] = ['director', 'manager', 'finance', 'admin']
 
 function SessionBar({ used, total }: { used: number; total: number }) {
   const pct = total > 0 ? Math.min((used / total) * 100, 100) : 0
@@ -160,6 +162,9 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
       {referral && <ReferredByCard patientId={id} info={referral} />}
       <PatientPackagesSummary packages={packages} patientId={id} />
       <PatientVisitHistory visits={visits ?? []} totalVisits={totalVisits ?? 0} patientId={id} />
+      {PAYMENT_ROLES.includes(profile?.role as UserRole) && (
+        <PatientPaymentLinks patientId={id} patientName={patient.name} />
+      )}
     </div>
   )
 }

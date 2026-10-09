@@ -383,7 +383,7 @@ export type TransactionType = 'income' | 'expense'
 export type TransactionStatus = 'pending' | 'confirmed' | 'rejected'
 
 // Payment method (METODE BAYAR in finance Excel)
-export type PaymentMethod = 'TUNAI' | 'TRANSFER BCA' | 'EDC BCA' | 'TRANSFER BANK KALBAR'
+export type PaymentMethod = 'TUNAI' | 'TRANSFER BCA' | 'EDC BCA' | 'TRANSFER BANK KALBAR' | 'DOKU QRIS' | 'DOKU VA'
 
 // Payment detail status (KETERANGAN BAYAR) — independent of approval `status`
 // LUNAS = fully paid, DP = down payment, PELUNASAN = final/settlement payment

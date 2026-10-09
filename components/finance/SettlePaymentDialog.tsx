@@ -9,6 +9,7 @@ import { PaymentHistoryTable } from './PaymentHistoryTable'
 import type { OrderPaymentSummary } from '@/lib/internal/orderPayments'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
+import { PayOnlineButton } from '@/components/payment-links/PayOnlineButton'
 
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
 
@@ -132,6 +133,21 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
               className="w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
+
+          {transaction.order_id && sisaNow > 0 && (
+            <PayOnlineButton
+              label="Kirim link bayar online (QRIS/VA)"
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-primary/40 text-primary text-xs font-semibold hover:bg-primary/10 cursor-pointer"
+              target={{
+                patientName: transaction.patient_name,
+                orderId: transaction.order_id,
+                amount: Math.max(extraNum, 0) || sisaNow,
+                category: transaction.category,
+                description: 'Pelunasan',
+              }}
+              onChange={(l) => { if (l.status === 'paid') router.refresh() }}
+            />
+          )}
 
           {/* Payment method */}
           <div>

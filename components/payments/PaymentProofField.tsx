@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Camera, FileImage, Loader2, RefreshCw, Upload, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadErrorMessage } from '@/lib/storageErrors'
-import { PAYMENT_PROOF_BUCKET, requiresPaymentProof } from '@/lib/paymentProof'
+import { PAYMENT_PROOF_BUCKET, isGatewayReceiptPath, proofBucketFor, requiresPaymentProof } from '@/lib/paymentProof'
 import { ProofImageEditor } from './ProofImageEditor'
 import { ProofCamera } from './ProofCamera'
 
@@ -23,7 +23,7 @@ export function usePaymentProofUrl(path: string | null | undefined): string | nu
   useEffect(() => {
     if (!path) return
     let cancelled = false
-    createClient().storage.from(PAYMENT_PROOF_BUCKET).createSignedUrl(path, SIGNED_URL_TTL).then(({ data }) => {
+    createClient().storage.from(proofBucketFor(path)).createSignedUrl(path, SIGNED_URL_TTL).then(({ data }) => {
       if (!cancelled && data?.signedUrl) setResolved({ path, url: data.signedUrl })
     })
     return () => { cancelled = true }
@@ -236,9 +236,10 @@ export function PaymentProofField({ method, value, onChange, onUploadingChange, 
 
 /** Small "Bukti" button for tables/lists; renders nothing without a path.
  *  Signs the URL on click so long tables don't fire one request per row. */
-export function PaymentProofLink({ path, label = 'Bukti' }: { path: string | null | undefined; label?: string }) {
+export function PaymentProofLink({ path, label }: { path: string | null | undefined; label?: string }) {
   const [opening, setOpening] = useState(false)
   if (!path) return null
+  const isReceipt = isGatewayReceiptPath(path)
 
   async function open(e: React.MouseEvent) {
     e.stopPropagation()
@@ -246,7 +247,7 @@ export function PaymentProofLink({ path, label = 'Bukti' }: { path: string | nul
     // Open the tab synchronously (inside the click) so popup blockers allow it.
     const win = window.open('', '_blank')
     setOpening(true)
-    const { data } = await createClient().storage.from(PAYMENT_PROOF_BUCKET).createSignedUrl(path, SIGNED_URL_TTL)
+    const { data } = await createClient().storage.from(proofBucketFor(path)).createSignedUrl(path, SIGNED_URL_TTL)
     setOpening(false)
     if (data?.signedUrl && win) win.location.href = data.signedUrl
     else win?.close()
@@ -256,10 +257,10 @@ export function PaymentProofLink({ path, label = 'Bukti' }: { path: string | nul
     <button
       type="button"
       onClick={open}
-      title="Lihat bukti transfer"
+      title={isReceipt ? 'Lihat kwitansi DOKU' : 'Lihat bukti transfer'}
       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
     >
-      {opening ? <Loader2 size={10} className="animate-spin" /> : <FileImage size={10} />} {label}
+      {opening ? <Loader2 size={10} className="animate-spin" /> : <FileImage size={10} />} {label ?? (isReceipt ? 'Kwitansi' : 'Bukti')}
     </button>
   )
 }

@@ -14,6 +14,7 @@ import type { ServiceType } from '@/types'
 import { SettlePaymentDialog } from '@/components/finance/SettlePaymentDialog'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, isPaymentProofRequiredOnEdit, requiresPaymentProof } from '@/lib/paymentProof'
+import { PayOnlineButton } from '@/components/payment-links/PayOnlineButton'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface PaymentVisitInfo {
@@ -546,6 +547,27 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                 <span className="text-sm font-semibold text-[#34C759]">{isEditing ? 'Pembayaran berhasil diperbarui!' : 'Pembayaran berhasil dicatat!'}</span>
               </div>
             ) : (
+              <div className="space-y-2">
+              {!isEditing && (
+                <PayOnlineButton
+                  label="Bayar Online (QRIS / VA)"
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-primary/40 text-primary text-xs font-semibold hover:bg-primary/10 transition-colors cursor-pointer"
+                  target={{
+                    visitId: visit.id,
+                    patientId: visit.patient_id,
+                    patientName: visit.patient_name,
+                    harga: h || null,
+                    discount: d || null,
+                    amount: a || Math.max(h - d, 0) || null,
+                    category,
+                    description: description || (isSportMassage && smSelected ? smSelected.nama : null),
+                  }}
+                  onChange={(l) => {
+                    // The paid link records the transaction itself — close like a manual save.
+                    if (l.status === 'paid') { onSuccess(); onClose() }
+                  }}
+                />
+              )}
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -567,6 +589,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                     : <><CreditCard size={14} /> Simpan Pembayaran</>
                   }
                 </button>
+              </div>
               </div>
             )}
           </div>

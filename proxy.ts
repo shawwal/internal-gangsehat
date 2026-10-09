@@ -14,6 +14,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // DOKU server-to-server notifications carry no session; the route verifies
+  // DOKU's HMAC signature itself.
+  if (pathname === '/api/payments/doku/notify') {
+    return NextResponse.next({ request })
+  }
+
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(

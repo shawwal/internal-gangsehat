@@ -6,6 +6,7 @@ export const ACTIVITY_RESOURCE_TYPES = {
   patient: 'Pasien',
   patient_visit: 'Kunjungan Pasien',
   transaction: 'Transaksi',
+  payment_link: 'Link Pembayaran Online',
   leave_request: 'Pengajuan Cuti',
   staff_target: 'Target Staff',
   attendance: 'Absensi',
@@ -50,6 +51,7 @@ interface LogActivityInput {
 const PATIENT_LINKED_TABLES: Partial<Record<ActivityResourceType, string>> = {
   patient_visit: 'patient_visits',
   transaction: 'transactions',
+  payment_link: 'payment_links',
   griya_slot: 'griya_schedule_slots',
   patient_package: 'patient_packages',
 }

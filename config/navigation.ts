@@ -246,6 +246,15 @@ export const navigation: NavItem[] = [
     group: 'finance',
   },
   {
+    key: 'payment-links',
+    label: 'Pembayaran Online',
+    href: '/finance/payment-links',
+    icon: 'QrCode',
+    // DOKU QRIS / VA links; branch-scoped by payment_links RLS (migration 101)
+    roles: ['finance', 'admin', 'manager', 'director'],
+    group: 'finance',
+  },
+  {
     key: 'finance-outstanding',
     label: 'Piutang / DP',
     href: '/finance/outstanding',

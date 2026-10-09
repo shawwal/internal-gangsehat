@@ -4,6 +4,26 @@
 
 export const PAYMENT_PROOF_BUCKET = 'payment-proofs'
 
+// Server-generated DOKU receipts (PDF) live in their own private bucket
+// (migration 101); their paths start with "doku/" so any proof viewer can
+// resolve them from `transactions.receipt_url` alone.
+export const PAYMENT_RECEIPT_BUCKET = 'payment-receipts'
+
+/** Payments recorded by the DOKU gateway ('DOKU QRIS' / 'DOKU VA'). Amount,
+ *  method and receipt are gateway-verified and not editable by hand. */
+export function isGatewayPayment(method: string | null | undefined): boolean {
+  return !!method && method.toUpperCase().startsWith('DOKU')
+}
+
+export function isGatewayReceiptPath(path: string | null | undefined): path is string {
+  return !!path && /^doku\/\d{4}\/\d{2}\/[A-Z0-9]+\.pdf$/.test(path)
+}
+
+/** Bucket holding a `receipt_url` / `proof_path` object. */
+export function proofBucketFor(path: string): string {
+  return isGatewayReceiptPath(path) ? PAYMENT_RECEIPT_BUCKET : PAYMENT_PROOF_BUCKET
+}
+
 export const PAYMENT_PROOF_REQUIRED_MSG = 'Bukti transfer wajib diunggah untuk pembayaran transfer.'
 
 /** True when `method` is a transfer that needs a proof image.
