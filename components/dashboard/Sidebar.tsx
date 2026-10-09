@@ -184,10 +184,11 @@ export function Sidebar({ role, branchId, allowedNavKeys, collapsed }: Props) {
 
       {/* Role badge */}
       {!collapsed && (
-        <div className="px-4 py-3 border-t border-sidebar-border shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-sidebar-border shrink-0">
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary capitalize">
             {role}
           </span>
+          <span className="text-[10px] font-mono text-foreground/40">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
         </div>
       )}
     </aside>
