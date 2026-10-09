@@ -55,3 +55,7 @@ export function channelLabel(channel: string | null | undefined): string {
   if (!channel) return '—'
   return CHANNEL_LABELS[channel] ?? channel.replace(/_/g, ' ')
 }
+
+/** Metode Bayar option on manual payment forms. Not a transactions.payment_method:
+ *  choosing it sends a DOKU link, and the paid link records TRANSACTION_METHOD. */
+export const ONLINE_PAYMENT = 'PEMBAYARAN ONLINE'

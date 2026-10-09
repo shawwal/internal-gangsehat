@@ -17,7 +17,8 @@ import { PAYMENT_PROOF_REQUIRED_MSG, isPaymentProofRequiredOnEdit, requiresPayme
 import { createPaymentLink } from '@/app/actions/paymentLinks'
 import { PaymentLinkPanel } from '@/components/payment-links/PaymentLinkPanel'
 import type { PaymentLinkView } from '@/components/payment-links/types'
-import type { PaymentLinkMethod } from '@/lib/doku/channels'
+import { ONLINE_PAYMENT, type PaymentLinkMethod } from '@/lib/doku/channels'
+import { OnlineMethodPicker } from '@/components/payment-links/OnlineMethodPicker'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface PaymentVisitInfo {
@@ -64,9 +65,8 @@ function fmtShortDate(d: string) {
   })
 }
 
-// Metode Bayar sentinel: not a transactions.payment_method — selecting it sends a
-// DOKU link instead, and the paid link records 'DOKU QRIS' / 'DOKU VA' itself.
-const ONLINE = 'ONLINE'
+// Metode Bayar sentinel (lib/doku/channels.ts): selecting it sends a DOKU link instead.
+const ONLINE = ONLINE_PAYMENT
 
 const inputCls = 'w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
@@ -540,30 +540,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                 </div>
               </div>
 
-              {isOnline && (
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { m: 'QRIS' as const, icon: QrCode, title: 'QRIS', sub: 'Scan di klinik / e-wallet' },
-                    { m: 'VA' as const, icon: Landmark, title: 'Virtual Account', sub: 'Transfer via bank' },
-                  ]).map(({ m, icon: Icon, title, sub }) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setOnlineMethod(m)}
-                      className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                        onlineMethod === m ? 'bg-primary/15 border-primary/50' : 'border-border hover:bg-white/5'
-                      }`}
-                    >
-                      <Icon size={18} className={onlineMethod === m ? 'text-primary' : 'text-muted-foreground'} />
-                      <span className={`text-sm font-semibold ${onlineMethod === m ? 'text-primary' : 'text-foreground'}`}>{title}</span>
-                      <span className="text-[11px] text-muted-foreground">{sub}</span>
-                    </button>
-                  ))}
-                  <p className="col-span-2 text-[11px] text-muted-foreground">
-                    Link DOKU dibuat dari nominal di atas. Pembayaran tercatat otomatis (beserta kwitansi) setelah pasien membayar.
-                  </p>
-                </div>
-              )}
+              {isOnline && <OnlineMethodPicker value={onlineMethod} onChange={setOnlineMethod} />}
 
               <PaymentProofField
                 method={paymentMethod}

@@ -13,6 +13,10 @@ import { TableSkeleton } from '@/components/ui/Skeleton'
 import { PaymentProofField, PaymentProofLink } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 import { PayOnlineButton } from '@/components/payment-links/PayOnlineButton'
+import { PayOnlineFlow } from '@/components/payment-links/PayOnlineFlow'
+import { OnlineMethodPicker } from '@/components/payment-links/OnlineMethodPicker'
+import type { PaymentLinkTarget } from '@/components/payment-links/types'
+import { ONLINE_PAYMENT, type PaymentLinkMethod } from '@/lib/doku/channels'
 
 const TYPE_LABELS: Record<TransactionType, string>    = { income: 'Pemasukan', expense: 'Pengeluaran' }
 const STATUS_BADGE: Record<TransactionStatus, string> = {
@@ -113,8 +117,16 @@ export default function TransactionsPage() {
     setForm((f) => ({
       ...f,
       category: f.type === 'income' ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0],
+      // Online links are for income only
+      payment_method: f.type !== 'income' && (f.payment_method as string) === ONLINE_PAYMENT ? 'TUNAI' : f.payment_method,
     }))
   }, [form.type])
+
+  // "PEMBAYARAN ONLINE": the form hands its values to the DOKU link dialog
+  // (payer picked there); the transaction is recorded when the link is paid.
+  const [onlineMethod, setOnlineMethod] = useState<PaymentLinkMethod>('QRIS')
+  const [onlineTarget, setOnlineTarget] = useState<PaymentLinkTarget | null>(null)
+  const isOnline = (form.payment_method as string) === ONLINE_PAYMENT
 
   const categories = form.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
   const isIncome   = form.type === 'income'
@@ -122,6 +134,19 @@ export default function TransactionsPage() {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (proofUploading) return
+    if (isOnline) {
+      setOnlineTarget({
+        method:      onlineMethod,
+        amount:      Number(form.amount) || null,
+        harga:       Number(form.harga) || null,
+        discount:    Number(form.discount) || null,
+        category:    form.category,
+        description: form.description || null,
+      })
+      setShowForm(false)
+      setForm(getDefaultForm())
+      return
+    }
     const needsProof = requiresPaymentProof(form.payment_method)
     if (needsProof && !form.receipt_url) { alert(PAYMENT_PROOF_REQUIRED_MSG); return }
     setSaving(true)
@@ -383,9 +408,12 @@ export default function TransactionsPage() {
                   <select value={form.payment_method} onChange={(e) => setForm((f) => ({ ...f, payment_method: e.target.value as PaymentMethod }))}
                     className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
                     {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                    {isIncome && <option value={ONLINE_PAYMENT}>{ONLINE_PAYMENT}</option>}
                   </select>
                 </div>
               </div>
+
+              {isOnline && <OnlineMethodPicker value={onlineMethod} onChange={setOnlineMethod} note="Lanjut pilih pasien / pembayar, lalu link DOKU dibuat. Transaksi tercatat otomatis setelah dibayar." />}
 
               <PaymentProofField
                 method={form.payment_method}
@@ -403,12 +431,20 @@ export default function TransactionsPage() {
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Batal</button>
                 <button type="submit" disabled={saving || proofUploading} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
-                  {saving ? 'Menyimpan...' : 'Simpan'}
+                  {saving ? 'Menyimpan...' : isOnline ? `Lanjut · Link ${onlineMethod}` : 'Simpan'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {onlineTarget && (
+        <PayOnlineFlow
+          target={onlineTarget}
+          onClose={() => setOnlineTarget(null)}
+          onChange={(l) => { if (l.status === 'paid') load() }}
+        />
       )}
 
       {rejectId && (

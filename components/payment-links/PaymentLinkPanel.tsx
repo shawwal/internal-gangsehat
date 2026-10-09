@@ -146,7 +146,7 @@ export function PaymentLinkPanel({ link: initial, onClose, onChange }: Props) {
 
   return (
     <ModalPortal>
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-3 sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[300] p-3 sm:p-4" onClick={onClose}>
       <div className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl max-h-[calc(100dvh-1.5rem)] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
           <div className="min-w-0">

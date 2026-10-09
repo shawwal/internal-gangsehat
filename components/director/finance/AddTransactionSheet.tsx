@@ -8,6 +8,10 @@ import { createTransactionManual } from '@/app/actions/transactions'
 import { todayJakartaISO } from '@/lib/utils'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
+import { ONLINE_PAYMENT, type PaymentLinkMethod } from '@/lib/doku/channels'
+import { OnlineMethodPicker } from '@/components/payment-links/OnlineMethodPicker'
+import { PayOnlineFlow } from '@/components/payment-links/PayOnlineFlow'
+import type { PaymentLinkTarget } from '@/components/payment-links/types'
 
 const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'TOKO', 'LAINNYA']
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
@@ -52,6 +56,10 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
   const [errMsg, setErrMsg] = useState('')
   const [mounted, setMounted] = useState(false)
   const [proofUploading, setProofUploading] = useState(false)
+  // "PEMBAYARAN ONLINE" (income only): hand the form to the DOKU link dialog;
+  // the transaction is recorded when the link is paid.
+  const [onlineMethod, setOnlineMethod] = useState<PaymentLinkMethod>('QRIS')
+  const [onlineTarget, setOnlineTarget] = useState<PaymentLinkTarget | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -66,6 +74,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
     setForm(f => ({
       ...f,
       category: f.type === 'income' ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0],
+      payment_method: f.type !== 'income' && f.payment_method === ONLINE_PAYMENT ? 'TUNAI' : f.payment_method,
     }))
   }, [form.type])
 
@@ -86,6 +95,8 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
   const amount     = parseRp(form.amount)
   const discount   = parseRp(form.discount)
   const sisa       = isIncome ? Math.max(harga - amount - discount, 0) : 0
+  const isOnline   = isIncome && form.payment_method === ONLINE_PAYMENT
+  const methods    = isIncome ? [...PAYMENT_METHODS, ONLINE_PAYMENT] : PAYMENT_METHODS
 
   function close() {
     if (status === 'saving') return
@@ -96,6 +107,19 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (status === 'saving' || proofUploading) return
+    if (isOnline) {
+      setOnlineTarget({
+        method:      onlineMethod,
+        amount:      amount || null,
+        harga:       harga || null,
+        discount:    discount || null,
+        category:    form.category,
+        description: form.description || null,
+        branchId:    form.branch_id || null,
+      })
+      close()
+      return
+    }
     const needsProof = requiresPaymentProof(form.payment_method)
     if (needsProof && !form.receipt_url) {
       setStatus('error')
@@ -334,7 +358,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
           <div>
             <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Metode Bayar</label>
             <div className="grid grid-cols-3 gap-2">
-              {PAYMENT_METHODS.map(m => (
+              {methods.map(m => (
                 <button
                   key={m}
                   type="button"
@@ -350,6 +374,8 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
               ))}
             </div>
           </div>
+
+          {isOnline && <OnlineMethodPicker value={onlineMethod} onChange={setOnlineMethod} note="Lanjut pilih pasien / pembayar, lalu link DOKU dibuat. Transaksi tercatat otomatis setelah dibayar." />}
 
           <PaymentProofField
             method={form.payment_method}
@@ -406,6 +432,8 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
               ? 'Tersimpan!'
               : status === 'saving'
               ? 'Menyimpan…'
+              : isOnline
+              ? `Lanjut · Link ${onlineMethod}`
               : isIncome
               ? 'Simpan Pemasukan'
               : 'Simpan Pengeluaran'
@@ -429,6 +457,14 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
 
       {/* Portal sheet */}
       {mounted && open && createPortal(sheet, document.body)}
+
+      {onlineTarget && (
+        <PayOnlineFlow
+          target={onlineTarget}
+          onClose={() => setOnlineTarget(null)}
+          onChange={(l) => { if (l.status === 'paid') router.refresh() }}
+        />
+      )}
     </>
   )
 }

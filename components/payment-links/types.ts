@@ -52,6 +52,10 @@ export interface PaymentLinkTarget {
   discount?: number | null
   category?: string | null
   description?: string | null
+  /** Preselected QRIS / VA (e.g. chosen on the host form's Metode Bayar). */
+  method?: 'QRIS' | 'VA' | null
+  /** Preselected branch (director forms). */
+  branchId?: string | null
 }
 
 /** A pending link past its expiry shows as expired before the next sync flips it. */

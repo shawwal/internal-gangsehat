@@ -45,8 +45,8 @@ interface Props {
  *  the admin only picks QRIS or VA. */
 export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Props) {
   const locked = !!(target.visitId || target.orderId)
-  const [method, setMethod] = useState<PaymentLinkMethod>('QRIS')
-  const [dueMinutes, setDueMinutes] = useState(DEFAULT_DUE_MINUTES.QRIS)
+  const [method, setMethod] = useState<PaymentLinkMethod>(target.method ?? 'QRIS')
+  const [dueMinutes, setDueMinutes] = useState(DEFAULT_DUE_MINUTES[target.method ?? 'QRIS'])
   const [amount, setAmount] = useState(target.amount ? String(target.amount) : '')
   const [category, setCategory] = useState(target.category ?? 'SESI KLINIK')
   const [description, setDescription] = useState(target.description ?? '')
@@ -56,7 +56,7 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
-  const [branchId, setBranchId] = useState('')
+  const [branchId, setBranchId] = useState(target.branchId ?? '')
   const [term, setTerm] = useState('')
   const [results, setResults] = useState<PatientPlain[]>([])
   const [searching, setSearching] = useState(false)
@@ -151,7 +151,7 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
 
   return (
     <ModalPortal>
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-3 sm:p-4" onClick={submitting ? undefined : onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[300] p-3 sm:p-4" onClick={submitting ? undefined : onClose}>
       <div className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl max-h-[calc(100dvh-1.5rem)] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
