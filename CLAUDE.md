@@ -92,6 +92,9 @@ Engine: `lib/payroll/engine.ts` (pure, tested against the Excel in `reference/`)
 ### PFOTM leaderboard (migration 096)
 `pfotm_point_rules` (metric_key, weight — never hardcode weights), `pfotm_periods` (is_locked, rules_snapshot), `pfotm_entries` (auto_metrics, override_metrics; metrics/total_points/rank/kpis frozen at lock). `patients.referred_by_staff_id` feeds Rujukan SM. Engine: `lib/pfotm/engine.ts`. Only director may edit/unlock a locked period.
 
+### Toko (shop) — migrations 068, 103
+Tables keep historical `griya_` names but serve **every branch** (scoped by branch_id): `griya_products` (stock), `griya_sales` (status completed/void/**pending_payment**, payment_method incl. `DOKU QRIS`/`DOKU VA`, transaction_id), `griya_sale_items`, `griya_stock_movements`. RPCs: `griya_create_sale(p jsonb)` (atomic stock decrement; optional `status`), `toko_move_sale_stock(sale, ±1, reason, user)` (atomic restock / re-deduct). Pages: `/toko` (fisioterapi, nav key `toko`) and `/griya-anak/toko` (Griya flag-gated) share `components/toko/` (`TokoWorkspace`, Kasir/Produk/Riwayat) and `app/actions/toko.ts`. Every completed sale = one income `transactions` row, category **TOKO** → all finance views. Online sale: sale `pending_payment` (stock reserved) + `payment_links.toko_sale_id`; settle (`lib/doku/settle.ts`) inserts the TOKO transaction and completes the sale on paid; expiry/cancel → `releaseTokoSale` voids + restocks.
+
 ### Marketing
 `campaigns`: branch_id, title, description, channel(social_media/whatsapp/email/flyer/other), start_date, end_date, budget, actual_spend, target_reach, actual_reach, status(draft/active/completed/cancelled), created_by
 
@@ -151,6 +154,7 @@ app/(dashboard)/
   finance/transactions/ reports/ payment-links/
   hr/staff/ attendance/ leave/
   marketing/campaigns/
+  toko/  (fisioterapi shop; griya-anak/toko = Griya shop)
   patients/[id]/visits/
   my-targets/  leave/  notifications/  settings/
   payroll/ (workspace) payroll/settings/   my-payslips/   pfotm/

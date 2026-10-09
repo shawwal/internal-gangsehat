@@ -514,7 +514,7 @@ export interface CreateTransactionManualInput {
 
 export async function createTransactionManual(
   input: CreateTransactionManualInput,
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; id?: string }> {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -602,7 +602,7 @@ export async function createTransactionManual(
   if (input.type === 'income') {
     await sendPaymentNotification(input.harga, input.category)
   }
-  return { error: null }
+  return { error: null, id: inserted?.id }
 }
 
 // ── Delete a transaction ──────────────────────────────────────────────────────

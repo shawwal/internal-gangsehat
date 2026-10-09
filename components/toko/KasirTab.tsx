@@ -2,13 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Search, Plus, Minus, Trash2, X } from 'lucide-react'
-import { fetchProducts, createSale, type GriyaProduct } from '@/app/actions/griyaToko'
+import { fetchProducts, createSale, type GriyaProduct } from '@/app/actions/toko'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { useToast } from '@/context/ToastContext'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
+import { ONLINE_PAYMENT, type PaymentLinkMethod } from '@/lib/doku/channels'
+import { OnlineMethodPicker } from '@/components/payment-links/OnlineMethodPicker'
+import { PaymentLinkPanel } from '@/components/payment-links/PaymentLinkPanel'
+import type { PaymentLinkView } from '@/components/payment-links/types'
+import type { TokoVariant } from './TokoWorkspace'
 
-const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
+const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR', ONLINE_PAYMENT]
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
 function rp(n: number) {
@@ -19,7 +24,7 @@ function todayIso() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export function KasirTab({ branchId }: { branchId: string }) {
+export function KasirTab({ branchId, variant = 'griya' }: { branchId: string; variant?: TokoVariant }) {
   const { showToast } = useToast()
   const [products, setProducts] = useState<GriyaProduct[]>([])
   const [q, setQ] = useState('')
@@ -36,6 +41,10 @@ export function KasirTab({ branchId }: { branchId: string }) {
   const [loading, setLoading] = useState(true)
   const [proofPath, setProofPath] = useState<string | null>(null)
   const [proofUploading, setProofUploading] = useState(false)
+  // PEMBAYARAN ONLINE: the sale waits (stock reserved) until the DOKU link is paid.
+  const [onlineMethod, setOnlineMethod] = useState<PaymentLinkMethod>('QRIS')
+  const [onlineLink, setOnlineLink] = useState<PaymentLinkView | null>(null)
+  const isOnline = method === ONLINE_PAYMENT
 
   useEffect(() => {
     setLoading(true)
@@ -77,22 +86,24 @@ export function KasirTab({ branchId }: { branchId: string }) {
   async function complete() {
     const items = Object.entries(cart).map(([product_id, qty]) => ({ product_id, qty }))
     if (items.length === 0 || proofUploading) return
-    const needsProof = requiresPaymentProof(method)
+    const needsProof = !isOnline && requiresPaymentProof(method)
     if (needsProof && !proofPath) { showToast(PAYMENT_PROOF_REQUIRED_MSG, 'error'); return }
     setSaving(true)
-    const { error } = await createSale({
+    const { error, link } = await createSale({
       branch_id: branchId,
       patient_id: patient?.id ?? null,
       items,
       discount: disc,
       payment_method: method,
-      amount_paid: amountPaid ? Number(amountPaid.replace(/\D/g, '')) : total,
+      amount_paid: isOnline ? total : amountPaid ? Number(amountPaid.replace(/\D/g, '')) : total,
       sale_date: saleDate,
       receipt_url: needsProof ? proofPath : null,
+      online: isOnline ? { method: onlineMethod } : null,
     })
     setSaving(false)
     if (error) { showToast(error, 'error'); return }
-    showToast('Penjualan tersimpan', 'success')
+    if (link) setOnlineLink(link)
+    else showToast('Penjualan tersimpan', 'success')
     // optimistic: drop the sold qty from local stock immediately
     setProducts((prev) => prev.map((p) => cart[p.id] ? { ...p, stock: p.stock - cart[p.id] } : p))
     setCart({}); setDiscount(''); setAmountPaid(''); setPatient(null); setPatientQ(''); setProofPath(null)
@@ -168,7 +179,7 @@ export function KasirTab({ branchId }: { branchId: string }) {
             </div>
           ) : (
             <div className="relative">
-              <input value={patientQ} onChange={(e) => setPatientQ(e.target.value)} placeholder="Kaitkan ke anak (opsional)" className={`${inputCls} text-xs`} />
+              <input value={patientQ} onChange={(e) => setPatientQ(e.target.value)} placeholder={variant === 'griya' ? 'Kaitkan ke anak (opsional)' : 'Kaitkan ke pasien (opsional)'} className={`${inputCls} text-xs`} />
               {patientResults.length > 0 && (
                 <div className="absolute z-10 mt-1 w-full rounded-xl border border-border bg-card shadow-lg max-h-40 overflow-y-auto">
                   {patientResults.map((r) => (
@@ -182,7 +193,11 @@ export function KasirTab({ branchId }: { branchId: string }) {
           <select value={method} onChange={(e) => setMethod(e.target.value)} className={`${inputCls} text-xs`}>
             {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
-          <input value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} placeholder={`Bayar (default ${rp(total)})`} inputMode="numeric" className={`${inputCls} text-xs`} />
+          {isOnline ? (
+            <OnlineMethodPicker value={onlineMethod} onChange={setOnlineMethod} note="Stok disisihkan sampai link dibayar. Penjualan & pemasukan tercatat otomatis setelah pembayaran." />
+          ) : (
+            <input value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} placeholder={`Bayar (default ${rp(total)})`} inputMode="numeric" className={`${inputCls} text-xs`} />
+          )}
           <input type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className={`${inputCls} text-xs`} />
           <PaymentProofField
             method={method}
@@ -198,9 +213,20 @@ export function KasirTab({ branchId }: { branchId: string }) {
         </div>
         <button onClick={complete} disabled={saving || proofUploading || total === 0}
           className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 cursor-pointer">
-          {saving ? 'Menyimpan...' : 'Selesaikan Penjualan'}
+          {saving ? 'Menyimpan...' : isOnline ? `Buat Link ${onlineMethod} · ${rp(total)}` : 'Selesaikan Penjualan'}
         </button>
       </div>
+
+      {onlineLink && (
+        <PaymentLinkPanel
+          link={onlineLink}
+          onClose={() => setOnlineLink(null)}
+          onChange={(l) => {
+            // Paid → the sale is completed server-side; cancelled/expired → stock came back.
+            if (l.status !== 'pending') fetchProducts(branchId, { activeOnly: true }).then(setProducts)
+          }}
+        />
+      )}
     </div>
   )
 }

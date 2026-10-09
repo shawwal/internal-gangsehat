@@ -12,6 +12,7 @@ export interface PaymentLinkView {
   visit_id: string | null
   order_id: string | null
   transaction_id: string | null
+  toko_sale_id: string | null
   method: PaymentLinkMethod
   amount: number
   category: string

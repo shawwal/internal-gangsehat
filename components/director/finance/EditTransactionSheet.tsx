@@ -8,7 +8,8 @@ import { updateTransaction, deleteTransaction } from '@/app/actions/transactions
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
-import { PAYMENT_PROOF_REQUIRED_MSG, isPaymentProofRequiredOnEdit, requiresPaymentProof } from '@/lib/paymentProof'
+import { PAYMENT_PROOF_REQUIRED_MSG, isGatewayPayment, isPaymentProofRequiredOnEdit, requiresPaymentProof } from '@/lib/paymentProof'
+import { PaymentProofLink } from '@/components/payments/PaymentProofField'
 
 const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'TOKO', 'LAINNYA']
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
@@ -466,6 +467,14 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
           {/* Payment method */}
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Metode Bayar</label>
+            {isGatewayPayment(transaction.payment_method) ? (
+              // Paid through DOKU: method, amount and receipt are gateway-verified.
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-xs">
+                <span className="font-semibold text-primary">{transaction.payment_method}</span>
+                <PaymentProofLink path={transaction.receipt_url} />
+                <span className="text-gray-400 ml-auto">dari pembayaran online, tidak bisa diubah</span>
+              </div>
+            ) : (
             <div className="grid grid-cols-3 gap-2">
               {PAYMENT_METHODS.map(m => (
                 <button
@@ -482,15 +491,16 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
                 </button>
               ))}
             </div>
+            )}
           </div>
 
-          <PaymentProofField
+          {!isGatewayPayment(transaction.payment_method) && <PaymentProofField
             method={payMethod}
             value={proofPath}
             onChange={setProofPath}
             onUploadingChange={setProofUploading}
             required={proofRequired}
-          />
+          />}
 
           {/* Description */}
           <div>

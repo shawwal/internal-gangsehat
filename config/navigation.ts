@@ -510,6 +510,16 @@ export const navigation: NavItem[] = [
     group: 'clinic',
   },
   {
+    // Fisioterapi shop — same tables/actions as Toko Griya Anak (griya-toko),
+    // any branch; not a griya- key, so it isn't gated by the Griya feature flag.
+    key: 'toko',
+    label: 'Toko',
+    href: '/toko',
+    icon: 'Store',
+    roles: ['director', 'manager', 'admin'],
+    group: 'clinic',
+  },
+  {
     key: 'home-visit',
     label: 'Home Visit',
     href: '/home-visit',

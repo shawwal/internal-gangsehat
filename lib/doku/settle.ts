@@ -9,7 +9,7 @@ import { logActivity } from '@/lib/activityLog'
 import { PAYMENT_RECEIPT_BUCKET } from '@/lib/paymentProof'
 import { getOrder, normalizeOrder, type GatewayMode, type NormalizedOrder } from './client'
 import { channelLabel, type PaymentLinkMethod } from './channels'
-import { buildIncomePayload, type OrderContext, type PaidLink, type VisitContext } from './payload'
+import { buildIncomePayload, buildTokoIncomePayload, type OrderContext, type PaidLink, type VisitContext } from './payload'
 import { buildReceiptPdf, receiptPath } from './receipt'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -24,12 +24,13 @@ export interface PaymentLinkRow extends PaidLink {
   transaction_id: string | null
   receipt_path: string | null
   customer_name: string
+  toko_sale_id: string | null
 }
 
 const LINK_COLS =
   'id, branch_id, patient_id, visit_id, order_id, method, amount, harga, discount, category, description, ' +
   'invoice_number, created_by, status, environment, expires_at, paid_at, payment_channel, doku_reference, ' +
-  'transaction_id, receipt_path, customer_name'
+  'transaction_id, receipt_path, customer_name, toko_sale_id'
 
 function toRow(r: Record<string, unknown>): PaymentLinkRow {
   return {
@@ -88,6 +89,7 @@ export async function syncPaymentLink(link: PaymentLinkRow, admin: Admin = creat
     await admin.from('payment_links')
       .update({ status: 'expired', raw_status: raw, updated_at: now })
       .eq('id', link.id).eq('status', 'pending')
+    if (link.toko_sale_id) await releaseTokoSale(link.toko_sale_id, admin)
     return { status: 'expired', changed: true }
   }
 
@@ -131,7 +133,74 @@ async function ensureSettlementArtifacts(link: PaymentLinkRow, admin: Admin, ord
   }
 }
 
+/**
+ * An online toko sale that will not be paid (link expired / cancelled): void it
+ * and give its reserved stock back. Conditional on 'pending_payment', so it runs
+ * once even if expiry and a manual cancel race.
+ */
+export async function releaseTokoSale(saleId: string, admin: Admin = createAdminClient(), userId: string | null = null) {
+  const { data: won } = await admin.from('griya_sales')
+    .update({ status: 'void' }).eq('id', saleId).eq('status', 'pending_payment').select('id').maybeSingle()
+  if (!won) return
+  const { error } = await admin.rpc('toko_move_sale_stock', { p_sale: saleId, p_direction: 1, p_reason: 'void', p_user: userId })
+  if (error) console.error('Toko release: restock failed', { saleId, error })
+}
+
+/** Paid toko link → TOKO income row, and the sale becomes completed. */
+async function insertTokoTransaction(link: PaymentLinkRow, admin: Admin, paidAt: string): Promise<string | null> {
+  const saleId = link.toko_sale_id!
+  const [{ data: sale }, { data: items }] = await Promise.all([
+    admin.from('griya_sales').select('branch_id, patient_id, total, status, transaction_id').eq('id', saleId).maybeSingle(),
+    admin.from('griya_sale_items').select('product_name, qty').eq('sale_id', saleId),
+  ])
+  if (!sale) {
+    console.error('DOKU toko link: sale not found', { invoice: link.invoice_number, saleId })
+    return null
+  }
+  if (sale.transaction_id) return sale.transaction_id as string
+
+  // Paid after the link expired / was cancelled: the sale was auto-voided and
+  // its stock released — take the items out again, the money is real.
+  if (sale.status === 'void') {
+    const { error } = await admin.rpc('toko_move_sale_stock', { p_sale: saleId, p_direction: -1, p_reason: 'sale', p_user: link.created_by })
+    if (error) console.error('Toko late payment: re-deduct failed', { saleId, error })
+  }
+
+  const payload = buildTokoIncomePayload(link, {
+    branch_id: sale.branch_id as string,
+    patient_id: (sale.patient_id as string | null) ?? null,
+    total: Number(sale.total),
+    items: (items ?? []).map((i) => ({ product_name: i.product_name as string, qty: Number(i.qty) })),
+  }, { paidAt, reference: link.doku_reference, channelLabel: channelLabel(link.payment_channel) })
+
+  const { data, error } = await admin.from('transactions').insert(payload).select('id').single()
+  if (error || !data) {
+    console.error('DOKU toko link: transaction insert failed', { invoice: link.invoice_number, error })
+    return null
+  }
+  await admin.from('griya_sales').update({
+    status: 'completed',
+    transaction_id: data.id,
+    payment_method: payload.payment_method,
+    payment_status: payload.payment_status,
+    amount_paid: link.amount,
+  }).eq('id', saleId)
+
+  await logActivity({
+    supabase: admin,
+    userId: link.created_by,
+    action: 'create',
+    resourceType: 'transaction',
+    resourceId: data.id,
+    resourceLabel: `TOKO — Rp${link.amount} (DOKU ${link.invoice_number})`,
+    branchId: payload.branch_id,
+    newValues: payload,
+  })
+  return data.id
+}
+
 async function insertTransaction(link: PaymentLinkRow, admin: Admin, paidAt: string): Promise<string | null> {
+  if (link.toko_sale_id) return insertTokoTransaction(link, admin, paidAt)
   let orderCtx: OrderContext | null = null
   let visitCtx: VisitContext | null = null
 

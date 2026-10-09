@@ -3,7 +3,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/activityLog'
 import { createTransactionManual } from '@/app/actions/transactions'
-import { PAYMENT_PROOF_BUCKET, isValidPaymentProofPath, paymentProofError } from '@/lib/paymentProof'
+import { PAYMENT_PROOF_BUCKET, isGatewayPayment, isValidPaymentProofPath, paymentProofError } from '@/lib/paymentProof'
+import { createPaymentLink } from '@/app/actions/paymentLinks'
+import { releaseTokoSale } from '@/lib/doku/settle'
+import { tokoSaleDescription } from '@/lib/doku/payload'
+import { TRANSACTION_METHOD, type PaymentLinkMethod } from '@/lib/doku/channels'
+import type { PaymentLinkView } from '@/components/payment-links/types'
+
+// Shop shared by every branch: Toko Griya Anak (/griya-anak/toko) and the
+// fisioterapi Toko (/toko). Tables keep their historical griya_ names (068);
+// they are scoped by branch_id only. Every completed sale is one income
+// transaction, category TOKO, so it flows into all finance views.
 
 const WRITE_ROLES = ['director', 'manager', 'admin']
 
@@ -159,12 +169,15 @@ export async function createSale(input: {
   notes?: string | null
   /** Bukti transfer path in `payment-proofs`; required for transfer methods. */
   receipt_url?: string | null
-}): Promise<{ error: string | null; saleId?: string }> {
+  /** Pay online instead: the sale waits as 'pending_payment' (stock reserved)
+   *  and is completed — with its income row — when DOKU confirms payment. */
+  online?: { method: PaymentLinkMethod } | null
+}): Promise<{ error: string | null; saleId?: string; link?: PaymentLinkView }> {
   const a = await requireWrite()
   if ('error' in a) return { error: a.error }
   if (input.items.length === 0) return { error: 'Keranjang kosong' }
   // Validate before the sale RPC so a missing proof never leaves a sale without its income row
-  const proofErr = paymentProofError(input.payment_method, input.receipt_url)
+  const proofErr = input.online ? null : paymentProofError(input.payment_method, input.receipt_url)
   if (proofErr) return { error: proofErr }
 
   // Compute total for the transaction + payment status
@@ -176,6 +189,7 @@ export async function createSale(input: {
   let subtotal = 0
   for (const it of input.items) subtotal += (priceMap.get(it.product_id)?.price ?? 0) * it.qty
   const total = Math.max(subtotal - input.discount, 0)
+  if (input.online) return createOnlineSale(a, input, input.online.method, total, priceMap)
   const paid = Math.min(input.amount_paid, total)
   const payStatus = paid >= total ? 'LUNAS' : 'DP'
 
@@ -196,9 +210,8 @@ export async function createSale(input: {
   if (rpcErr || !saleId) return { error: rpcErr?.message ?? 'Gagal menyimpan penjualan' }
 
   // Money side: one income transaction so it flows into finance reports
-  const first = priceMap.get(input.items[0].product_id)?.name ?? 'Barang'
-  const desc = input.items.length > 1 ? `${input.items.length} item · ${first} dll.` : `${first} ×${input.items[0].qty}`
-  const { error: txErr } = await createTransactionManual({
+  const desc = describeItems(input.items, priceMap)
+  const { error: txErr, id: txId } = await createTransactionManual({
     type: 'income',
     category: 'TOKO',
     harga: total,
@@ -213,19 +226,7 @@ export async function createSale(input: {
     branch_id: input.branch_id,
     receipt_url: input.receipt_url ?? null,
   })
-  if (!txErr) {
-    // link the transaction back (best-effort — find the just-created row)
-    const { data: tx } = await a.supabase
-      .from('transactions')
-      .select('id')
-      .eq('branch_id', input.branch_id)
-      .eq('category', 'TOKO')
-      .eq('transaction_date', input.sale_date)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (tx?.id) await a.supabase.from('griya_sales').update({ transaction_id: tx.id }).eq('id', saleId)
-  }
+  if (txId) await a.supabase.from('griya_sales').update({ transaction_id: txId }).eq('id', saleId)
 
   await logActivity({
     supabase: a.supabase, userId: a.userId, action: 'create', resourceType: 'griya_sale',
@@ -233,6 +234,62 @@ export async function createSale(input: {
     newValues: { total, paid, items: input.items.length },
   })
   return { error: txErr ? `Penjualan tersimpan, tapi gagal mencatat pemasukan: ${txErr}` : null, saleId: saleId as string }
+}
+
+function describeItems(items: SaleItemInput[], priceMap: Map<string, { price: number; name: string }>) {
+  return tokoSaleDescription(items.map((it) => ({ product_name: priceMap.get(it.product_id)?.name ?? 'Barang', qty: it.qty })))
+}
+
+/** Online sale: reserve stock as 'pending_payment', then create its DOKU link.
+ *  No transaction yet — lib/doku/settle.ts records it when the link is paid. */
+async function createOnlineSale(
+  a: AuthOk,
+  input: Parameters<typeof createSale>[0],
+  method: PaymentLinkMethod,
+  total: number,
+  priceMap: Map<string, { price: number; name: string }>,
+): Promise<{ error: string | null; saleId?: string; link?: PaymentLinkView }> {
+  if (total < 1000) return { error: 'Total minimal Rp1.000 untuk pembayaran online' }
+  const { data: saleId, error: rpcErr } = await a.supabase.rpc('griya_create_sale', {
+    p: {
+      branch_id: input.branch_id,
+      patient_id: input.patient_id ?? null,
+      sold_by: a.userId,
+      sale_date: input.sale_date,
+      discount: input.discount,
+      payment_method: TRANSACTION_METHOD[method],
+      payment_status: 'LUNAS',
+      amount_paid: total,
+      notes: input.notes ?? null,
+      items: input.items,
+      status: 'pending_payment',
+    },
+  })
+  if (rpcErr || !saleId) return { error: rpcErr?.message ?? 'Gagal menyimpan penjualan' }
+
+  const desc = describeItems(input.items, priceMap)
+  const { data: link, error: linkErr } = await createPaymentLink({
+    method,
+    amount: total,
+    harga: total,
+    category: 'TOKO',
+    description: desc,
+    patientId: input.patient_id ?? null,
+    branchId: input.branch_id,
+    tokoSaleId: saleId as string,
+  })
+  if (linkErr || !link) {
+    // No link → nothing can pay this sale; give the stock back.
+    await releaseTokoSale(saleId as string, undefined, a.userId)
+    return { error: linkErr ?? 'Gagal membuat link pembayaran' }
+  }
+
+  await logActivity({
+    supabase: a.supabase, userId: a.userId, action: 'create', resourceType: 'griya_sale',
+    resourceId: saleId as string, resourceLabel: `${desc} (online ${method})`, branchId: input.branch_id,
+    newValues: { total, method, status: 'pending_payment', invoice: link.invoice_number },
+  })
+  return { error: null, saleId: saleId as string, link }
 }
 
 export interface SaleRow {
@@ -282,20 +339,19 @@ export async function fetchSaleItems(saleId: string): Promise<SaleItemRow[]> {
   return (data ?? []) as SaleItemRow[]
 }
 
-/** Restore stock for a sale's line items (+movement rows). Best-effort. */
-async function restockFromSale(a: AuthOk, saleId: string, branchId: string) {
-  const { data: items } = await a.supabase
-    .from('griya_sale_items').select('product_id, qty').eq('sale_id', saleId)
-  for (const it of items ?? []) {
-    if (!it.product_id) continue
-    const { data: p } = await a.supabase.from('griya_products').select('stock').eq('id', it.product_id).single()
-    if (!p) continue
-    await a.supabase.from('griya_products').update({ stock: p.stock + it.qty }).eq('id', it.product_id)
-    await a.supabase.from('griya_stock_movements').insert({
-      product_id: it.product_id, branch_id: branchId, delta: it.qty,
-      reason: 'void', sale_id: saleId, created_by: a.userId,
-    })
-  }
+/** Restore stock for a sale's line items (+movement rows), atomically (migration 103). */
+async function restockFromSale(a: AuthOk, saleId: string) {
+  const { error } = await a.supabase.rpc('toko_move_sale_stock', {
+    p_sale: saleId, p_direction: 1, p_reason: 'void', p_user: a.userId,
+  })
+  if (error) console.error('Toko restock failed', { saleId, error })
+}
+
+/** A pending online sale being voided/deleted: stop its link from being paid. */
+async function cancelOpenLinks(a: AuthOk, saleId: string) {
+  await a.supabase.from('payment_links')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('toko_sale_id', saleId).eq('status', 'pending')
 }
 
 export async function voidSale(saleId: string): Promise<{ error: string | null }> {
@@ -307,9 +363,13 @@ export async function voidSale(saleId: string): Promise<{ error: string | null }
   if (!sale) return { error: 'Penjualan tidak ditemukan' }
   if (sale.status === 'void') return { error: 'Penjualan sudah dibatalkan' }
 
-  await restockFromSale(a, saleId, sale.branch_id as string)
+  if (sale.status === 'pending_payment') await cancelOpenLinks(a, saleId)
+  // Conditional flip: a link expiring at the same moment can't restock twice.
+  const { data: won } = await a.supabase.from('griya_sales')
+    .update({ status: 'void' }).eq('id', saleId).eq('status', sale.status).select('id').maybeSingle()
+  if (!won) return { error: 'Status penjualan berubah, muat ulang halaman.' }
+  await restockFromSale(a, saleId)
 
-  await a.supabase.from('griya_sales').update({ status: 'void' }).eq('id', saleId)
   if (sale.transaction_id) {
     await a.supabase.from('transactions')
       .update({ status: 'rejected', rejection_reason: 'Penjualan toko dibatalkan' })
@@ -330,11 +390,16 @@ export async function deleteSale(saleId: string): Promise<{ error: string | null
   if ('error' in a) return { error: a.error }
 
   const { data: sale } = await a.supabase
-    .from('griya_sales').select('branch_id, status, transaction_id').eq('id', saleId).single()
+    .from('griya_sales').select('branch_id, status, transaction_id, payment_method').eq('id', saleId).single()
   if (!sale) return { error: 'Penjualan tidak ditemukan' }
+  // Money that really arrived through DOKU keeps its record — void instead.
+  if (sale.status === 'completed' && isGatewayPayment(sale.payment_method as string | null)) {
+    return { error: 'Penjualan yang sudah dibayar online tidak bisa dihapus. Gunakan Batalkan.' }
+  }
 
-  if (sale.status === 'completed') {
-    await restockFromSale(a, saleId, sale.branch_id as string)
+  if (sale.status === 'pending_payment') await cancelOpenLinks(a, saleId)
+  if (sale.status === 'completed' || sale.status === 'pending_payment') {
+    await restockFromSale(a, saleId)
   }
   if (sale.transaction_id) {
     const { data: tx } = await a.supabase

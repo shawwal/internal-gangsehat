@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, Eye, EyeOff, PackagePlus, Check, X } from 'lucide
 import {
   fetchProducts, upsertProduct, toggleProductActive, deleteProduct, adjustStock,
   type GriyaProduct,
-} from '@/app/actions/griyaToko'
+} from '@/app/actions/toko'
 import { TableRowsSkeleton } from '@/components/ui/Skeleton'
 
 const CATEGORIES = ['BUKU', 'ALAT TERAPI', 'MERCHANDISE', 'LAINNYA']

@@ -17,7 +17,7 @@ import { createTransactionManual, deleteTransaction, updateTransaction } from '@
 import { Skeleton, SkeletonRegion, FormSkeleton, StatCardsSkeleton } from '@/components/ui/Skeleton'
 import { PaymentProofField, PaymentProofLink } from '@/components/payments/PaymentProofField'
 import { PaymentProofDialog } from '@/components/payments/PaymentProofDialog'
-import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
+import { PAYMENT_PROOF_REQUIRED_MSG, isGatewayPayment, requiresPaymentProof } from '@/lib/paymentProof'
 
 type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'admin' | null
 
@@ -456,7 +456,7 @@ export default function ClosingAdminPage() {
                           ) : (
                             <span className="font-medium text-foreground">{t.category}</span>
                           )}
-                          {canEditCategory ? (
+                          {canEditCategory && !isGatewayPayment(t.payment_method) ? (
                             <select
                               value={t.payment_method ?? PAYMENT_METHODS[0]}
                               disabled={savingTxId === t.id}

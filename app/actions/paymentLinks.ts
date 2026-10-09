@@ -7,7 +7,7 @@ import { logActivity } from '@/lib/activityLog'
 import { createCheckout, dokuEnabled, gatewayMode } from '@/lib/doku/client'
 import { DEFAULT_DUE_MINUTES, paymentMethodTypes, type PaymentLinkMethod } from '@/lib/doku/channels'
 import { newInvoiceNumber } from '@/lib/doku/invoice'
-import { findLink, syncPaymentLink } from '@/lib/doku/settle'
+import { findLink, releaseTokoSale, syncPaymentLink } from '@/lib/doku/settle'
 import { PAYMENT_RECEIPT_BUCKET } from '@/lib/paymentProof'
 import { orderBills, visitBill, type BillOption } from '@/lib/doku/bills'
 import { SERVICE_TO_CATEGORY } from '@/lib/serviceType'
@@ -21,7 +21,7 @@ const PAGE_SIZE = 10
 const VIEW_COLS =
   'id, created_at, branch_id, patient_id, visit_id, order_id, transaction_id, method, amount, harga, discount, ' +
   'category, description, customer_name, customer_phone, customer_email, invoice_number, checkout_url, environment, ' +
-  'status, expires_at, sent_at, sent_via, paid_at, payment_channel, doku_reference, receipt_path, ' +
+  'status, expires_at, sent_at, sent_via, paid_at, payment_channel, doku_reference, receipt_path, toko_sale_id, ' +
   'branches!branch_id(name), internal_profiles!created_by(full_name)'
 
 function toView(r: Record<string, unknown>): PaymentLinkView {
@@ -36,6 +36,7 @@ function toView(r: Record<string, unknown>): PaymentLinkView {
     visit_id: (r.visit_id as string | null) ?? null,
     order_id: (r.order_id as string | null) ?? null,
     transaction_id: (r.transaction_id as string | null) ?? null,
+    toko_sale_id: (r.toko_sale_id as string | null) ?? null,
     method: r.method as PaymentLinkMethod,
     amount: Number(r.amount),
     category: r.category as string,
@@ -96,6 +97,8 @@ export interface CreatePaymentLinkInput {
   /** Director only (no own branch); others are always scoped to their branch. */
   branchId?: string | null
   dueMinutes?: number | null
+  /** Pending toko sale this link pays for (settled into a TOKO transaction). */
+  tokoSaleId?: string | null
 }
 
 export async function createPaymentLink(
@@ -115,7 +118,12 @@ export async function createPaymentLink(
   // Resolve branch + patient from the most specific target.
   let branchId: string | null = null
   let patientId = input.patientId ?? null
-  if (input.visitId) {
+  if (input.tokoSaleId) {
+    const { data: sale } = await supabase.from('griya_sales').select('branch_id, patient_id, status').eq('id', input.tokoSaleId).maybeSingle()
+    if (!sale || sale.status !== 'pending_payment') return { data: null, error: 'Penjualan toko tidak ditemukan' }
+    branchId = sale.branch_id
+    patientId = patientId ?? sale.patient_id
+  } else if (input.visitId) {
     const { data: v } = await supabase.from('patient_visits').select('branch_id, patient_id').eq('id', input.visitId).maybeSingle()
     if (!v) return { data: null, error: 'Kunjungan tidak ditemukan' }
     branchId = v.branch_id
@@ -138,6 +146,7 @@ export async function createPaymentLink(
       customerPhone = customerPhone || pii.phone || null
     }
   }
+  if (!customerName && input.tokoSaleId) customerName = 'Pelanggan Toko'
   if (!customerName) return { data: null, error: 'Nama pembayar wajib diisi' }
 
   // Reuse an open link for the same target, method and amount (avoids duplicate
@@ -146,10 +155,11 @@ export async function createPaymentLink(
     .eq('status', 'pending').eq('method', input.method).eq('amount', amount).eq('environment', mode)
     .gt('expires_at', new Date(Date.now() + 5 * 60_000).toISOString())
     .not('checkout_url', 'is', null)
-  reuse = input.visitId ? reuse.eq('visit_id', input.visitId)
+  reuse = input.tokoSaleId ? reuse.eq('toko_sale_id', input.tokoSaleId)
+    : input.visitId ? reuse.eq('visit_id', input.visitId)
     : input.orderId ? reuse.eq('order_id', input.orderId)
-    : patientId ? reuse.eq('patient_id', patientId).is('visit_id', null).is('order_id', null)
-    : reuse.eq('customer_name', customerName).is('patient_id', null)
+    : patientId ? reuse.eq('patient_id', patientId).is('visit_id', null).is('order_id', null).is('toko_sale_id', null)
+    : reuse.eq('customer_name', customerName).is('patient_id', null).is('toko_sale_id', null)
   const { data: existing } = await reuse.order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (existing) return { data: toView(existing as unknown as Record<string, unknown>), error: null }
 
@@ -160,6 +170,7 @@ export async function createPaymentLink(
     patient_id: patientId,
     visit_id: input.visitId ?? null,
     order_id: input.orderId ?? null,
+    toko_sale_id: input.tokoSaleId ?? null,
     method: input.method,
     amount,
     harga: Math.max(Number(input.harga ?? 0) || 0, 0),
@@ -362,9 +373,12 @@ export async function markPaymentLinkSent(id: string, via: 'whatsapp' | 'copy' |
 export async function cancelPaymentLink(id: string): Promise<{ error: string | null }> {
   const auth = await requirePaymentRole()
   if ('error' in auth) return { error: auth.error ?? null }
-  const { error } = await auth.supabase.from('payment_links')
+  const { data: cancelled, error } = await auth.supabase.from('payment_links')
     .update({ status: 'cancelled', updated_at: new Date().toISOString() })
     .eq('id', id).eq('status', 'pending')
+    .select('toko_sale_id').maybeSingle()
+  // A cancelled toko link releases its sale's reserved stock.
+  if (cancelled?.toko_sale_id) await releaseTokoSale(cancelled.toko_sale_id, createAdminClient(), auth.user.id)
   if (!error) {
     await logActivity({
       supabase: auth.supabase, userId: auth.user.id, action: 'update', resourceType: 'payment_link',
@@ -372,6 +386,15 @@ export async function cancelPaymentLink(id: string): Promise<{ error: string | n
     })
   }
   return { error: error?.message ?? null }
+}
+
+/** Latest link of a toko sale (Riwayat → reopen the QR / share panel). */
+export async function getPaymentLinkForSale(saleId: string): Promise<PaymentLinkView | null> {
+  const auth = await requirePaymentRole()
+  if ('error' in auth) return null
+  const { data } = await auth.supabase.from('payment_links').select(VIEW_COLS)
+    .eq('toko_sale_id', saleId).order('created_at', { ascending: false }).limit(1).maybeSingle()
+  return data ? toView(data as unknown as Record<string, unknown>) : null
 }
 
 export async function getPaymentLinkReceiptUrl(id: string): Promise<string | null> {

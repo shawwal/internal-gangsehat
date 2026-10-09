@@ -13,7 +13,7 @@ import { SERVICE_TYPES, SERVICE_TO_CATEGORY, CATEGORY_TO_SERVICE_TYPE, getEffect
 import type { ServiceType } from '@/types'
 import { SettlePaymentDialog } from '@/components/finance/SettlePaymentDialog'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
-import { PAYMENT_PROOF_REQUIRED_MSG, isPaymentProofRequiredOnEdit, requiresPaymentProof } from '@/lib/paymentProof'
+import { PAYMENT_PROOF_REQUIRED_MSG, isGatewayPayment, isPaymentProofRequiredOnEdit, requiresPaymentProof } from '@/lib/paymentProof'
 import { createPaymentLink } from '@/app/actions/paymentLinks'
 import { PaymentLinkPanel } from '@/components/payment-links/PaymentLinkPanel'
 import type { PaymentLinkView } from '@/components/payment-links/types'
@@ -522,6 +522,8 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                     <option value="EDC BCA">EDC BCA</option>
                     <option value="TRANSFER BANK KALBAR">TRANSFER BANK KALBAR</option>
                     {!isEditing && <option value={ONLINE}>PEMBAYARAN ONLINE</option>}
+                    {/* Paid through DOKU: shown as-is (the server keeps gateway method/amount/receipt) */}
+                    {isGatewayPayment(paymentMethod) && <option value={paymentMethod}>{paymentMethod}</option>}
                   </select>
                 </div>
                 <div>

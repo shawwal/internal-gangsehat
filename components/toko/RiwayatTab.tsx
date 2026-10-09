@@ -1,11 +1,20 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { fetchSales, fetchSaleItems, voidSale, deleteSale, type SaleRow, type SaleItemRow } from '@/app/actions/griyaToko'
+import { fetchSales, fetchSaleItems, voidSale, deleteSale, type SaleRow, type SaleItemRow } from '@/app/actions/toko'
 import { Pagination } from '@/components/leave/Pagination'
 import { useToast } from '@/context/ToastContext'
 import { TableRowsSkeleton } from '@/components/ui/Skeleton'
 import { PaymentProofLink } from '@/components/payments/PaymentProofField'
+import { getPaymentLinkForSale } from '@/app/actions/paymentLinks'
+import { PaymentLinkPanel } from '@/components/payment-links/PaymentLinkPanel'
+import type { PaymentLinkView } from '@/components/payment-links/types'
+
+const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  completed:       { label: 'Selesai',        cls: 'bg-[#34C759]/15 text-[#34C759]' },
+  pending_payment: { label: 'Menunggu bayar', cls: 'bg-[#FFB35C]/15 text-[#FFB35C]' },
+  void:            { label: 'Dibatalkan',     cls: 'bg-destructive/15 text-destructive' },
+}
 
 const PAGE_SIZE = 10
 function rp(n: number) {
@@ -26,6 +35,13 @@ export function RiwayatTab({ branchId }: { branchId: string }) {
   const [page, setPage] = useState(1)
   const [openId, setOpenId] = useState<string | null>(null)
   const [items, setItems] = useState<SaleItemRow[]>([])
+  const [link, setLink] = useState<PaymentLinkView | null>(null)
+
+  async function openLink(saleId: string) {
+    const l = await getPaymentLinkForSale(saleId)
+    if (l) setLink(l)
+    else showToast('Link pembayaran tidak ditemukan', 'error')
+  }
 
   const reload = useCallback(() => {
     setLoading(true)
@@ -40,7 +56,8 @@ export function RiwayatTab({ branchId }: { branchId: string }) {
     fetchSaleItems(openId).then(setItems)
   }, [openId])
 
-  const total = rows.reduce((s, r) => s + (r.status === 'void' ? 0 : r.total), 0)
+  // Only money actually received — a pending online sale isn't income yet.
+  const total = rows.reduce((s, r) => s + (r.status === 'completed' ? r.total : 0), 0)
   const paged = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
@@ -75,11 +92,14 @@ export function RiwayatTab({ branchId }: { branchId: string }) {
                 </td>
                 <td className="px-4 py-2 text-right">{rp(s.total)}</td>
                 <td className="px-4 py-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${s.status === 'void' ? 'bg-destructive/15 text-destructive' : 'bg-[#34C759]/15 text-[#34C759]'}`}>
-                    {s.status === 'void' ? 'Dibatalkan' : 'Selesai'}
+                  <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${(STATUS_BADGE[s.status] ?? STATUS_BADGE.completed).cls}`}>
+                    {(STATUS_BADGE[s.status] ?? STATUS_BADGE.completed).label}
                   </span>
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
+                  {s.payment_method?.startsWith('DOKU') && (
+                    <button onClick={() => openLink(s.id)} className="text-xs text-primary mr-3 cursor-pointer">Link</button>
+                  )}
                   <button onClick={() => setOpenId(openId === s.id ? null : s.id)} className="text-xs text-primary cursor-pointer">Detail</button>
                   {s.status !== 'void' && (
                     <button
@@ -109,6 +129,14 @@ export function RiwayatTab({ branchId }: { branchId: string }) {
       </div>
 
       <Pagination page={page} pageSize={PAGE_SIZE} total={rows.length} onPage={setPage} />
+
+      {link && (
+        <PaymentLinkPanel
+          link={link}
+          onClose={() => setLink(null)}
+          onChange={(l) => { if (l.status !== 'pending') reload() }}
+        />
+      )}
     </div>
   )
 }
