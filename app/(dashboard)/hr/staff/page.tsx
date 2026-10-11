@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Search, UserPlus, AlertTriangle } from 'lucide-react'
+import { Search, UserPlus, AlertTriangle, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activityLog'
+import { changeStaffRoleByHR } from '@/app/actions/change-user-role'
+import { ROLE_LABELS, STAFF_ROLES } from '@/components/users/types'
 import type { UserRole } from '@/types'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 
@@ -14,11 +16,6 @@ interface StaffRow {
   role: UserRole
   is_active: boolean
   branch_id: string | null
-}
-
-const ROLE_LABELS: Record<string, string> = {
-  director: 'Direktur', finance: 'Keuangan', hr: 'HR', marketing: 'Marketing',
-  sport_massage_therapist: 'Terapis Sport Massage',
 }
 
 export default function HRStaffPage() {
@@ -32,11 +29,14 @@ export default function HRStaffPage() {
   const [inviteRole, setInviteRole]   = useState<UserRole>('marketing')
   const [saving, setSaving]     = useState(false)
   const [message, setMessage]   = useState('')
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
 
   async function load() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+    setCurrentUserId(user.id)
 
     const { data: self } = await supabase
       .from('internal_profiles')
@@ -86,6 +86,14 @@ export default function HRStaffPage() {
     }
     setSaving(false)
     setTimeout(() => setMessage(''), 4000)
+  }
+
+  async function changeRole(s: StaffRow, role: UserRole) {
+    setSavingId(s.id)
+    const result = await changeStaffRoleByHR(s.id, role)
+    setSavingId(null)
+    if (result.error) alert(result.error)
+    load()
   }
 
   async function toggleActive(s: StaffRow) {
@@ -158,7 +166,23 @@ export default function HRStaffPage() {
                     <p className="text-xs text-muted-foreground">{s.email}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-xs bg-muted px-2 py-0.5 rounded-full">{ROLE_LABELS[s.role] ?? s.role}</span>
+                    {s.id === currentUserId || s.role === 'director' ? (
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full">{ROLE_LABELS[s.role] ?? s.role}</span>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={s.role}
+                          disabled={savingId === s.id}
+                          onChange={(e) => changeRole(s, e.target.value as UserRole)}
+                          className="text-xs border border-border rounded-lg px-2 py-1 bg-input focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {STAFF_ROLES.map((r) => (
+                            <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                          ))}
+                        </select>
+                        {savingId === s.id && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.is_active ? 'bg-chart-4/15 text-chart-4' : 'bg-muted text-muted-foreground'}`}>
