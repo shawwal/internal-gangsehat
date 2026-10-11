@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Search, UserPlus, AlertTriangle, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activityLog'
-import { changeStaffRoleByHR } from '@/app/actions/change-user-role'
+import { changeStaffRoleByHR, inviteStaffByHR } from '@/app/actions/change-user-role'
 import { ROLE_LABELS, STAFF_ROLES } from '@/components/users/types'
 import type { UserRole } from '@/types'
 import { TableSkeleton } from '@/components/ui/Skeleton'
@@ -26,7 +26,8 @@ export default function HRStaffPage() {
   const [noBranchWarning, setNoBranchWarning] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole]   = useState<UserRole>('marketing')
+  const [inviteName, setInviteName]   = useState('')
+  const [inviteRole, setInviteRole]   = useState<UserRole>('therapist')
   const [saving, setSaving]     = useState(false)
   const [message, setMessage]   = useState('')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -72,20 +73,19 @@ export default function HRStaffPage() {
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    const supabase = createClient()
-    const { error } = await (supabase.auth as any).admin?.inviteUserByEmail
-      ? (supabase.auth as any).admin.inviteUserByEmail(inviteEmail)
-      : supabase.auth.signInWithOtp({ email: inviteEmail })
-
-    if (!error) {
-      setMessage(`Undangan terkirim ke ${inviteEmail}`)
-      setInviteEmail('')
-      setShowInvite(false)
-    } else {
-      setMessage('Gagal mengirim undangan.')
-    }
+    const result = await inviteStaffByHR(inviteEmail, inviteName, inviteRole)
     setSaving(false)
-    setTimeout(() => setMessage(''), 4000)
+    if (result.error) {
+      setMessage(result.error)
+    } else {
+      setMessage(`Undangan terkirim ke ${inviteEmail} sebagai ${ROLE_LABELS[inviteRole]}`)
+      setInviteEmail('')
+      setInviteName('')
+      setInviteRole('therapist')
+      setShowInvite(false)
+      load()
+    }
+    setTimeout(() => setMessage(''), 5000)
   }
 
   async function changeRole(s: StaffRow, role: UserRole) {
@@ -208,6 +208,12 @@ export default function HRStaffPage() {
             <h2 className="text-base font-semibold text-foreground mb-4">Undang Staff</h2>
             <form onSubmit={handleInvite} className="space-y-3">
               <div>
+                <label className="block text-xs font-medium text-foreground mb-1">Nama Lengkap</label>
+                <input required value={inviteName} onChange={(e) => setInviteName(e.target.value)}
+                  placeholder="Nama lengkap staff"
+                  className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+              <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Email</label>
                 <input required type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="email@example.com"
@@ -217,10 +223,11 @@ export default function HRStaffPage() {
                 <label className="block text-xs font-medium text-foreground mb-1">Role</label>
                 <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as UserRole)}
                   className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
-                  {(['finance','hr','marketing'] as UserRole[]).map((r) => (
+                  {STAFF_ROLES.filter((r) => r !== 'non-staff').map((r) => (
                     <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                   ))}
                 </select>
+                <p className="text-[11px] text-muted-foreground mt-1">Staff baru otomatis masuk ke cabang {branchName ?? 'Anda'}.</p>
               </div>
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setShowInvite(false)} className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Batal</button>
