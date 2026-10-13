@@ -37,6 +37,10 @@ export interface AffiliateRow {
   referralCount: number
   /** …of which approved into patients. */
   referralApproved: number
+  /** Sum of non-void entries in affiliate_points. */
+  points: number
+  /** Referred customers whose payment was confirmed (non-void referral awards). */
+  paidCustomers: number
 }
 
 export interface AffiliateStats {
@@ -45,6 +49,7 @@ export interface AffiliateStats {
   approved: number
   rejected: number
   inactive: number
+  totalPoints: number
 }
 
 async function getDirector(): Promise<{ id: string } | null> {
@@ -69,7 +74,7 @@ export async function fetchAffiliatesPage(params: {
   search: string
   page: number
 }): Promise<{ error: string | null; rows: AffiliateRow[]; total: number; stats: AffiliateStats }> {
-  const empty = { rows: [], total: 0, stats: { total: 0, pending: 0, approved: 0, rejected: 0, inactive: 0 } }
+  const empty = { rows: [], total: 0, stats: { total: 0, pending: 0, approved: 0, rejected: 0, inactive: 0, totalPoints: 0 } }
   const director = await getDirector()
   if (!director) return { ...empty, error: 'Tidak memiliki akses.' }
 
@@ -95,13 +100,14 @@ export async function fetchAffiliatesPage(params: {
   if (!term) query = query.range(from, to)
   else query = query.limit(1000)
 
-  const [{ data, count, error }, total, pending, approved, rejected, inactive] = await Promise.all([
+  const [{ data, count, error }, total, pending, approved, rejected, inactive, allPoints] = await Promise.all([
     query,
     countFor(),
     countFor('pending'),
     countFor('approved'),
     countFor('rejected'),
     countFor('inactive'),
+    admin.from('affiliate_points').select('points').eq('is_void', false),
   ])
   if (error) return { ...empty, error: error.message }
 
@@ -125,6 +131,8 @@ export async function fetchAffiliatesPage(params: {
     reviewerName: a.internal_profiles?.full_name ?? null,
     referralCount: 0,
     referralApproved: 0,
+    points: 0,
+    paidCustomers: 0,
   }))
 
   let filteredTotal = count ?? 0
@@ -151,9 +159,22 @@ export async function fetchAffiliatesPage(params: {
       r.referralCount++
       if (ref.status === 'approved') r.referralApproved++
     }
+
+    const { data: pts } = await admin
+      .from('affiliate_points')
+      .select('affiliate_id, kind, points')
+      .eq('is_void', false)
+      .in('affiliate_id', rows.map((r) => r.id))
+    for (const p of pts ?? []) {
+      const r = byId.get(p.affiliate_id)
+      if (!r) continue
+      r.points += p.points
+      if (p.kind === 'referral') r.paidCustomers++
+    }
   }
 
-  return { error: null, rows, total: filteredTotal, stats: { total, pending, approved, rejected, inactive } }
+  const totalPoints = (allPoints.data ?? []).reduce((sum, p) => sum + p.points, 0)
+  return { error: null, rows, total: filteredTotal, stats: { total, pending, approved, rejected, inactive, totalPoints } }
 }
 
 /** Valid transitions: pending → approved/rejected, approved ↔ inactive. */
@@ -213,6 +234,198 @@ export async function deleteAffiliate(id: string): Promise<{ error: string | nul
   await logActivity({
     supabase: await createClient(), userId: director.id, action: 'delete', resourceType: 'affiliate',
     resourceId: id, resourceLabel: before.code, oldValues: { code: before.code, status: before.status },
+  })
+  return { error: null }
+}
+
+// ── Points ──────────────────────────────────────────────────────────────────
+// Referral awards are written by the DB (supabase/104-affiliate-points.sql) when
+// a referred patient's first income transaction is confirmed, at the rate in
+// affiliate_settings. Directors adjust here; every change is logged.
+
+export interface AffiliatePointEntry {
+  id: string
+  createdAt: string
+  kind: 'referral' | 'adjustment'
+  points: number
+  /** Rate at award time (referral only). */
+  defaultPoints: number | null
+  note: string | null
+  isVoid: boolean
+  patientName: string | null
+  patientNoRm: string | null
+  transactionDate: string | null
+  transactionAmount: number | null
+  createdByName: string | null
+  editedByName: string | null
+  editedAt: string | null
+}
+
+export async function getAffiliatePointsRate(): Promise<{ error: string | null; rate: number }> {
+  const director = await getDirector()
+  if (!director) return { error: 'Tidak memiliki akses.', rate: 0 }
+  const { data, error } = await createAdminClient()
+    .from('affiliate_settings').select('points_per_customer').eq('id', true).maybeSingle()
+  if (error) return { error: error.message, rate: 0 }
+  return { error: null, rate: data?.points_per_customer ?? 10 }
+}
+
+export async function setAffiliatePointsRate(rate: number): Promise<{ error: string | null }> {
+  const director = await getDirector()
+  if (!director) return { error: 'Tidak memiliki akses.' }
+  if (!Number.isInteger(rate) || rate < 0) return { error: 'Poin harus bilangan bulat ≥ 0.' }
+
+  const admin = createAdminClient()
+  const { data: before } = await admin
+    .from('affiliate_settings').select('points_per_customer').eq('id', true).maybeSingle()
+  const { error } = await admin.from('affiliate_settings').upsert({
+    id: true, points_per_customer: rate, updated_by: director.id, updated_at: new Date().toISOString(),
+  })
+  if (error) return { error: error.message }
+
+  await logActivity({
+    supabase: await createClient(), userId: director.id, action: 'update', resourceType: 'affiliate_points',
+    resourceLabel: 'Poin per pelanggan',
+    oldValues: { points_per_customer: before?.points_per_customer ?? null },
+    newValues: { points_per_customer: rate },
+  })
+  return { error: null }
+}
+
+export async function fetchAffiliatePoints(
+  affiliateId: string,
+): Promise<{ error: string | null; entries: AffiliatePointEntry[] }> {
+  const director = await getDirector()
+  if (!director) return { error: 'Tidak memiliki akses.', entries: [] }
+
+  const { data, error } = await createAdminClient()
+    .from('affiliate_points')
+    .select(`
+      id, created_at, kind, points, default_points, note, is_void, edited_at,
+      patients!patient_id(encrypted_name, no_rm),
+      transactions!transaction_id(transaction_date, amount),
+      creator:internal_profiles!created_by(full_name),
+      editor:internal_profiles!edited_by(full_name)
+    `)
+    .eq('affiliate_id', affiliateId)
+    .order('created_at', { ascending: false })
+  if (error) return { error: error.message, entries: [] }
+
+  type One<T> = T | T[] | null
+  const one = <T,>(v: One<T>): T | null => (Array.isArray(v) ? v[0] ?? null : v)
+
+  const entries: AffiliatePointEntry[] = (data ?? []).map((e) => {
+    const patient = one(e.patients as One<{ encrypted_name: string; no_rm: string | null }>)
+    const tx = one(e.transactions as One<{ transaction_date: string; amount: number }>)
+    return {
+      id: e.id,
+      createdAt: e.created_at,
+      kind: e.kind,
+      points: e.points,
+      defaultPoints: e.default_points,
+      note: e.note,
+      isVoid: e.is_void,
+      patientName: patient ? safeDecrypt(patient.encrypted_name) || null : null,
+      patientNoRm: patient?.no_rm ?? null,
+      transactionDate: tx?.transaction_date ?? null,
+      transactionAmount: tx?.amount ?? null,
+      createdByName: one(e.creator as One<{ full_name: string }>)?.full_name ?? null,
+      editedByName: one(e.editor as One<{ full_name: string }>)?.full_name ?? null,
+      editedAt: e.edited_at,
+    }
+  })
+  return { error: null, entries }
+}
+
+async function loadEntry(id: string) {
+  const { data } = await createAdminClient()
+    .from('affiliate_points')
+    .select('id, affiliate_id, kind, points, default_points, note, is_void, affiliates!affiliate_id(code)')
+    .eq('id', id)
+    .maybeSingle()
+  if (!data) return null
+  const aff = data.affiliates as { code: string } | { code: string }[] | null
+  return { ...data, code: (Array.isArray(aff) ? aff[0]?.code : aff?.code) ?? '' }
+}
+
+export async function updateAffiliatePointEntry(
+  id: string,
+  points: number,
+  note: string,
+): Promise<{ error: string | null }> {
+  const director = await getDirector()
+  if (!director) return { error: 'Tidak memiliki akses.' }
+  if (!Number.isInteger(points)) return { error: 'Poin harus bilangan bulat.' }
+
+  const before = await loadEntry(id)
+  if (!before) return { error: 'Data poin tidak ditemukan.' }
+  const cleanNote = note.trim()
+  if (before.kind === 'referral' && points < 0) return { error: 'Poin rujukan tidak boleh negatif.' }
+  if (before.kind === 'adjustment' && points === 0) return { error: 'Poin penyesuaian tidak boleh 0.' }
+  if (!cleanNote && (before.kind === 'adjustment' || points !== before.default_points)) {
+    return { error: 'Catatan wajib diisi saat mengubah poin.' }
+  }
+
+  const { error } = await createAdminClient()
+    .from('affiliate_points')
+    .update({ points, note: cleanNote || null, edited_by: director.id, edited_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { error: error.message }
+
+  await logActivity({
+    supabase: await createClient(), userId: director.id, action: 'update', resourceType: 'affiliate_points',
+    resourceId: id, resourceLabel: before.code,
+    oldValues: { points: before.points, note: before.note },
+    newValues: { points, note: cleanNote || null },
+  })
+  return { error: null }
+}
+
+export async function setAffiliatePointVoid(id: string, isVoid: boolean): Promise<{ error: string | null }> {
+  const director = await getDirector()
+  if (!director) return { error: 'Tidak memiliki akses.' }
+
+  const before = await loadEntry(id)
+  if (!before) return { error: 'Data poin tidak ditemukan.' }
+
+  const { error } = await createAdminClient()
+    .from('affiliate_points')
+    .update({ is_void: isVoid, edited_by: director.id, edited_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { error: error.message }
+
+  await logActivity({
+    supabase: await createClient(), userId: director.id, action: 'update', resourceType: 'affiliate_points',
+    resourceId: id, resourceLabel: before.code,
+    oldValues: { is_void: before.is_void }, newValues: { is_void: isVoid },
+  })
+  return { error: null }
+}
+
+export async function addAffiliateAdjustment(
+  affiliateId: string,
+  points: number,
+  note: string,
+): Promise<{ error: string | null }> {
+  const director = await getDirector()
+  if (!director) return { error: 'Tidak memiliki akses.' }
+  if (!Number.isInteger(points) || points === 0) return { error: 'Poin harus bilangan bulat selain 0.' }
+  if (!note.trim()) return { error: 'Catatan wajib diisi.' }
+
+  const admin = createAdminClient()
+  const { data: aff } = await admin.from('affiliates').select('code').eq('id', affiliateId).maybeSingle()
+  if (!aff) return { error: 'Afiliasi tidak ditemukan.' }
+
+  const { data, error } = await admin
+    .from('affiliate_points')
+    .insert({ affiliate_id: affiliateId, kind: 'adjustment', points, note: note.trim(), created_by: director.id })
+    .select('id')
+    .single()
+  if (error) return { error: error.message }
+
+  await logActivity({
+    supabase: await createClient(), userId: director.id, action: 'create', resourceType: 'affiliate_points',
+    resourceId: data.id, resourceLabel: aff.code, newValues: { points, note: note.trim() },
   })
   return { error: null }
 }

@@ -1,16 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CheckCircle2, Clock, Handshake, Loader2, Search, Users, X, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock, Handshake, Loader2, Pencil, Search, Star, Users, X, XCircle } from 'lucide-react'
 import {
   deleteAffiliate,
   fetchAffiliatesPage,
+  getAffiliatePointsRate,
+  setAffiliatePointsRate,
   setAffiliateStatus,
   type AffiliateRow,
   type AffiliateStats,
   type AffiliateStatus,
 } from '@/app/actions/affiliates'
 import { AffiliateCard, AFFILIATE_STATUS_LABEL } from '@/components/affiliates/AffiliateCard'
+import { AffiliatePointsDialog } from '@/components/affiliates/AffiliatePointsDialog'
 import { Pagination } from '@/components/leave/Pagination'
 
 const PAGE_SIZE = 10
@@ -44,12 +47,16 @@ const SUCCESS_TEXT: Record<Exclude<AffiliateStatus, 'pending'>, string> = {
 export default function AffiliatesPage() {
   const [rows, setRows]       = useState<AffiliateRow[]>([])
   const [total, setTotal]     = useState(0)
-  const [stats, setStats]     = useState<AffiliateStats>({ total: 0, pending: 0, approved: 0, rejected: 0, inactive: 0 })
+  const [stats, setStats]     = useState<AffiliateStats>({ total: 0, pending: 0, approved: 0, rejected: 0, inactive: 0, totalPoints: 0 })
   const [status, setStatus]   = useState<StatusFilter>('pending')
   const [search, setSearch]   = useState('')
   const [page, setPage]       = useState(1)
   const [loading, setLoading] = useState(true)
   const [notice, setNotice]   = useState<Notice | null>(null)
+  const [pointsFor, setPointsFor] = useState<AffiliateRow | null>(null)
+  const [rate, setRate]           = useState<number | null>(null)
+  const [rateDraft, setRateDraft] = useState<string | null>(null)
+  const [savingRate, setSavingRate] = useState(false)
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
@@ -65,6 +72,19 @@ export default function AffiliatesPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
   useEffect(() => () => { if (searchRef.current) clearTimeout(searchRef.current) }, [])
+  useEffect(() => { getAffiliatePointsRate().then(res => { if (!res.error) setRate(res.rate) }) }, [])
+
+  async function saveRate() {
+    if (rateDraft === null) return
+    setSavingRate(true)
+    const next = Number(rateDraft)
+    const { error } = await setAffiliatePointsRate(next)
+    setSavingRate(false)
+    if (error) { setNotice({ kind: 'error', text: error }); return }
+    setRate(next)
+    setRateDraft(null)
+    setNotice({ kind: 'success', text: `Poin per pelanggan diubah ke ${next}. Berlaku untuk pembayaran yang dikonfirmasi berikutnya.` })
+  }
 
   function handleSearch(value: string) {
     if (searchRef.current) clearTimeout(searchRef.current)
@@ -92,10 +112,51 @@ export default function AffiliatesPage() {
         </h1>
         <p className="text-sm text-muted-foreground">
           Pendaftaran afiliasi dari gangsehat.com/daftar/afiliasi — kode hanya bisa dipakai pasien setelah disetujui.
+          Afiliasi mendapat poin saat pembayaran pertama pasien rujukannya dikonfirmasi.
         </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+          <Star size={14} className="text-primary" />
+          <span className="text-muted-foreground">Poin per pelanggan:</span>
+          {rateDraft === null ? (
+            <button
+              onClick={() => setRateDraft(String(rate ?? 10))}
+              disabled={rate === null}
+              className="inline-flex items-center gap-1 font-semibold text-foreground hover:text-primary disabled:opacity-60"
+              title="Ubah poin per pelanggan"
+            >
+              {rate ?? '…'} <Pencil size={12} />
+            </button>
+          ) : (
+            <>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={rateDraft}
+                onChange={e => setRateDraft(e.target.value)}
+                className="w-20 px-2 py-1 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+                autoFocus
+              />
+              <button
+                onClick={saveRate}
+                disabled={savingRate || rateDraft.trim() === ''}
+                className="px-3 py-1 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 disabled:opacity-60"
+              >
+                {savingRate ? 'Menyimpan...' : 'Simpan'}
+              </button>
+              <button
+                onClick={() => setRateDraft(null)}
+                disabled={savingRate}
+                className="px-3 py-1 rounded-lg border border-border text-xs font-medium hover:bg-muted"
+              >
+                Batal
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard label="Total Afiliasi" value={stats.total}
           icon={<Users size={18} className="text-foreground" />} color="bg-muted" />
         <StatCard label="Menunggu" value={stats.pending}
@@ -105,6 +166,8 @@ export default function AffiliatesPage() {
         <StatCard label="Ditolak / Nonaktif" value={stats.rejected + stats.inactive}
           icon={<XCircle size={18} className="text-destructive" />}
           color="bg-destructive/10" />
+        <StatCard label="Total Poin" value={stats.totalPoints}
+          icon={<Star size={18} className="text-primary" />} color="bg-primary/10" />
       </div>
 
       {notice && (
@@ -161,12 +224,16 @@ export default function AffiliatesPage() {
       ) : (
         <div className="space-y-3">
           {rows.map(row => (
-            <AffiliateCard key={row.id} row={row} onStatus={handleStatus} onDelete={handleDelete} />
+            <AffiliateCard key={row.id} row={row} onStatus={handleStatus} onDelete={handleDelete} onPoints={setPointsFor} />
           ))}
         </div>
       )}
 
       <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
+
+      {pointsFor && (
+        <AffiliatePointsDialog affiliate={pointsFor} onClose={() => setPointsFor(null)} onChanged={load} />
+      )}
     </div>
   )
 }

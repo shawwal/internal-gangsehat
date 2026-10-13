@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import {
-  Ban, Check, Clock, Copy, CreditCard, Mail, MapPin, Phone, RotateCcw, Trash2, Users, XCircle,
+  Ban, Check, Clock, Copy, CreditCard, Mail, MapPin, Phone, RotateCcw, Star, Trash2, Users, XCircle,
 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import type { AffiliateRow, AffiliateStatus } from '@/app/actions/affiliates'
@@ -35,9 +35,10 @@ interface Props {
   row: AffiliateRow
   onStatus: (id: string, status: Action, note?: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
+  onPoints: (row: AffiliateRow) => void
 }
 
-export function AffiliateCard({ row, onStatus, onDelete }: Props) {
+export function AffiliateCard({ row, onStatus, onDelete, onPoints }: Props) {
   const [rejecting, setRejecting]   = useState(false)
   const [rejectNote, setRejectNote] = useState('')
   const [loading, setLoading]       = useState(false)
@@ -124,8 +125,15 @@ export function AffiliateCard({ row, onStatus, onDelete }: Props) {
         <div className="rounded-xl bg-muted/50 px-3 py-2 space-y-0.5">
           <p className="flex items-center gap-1 font-medium text-foreground"><Users size={11} /> Rujukan</p>
           <p className="text-muted-foreground">
-            {row.referralCount} pendaftaran · {row.referralApproved} jadi pasien
+            {row.referralCount} pendaftaran · {row.referralApproved} jadi pasien · {row.paidCustomers} sudah bayar
           </p>
+          <button
+            onClick={() => onPoints(row)}
+            title="Lihat & ubah poin"
+            className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+          >
+            <Star size={11} /> {row.points} poin
+          </button>
           {(row.pekerjaan || row.socialMedia) && (
             <p className="text-muted-foreground truncate">
               {[row.pekerjaan, row.socialMedia].filter(Boolean).join(' · ')}

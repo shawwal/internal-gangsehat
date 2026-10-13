@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activityLog'
-import { STAFF_ROLES } from '@/components/users/types'
+import { STAFF_ROLES, HR_ASSIGNABLE_ROLES } from '@/components/users/types'
 import type { UserRole } from '@/components/users/types'
 
 /**
@@ -77,7 +77,7 @@ export async function changeStaffRoleByHR(targetId: string, newRole: UserRole) {
   if (caller?.role !== 'hr') return { error: 'Akses ditolak.' }
   if (!caller.branch_id) return { error: 'Akun Anda belum terhubung ke cabang.' }
   if (targetId === user.id) return { error: 'Tidak dapat mengubah peran akun sendiri.' }
-  if (!STAFF_ROLES.includes(newRole)) return { error: 'Peran tidak valid.' }
+  if (!HR_ASSIGNABLE_ROLES.includes(newRole)) return { error: 'HR hanya dapat menetapkan peran Terapis, Staff, atau Admin.' }
 
   const admin = createAdminClient()
 
@@ -142,7 +142,7 @@ export async function inviteStaffByHR(email: string, fullName: string, newRole: 
   const cleanName  = fullName.trim()
   if (!cleanEmail) return { error: 'Email wajib diisi.' }
   if (cleanName.length < 2) return { error: 'Nama minimal 2 karakter.' }
-  if (newRole === 'non-staff' || !STAFF_ROLES.includes(newRole)) return { error: 'Peran tidak valid.' }
+  if (!HR_ASSIGNABLE_ROLES.includes(newRole)) return { error: 'HR hanya dapat mengundang sebagai Terapis, Staff, atau Admin.' }
 
   const admin = createAdminClient()
 

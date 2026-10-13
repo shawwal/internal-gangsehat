@@ -5,7 +5,7 @@ import { Search, UserPlus, AlertTriangle, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activityLog'
 import { changeStaffRoleByHR, inviteStaffByHR } from '@/app/actions/change-user-role'
-import { ROLE_LABELS, STAFF_ROLES } from '@/components/users/types'
+import { ROLE_LABELS, HR_ASSIGNABLE_ROLES } from '@/components/users/types'
 import type { UserRole } from '@/types'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 
@@ -22,6 +22,7 @@ export default function HRStaffPage() {
   const [staff, setStaff]       = useState<StaffRow[]>([])
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
+  const [roleFilter, setRoleFilter] = useState<UserRole | ''>('')
   const [branchName, setBranchName]       = useState<string | null>(null)
   const [noBranchWarning, setNoBranchWarning] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
@@ -65,10 +66,11 @@ export default function HRStaffPage() {
 
   useEffect(() => { load() }, [])
 
-  const filtered = staff.filter((s) =>
-    s.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    s.email.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = staff.filter((s) => {
+    if (roleFilter && s.role !== roleFilter) return false
+    const q = search.toLowerCase()
+    return s.full_name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q)
+  })
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault()
@@ -126,6 +128,16 @@ export default function HRStaffPage() {
               className="w-full pl-8 pr-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
           </div>
           {!noBranchWarning && (
+            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as UserRole | '')}
+              className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
+              <option value="">Semua Role</option>
+              <option value="non-staff">{ROLE_LABELS['non-staff']}</option>
+              {HR_ASSIGNABLE_ROLES.map((r) => (
+                <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+              ))}
+            </select>
+          )}
+          {!noBranchWarning && (
             <button onClick={() => setShowInvite(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
               <UserPlus size={16} /> Undang
@@ -171,12 +183,15 @@ export default function HRStaffPage() {
                     ) : (
                       <div className="flex items-center gap-1.5">
                         <select
-                          value={s.role}
+                          value={HR_ASSIGNABLE_ROLES.includes(s.role) ? s.role : ''}
                           disabled={savingId === s.id}
-                          onChange={(e) => changeRole(s, e.target.value as UserRole)}
+                          onChange={(e) => { if (e.target.value) changeRole(s, e.target.value as UserRole) }}
                           className="text-xs border border-border rounded-lg px-2 py-1 bg-input focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {STAFF_ROLES.map((r) => (
+                          {!HR_ASSIGNABLE_ROLES.includes(s.role) && (
+                            <option value="">{ROLE_LABELS[s.role] ?? s.role} — pilih peran…</option>
+                          )}
+                          {HR_ASSIGNABLE_ROLES.map((r) => (
                             <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                           ))}
                         </select>
@@ -223,7 +238,7 @@ export default function HRStaffPage() {
                 <label className="block text-xs font-medium text-foreground mb-1">Role</label>
                 <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as UserRole)}
                   className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
-                  {STAFF_ROLES.filter((r) => r !== 'non-staff').map((r) => (
+                  {HR_ASSIGNABLE_ROLES.map((r) => (
                     <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                   ))}
                 </select>

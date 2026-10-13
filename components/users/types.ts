@@ -48,6 +48,11 @@ export const ROLE_COLOR: Record<UserRole, string> = {
 
 export const STAFF_ROLES: UserRole[] = ['finance', 'hr', 'marketing', 'staff', 'therapist', 'manager', 'admin', 'non-staff', 'sport_massage_therapist']
 
+// Roles HR may invite into — or assign to — staff in their own branch.
+// Deliberately narrow: HR onboards clinical/operational staff, never finance,
+// marketing, manager, HR, or director.
+export const HR_ASSIGNABLE_ROLES: UserRole[] = ['therapist', 'staff', 'admin']
+
 export function formatDate(d: string) {
   return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
 }
