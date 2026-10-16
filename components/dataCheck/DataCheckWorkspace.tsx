@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ClipboardCheck, ExternalLink, Loader2, Sparkles, UserCheck } from 'lucide-react'
+import { ClipboardCheck, ExternalLink, Loader2, Search, Sparkles, UserCheck } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import {
   applyTherapistSuggestions, exportDataCheck, getDataCheck, setDataCheckTherapist,
@@ -16,6 +16,7 @@ import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
+import { SearchSelect, type SearchSelectOption } from '@/components/ui/SearchSelect'
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/
 
@@ -54,11 +55,13 @@ export function DataCheckWorkspace() {
   const to = ISO.test(sp.get('to') ?? '') ? sp.get('to')! : def.to
   const branchParam = sp.get('branch')
   const page = Math.max(1, Number(sp.get('page')) || 1)
+  const q = sp.get('q') ?? ''
+  const [qDraft, setQDraft] = useState(q)
 
   const [data, setData] = useState<DataCheckData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
-  const queryKey = JSON.stringify([branchParam, from, to, tab, issue, page, reloadKey])
+  const queryKey = JSON.stringify([branchParam, from, to, tab, issue, q, page, reloadKey])
   const [loadedKey, setLoadedKey] = useState<string | null>(null)
   const loading = loadedKey !== queryKey
   const [picks, setPicks] = useState<Record<string, string>>({})
@@ -77,7 +80,7 @@ export function DataCheckWorkspace() {
 
   useEffect(() => {
     let cancelled = false
-    getDataCheck({ branchId: branchParam, from, to, tab, issue, page }).then((res) => {
+    getDataCheck({ branchId: branchParam, from, to, tab, issue, q, page }).then((res) => {
       if (cancelled) return
       setLoadedKey(queryKey)
       if (!res.ok) { setError(res.error); return }
@@ -86,7 +89,14 @@ export function DataCheckWorkspace() {
       setPicks({})
     })
     return () => { cancelled = true }
-  }, [branchParam, from, to, tab, issue, page, reloadKey, queryKey])
+  }, [branchParam, from, to, tab, issue, q, page, reloadKey, queryKey])
+
+  // Debounced search → URL (so it survives reloads / can be shared).
+  useEffect(() => {
+    if (qDraft.trim() === q) return
+    const t = setTimeout(() => setParams({ q: qDraft.trim() || null }), 350)
+    return () => clearTimeout(t)
+  }, [qDraft, q, setParams])
 
   const reload = () => setReloadKey((k) => k + 1)
 
@@ -115,7 +125,7 @@ export function DataCheckWorkspace() {
   }
 
   async function handleExport() {
-    const res = await exportDataCheck({ branchId: data?.branchId ?? branchParam, from, to, tab, issue })
+    const res = await exportDataCheck({ branchId: data?.branchId ?? branchParam, from, to, tab, issue, q })
     if (!res.ok) { showToast(res.error, 'error'); return }
     const issueLabel = (k: string) => (issues as Record<string, string>)[k] ?? k
     const cols: ExportColumn<DataCheckRow>[] = [
@@ -156,14 +166,16 @@ export function DataCheckWorkspace() {
 
       <div className="rounded-2xl border border-border bg-card p-3 sm:p-4 flex flex-wrap items-center gap-3">
         {data && data.branches.length > 1 && (
-          <select
-            className="h-9 px-3 rounded-xl border border-border bg-background text-sm"
-            value={data.branchId}
-            onChange={(e) => setParams({ branch: e.target.value })}
-            aria-label="Cabang"
-          >
-            {data.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
+          <div className="w-60">
+            <SearchSelect
+              options={data.branches.map((b) => ({ value: b.id, label: b.name }))}
+              value={data.branchId}
+              onChange={(v) => setParams({ branch: v })}
+              searchPlaceholder="Cari cabang…"
+              ariaLabel="Cabang"
+              className="w-full h-9 flex items-center gap-2 px-3 rounded-xl border border-border bg-background text-sm text-left"
+            />
+          </div>
         )}
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Tanggal</span>
@@ -171,6 +183,16 @@ export function DataCheckWorkspace() {
             from={from}
             to={to}
             onChange={(f, t) => setParams({ from: f || def.from, to: t || def.to })}
+          />
+        </div>
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <input
+            value={qDraft}
+            onChange={(e) => setQDraft(e.target.value)}
+            placeholder="Cari pasien, kategori, Fisio…"
+            className="w-full h-9 pl-8 pr-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            aria-label="Cari"
           />
         </div>
         <div className="ml-auto">
@@ -286,20 +308,17 @@ export function DataCheckWorkspace() {
                           {r.issues.includes('tanpa_fisio') && (
                             <div className="space-y-1">
                               <div className="flex items-center gap-1.5">
-                                <select
-                                  value={picks[r.id] ?? r.suggestion?.staffId ?? ''}
-                                  onChange={(e) => setPicks((p) => ({ ...p, [r.id]: e.target.value }))}
-                                  className="h-8 max-w-[170px] px-2 rounded-lg border border-border bg-background text-xs"
-                                  aria-label={`Fisio untuk ${r.patientName}`}
-                                >
-                                  <option value="">Pilih Fisio…</option>
-                                  {data.therapists.filter((t) => !t.inactive).map((t) => (
-                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                  ))}
-                                  {r.suggestion && !data.therapists.some((t) => t.id === r.suggestion!.staffId) && (
-                                    <option value={r.suggestion.staffId}>{r.suggestion.name}</option>
-                                  )}
-                                </select>
+                                <div className="w-[170px]">
+                                  <SearchSelect
+                                    options={fisioOptions(data, r)}
+                                    value={picks[r.id] ?? r.suggestion?.staffId ?? ''}
+                                    onChange={(v) => setPicks((p) => ({ ...p, [r.id]: v }))}
+                                    placeholder="Pilih Fisio…"
+                                    searchPlaceholder="Cari nama Fisio…"
+                                    ariaLabel={`Fisio untuk ${r.patientName}`}
+                                    className="w-full h-8 flex items-center gap-1.5 px-2 rounded-lg border border-border bg-background text-xs text-left"
+                                  />
+                                </div>
                                 <button
                                   onClick={() => assign(r)}
                                   disabled={!!saving}
@@ -348,6 +367,15 @@ export function DataCheckWorkspace() {
       )}
     </div>
   )
+}
+
+/** Active therapists of the branch, the suggestion first (marked), even if not in the list. */
+function fisioOptions(data: DataCheckData, r: DataCheckRow): SearchSelectOption[] {
+  const s = r.suggestion
+  const rest = data.therapists
+    .filter((t) => !t.inactive && t.id !== s?.staffId)
+    .map((t) => ({ value: t.id, label: t.name }))
+  return s ? [{ value: s.staffId, label: s.name, hint: 'saran' }, ...rest] : rest
 }
 
 function IssueChip({ active, label, count, onClick }: { active: boolean; label: string; count: number | undefined; onClick: () => void }) {

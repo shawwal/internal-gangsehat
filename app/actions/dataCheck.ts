@@ -57,6 +57,8 @@ export interface DataCheckParams {
   tab: DataCheckTab
   /** '' = any issue */
   issue: string
+  /** search: patient name, category / service, therapist name ('' = all) */
+  q?: string
   page: number
 }
 
@@ -174,6 +176,28 @@ function countIssues(flagged: Flagged<unknown>[], keys: string[]) {
 const filterRows = <T>(flagged: Flagged<T>[], issue: string) =>
   flagged.filter((f) => (issue ? f.issues.includes(issue) : f.issues.length > 0))
 
+/** Text search over patient name (decrypted), category / service and current therapist. */
+async function searchRows<T extends TxRaw | VisitRaw>(flagged: Flagged<T>[], q: string | undefined): Promise<Flagged<T>[]> {
+  const term = (q ?? '').trim().toLowerCase()
+  if (!term) return flagged
+  const staffIds = [...new Set(flagged.map((f) => f.therapistId).filter((x): x is string => !!x))]
+  const [names, { data: staff }] = await Promise.all([
+    resolvePatientNames(flagged.map((f) => f.row.patient_id)),
+    staffIds.length
+      ? createAdminClient().from('internal_profiles').select('id, full_name, nickname').in('id', staffIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string; nickname: string | null }[] }),
+  ])
+  const staffText = new Map((staff ?? []).map((p) => [p.id, `${p.full_name} ${p.nickname ?? ''}`.toLowerCase()]))
+  return flagged.filter((f) => {
+    const label = 'category' in f.row ? f.row.category : f.row.service_type
+    return [
+      f.row.patient_id ? names.get(f.row.patient_id) : '',
+      label,
+      f.therapistId ? staffText.get(f.therapistId) : '',
+    ].some((x) => (x ?? '').toLowerCase().includes(term))
+  })
+}
+
 async function toRows(tab: DataCheckTab, branchId: string, flagged: Flagged<TxRaw | VisitRaw>[]): Promise<DataCheckRow[]> {
   const patientIds = flagged.map((f) => f.row.patient_id)
   const staffIds = [...new Set(flagged.map((f) => f.therapistId).filter((x): x is string => !!x))]
@@ -234,7 +258,7 @@ export async function getDataCheck(params: DataCheckParams): Promise<Result<Data
     listTherapistOptions(actor.supabase, branchId),
   ])
   const source = (params.tab === 'kunjungan' ? visits : txs) as Flagged<TxRaw | VisitRaw>[]
-  const filtered = filterRows(source, params.issue).sort(byDateDesc)
+  const filtered = (await searchRows(filterRows(source, params.issue), params.q)).sort(byDateDesc)
   const page = Math.max(1, Math.min(params.page, Math.ceil(filtered.length / PAGE_SIZE) || 1))
   const rows = await toRows(params.tab, branchId, filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE))
 
@@ -266,7 +290,7 @@ export async function exportDataCheck(params: Omit<DataCheckParams, 'page'>): Pr
   const source = (params.tab === 'kunjungan'
     ? await flagVisits(branchId, params.from, params.to)
     : await flagTransactions(actor.supabase, branchId, params.from, params.to)) as Flagged<TxRaw | VisitRaw>[]
-  return ok(await toRows(params.tab, branchId, filterRows(source, params.issue).sort(byDateDesc)))
+  return ok(await toRows(params.tab, branchId, (await searchRows(filterRows(source, params.issue), params.q)).sort(byDateDesc)))
 }
 
 // ── Fixing the therapist ────────────────────────────────────────────────────

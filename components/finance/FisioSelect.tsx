@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { getSaleFisioDefaults } from '@/app/actions/dataCheck'
 import type { TherapistOption } from '@/lib/finance/therapists'
+import { SearchSelect } from '@/components/ui/SearchSelect'
 
 interface Props {
   patientId: string | null
@@ -29,6 +30,7 @@ export function FisioSelect({
 }: Props) {
   const [options, setOptions] = useState<TherapistOption[] | null>(null)
   const [hint, setHint] = useState<string | null>(null)
+  const [suggestedId, setSuggestedId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -43,6 +45,7 @@ export function FisioSelect({
       setHint(preferred
         ? 'Terapis jadwal ini — ubah bila penjualnya fisio lain.'
         : suggestion ? `Terakhir menangani pasien: ${suggestion.name} (${suggestion.visitDate})` : null)
+      setSuggestedId(preferred ?? suggestion?.staffId ?? null)
       const pick = preferred ?? suggestion?.staffId
       if (pick && !value) onChange(pick)
     })
@@ -56,16 +59,16 @@ export function FisioSelect({
       <label className={labelClassName ?? DEFAULT_LABEL}>
         Fisio {required && <span className="text-destructive">*</span>}
       </label>
-      <select
+      <SearchSelect
+        options={options === null ? null : options.map((t) => ({ value: t.id, label: t.name, hint: t.id === suggestedId ? 'saran' : undefined }))}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={options === null}
-        className={selectClassName ?? DEFAULT_SELECT}
-        aria-label="Fisio"
-      >
-        <option value="">{options === null ? 'Memuat…' : required ? 'Pilih Fisio…' : '— Tidak ditentukan —'}</option>
-        {(options ?? []).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-      </select>
+        onChange={onChange}
+        placeholder={required ? 'Pilih Fisio…' : '— Tidak ditentukan —'}
+        emptyOptionLabel={required ? undefined : '— Tidak ditentukan —'}
+        searchPlaceholder="Cari nama Fisio…"
+        ariaLabel="Fisio"
+        className={`${selectClassName ?? DEFAULT_SELECT} flex items-center gap-2 text-left`}
+      />
       <p className="text-[11px] text-muted-foreground mt-1">
         {hint ?? 'Penjualan dihitung ke Fisio ini (PFOTM, Progress Target, laporan per terapis).'}
       </p>
