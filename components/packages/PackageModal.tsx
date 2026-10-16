@@ -6,6 +6,7 @@ import { createPatientPackage, updatePatientPackage } from '@/app/actions/packag
 import { createTransactionManual, fetchLayananHarga } from '@/app/actions/transactions'
 import type { CreateTransactionManualInput } from '@/app/actions/transactions'
 import { DEFAULT_FORM, INPUT_CLS, LABEL_CLS } from './types'
+import { FisioSelect } from '@/components/finance/FisioSelect'
 import { PACKAGE_CATEGORIES } from '@/lib/serviceType'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
@@ -42,6 +43,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
   const [error, setError]   = useState<string | null>(null)
   const [proofPath, setProofPath] = useState<string | null>(null)
   const [proofUploading, setProofUploading] = useState(false)
+  const [fisioId, setFisioId] = useState('')
 
   const sessionCount = form.jenis_paket === 'P1' ? 5 : 10
 
@@ -73,6 +75,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
     // Check before the package is created, so a missing proof never leaves an unpaid package
     const needsProof = !isEdit && requiresPaymentProof(form.payment_method)
     if (needsProof && !proofPath) { setError(PAYMENT_PROOF_REQUIRED_MSG); return }
+    if (!isEdit && !fisioId) { setError('Pilih Fisio yang menjual / menangani paket ini.'); return }
     setSaving(true)
     setError(null)
 
@@ -115,6 +118,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
         patient_id:       patientId,
         package_id:       pkgId,
         branch_id:        branchId,
+        fisio_id:         fisioId,
         receipt_url:      needsProof ? proofPath : null,
       }
       const { error: txErr } = await createTransactionManual(txInput)
@@ -220,6 +224,16 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
 
           {!isEdit && (
             <>
+              <FisioSelect
+                patientId={patientId}
+                branchId={branchId}
+                value={fisioId}
+                onChange={setFisioId}
+                required
+                selectClassName={INPUT_CLS}
+                labelClassName={LABEL_CLS}
+              />
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={LABEL_CLS}>Harga Paket (Rp)</label>

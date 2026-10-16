@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { CalendarDays, Plus, Trash2, X } from 'lucide-react'
 import { createBulkVisits } from '@/app/actions/jadwal'
+import { FisioSelect } from '@/components/finance/FisioSelect'
 import type { PatientPackage } from './types'
 import type { Shift } from '@/lib/shifts'
 
@@ -42,6 +43,9 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
   const [sessions, setSessions] = useState<SessionRow[]>(() => buildInitialSessions(Math.max(pkg.remaining_sessions - pkg.scheduled_sessions, 1)))
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState<string | null>(null)
+  // Therapist for every session — pre-filled with the patient's last therapist;
+  // left empty, the sessions show up in Cek Data → Kunjungan → Tanpa Fisio.
+  const [fisioId, setFisioId]   = useState('')
 
   const serviceType = pkg.jenis_paket?.startsWith('P')
     ? (pkg.package_name.toLowerCase().includes('visit') ? 'PAKET VISIT' : 'PAKET TERAPI')
@@ -73,7 +77,7 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
     const inputs = sessions.map((s) => ({
       patient_id:         patientId,
       branch_id:          branchId,
-      attending_staff_id: null,
+      attending_staff_id: fisioId || null,
       visit_date:         s.date,
       visit_time:         null,
       service_type:       serviceType,
@@ -119,6 +123,9 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
 
         {/* Body */}
         <form id="session-wizard-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5">
+          <div className="mb-4">
+            <FisioSelect patientId={patientId} branchId={branchId} value={fisioId} onChange={setFisioId} />
+          </div>
           <div className="space-y-2">
             <div className="grid grid-cols-[2rem_1fr_6rem_7rem_1.5rem] gap-2 pb-1 border-b border-border">
               <span className="text-xs font-medium text-muted-foreground">#</span>

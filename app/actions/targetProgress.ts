@@ -9,13 +9,18 @@ import type { CategoryKey, TransactionForProgress } from '@/components/targetPro
 import type { TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
 import { deriveAdminStatus, fetchPackagePositions } from '@/lib/internal/visitInsights'
 import { getVisitFormRoute } from '@/lib/visitRouting'
+import { resolveTherapistNames } from '@/lib/finance/therapists'
 
 export interface TargetProgressDetailRow {
   id: string
+  patientId: string | null
   patientName: string
+  noRm: string | null
   serviceType: string | null
   visitTime: string | null
   fisioName: string
+  // Attending therapist (visit) / attributed therapist (transaction) — filter key.
+  therapistId: string | null
   // Nickname ("panggilan") when set, else full name — used by the Excel export.
   fisioNickname?: string
   packageName?: string
@@ -31,6 +36,7 @@ export interface TargetProgressDetailRow {
 interface VisitRow {
   id: string
   patient_id: string
+  attending_staff_id: string | null
   visit_date: string
   visit_time: string | null
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
@@ -54,6 +60,8 @@ function statusKunjunganLabel(v: VisitRow, formStatus: string | undefined): stri
 interface TransactionRow {
   id: string
   patient_id: string | null
+  visit_id: string | null
+  fisio_id: string | null
   category: string
   harga: number | null
   discount: number | null
@@ -138,7 +146,7 @@ export async function fetchTargetProgressDetail(
     const { data, error } = await db
       .from('transactions')
       .select(
-        'id, patient_id, category, harga, discount, amount, payment_method, ' +
+        'id, patient_id, visit_id, fisio_id, category, harga, discount, amount, payment_method, ' +
         'payment_status, status, description, penjamin, transaction_date, receipt_url',
       )
       .eq('branch_id', branchId)
@@ -154,23 +162,28 @@ export async function fetchTargetProgressDetail(
       .sort((a, b) => a.transaction_date.localeCompare(b.transaction_date))
 
     const patientIds = [...new Set(rows.map((row) => row.patient_id).filter((id): id is string => !!id))]
-    const { data: patients } = await db
-      .from('patients')
-      .select('id, encrypted_name')
-      .in('id', patientIds)
-    const nameById = new Map((patients ?? []).map((p) => [p.id, p.encrypted_name]))
+    const [{ data: patients }, therapists] = await Promise.all([
+      db.from('patients').select('id, encrypted_name, no_rm').in('id', patientIds),
+      // fisio_id, else the linked visit's attending staff — same rule as the finance pages.
+      resolveTherapistNames(supabase, rows),
+    ])
+    const patientById = new Map((patients ?? []).map((p) => [p.id as string, p]))
 
     return rows.map((row) => {
-      const encName = row.patient_id ? nameById.get(row.patient_id) ?? '' : ''
-      const name = encName
-        ? decryptPatientPII({ encrypted_name: encName, encrypted_phone: '' }).name
+      const patient = row.patient_id ? patientById.get(row.patient_id) : undefined
+      const name = patient?.encrypted_name
+        ? decryptPatientPII({ encrypted_name: patient.encrypted_name, encrypted_phone: '' }).name
         : '—'
+      const therapist = therapists.get(row.id)
       return {
         id: row.id,
+        patientId: row.patient_id,
         patientName: name || '—',
+        noRm: (patient?.no_rm as string | null) ?? null,
         serviceType: row.category,
         visitTime: null,
-        fisioName: '—',
+        fisioName: therapist?.name ?? '—',
+        therapistId: therapist?.id ?? null,
         visitDate: row.transaction_date,
         tx: canReadTx ? {
           id: row.id,
@@ -197,7 +210,7 @@ export async function fetchTargetProgressDetail(
   const { data, error } = await supabase
     .from('patient_visits')
     .select(
-      'id, patient_id, visit_date, visit_time, kehadiran, status, service_type, package_id, ' +
+      'id, patient_id, attending_staff_id, visit_date, visit_time, kehadiran, status, service_type, package_id, ' +
       'diagnosis, treatment, regio, internal_profiles!attending_staff_id(full_name, nickname)',
     )
     .eq('branch_id', branchId)
@@ -221,9 +234,9 @@ export async function fetchTargetProgressDetail(
   const patientIds = [...new Set(rows.map((row) => row.patient_id))]
   const { data: patients } = await supabase
     .from('patients')
-    .select('id, encrypted_name')
+    .select('id, encrypted_name, no_rm')
     .in('id', patientIds)
-  const nameById = new Map((patients ?? []).map((p) => [p.id, p.encrypted_name]))
+  const patientById = new Map((patients ?? []).map((p) => [p.id as string, p]))
 
   // Layanan / pertemuan ke / status kunjungan — derived the same way as the
   // Jadwal List page (app/actions/jadwalList.ts) so both views agree.
@@ -258,16 +271,19 @@ export async function fetchTargetProgressDetail(
     const layanan = row.package_id
       ? `PAKET ${jenisPaket?.replace(/^P/, '') ?? ''}`.trim()
       : row.service_type
-    const encName = nameById.get(row.patient_id) ?? ''
-    const name = encName
-      ? decryptPatientPII({ encrypted_name: encName, encrypted_phone: '' }).name
+    const patient = patientById.get(row.patient_id)
+    const name = patient?.encrypted_name
+      ? decryptPatientPII({ encrypted_name: patient.encrypted_name, encrypted_phone: '' }).name
       : '—'
     return {
       id: row.id,
+      patientId: row.patient_id,
       patientName: name || '—',
+      noRm: (patient?.no_rm as string | null) ?? null,
       serviceType: layanan,
       visitTime: row.visit_time,
       fisioName: row.internal_profiles?.full_name ?? '—',
+      therapistId: row.attending_staff_id,
       fisioNickname: row.internal_profiles?.nickname?.trim() || row.internal_profiles?.full_name || '—',
       visitDate: row.visit_date,
       pertemuanKe: row.package_id ? (packagePositions.get(row.id)?.pertemuan ?? 1) : 1,

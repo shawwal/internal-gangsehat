@@ -2,6 +2,7 @@
 
 import './target-progress-styles.css'
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Table2, TrendingUp, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { datesBetween, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES } from '@/lib/metrics/achievement'
@@ -13,7 +14,6 @@ import { ClassicTable } from '@/components/targetProgress/ClassicTable'
 import { ModernView } from '@/components/targetProgress/ModernView'
 import {
   CATEGORY_DEFS,
-  EDITABLE_ROLES,
   type CategoryKey,
   type CategorySummary,
   type BranchOption,
@@ -33,20 +33,35 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'visual', label: 'Progress Visual', icon: <TrendingUp size={15} /> },
 ]
 
+// `?branch=&m=&y=&mode=` — kept in sync below so Back from the detail page
+// (or a reload) lands on the same branch / month / window.
+function parseInitial(sp: URLSearchParams) {
+  const m = Number(sp.get('m'))
+  const y = Number(sp.get('y'))
+  const valid = Number.isInteger(m) && m >= 1 && m <= 12 && Number.isInteger(y) && y >= 2000 && y <= 2100
+  return {
+    branch: sp.get('branch'),
+    month: valid ? m : CURRENT_MONTH,
+    year: valid ? y : CURRENT_YEAR,
+    mode: (sp.get('mode') === 'payroll' ? 'payroll' : 'month') as WindowMode,
+  }
+}
+
 export default function TargetProgressPage() {
+  const searchParams = useSearchParams()
+  const [initial] = useState(() => parseInitial(searchParams))
   const [role, setRole] = useState<Role>(null)
 
   const canPickBranch = role === 'director'
-  const canEdit = role !== null && (EDITABLE_ROLES as readonly string[]).includes(role)
 
   const [branchList, setBranchList] = useState<BranchOption[]>([])
-  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(initial.branch)
   const [selectedBranchName, setSelectedBranchName] = useState<string>('')
 
-  const [month, setMonth] = useState(CURRENT_MONTH)
-  const [year, setYear] = useState(CURRENT_YEAR)
+  const [month, setMonth] = useState(initial.month)
+  const [year, setYear] = useState(initial.year)
   const [tab, setTab] = useState<Tab>('klasik')
-  const [windowMode, setWindowMode] = useState<WindowMode>('month')
+  const [windowMode, setWindowMode] = useState<WindowMode>(initial.mode)
   const [dates, setDates] = useState<string[]>([])
 
   const [loading, setLoading] = useState(true)
@@ -76,14 +91,28 @@ export default function TargetProgressPage() {
           .select('id, name')
           .eq('is_active', true)
           .order('name')
-        setBranchList((branchData ?? []) as BranchOption[])
+        const list = (branchData ?? []) as BranchOption[]
+        setBranchList(list)
+        const fromUrl = list.find(b => b.id === initial.branch)
+        if (fromUrl) setSelectedBranchName(fromUrl.name)
+        else setSelectedBranchId(null)
       } else if (p.branch_id) {
         setSelectedBranchId(p.branch_id)
         setSelectedBranchName(p.branches?.name ?? '')
       }
     }
     init()
-  }, [])
+  }, [initial.branch])
+
+  const query = new URLSearchParams({
+    ...(selectedBranchId ? { branch: selectedBranchId } : {}),
+    m: String(month),
+    y: String(year),
+    mode: windowMode,
+  }).toString()
+  useEffect(() => {
+    window.history.replaceState(null, '', `?${query}`)
+  }, [query])
 
   // ── Load branch target + visits for selected branch/month ────────────────
   const load = useCallback(async () => {
@@ -247,8 +276,7 @@ export default function TargetProgressPage() {
                 dates={dates}
                 monthLabel={monthLabel}
                 branchId={selectedBranchId}
-                canEdit={canEdit}
-                onDataChanged={load}
+                backQuery={query}
               />
             )}
             {tab === 'visual' && (

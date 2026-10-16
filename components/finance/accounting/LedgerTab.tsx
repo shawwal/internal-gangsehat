@@ -17,6 +17,7 @@ import { formatRp, PAYMENT_METHODS, PAYMENT_STATUSES, inputCls } from './shared'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 import { PaymentProofField, PaymentProofLink } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
+import { FisioSelect, isTherapistCategory } from '@/components/finance/FisioSelect'
 
 interface Props {
   type: TransactionType
@@ -60,6 +61,9 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
   const [layanan, setLayanan] = useState<LayananRow[]>([])
   const [expenseCats, setExpenseCats] = useState<ExpenseCategoryRow[]>([])
   const [admins, setAdmins] = useState<AdminOption[]>([])
+
+  // An income saved without an item is stored as LAINNYA — still needs a Fisio.
+  const fisioRequired = isIncome && isTherapistCategory(form.category || 'LAINNYA')
 
   const [patientQuery, setPatientQuery] = useState('')
   const [patientResults, setPatientResults] = useState<PatientPlain[]>([])
@@ -132,6 +136,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
     if (proofUploading) return
     const needsProof = requiresPaymentProof(form.payment_method)
     if (needsProof && !form.receipt_url) { alert(PAYMENT_PROOF_REQUIRED_MSG); return }
+    if (fisioRequired && !form.fisio_id) { alert('Pilih Fisio untuk transaksi layanan ini — tanpa Fisio, penjualan tidak terhitung ke terapis mana pun.'); return }
     setSaving(true)
     const { error } = await createTransactionManual({
       type,
@@ -392,13 +397,25 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
                 </div>
               )}
 
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">Admin / Fisioterapis</label>
-                <select value={form.fisio_id} onChange={(e) => setForm((f) => ({ ...f, fisio_id: e.target.value }))} className={inputCls}>
-                  <option value="">— Tidak ditentukan —</option>
-                  {admins.map((a) => <option key={a.id} value={a.id}>{a.full_name}</option>)}
-                </select>
-              </div>
+              {isIncome ? (
+                <FisioSelect
+                  patientId={form.patient_id || null}
+                  branchId={branchId}
+                  value={form.fisio_id}
+                  onChange={(id) => setForm((f) => ({ ...f, fisio_id: id }))}
+                  required={fisioRequired}
+                  selectClassName={inputCls}
+                  labelClassName="block text-xs font-medium text-foreground mb-1"
+                />
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Admin</label>
+                  <select value={form.fisio_id} onChange={(e) => setForm((f) => ({ ...f, fisio_id: e.target.value }))} className={inputCls}>
+                    <option value="">— Tidak ditentukan —</option>
+                    {admins.map((a) => <option key={a.id} value={a.id}>{a.full_name}</option>)}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Keterangan</label>

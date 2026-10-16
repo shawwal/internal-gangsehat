@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const MANAGE_ROLES = ['finance', 'manager', 'director', 'admin']
 
@@ -144,12 +145,18 @@ export async function fetchTransactionsForRange(
 
 export interface AdminOption { id: string; full_name: string }
 
+// Names for the ledger's "Admin" / Laporan breakdown. RLS only lets most
+// roles read their own profile row, so the list came back empty for finance —
+// read with the service role after the access check (names only).
 export async function fetchBranchAdmins(branchId: string): Promise<AdminOption[]> {
-  const supabase = await createClient()
-  const { data } = await supabase
+  const access = await requireBranchAccess()
+  if ('error' in access) return []
+  const branch = access.role === 'director' ? branchId : access.branchId
+  if (!branch) return []
+  const { data } = await createAdminClient()
     .from('internal_profiles')
     .select('id, full_name')
-    .eq('branch_id', branchId)
+    .eq('branch_id', branch)
     .eq('is_active', true)
     .order('full_name')
   return (data ?? []) as AdminOption[]

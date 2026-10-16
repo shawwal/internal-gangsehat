@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { EyeOff, List, RefreshCw, RotateCcw, UserPlus } from 'lucide-react'
 import { getPfotmMetricDetail, type PfotmEntry, type PfotmGap } from '@/app/actions/pfotm'
 import { DRILLDOWN_METRICS } from '@/lib/pfotm/autoMetrics'
+import { PACKAGE_KEYS } from '@/lib/pfotm/engine'
 import { MetricDetailModal } from '@/components/metrics/MetricDetailModal'
 import type { BoardRow, PointRule } from '@/lib/pfotm/engine'
 import { btn } from '@/components/payroll/Modal'
@@ -21,6 +23,8 @@ interface Props {
   gap: PfotmGap | null
   periodStart: string
   periodEnd: string
+  /** finance / manager / admin / director — may open Cek Data to set the missing Fisio */
+  canFixData: boolean
   onRefresh: () => void
   onOverride: (entryId: string, key: string, value: number | null) => void
   onExclude: (entryId: string, excluded: boolean) => void
@@ -82,6 +86,23 @@ export function PfotmInput(p: Props) {
           </div>
         )}
       </div>
+
+      {p.gap && (() => {
+        const inBoard = PACKAGE_KEYS.reduce((t, k) => t + sumOf(statEntries.map((e) => metricValue(e, k))), 0)
+        const outside = PACKAGE_KEYS.reduce((t, k) => t + (p.gap?.[k]?.auto ?? 0), 0)
+        return (
+          <p className="text-xs rounded-xl border border-border bg-muted/30 px-3 py-2 text-foreground">
+            <b>Paket Klinik (Paket 1 + 2 + 3):</b> {inBoard} di peserta + <span className="text-destructive font-semibold">{outside} di luar Jumlah</span> = <b>{inBoard + outside}</b> — sama dengan Paket Klinik di Progress Target (mode tanggal yang sama).
+            {outside > 0 && (p.canFixData ? (
+              <> Agar masuk ke peserta, isi Fisio-nya di{' '}
+                <Link href={`/finance/cek-data?tab=transaksi&issue=tanpa_fisio&from=${p.periodStart}&to=${p.periodEnd}`} className="font-semibold text-primary hover:underline">
+                  Cek Data →
+                </Link>
+              </>
+            ) : <> Agar masuk ke peserta, Fisio-nya perlu diisi oleh finance/admin.</>)}
+          </p>
+        )
+      })()}
 
       <div className="overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="text-xs border-collapse min-w-full">
@@ -198,6 +219,23 @@ export function PfotmInput(p: Props) {
                   <td colSpan={3} />
                 </tr>
               )}
+              {p.gap && (
+                <tr className="border-t border-border">
+                  <td className="sticky left-0 z-10 bg-card px-3 py-1.5 border-r border-border text-[11px] leading-tight"
+                    title="Jumlah + Di luar Jumlah — sama dengan angka Progress Target pada rentang tanggal yang sama">
+                    Total cabang
+                  </td>
+                  {rules.map((r) => {
+                    const g = p.gap?.[r.metric_key]
+                    return (
+                      <td key={r.metric_key} className="px-1 py-1.5 text-center">
+                        {!g || r.metric_key === 'rujukan_sm' ? '' : formatStat(sumOf(statEntries.map((e) => metricValue(e, r.metric_key))) + g.auto)}
+                      </td>
+                    )
+                  })}
+                  <td colSpan={3} />
+                </tr>
+              )}
             </tfoot>
           )}
         </table>
@@ -213,14 +251,18 @@ export function PfotmInput(p: Props) {
       {gapDetail && p.gap?.[gapDetail.metric_key] && (
         <MetricDetailModal
           title={`${gapDetail.metric_label} — di luar Jumlah`}
-          subtitle="Tidak dihitung ke siapa pun. Isi Fisio saat mencatat pembayaran, atau koreksi angka peserta yang menangani."
+          subtitle="Tidak dihitung ke siapa pun sampai Fisio-nya diisi. Saran = fisioterapis terakhir yang menangani pasien."
           load={() => Promise.resolve({ ok: true as const, data: p.gap![gapDetail.metric_key] })}
           onClose={() => setGapDetail(null)}
+          footerLink={p.canFixData ? {
+            href: `/finance/cek-data?tab=${gapDetail.metric_key === 'kunjungan' ? 'kunjungan' : 'transaksi'}&issue=tanpa_fisio&from=${p.periodStart}&to=${p.periodEnd}`,
+            label: 'Perbaiki di Cek Data',
+          } : undefined}
         />
       )}
       <p className="text-xs text-muted-foreground">
         Angka dihitung pada rentang data <b>{p.periodStart} s/d {p.periodEnd}</b> (atur di atas) — samakan dengan mode tanggal di Progress Target.
-        Paket 1 + Paket 2 + Paket 3 (Jumlah + Di luar Jumlah) = Paket Klinik di Progress Target; transaksi paket tanpa Fisio dikreditkan ke fisioterapis kunjungan pertama paket tersebut.
+        Paket 1 + Paket 2 + Paket 3 pada baris &quot;Total cabang&quot; = Paket Klinik di Progress Target. Penjualan dihitung ke Fisio transaksi (atau terapis kunjungan yang ditautkan) — aturan yang sama dengan halaman Keuangan; tanpa Fisio = &quot;Di luar Jumlah&quot;.
         Jumlah &amp; rata-rata dihitung dari peserta yang ikut peringkat (yang dikeluarkan tidak dihitung).
         Baris &quot;Di luar Jumlah&quot; = transaksi/kunjungan cabang yang tidak masuk Jumlah (tanpa Fisio, staf bukan peserta, atau peserta yang dikeluarkan) — Jumlah + baris ini = angka Progress Target.
         Angka otomatis: Hadir/Terlambat/Alfa dari absensi, Jumlah Kunjungan = kunjungan hadir (aturan sama dengan Progress Target, tanpa sport massage), Paket &amp; TA/Sesi Visit dari transaksi masuk LUNAS/DP, Rujukan SM dari kolom &quot;Dirujuk oleh&quot; pasien.

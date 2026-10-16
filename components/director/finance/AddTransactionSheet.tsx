@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { Plus, X, Check, AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createTransactionManual } from '@/app/actions/transactions'
+import { FisioSelect, isTherapistCategory } from '@/components/finance/FisioSelect'
 import { todayJakartaISO } from '@/lib/utils'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
@@ -39,6 +40,7 @@ function getDefault() {
     transaction_date: todayJakartaISO(),
     branch_id:        '',
     receipt_url:      null as string | null,
+    fisio_id:         '',
   }
 }
 
@@ -133,6 +135,12 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
       setTimeout(() => setStatus('idle'), 600)
       return
     }
+    if (isIncome && isTherapistCategory(form.category) && !form.fisio_id) {
+      setStatus('error')
+      setErrMsg('Pilih Fisio — tanpa Fisio, penjualan tidak terhitung ke terapis mana pun.')
+      setTimeout(() => setStatus('idle'), 600)
+      return
+    }
     setStatus('saving')
     setErrMsg('')
 
@@ -149,6 +157,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
       transaction_date: form.transaction_date,
       branch_id:        form.branch_id,
       receipt_url:      needsProof ? form.receipt_url : null,
+      fisio_id:         isIncome ? (form.fisio_id || null) : null,
     })
 
     if (error) {
@@ -230,7 +239,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Cabang</label>
               <select
                 value={form.branch_id}
-                onChange={e => setForm(f => ({ ...f, branch_id: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, branch_id: e.target.value, fisio_id: '' }))}
                 required
                 className="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
@@ -374,6 +383,18 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
               ))}
             </div>
           </div>
+
+          {isIncome && !isOnline && form.branch_id && (
+            <FisioSelect
+              key={form.branch_id}
+              patientId={null}
+              branchId={form.branch_id}
+              value={form.fisio_id}
+              onChange={(id) => setForm(f => ({ ...f, fisio_id: id }))}
+              required={isTherapistCategory(form.category)}
+              labelClassName="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5"
+            />
+          )}
 
           {isOnline && <OnlineMethodPicker value={onlineMethod} onChange={setOnlineMethod} note="Lanjut pilih pasien / pembayar, lalu link DOKU dibuat. Transaksi tercatat otomatis setelah dibayar." />}
 

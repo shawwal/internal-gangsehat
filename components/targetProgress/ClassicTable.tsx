@@ -1,9 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import Link from 'next/link'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
-import { DetailModal } from './DetailModal'
 import { formatPct, progressColor } from './utils'
 import type { CategoryKey, CategorySummary } from './types'
 
@@ -13,30 +12,18 @@ interface ClassicTableProps {
   dates: string[]
   monthLabel: string
   branchId: string
-  canEdit: boolean
-  onDataChanged?: () => void
+  /** This page's own query (branch/month/mode) — the detail page links back to it. */
+  backQuery: string
 }
 
-interface DetailTarget {
-  date: string
-  endDate?: string
-  category: CategoryKey
-  label: string
-}
-
-export function ClassicTable({ summaries, dates, monthLabel, branchId, canEdit, onDataChanged }: ClassicTableProps) {
+export function ClassicTable({ summaries, dates, monthLabel, branchId, backQuery }: ClassicTableProps) {
   // Column header = day of month; the payroll window crosses a month boundary,
   // so headers can run 27 … 31, 1 … 26.
   const dayNumbers = dates.map((d) => Number(d.slice(8, 10)))
-  const [detail, setDetail] = useState<DetailTarget | null>(null)
 
-  function openDetail(category: CategoryKey, label: string, index: number) {
-    setDetail({ date: dates[index], category, label })
-  }
-
-  // Capaian = the whole window's list for that category.
-  function openMonthDetail(category: CategoryKey, label: string) {
-    setDetail({ date: dates[0], endDate: dates[dates.length - 1], category, label })
+  // A day cell lists that day; Capaian lists the whole window.
+  function detailHref(category: CategoryKey, start: string, end: string = start) {
+    return `/target-progress/detail?${new URLSearchParams({ branch: branchId, category, start, end, back: backQuery })}`
   }
 
   function handleExport() {
@@ -93,11 +80,14 @@ export function ClassicTable({ summaries, dates, monthLabel, branchId, canEdit, 
                   </td>
                   <td className="px-2 py-2 text-right text-foreground">{s.target.toLocaleString('id-ID')}</td>
                   <td
-                    onClick={s.actual > 0 ? () => openMonthDetail(s.key, s.label) : undefined}
-                    className={`px-2 py-2 text-right ${s.actual > 0 ? 'cursor-pointer hover:underline font-semibold' : 'text-foreground'}`}
+                    className={`px-2 py-2 text-right ${s.actual > 0 ? 'font-semibold' : 'text-foreground'}`}
                     style={s.actual > 0 ? { color: 'var(--chart-5)' } : undefined}
                   >
-                    {s.actual.toLocaleString('id-ID')}
+                    {s.actual > 0 ? (
+                      <Link href={detailHref(s.key, dates[0], dates[dates.length - 1])} prefetch={false} className="hover:underline">
+                        {s.actual.toLocaleString('id-ID')}
+                      </Link>
+                    ) : s.actual.toLocaleString('id-ID')}
                   </td>
                   <td
                     className="px-2 py-2 text-right font-semibold"
@@ -111,11 +101,12 @@ export function ClassicTable({ summaries, dates, monthLabel, branchId, canEdit, 
                   {s.daily.map((v, i) => (
                     <td
                       key={i}
-                      onClick={v > 0 ? () => openDetail(s.key, s.label, i) : undefined}
-                      className={`px-1 py-2 text-center font-medium ${v > 0 ? 'cursor-pointer hover:underline' : ''}`}
+                      className="px-1 py-2 text-center font-medium"
                       style={{ color: v > 0 ? 'var(--chart-5)' : 'var(--muted-foreground)' }}
                     >
-                      {v}
+                      {v > 0 ? (
+                        <Link href={detailHref(s.key, dates[i])} prefetch={false} className="block hover:underline">{v}</Link>
+                      ) : v}
                     </td>
                   ))}
                 </tr>
@@ -124,18 +115,6 @@ export function ClassicTable({ summaries, dates, monthLabel, branchId, canEdit, 
           </tbody>
         </table>
       </div>
-
-      <DetailModal
-        open={!!detail}
-        onClose={() => setDetail(null)}
-        branchId={branchId}
-        date={detail?.date ?? null}
-        endDate={detail?.endDate ?? null}
-        category={detail?.category ?? null}
-        label={detail?.label ?? ''}
-        canEdit={canEdit}
-        onDataChanged={onDataChanged}
-      />
     </div>
   )
 }

@@ -57,6 +57,10 @@ export interface FinanceParams {
   /** YYYY-MM-DD, inclusive. Either set → overrides month/year as the period. */
   from: string
   to: string
+  /** internal_profiles.id — attribution rule in lib/finance/attribution.ts */
+  therapist: string
+  /** transactions.category (the "layanan" filter) */
+  category: string
   q: string
   noPatient: boolean
   txType: 'income' | 'expense' | ''

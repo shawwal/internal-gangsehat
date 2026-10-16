@@ -27,7 +27,7 @@ export function TherapistVisitsModal({ open, onClose, branchId, therapistId, the
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
 
-  // Standard fetch-on-open pattern (matches components/targetProgress/DetailModal.tsx).
+  // Standard fetch-on-open pattern.
   useEffect(() => {
     if (!open || !therapistId) return
     // eslint-disable-next-line react-hooks/set-state-in-effect

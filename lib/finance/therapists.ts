@@ -1,5 +1,6 @@
 import type { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { byDateDesc, selectAttributedTransactions } from './attribution'
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -29,21 +30,7 @@ export async function resolveTherapistNames(
   const result = new Map<string, TherapistRef>()
   if (!rows.length) return result
 
-  const visitIds = [...new Set(rows.filter((r) => !r.fisio_id && r.visit_id).map((r) => r.visit_id as string))]
-  const visitStaff = new Map<string, string>()
-  if (visitIds.length) {
-    const { data: visits } = await supabase
-      .from('patient_visits')
-      .select('id, attending_staff_id')
-      .in('id', visitIds)
-    for (const v of visits ?? []) if (v.attending_staff_id) visitStaff.set(v.id, v.attending_staff_id)
-  }
-
-  const staffByTx = new Map<string, string>()
-  for (const r of rows) {
-    const staffId = r.fisio_id ?? (r.visit_id ? visitStaff.get(r.visit_id) : undefined)
-    if (staffId) staffByTx.set(r.id, staffId)
-  }
+  const staffByTx = await resolveTherapistIds(supabase, rows)
   const staffIds = [...new Set(staffByTx.values())]
   if (!staffIds.length) return result
 
@@ -58,6 +45,34 @@ export async function resolveTherapistNames(
     if (name) result.set(txId, { id: staffId, name })
   }
   return result
+}
+
+/**
+ * The attribution rule itself — therapist id per transaction id: `fisio_id`,
+ * else the linked visit's `attending_staff_id`; unattributed rows are absent.
+ * Shared by the finance tables (via `resolveTherapistNames`) and PFOTM, so a
+ * therapist's PFOTM sales are exactly their rows on the finance page.
+ */
+export async function resolveTherapistIds(
+  supabase: { from: ServerClient['from'] },
+  rows: TherapistSourceRow[],
+): Promise<Map<string, string>> {
+  const visitIds = [...new Set(rows.filter((r) => !r.fisio_id && r.visit_id).map((r) => r.visit_id as string))]
+  const visitStaff = new Map<string, string>()
+  for (let i = 0; i < visitIds.length; i += 300) {
+    const { data: visits } = await supabase
+      .from('patient_visits')
+      .select('id, attending_staff_id')
+      .in('id', visitIds.slice(i, i + 300))
+    for (const v of visits ?? []) if (v.attending_staff_id) visitStaff.set(v.id, v.attending_staff_id)
+  }
+
+  const staffByTx = new Map<string, string>()
+  for (const r of rows) {
+    const staffId = r.fisio_id ?? (r.visit_id ? visitStaff.get(r.visit_id) : undefined)
+    if (staffId) staffByTx.set(r.id, staffId)
+  }
+  return staffByTx
 }
 
 const THERAPIST_TX_COLUMNS =
@@ -93,33 +108,57 @@ export async function loadTherapistTransactions(
   staffId: string,
   { from, to, branchId }: { from: string; to: string; branchId?: string },
 ): Promise<TherapistTransaction[]> {
-  // fisio_id set → it decides; otherwise the visit's attending staff does.
-  let direct = supabase
-    .from('transactions')
-    .select(THERAPIST_TX_COLUMNS)
-    .eq('fisio_id', staffId)
-    .neq('status', 'rejected')
-    .limit(99999)
-  let viaVisit = supabase
-    .from('transactions')
-    .select(`${THERAPIST_TX_COLUMNS}, patient_visits!visit_id!inner(attending_staff_id)`)
-    .is('fisio_id', null)
-    .eq('patient_visits.attending_staff_id', staffId)
-    .neq('status', 'rejected')
-    .limit(99999)
-  if (from) { direct = direct.gte('transaction_date', from); viaVisit = viaVisit.gte('transaction_date', from) }
-  if (to)   { direct = direct.lte('transaction_date', to);   viaVisit = viaVisit.lte('transaction_date', to) }
-  if (branchId) { direct = direct.eq('branch_id', branchId); viaVisit = viaVisit.eq('branch_id', branchId) }
-
-  const [a, b] = await Promise.all([direct, viaVisit])
-  type Raw = Omit<TherapistTransaction, 'branch_name'> & { branches: unknown; patient_visits?: unknown }
-  const rows: TherapistTransaction[] = ([...(a.data ?? []), ...(b.data ?? [])] as unknown as Raw[]).map((r) => {
-    const { branches, ...rest } = r
-    delete rest.patient_visits
-    return { ...rest, branch_name: (branches as { name: string } | null)?.name ?? '—' }
+  type Raw = Omit<TherapistTransaction, 'branch_name'> & { branches: unknown }
+  const raw = await selectAttributedTransactions<Raw>(supabase, THERAPIST_TX_COLUMNS, staffId, (q) => {
+    q = q.neq('status', 'rejected').limit(99999)
+    if (from)     q = q.gte('transaction_date', from)
+    if (to)       q = q.lte('transaction_date', to)
+    if (branchId) q = q.eq('branch_id', branchId)
+    return q
   })
-  return rows.sort((x, y) =>
-    y.transaction_date.localeCompare(x.transaction_date) || y.id.localeCompare(x.id))
+  return raw
+    .map(({ branches, ...rest }) => ({ ...rest, branch_name: (branches as { name: string } | null)?.name ?? '—' }))
+    .sort(byDateDesc)
+}
+
+export interface TherapistOption {
+  id: string
+  name: string
+  inactive: boolean
+}
+
+const THERAPIST_ROLES = ['therapist', 'sport_massage_therapist']
+
+/**
+ * Options for the therapist filter: therapist-role staff of the branch (all
+ * branches when `branchId` is empty) plus anyone recently recorded as the
+ * therapist on a visible transaction — admins/managers do treat patients.
+ * `branchId` must already be forced to the caller's own branch for
+ * non-directors; the transaction scan is RLS-scoped via the caller's client.
+ */
+export async function listTherapistOptions(supabase: ServerClient, branchId: string): Promise<TherapistOption[]> {
+  const admin = createAdminClient()
+  let rolesQ = admin.from('internal_profiles').select('id').in('role', THERAPIST_ROLES)
+  if (branchId) rolesQ = rolesQ.eq('branch_id', branchId)
+  let recentQ = supabase
+    .from('transactions')
+    .select('fisio_id')
+    .not('fisio_id', 'is', null)
+    .order('transaction_date', { ascending: false })
+    .limit(1000)
+  if (branchId) recentQ = recentQ.eq('branch_id', branchId)
+
+  const [{ data: byRole }, { data: recent }] = await Promise.all([rolesQ, recentQ])
+  const ids = [...new Set([
+    ...(byRole ?? []).map((p) => p.id as string),
+    ...(recent ?? []).map((r) => r.fisio_id as string),
+  ])]
+  if (!ids.length) return []
+
+  const { data: profiles } = await admin.from('internal_profiles').select('id, full_name, is_active').in('id', ids)
+  return (profiles ?? [])
+    .map((p) => ({ id: p.id as string, name: (p.full_name as string) || '—', inactive: p.is_active === false }))
+    .sort((a, b) => Number(a.inactive) - Number(b.inactive) || a.name.localeCompare(b.name, 'id'))
 }
 
 /** Therapist profile for the page header (admin client — see above). */

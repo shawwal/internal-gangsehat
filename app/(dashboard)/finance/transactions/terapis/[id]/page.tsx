@@ -1,11 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { AlertCircle, ArrowLeft, ChevronLeft, ChevronRight, Receipt, Wallet, Users, Hourglass, UserRound } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Receipt, Wallet, Users, Hourglass, UserRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { getTherapistProfile, loadTherapistTransactions } from '@/lib/finance/therapists'
 import { UrlDateRangeFilter } from '@/components/finance/DateRangeFilter'
+import { UrlSortSelect } from '@/components/finance/UrlSortSelect'
+import { SearchInput } from '@/components/director/finance/SearchInput'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +26,15 @@ const TX_STATUS_BADGE: Record<string, string> = {
 }
 const TX_STATUS_LABEL: Record<string, string> = { pending: 'Menunggu', confirmed: 'Dikonfirmasi' }
 
+const SORT_OPTIONS = [
+  { value: 'date_desc', label: 'Tanggal terbaru' },
+  { value: 'date_asc',  label: 'Tanggal terlama' },
+  { value: 'name_asc',  label: 'Nama pasien A–Z' },
+  { value: 'name_desc', label: 'Nama pasien Z–A' },
+] as const
+type SortKey = typeof SORT_OPTIONS[number]['value']
+const isSortKey = (v: string | undefined): v is SortKey => SORT_OPTIONS.some((o) => o.value === v)
+
 function formatRp(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 }
@@ -37,24 +48,61 @@ export default async function TherapistTransactionsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ from?: string; to?: string; page?: string }>
+  searchParams: Promise<{ from?: string; to?: string; page?: string; q?: string; sort?: string }>
 }) {
   const { id } = await params
   if (!UUID.test(id)) notFound()
   const sp       = await searchParams
   const dateFrom = sp.from && ISO_DATE.test(sp.from) ? sp.from : ''
   const dateTo   = sp.to   && ISO_DATE.test(sp.to)   ? sp.to   : ''
+  const q        = sp.q?.trim() ?? ''
+  const sort: SortKey = isSortKey(sp.sort) ? sp.sort : 'date_desc'
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: me } = await supabase.from('internal_profiles').select('role').eq('id', user!.id).single()
   const isDirector = me?.role === 'director'
 
-  const [therapist, rows] = await Promise.all([
+  const [therapist, allRows] = await Promise.all([
     getTherapistProfile(id),
     loadTherapistTransactions(supabase, id, { from: dateFrom, to: dateTo }),
   ])
   if (!therapist) notFound()
+
+  // ── Patient sort/search keys: plaintext name_normalized, no decryption ────
+  const allPatientIds = [...new Set(allRows.map((r) => r.patient_id).filter((x): x is string => !!x))]
+  const sortName = new Map<string, string>()
+  const ID_CHUNK = 150 // keep the `in (...)` URL short
+  const chunks = Array.from({ length: Math.ceil(allPatientIds.length / ID_CHUNK) }, (_, i) =>
+    allPatientIds.slice(i * ID_CHUNK, (i + 1) * ID_CHUNK))
+  const chunkResults = await Promise.all(chunks.map((ids) =>
+    supabase.from('patients').select('id, name_normalized').in('id', ids)))
+  for (const { data } of chunkResults) {
+    for (const p of data ?? []) sortName.set(p.id, String(p.name_normalized ?? '').toLowerCase())
+  }
+  const nameKey = (r: { patient_id: string | null }) => (r.patient_id ? sortName.get(r.patient_id) ?? '' : '')
+
+  // ── Search (patient name, category, description) → drives totals + list ───
+  const needle = q.toLowerCase()
+  const rows = needle
+    ? allRows.filter((r) =>
+        nameKey(r).includes(needle) ||
+        r.category.toLowerCase().includes(needle) ||
+        (r.description ?? '').toLowerCase().includes(needle))
+    : [...allRows]
+
+  // ── Sort. Name sorts put rows without a patient last. ─────────────────────
+  rows.sort((a, b) => {
+    if (sort === 'name_asc' || sort === 'name_desc') {
+      const na = nameKey(a), nb = nameKey(b)
+      if (!na !== !nb) return na ? -1 : 1
+      const cmp = na.localeCompare(nb, 'id')
+      if (cmp !== 0) return sort === 'name_asc' ? cmp : -cmp
+      return b.transaction_date.localeCompare(a.transaction_date)
+    }
+    const cmp = a.transaction_date.localeCompare(b.transaction_date) || a.id.localeCompare(b.id)
+    return sort === 'date_asc' ? cmp : -cmp
+  })
 
   // ── Totals over the whole period (rejected already excluded) ──────────────
   const income      = rows.filter((r) => r.type === 'income')
@@ -95,14 +143,27 @@ export default async function TherapistTransactionsPage({
     : dateTo   ? `Sampai ${formatDay(dateTo)}`
     : 'Semua waktu'
 
-  function pageHref(p: number) {
-    const q = new URLSearchParams()
-    if (dateFrom) q.set('from', dateFrom)
-    if (dateTo)   q.set('to', dateTo)
-    if (p > 1)    q.set('page', String(p))
-    const qs = q.toString()
+  function buildHref(overrides: { page?: number; sort?: SortKey; q?: string }) {
+    const p = new URLSearchParams()
+    if (dateFrom) p.set('from', dateFrom)
+    if (dateTo)   p.set('to', dateTo)
+    const nextQ = overrides.q ?? q
+    if (nextQ)    p.set('q', nextQ)
+    const nextSort = overrides.sort ?? sort
+    if (nextSort !== 'date_desc') p.set('sort', nextSort)
+    if (overrides.page && overrides.page > 1) p.set('page', String(overrides.page))
+    const qs = p.toString()
     return `/finance/transactions/terapis/${id}${qs ? `?${qs}` : ''}`
   }
+  const pageHref = (page: number) => buildHref({ page })
+
+  // Clickable column headers: Tanggal toggles newest/oldest, Pasien A–Z/Z–A
+  const dateSorted = sort === 'date_desc' || sort === 'date_asc'
+  const nameSorted = sort === 'name_asc' || sort === 'name_desc'
+  const dateHeaderHref = buildHref({ sort: sort === 'date_desc' ? 'date_asc' : 'date_desc' })
+  const nameHeaderHref = buildHref({ sort: sort === 'name_asc' ? 'name_desc' : 'name_asc' })
+  const sortIcon = (active: boolean, asc: boolean) =>
+    active ? (asc ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : null
 
   const backHref = isDirector ? '/director/finance' : '/finance/transactions'
 
@@ -129,6 +190,7 @@ export default async function TherapistTransactionsPage({
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             Transaksi terkait terapis{therapist.branchName ? ` · ${therapist.branchName}` : ''} · {periodLabel}
+            {q && <> · pencarian &ldquo;{q}&rdquo;</>}
           </p>
         </div>
         <Suspense>
@@ -169,15 +231,34 @@ export default async function TherapistTransactionsPage({
 
       {/* List */}
       <div className="glass-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-foreground">Daftar Transaksi</h2>
-          <span className="text-xs text-muted-foreground">Tidak termasuk transaksi ditolak</span>
+        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Daftar Transaksi</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {rows.length}{q ? ` dari ${allRows.length} untuk "${q}"` : ''} · tidak termasuk transaksi ditolak
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Suspense>
+              <SearchInput defaultValue={q} />
+            </Suspense>
+            <Suspense>
+              <UrlSortSelect value={sort} options={[...SORT_OPTIONS]} />
+            </Suspense>
+          </div>
         </div>
 
         {rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-14 gap-2">
             <AlertCircle size={28} className="text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">Tidak ada transaksi untuk periode ini</p>
+            <p className="text-sm text-muted-foreground">
+              {q ? `Tidak ada hasil untuk "${q}"` : 'Tidak ada transaksi untuk periode ini'}
+            </p>
+            {q && (
+              <Link href={buildHref({ q: '' })} className="text-xs text-primary hover:underline mt-1">
+                Hapus pencarian
+              </Link>
+            )}
           </div>
         ) : (
           <>
@@ -185,9 +266,17 @@ export default async function TherapistTransactionsPage({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tanggal</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      <Link href={dateHeaderHref} className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${dateSorted ? 'text-foreground' : ''}`}>
+                        Tanggal {sortIcon(dateSorted, sort === 'date_asc')}
+                      </Link>
+                    </th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kategori</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pasien</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      <Link href={nameHeaderHref} className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${nameSorted ? 'text-foreground' : ''}`}>
+                        Pasien {sortIcon(nameSorted, sort === 'name_asc')}
+                      </Link>
+                    </th>
                     {showBranch && <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cabang</th>}
                     <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Harga</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Bayar</th>

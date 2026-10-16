@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Plus, CheckCircle, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionType, TransactionStatus, PaymentMethod, PaymentDetailStatus } from '@/types'
@@ -8,7 +8,10 @@ import { ExportButton } from '@/components/ui/ExportButton'
 import { DateRangeFilter } from '@/components/finance/DateRangeFilter'
 import { TherapistLink } from '@/components/finance/TherapistLink'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
-import { createTransactionManual, getTransactionTherapists } from '@/app/actions/transactions'
+import { createTransactionManual, getTherapistOptions, getTransactionTherapists } from '@/app/actions/transactions'
+import { FisioSelect, isTherapistCategory } from '@/components/finance/FisioSelect'
+import { TherapistServiceFilters, type TherapistOption } from '@/components/finance/TherapistServiceFilters'
+import { byDateDesc, selectAttributedTransactions, type QueryBuilder } from '@/lib/finance/attribution'
 import { todayJakartaISO } from '@/lib/utils'
 import { logActivity } from '@/lib/activityLog'
 import { TableSkeleton } from '@/components/ui/Skeleton'
@@ -78,6 +81,7 @@ function getDefaultForm() {
     description:      '',
     transaction_date: todayJakartaISO(),
     receipt_url:      null as string | null,
+    fisio_id:         '',
   }
 }
 
@@ -94,11 +98,18 @@ export default function TransactionsPage() {
   const [therapists, setTherapists] = useState<Record<string, { id: string; name: string }> | null>(null)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo]     = useState('')
+  const [therapistFilter, setTherapistFilter] = useState('')
+  const [categoryFilter, setCategoryFilter]   = useState('')
+  const [therapistOptions, setTherapistOptions] = useState<TherapistOption[] | null>(null)
 
   const [userId, setUserId]     = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
 
+  // Latest load wins — a slower, older request (e.g. previous date range) must not overwrite newer rows
+  const loadSeq = useRef(0)
+
   async function load() {
+    const seq = ++loadSeq.current
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -110,20 +121,37 @@ export default function TransactionsPage() {
     setUserId(user.id)
     setUserRole(prof?.role ?? null)
 
-    let q = supabase.from('transactions').select('*').order('transaction_date', { ascending: false }).limit(100)
-    if (prof?.branch_id) q = q.eq('branch_id', prof.branch_id)
-    if (dateFrom) q = q.gte('transaction_date', dateFrom)
-    if (dateTo)   q = q.lte('transaction_date', dateTo)
-    const { data } = await q
-    const list = (data ?? []) as Transaction[]
+    const applyFilters = (q: QueryBuilder): QueryBuilder => {
+      q = q.order('transaction_date', { ascending: false }).order('id', { ascending: false }).limit(100)
+      if (prof?.branch_id) q = q.eq('branch_id', prof.branch_id)
+      if (dateFrom)       q = q.gte('transaction_date', dateFrom)
+      if (dateTo)         q = q.lte('transaction_date', dateTo)
+      if (categoryFilter) q = q.eq('category', categoryFilter)
+      return q
+    }
+    let list: Transaction[]
+    if (therapistFilter) {
+      // Two attributed queries (fisio_id / visit's therapist), each capped at 100 → merge, keep newest 100
+      const merged = await selectAttributedTransactions<Transaction>(supabase, '*', therapistFilter, applyFilters).catch(() => [])
+      list = merged.sort(byDateDesc).slice(0, 100)
+    } else {
+      const { data } = await applyFilters(supabase.from('transactions').select('*'))
+      list = (data ?? []) as Transaction[]
+    }
+    if (seq !== loadSeq.current) return
     setRows(list)
     setLoading(false)
     getTransactionTherapists(list.map((r) => r.id))
-      .then(setTherapists)
-      .catch(() => setTherapists({}))
+      .then((t) => { if (seq === loadSeq.current) setTherapists(t) })
+      .catch(() => { if (seq === loadSeq.current) setTherapists({}) })
   }
 
-  useEffect(() => { load() }, [dateFrom, dateTo]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [dateFrom, dateTo, therapistFilter, categoryFilter]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Dropdown options load in the background — the table doesn't wait for them
+  useEffect(() => {
+    getTherapistOptions().then(setTherapistOptions).catch(() => setTherapistOptions([]))
+  }, [])
 
   function changeRange(from: string, to: string) {
     setLoading(true)
@@ -131,6 +159,15 @@ export default function TransactionsPage() {
     setDateFrom(from)
     setDateTo(to)
   }
+
+  function changeTherapistService(next: { therapist: string; category: string }) {
+    setLoading(true)
+    setTherapists(null)
+    setTherapistFilter(next.therapist)
+    setCategoryFilter(next.category)
+  }
+
+  const hasFilters = !!(dateFrom || dateTo || therapistFilter || categoryFilter)
 
   // Reset category when type changes so the value stays valid
   useEffect(() => {
@@ -169,6 +206,9 @@ export default function TransactionsPage() {
     }
     const needsProof = requiresPaymentProof(form.payment_method)
     if (needsProof && !form.receipt_url) { alert(PAYMENT_PROOF_REQUIRED_MSG); return }
+    if (isIncome && isTherapistCategory(form.category) && !form.fisio_id) {
+      alert('Pilih Fisio untuk transaksi layanan ini — tanpa Fisio, penjualan tidak terhitung ke terapis mana pun.'); return
+    }
     setSaving(true)
     const { error } = await createTransactionManual({
       type:             form.type,
@@ -182,6 +222,7 @@ export default function TransactionsPage() {
       description:      form.description || null,
       transaction_date: form.transaction_date,
       receipt_url:      needsProof ? form.receipt_url : null,
+      fisio_id:         isIncome ? (form.fisio_id || null) : null,
     })
     setSaving(false)
     if (error) { alert(error); return }
@@ -282,11 +323,19 @@ export default function TransactionsPage() {
       </div>
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <DateRangeFilter from={dateFrom} to={dateTo} onChange={changeRange} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <TherapistServiceFilters
+            therapists={therapistOptions}
+            therapist={therapistFilter}
+            category={categoryFilter}
+            onChange={changeTherapistService}
+          />
+          <DateRangeFilter from={dateFrom} to={dateTo} onChange={changeRange} />
+        </div>
         {!loading && (
           <p className="text-xs text-muted-foreground">
             {rows.length === 100 ? 'Menampilkan 100 transaksi terbaru' : `${rows.length} transaksi`}
-            {dateFrom || dateTo ? ' dalam rentang ini' : ''}
+            {hasFilters ? ' sesuai filter' : ''}
           </p>
         )}
       </div>
@@ -367,7 +416,7 @@ export default function TransactionsPage() {
               ))}
             </tbody>
           </table>
-          {!rows.length && <p className="text-sm text-muted-foreground text-center py-8">{dateFrom || dateTo ? 'Tidak ada transaksi dalam rentang tanggal ini.' : 'Belum ada transaksi.'}</p>}
+          {!rows.length && <p className="text-sm text-muted-foreground text-center py-8">{hasFilters ? 'Tidak ada transaksi untuk filter ini.' : 'Belum ada transaksi.'}</p>}
         </div>
       )}
 
@@ -449,6 +498,17 @@ export default function TransactionsPage() {
                   </select>
                 </div>
               </div>
+
+              {isIncome && !isOnline && (
+                <FisioSelect
+                  patientId={null}
+                  branchId={null}
+                  value={form.fisio_id}
+                  onChange={(id) => setForm((f) => ({ ...f, fisio_id: id }))}
+                  required={isTherapistCategory(form.category)}
+                  labelClassName="block text-xs font-medium text-foreground mb-1"
+                />
+              )}
 
               {isOnline && <OnlineMethodPicker value={onlineMethod} onChange={setOnlineMethod} note="Lanjut pilih pasien / pembayar, lalu link DOKU dibuat. Transaksi tercatat otomatis setelah dibayar." />}
 

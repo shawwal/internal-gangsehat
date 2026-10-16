@@ -263,6 +263,15 @@ export const navigation: NavItem[] = [
     group: 'finance',
   },
   {
+    key: 'finance-data-check',
+    label: 'Cek Data',
+    href: '/finance/cek-data',
+    icon: 'ClipboardCheck',
+    // Transactions / visits missing a therapist or other details (app/actions/dataCheck.ts)
+    roles: ['finance', 'admin', 'manager', 'director'],
+    group: 'finance',
+  },
+  {
     key: 'closing-admin',
     label: 'Closing Admin',
     href: '/closing',

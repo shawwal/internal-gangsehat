@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { resolveTherapistNames } from '@/lib/finance/therapists'
+import { UUID_RE, byDateDesc, isServiceCategory, selectAttributedTransactions, type QueryBuilder } from '@/lib/finance/attribution'
 import {
   MONTH_LABELS, PAGE_SIZE, type BranchSummary, type TransactionRow, type FinanceParams,
 } from '@/components/director/finance/types'
@@ -11,6 +12,8 @@ interface RawSearchParams {
   year?: string
   from?: string
   to?: string
+  therapist?: string
+  category?: string
   page?: string
   q?: string
   no_patient?: string
@@ -44,6 +47,8 @@ export function parseFinanceParams(params: RawSearchParams): FinanceParams {
     year:      params.year   ?? String(new Date().getFullYear()),
     from:      params.from && ISO_DATE.test(params.from) ? params.from : '',
     to:        params.to   && ISO_DATE.test(params.to)   ? params.to   : '',
+    therapist: params.therapist && UUID_RE.test(params.therapist) ? params.therapist : '',
+    category:  isServiceCategory(params.category) ? params.category : '',
     q:         params.q?.trim() ?? '',
     noPatient: params.no_patient === '1',
     txType:    params.tx_type === 'income' ? 'income' : params.tx_type === 'expense' ? 'expense' : '',
@@ -54,7 +59,7 @@ export function parseFinanceParams(params: RawSearchParams): FinanceParams {
 }
 
 export async function loadFinanceData(params: FinanceParams) {
-  const { branchId, month, year, from: rangeFrom, to: rangeTo, q, noPatient, txType, status, payStatus, page } = params
+  const { branchId, month, year, from: rangeFrom, to: rangeTo, therapist, category, q, noPatient, txType, status, payStatus, page } = params
   const hasRange = !!(rangeFrom || rangeTo)
   const from = (page - 1) * PAGE_SIZE
   const to   = from + PAGE_SIZE - 1
@@ -101,6 +106,8 @@ export async function loadFinanceData(params: FinanceParams) {
     if (month)   baseParams.month      = month
     if (year)    baseParams.year       = year
   }
+  if (therapist) baseParams.therapist  = therapist
+  if (category)  baseParams.category   = category
   if (q)         baseParams.q          = q
   if (noPatient) baseParams.no_patient = '1'
   if (txType)    baseParams.tx_type    = txType
@@ -120,63 +127,73 @@ export async function loadFinanceData(params: FinanceParams) {
     searchPatientIds = (pMatches ?? []).map(p => p.id)
   }
 
+  const AGG_COLS  = 'branch_id, type, harga, discount, amount, outstanding, branches!branch_id(name)'
+  const LIST_COLS = 'id, branch_id, patient_id, visit_id, fisio_id, type, category, harga, discount, amount, outstanding, payment_method, payment_status, status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)'
+  type AggRow  = { branch_id: string; type: string; harga: number | null; discount: number | null; amount: number | null; outstanding: number | null; branches: unknown }
+  type ListRow = Omit<TransactionRow, 'patient_name' | 'branch_name' | 'therapist'> & { visit_id: string | null; fisio_id: string | null; branches: unknown }
+
+  // Scope shared by KPI aggregate and list: period, branch, service. The
+  // therapist filter is applied by selectAttributedTransactions (two queries).
+  const applyScope = (q2: QueryBuilder): QueryBuilder => {
+    if (dateFrom) q2 = q2.gte('transaction_date', dateFrom)
+    if (dateTo)   q2 = q2.lt('transaction_date', dateTo)
+    if (branchId) q2 = q2.eq('branch_id', branchId)
+    if (category) q2 = q2.eq('category', category)
+    return q2
+  }
+  // List-only filters (KPIs intentionally ignore these)
+  const applyListFilters = (q2: QueryBuilder): QueryBuilder => {
+    if (noPatient) q2 = q2.is('patient_id', null)
+    if (txType)    q2 = q2.eq('type', txType)
+    if (status)    q2 = q2.eq('status', status)
+    if (payStatus) q2 = q2.eq('payment_status', payStatus)
+    if (q) {
+      const orParts = [
+        `category.ilike.%${q}%`,
+        `description.ilike.%${q}%`,
+        `penjamin.ilike.%${q}%`,
+      ]
+      if (searchPatientIds.length > 0) {
+        orParts.push(`patient_id.in.(${searchPatientIds.join(',')})`)
+      }
+      q2 = q2.or(orParts.join(','))
+    }
+    return q2
+  }
+
   // ── Parallel: branches, aggregate txns, paginated txns ────────────────────
   const [
     { data: branchList },
-    { data: aggTxns },
-    { data: txnRows, count: txnTotal },
+    aggTxns,
+    { rows: txnRows, total: txnTotal },
   ] = await Promise.all([
     supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
 
     // All txns for aggregate — always excludes rejected regardless of the list-level status
     // filter, since KPI cards / branch summary represent valid (non-voided) revenue.
     // .limit(99999) overrides PostgREST's default 1000-row cap
-    (async () => {
-      let q2 = supabase
-        .from('transactions')
-        .select('branch_id, type, harga, discount, amount, outstanding, branches!branch_id(name)')
-        .neq('status', 'rejected')
-        .limit(99999)
-      if (dateFrom) q2 = q2.gte('transaction_date', dateFrom)
-      if (dateTo)   q2 = q2.lt('transaction_date', dateTo)
-      if (branchId) q2 = q2.eq('branch_id', branchId)
-      return q2
-    })(),
+    therapist
+      ? selectAttributedTransactions<AggRow>(supabase, AGG_COLS, therapist, (q2) => applyScope(q2.neq('status', 'rejected').limit(99999)))
+      : applyScope(supabase.from('transactions').select(AGG_COLS).neq('status', 'rejected').limit(99999))
+          .then((r: { data: AggRow[] | null }) => r.data ?? []) as Promise<AggRow[]>,
 
-    // Paginated + searchable + filterable transactions
-    (async () => {
-      let q2 = supabase
-        .from('transactions')
-        .select(
-          'id, branch_id, patient_id, visit_id, fisio_id, type, category, harga, discount, amount, outstanding, payment_method, payment_status, status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)',
-          { count: 'exact' },
-        )
-        .order('transaction_date', { ascending: false })
-        .order('id', { ascending: false })
-        .range(from, to)
-
-      if (dateFrom)  q2 = q2.gte('transaction_date', dateFrom)
-      if (dateTo)    q2 = q2.lt('transaction_date', dateTo)
-      if (branchId)  q2 = q2.eq('branch_id', branchId)
-      if (noPatient) q2 = q2.is('patient_id', null)
-      if (txType)    q2 = q2.eq('type', txType)
-      if (status)    q2 = q2.eq('status', status)
-      if (payStatus) q2 = q2.eq('payment_status', payStatus)
-
-      if (q) {
-        const orParts = [
-          `category.ilike.%${q}%`,
-          `description.ilike.%${q}%`,
-          `penjamin.ilike.%${q}%`,
-        ]
-        if (searchPatientIds.length > 0) {
-          orParts.push(`patient_id.in.(${searchPatientIds.join(',')})`)
-        }
-        q2 = q2.or(orParts.join(','))
-      }
-
-      return q2
-    })(),
+    // Paginated + searchable + filterable transactions. With a therapist the
+    // two attributed queries are merged, so paginate in memory (one
+    // therapist's rows — small).
+    therapist
+      ? selectAttributedTransactions<ListRow>(supabase, LIST_COLS, therapist, (q2) => applyListFilters(applyScope(q2)).limit(99999))
+          .then((rows) => {
+            rows.sort(byDateDesc)
+            return { rows: rows.slice(from, to + 1), total: rows.length }
+          })
+      : applyListFilters(applyScope(
+          supabase
+            .from('transactions')
+            .select(LIST_COLS, { count: 'exact' })
+            .order('transaction_date', { ascending: false })
+            .order('id', { ascending: false })
+            .range(from, to),
+        )).then((r: { data: ListRow[] | null; count: number | null }) => ({ rows: r.data ?? [], total: r.count ?? 0 })) as Promise<{ rows: ListRow[]; total: number }>,
   ])
 
   // ── Compute per-branch summary ─────────────────────────────────────────────

@@ -29,7 +29,7 @@ export function TransactionsTable({ txns, showBranchColumn, q, baseParams, perio
           {q ? `Tidak ada transaksi untuk "${q}"` : 'Tidak ada transaksi untuk filter ini'}
         </p>
         <Link
-          href={buildFinanceUrl(baseParams, { q: undefined, tx_type: undefined, no_patient: undefined, status: undefined, pay_status: undefined, page: undefined })}
+          href={buildFinanceUrl(baseParams, { q: undefined, tx_type: undefined, no_patient: undefined, status: undefined, pay_status: undefined, therapist: undefined, category: undefined, page: undefined })}
           className="text-xs text-primary hover:underline mt-1"
         >
           Hapus filter

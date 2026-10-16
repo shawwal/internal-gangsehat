@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createPatientPackage } from '@/app/actions/packages'
 import { createTransactionManual, fetchLayananDetail } from '@/app/actions/transactions'
+import { FisioSelect } from '@/components/finance/FisioSelect'
 import type { CreateTransactionManualInput } from '@/app/actions/transactions'
 import { PACKAGE_CATEGORIES, type PackageCategory } from './types'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
@@ -34,6 +35,8 @@ export function PackageForm({ patientId, patientName, branchId, lockedCategory, 
   const [error, setError]   = useState<string | null>(null)
   const [proofPath, setProofPath] = useState<string | null>(null)
   const [proofUploading, setProofUploading] = useState(false)
+  // Fisio credited for the sale (transactions.fisio_id) — see FisioSelect.
+  const [fisioId, setFisioId] = useState('')
 
   const sessions = jenis === 'P1' ? 5 : 10
   const isVisit  = category === 'PAKET VISIT'
@@ -75,6 +78,7 @@ export function PackageForm({ patientId, patientName, branchId, lockedCategory, 
     // Check before the package is created, so a missing proof never leaves an unpaid package
     const needsProof = requiresPaymentProof(method)
     if (needsProof && !proofPath) { setError(PAYMENT_PROOF_REQUIRED_MSG); return }
+    if (!fisioId) { setError('Pilih Fisio yang menjual / menangani paket ini.'); return }
     setSaving(true)
     setError(null)
 
@@ -109,6 +113,7 @@ export function PackageForm({ patientId, patientName, branchId, lockedCategory, 
       patient_id:       patientId,
       package_id:       pkgId,
       branch_id:        branchId,
+      fisio_id:         fisioId || null,
       receipt_url:      needsProof ? proofPath : null,
     }
 
@@ -202,6 +207,16 @@ export function PackageForm({ patientId, patientName, branchId, lockedCategory, 
           placeholder="mis. Paket Fisio Lutut P1"
         />
       </div>
+
+      <FisioSelect
+        patientId={patientId}
+        branchId={branchId}
+        value={fisioId}
+        onChange={setFisioId}
+        required
+        selectClassName={inputCls}
+        labelClassName={labelCls}
+      />
 
       {/* Harga & Bayar */}
       <div className="grid grid-cols-2 gap-3">

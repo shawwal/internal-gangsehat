@@ -36,6 +36,8 @@ export interface SaleForPfotm {
   category: string
   transaction_date?: string
   patient_id?: string | null
+  payment_status?: string | null
+  payment_method?: string | null
   /** The package bought, when the transaction links to one (PAKET KLINIK tiering). */
   package: PackageInfo | null
 }
@@ -56,6 +58,9 @@ export interface PfotmHit {
   ref_id: string | null
   /** service type or transaction category */
   label: string | null
+  /** sales only */
+  payment_status?: string | null
+  payment_method?: string | null
 }
 
 export interface PfotmAutoInput {
@@ -124,7 +129,10 @@ export function pfotmHitsWithGap(params: PfotmAutoInput): { hits: PfotmHit[]; ga
       : s.category === 'PAKET VISIT' ? 'paket_visit'
       : s.category === 'TA VISIT' || s.category === 'SESI VISIT' ? 'ta_sesi_visit'
       : null
-    if (key) hit(s.staff_id, key, s.transaction_date ?? start, { patient_id: s.patient_id ?? null, ref_id: s.id ?? null, label: s.category }, true)
+    if (key) hit(s.staff_id, key, s.transaction_date ?? start, {
+      patient_id: s.patient_id ?? null, ref_id: s.id ?? null, label: s.category,
+      payment_status: s.payment_status ?? null, payment_method: s.payment_method ?? null,
+    }, true)
   }
 
   for (const r of params.referrals) {

@@ -18,6 +18,8 @@ import {
   datesBetween, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES, type MetricDetail,
 } from '@/lib/metrics/achievement'
 import { resolvePatientNames } from '@/lib/metrics/patientNames'
+import { resolveTherapistIds } from '@/lib/finance/therapists'
+import { suggestLastTherapists } from '@/lib/finance/suggestTherapist'
 import { mergeMetrics, rankBoard, sanitizeMetricValue, type Metrics, type PointRule } from '@/lib/pfotm/engine'
 
 type Ok<T> = { ok: true; data: T }
@@ -172,7 +174,7 @@ async function collectPfotmInput(
       .limit(20000),
     supabase.from('patients').select('id, referred_by_staff_id, created_at').in('referred_by_staff_id', staffIds),
     admin.from('transactions')
-      .select('id, fisio_id, visit_id, order_id, category, transaction_date, patient_id')
+      .select('id, fisio_id, visit_id, order_id, category, transaction_date, patient_id, payment_status, payment_method')
       .eq('branch_id', branchId)
       .eq('type', 'income')
       .neq('status', 'rejected')
@@ -184,12 +186,11 @@ async function collectPfotmInput(
   const periodVisits = (visitRes.data ?? []) as unknown as VisitForPayroll[]
   const txRows = (txRes.data ?? []) as {
     id: string; fisio_id: string | null; visit_id: string | null; order_id: string | null; category: string
-    transaction_date: string; patient_id: string | null
+    transaction_date: string; patient_id: string | null; payment_status: string | null; payment_method: string | null
   }[]
 
-  // Attribute each sale: the transaction's Fisio, else the linked visit's
-  // therapist. PAKET KLINIK also needs its package (by order_id or via the
-  // linked visit) to tell P1 / P2 / P3 apart.
+  // PAKET KLINIK needs its package (by order_id or via the linked visit) to
+  // tell P1 / P2 / P3 apart.
   const visitIds = [...new Set(txRows.map((t) => t.visit_id).filter((x): x is string => !!x))]
   const orderIds = [...new Set(txRows.map((t) => t.order_id).filter((x): x is string => !!x))]
   const visitById = new Map<string, { attending_staff_id: string | null; package_id: string | null }>()
@@ -208,40 +209,24 @@ async function collectPfotmInput(
     const { data } = await admin.from('patient_packages').select('id, jenis_paket, total_sessions, order_id').in('order_id', orderIds.slice(i, i + 300))
     for (const p of (data ?? []) as (PackageInfo & { order_id: string })[]) packageByOrder.set(p.order_id, p)
   }
-  // No Fisio and no linked visit (typical for a package recorded from the
-  // cashier / ledger): credit the therapist of the package's first visit —
-  // the same rule payroll uses for package activity.
   const pkgOf = (t: typeof txRows[number]) => {
     const visit = t.visit_id ? visitById.get(t.visit_id) : undefined
     return (t.order_id ? packageByOrder.get(t.order_id) : undefined)
       ?? (visit?.package_id ? packageById.get(visit.package_id) : undefined)
       ?? null
   }
-  const orphanPkgIds = [...new Set(txRows
-    .filter((t) => !t.fisio_id && !(t.visit_id && visitById.get(t.visit_id)?.attending_staff_id))
-    .map((t) => pkgOf(t)?.id)
-    .filter((x): x is string => !!x))]
-  const firstTherapistByPkg = new Map<string, string>()
-  for (let i = 0; i < orphanPkgIds.length; i += 300) {
-    const { data } = await admin.from('patient_visits')
-      .select('package_id, attending_staff_id, visit_date')
-      .in('package_id', orphanPkgIds.slice(i, i + 300))
-      .not('attending_staff_id', 'is', null)
-      .in('status', [...KUNJUNGAN_VISIT_STATUSES])
-      .order('visit_date', { ascending: true })
-    for (const v of data ?? []) if (!firstTherapistByPkg.has(v.package_id)) firstTherapistByPkg.set(v.package_id, v.attending_staff_id)
-  }
+  // Same rule as the finance pages (fisio_id → linked visit's therapist), so a
+  // therapist's sales here are exactly their rows there. No guessing: a sale
+  // without either lands in the "Di luar Jumlah" gap until finance sets a Fisio.
+  const therapistByTx = await resolveTherapistIds(admin, txRows)
 
-  const sales: SaleForPfotm[] = txRows.map((t) => {
-    const visit = t.visit_id ? visitById.get(t.visit_id) : undefined
-    const pkg = pkgOf(t)
-    return {
-      id: t.id,
-      staff_id: t.fisio_id ?? visit?.attending_staff_id ?? (pkg ? firstTherapistByPkg.get(pkg.id) : undefined) ?? null,
-      category: t.category,
-      transaction_date: t.transaction_date, patient_id: t.patient_id, package: pkg,
-    }
-  })
+  const sales: SaleForPfotm[] = txRows.map((t) => ({
+    id: t.id,
+    staff_id: therapistByTx.get(t.id) ?? null,
+    category: t.category,
+    transaction_date: t.transaction_date, patient_id: t.patient_id, package: pkgOf(t),
+    payment_status: t.payment_status, payment_method: t.payment_method,
+  }))
 
   // Referral date = the referred patient's first visit (fallback: registration date).
   const referred = (refRes.data ?? []) as { id: string; referred_by_staff_id: string; created_at: string }[]
@@ -705,7 +690,10 @@ export async function getPfotmMetricDetail(entryId: string, metricKey: string): 
   const hits = pfotmHits(input).filter((h) => h.key === metricKey).sort((a, b) => a.date.localeCompare(b.date))
   const names = await resolvePatientNames(hits.map((h) => h.patient_id))
   return ok({
-    rows: hits.map((h) => ({ date: h.date, patientName: (h.patient_id && names.get(h.patient_id)) || '—', label: h.label })),
+    rows: hits.map((h) => ({
+      date: h.date, patientName: (h.patient_id && names.get(h.patient_id)) || '—', label: h.label,
+      paymentStatus: h.payment_status, paymentMethod: h.payment_method,
+    })),
     auto: hits.length,
     override: override ?? null,
   })
@@ -739,11 +727,17 @@ export async function getPfotmGap(periodId: string): Promise<Result<PfotmGap>> {
   gap.sort((a, b) => a.date.localeCompare(b.date))
 
   const otherStaff = [...new Set(gap.map((h) => h.staff_id).filter((x): x is string => !!x && !excludedName.has(x)))]
-  const [names, { data: profiles }] = await Promise.all([
+  // Rows with no Fisio: hint at the patient's last therapist (Cek Data's rule) — not counted.
+  const noFisio = gap.filter((h) => !h.staff_id && h.ref_id)
+  const [names, { data: profiles }, suggestions] = await Promise.all([
     resolvePatientNames(gap.map((h) => h.patient_id)),
     otherStaff.length
       ? createAdminClient().from('internal_profiles').select('id, full_name, nickname').in('id', otherStaff)
       : Promise.resolve({ data: [] as { id: string; full_name: string; nickname: string | null }[] }),
+    suggestLastTherapists(noFisio.map((h) => ({
+      key: h.ref_id as string, patient_id: h.patient_id, branch_id: period.branch_id, date: h.date,
+      excludeVisitId: h.key === 'kunjungan' ? (h.ref_id as string) : undefined,
+    }))),
   ])
   const staffName = new Map((profiles ?? []).map((p) => [p.id, p.nickname?.trim() || p.full_name]))
 
@@ -753,9 +747,11 @@ export async function getPfotmGap(periodId: string): Promise<Result<PfotmGap>> {
       date: h.date,
       patientName: (h.patient_id && names.get(h.patient_id)) || '—',
       label: `${h.label ?? ''} · ${
-        !h.staff_id ? 'tanpa Fisio'
+        !h.staff_id
+          ? `tanpa Fisio${h.ref_id && suggestions.get(h.ref_id) ? ` · saran: ${suggestions.get(h.ref_id)!.name}` : ''}`
         : excludedName.has(h.staff_id) ? `${excludedName.get(h.staff_id)} (dikeluarkan)`
         : `${staffName.get(h.staff_id) ?? 'staf lain'} (bukan peserta)`}`,
+      paymentStatus: h.payment_status, paymentMethod: h.payment_method,
     }))
     out[key] = { rows, auto: rows.length, override: null }
   }

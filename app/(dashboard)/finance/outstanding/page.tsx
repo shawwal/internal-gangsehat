@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { resolveTherapistNames } from '@/lib/finance/therapists'
+import { listTherapistOptions, resolveTherapistNames } from '@/lib/finance/therapists'
+import { UUID_RE, byDateDesc, isServiceCategory, selectAttributedTransactions, type QueryBuilder } from '@/lib/finance/attribution'
+import { UrlTherapistServiceFilters } from '@/components/finance/TherapistServiceFilters'
 import { decryptPatientPII } from '@/lib/encryption'
 import { OutstandingBranchFilter } from '@/components/finance/OutstandingBranchFilter'
 import { SearchInput } from '@/components/director/finance/SearchInput'
@@ -40,7 +42,7 @@ function buildUrl(base: Record<string, string>, overrides: Record<string, string
 export default async function OutstandingPaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branch?: string; page?: string; q?: string; status?: string; from?: string; to?: string }>
+  searchParams: Promise<{ branch?: string; page?: string; q?: string; status?: string; from?: string; to?: string; therapist?: string; category?: string }>
 }) {
   const params = await searchParams
   const q      = params.q?.trim() ?? ''
@@ -48,6 +50,8 @@ export default async function OutstandingPaymentsPage({
   const page   = Math.max(1, Number(params.page) || 1)
   const dateFrom = params.from && ISO_DATE.test(params.from) ? params.from : ''
   const dateTo   = params.to   && ISO_DATE.test(params.to)   ? params.to   : ''
+  const therapist = params.therapist && UUID_RE.test(params.therapist) ? params.therapist : ''
+  const category  = isServiceCategory(params.category) ? params.category : ''
   const from   = (page - 1) * PAGE_SIZE
   const to     = from + PAGE_SIZE - 1
 
@@ -68,6 +72,8 @@ export default async function OutstandingPaymentsPage({
   if (status)   baseParams.status = status
   if (dateFrom) baseParams.from   = dateFrom
   if (dateTo)   baseParams.to     = dateTo
+  if (therapist) baseParams.therapist = therapist
+  if (category)  baseParams.category  = category
 
   // ── Search: resolve patient IDs matching name_normalized ──────────────────
   let searchPatientIds: string[] = []
@@ -80,69 +86,79 @@ export default async function OutstandingPaymentsPage({
     searchPatientIds = (pMatches ?? []).map((p) => p.id)
   }
 
-  const [{ data: branchList }, { data: aggRows }, { data: txnRows, count: txnTotal }] = await Promise.all([
+  const LIST_COLS = 'id, order_id, branch_id, patient_id, visit_id, fisio_id, category, harga, discount, amount, outstanding, payment_method, payment_status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)'
+  type ListRow = {
+    id: string; order_id: string | null; branch_id: string; patient_id: string | null; visit_id: string | null; fisio_id: string | null
+    category: string; harga: number | null; discount: number | null; amount: number | null; outstanding: number | null
+    payment_method: string | null; payment_status: string | null; transaction_date: string; description: string | null
+    penjamin: string | null; receipt_url: string | null; branches: unknown
+  }
+
+  // Scope shared by the totals and the list: branch, period, service.
+  // The therapist filter is applied by selectAttributedTransactions.
+  const applyScope = (q2: QueryBuilder): QueryBuilder => {
+    q2 = q2.eq('type', 'income').neq('status', 'rejected')
+    if (branchId) q2 = q2.eq('branch_id', branchId)
+    if (dateFrom) q2 = q2.gte('transaction_date', dateFrom)
+    if (dateTo)   q2 = q2.lte('transaction_date', dateTo)
+    if (category) q2 = q2.eq('category', category)
+    return q2
+  }
+  const applyListFilters = (q2: QueryBuilder): QueryBuilder => {
+    // "Belum Lunas" (default) covers DP + Pelunasan via outstanding > 0.
+    // "Lunas" breaks out of that framing on purpose — a paid-off row has
+    // outstanding = 0, so it must drop the outstanding filter entirely.
+    if (status === 'LUNAS') {
+      q2 = q2.eq('payment_status', 'LUNAS')
+    } else if (status === 'DP' || status === 'PELUNASAN') {
+      q2 = q2.eq('payment_status', status).gt('outstanding', 0)
+    } else {
+      q2 = q2.gt('outstanding', 0)
+    }
+    if (q) {
+      const orParts = [
+        `category.ilike.%${q}%`,
+        `description.ilike.%${q}%`,
+        `penjamin.ilike.%${q}%`,
+      ]
+      if (searchPatientIds.length > 0) {
+        orParts.push(`patient_id.in.(${searchPatientIds.join(',')})`)
+      }
+      q2 = q2.or(orParts.join(','))
+    }
+    return q2
+  }
+
+  const [{ data: branchList }, aggRows, { rows: txnRows, total: txnTotal }, therapistOptions] = await Promise.all([
     isDirector
       ? supabase.from('branches').select('id, name').eq('is_active', true).order('name')
       : Promise.resolve({ data: [] }),
 
-    // Unpaginated aggregate — total outstanding + count, same branch + date scope, no search filter
-    (async () => {
-      let q2 = supabase
-        .from('transactions')
-        .select('outstanding')
-        .eq('type', 'income')
-        .neq('status', 'rejected')
-        .gt('outstanding', 0)
-        .limit(99999)
-      if (branchId) q2 = q2.eq('branch_id', branchId)
-      if (dateFrom) q2 = q2.gte('transaction_date', dateFrom)
-      if (dateTo)   q2 = q2.lte('transaction_date', dateTo)
-      return q2
-    })(),
+    // Unpaginated aggregate — total outstanding + count, same branch/date/therapist/service scope, no search filter
+    therapist
+      ? selectAttributedTransactions<{ outstanding: number | null }>(supabase, 'outstanding', therapist,
+          (q2) => applyScope(q2).gt('outstanding', 0).limit(99999))
+      : applyScope(supabase.from('transactions').select('outstanding')).gt('outstanding', 0).limit(99999)
+          .then((r: { data: { outstanding: number | null }[] | null }) => r.data ?? []) as Promise<{ outstanding: number | null }[]>,
 
-    // Paginated + searchable outstanding transactions
-    (async () => {
-      let q2 = supabase
-        .from('transactions')
-        .select(
-          'id, order_id, branch_id, patient_id, visit_id, fisio_id, category, harga, discount, amount, outstanding, payment_method, payment_status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)',
-          { count: 'exact' },
-        )
-        .eq('type', 'income')
-        .neq('status', 'rejected')
-        .order('transaction_date', { ascending: true })
-        .order('id', { ascending: true })
-        .range(from, to)
+    // Paginated + searchable outstanding transactions (oldest first). With a
+    // therapist the two attributed queries are merged → paginate in memory.
+    therapist
+      ? selectAttributedTransactions<ListRow>(supabase, LIST_COLS, therapist, (q2) => applyListFilters(applyScope(q2)).limit(99999))
+          .then((rows) => {
+            rows.sort((x, y) => -byDateDesc(x, y))
+            return { rows: rows.slice(from, to + 1), total: rows.length }
+          })
+      : applyListFilters(applyScope(
+          supabase
+            .from('transactions')
+            .select(LIST_COLS, { count: 'exact' })
+            .order('transaction_date', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to),
+        )).then((r: { data: ListRow[] | null; count: number | null }) => ({ rows: r.data ?? [], total: r.count ?? 0 })) as Promise<{ rows: ListRow[]; total: number }>,
 
-      // "Belum Lunas" (default) covers DP + Pelunasan via outstanding > 0.
-      // "Lunas" breaks out of that framing on purpose — a paid-off row has
-      // outstanding = 0, so it must drop the outstanding filter entirely.
-      if (status === 'LUNAS') {
-        q2 = q2.eq('payment_status', 'LUNAS')
-      } else if (status === 'DP' || status === 'PELUNASAN') {
-        q2 = q2.eq('payment_status', status).gt('outstanding', 0)
-      } else {
-        q2 = q2.gt('outstanding', 0)
-      }
-
-      if (branchId) q2 = q2.eq('branch_id', branchId)
-      if (dateFrom) q2 = q2.gte('transaction_date', dateFrom)
-      if (dateTo)   q2 = q2.lte('transaction_date', dateTo)
-
-      if (q) {
-        const orParts = [
-          `category.ilike.%${q}%`,
-          `description.ilike.%${q}%`,
-          `penjamin.ilike.%${q}%`,
-        ]
-        if (searchPatientIds.length > 0) {
-          orParts.push(`patient_id.in.(${searchPatientIds.join(',')})`)
-        }
-        q2 = q2.or(orParts.join(','))
-      }
-
-      return q2
-    })(),
+    listTherapistOptions(supabase, branchId),
   ])
 
   const totalOutstanding = (aggRows ?? []).reduce((s, r) => s + Number(r.outstanding ?? 0), 0)
@@ -243,6 +259,9 @@ export default async function OutstandingPaymentsPage({
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <Suspense>
+              <UrlTherapistServiceFilters therapists={therapistOptions} therapist={therapist} category={category} />
+            </Suspense>
             <Suspense>
               <UrlDateRangeFilter from={dateFrom} to={dateTo} />
             </Suspense>

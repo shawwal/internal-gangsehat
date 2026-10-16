@@ -305,6 +305,7 @@ export default function PfotmPage() {
                 editable={canInput}
                 refreshing={busy === 'refresh'}
                 gap={gap}
+                canFixData={['finance', 'manager', 'admin', 'director'].includes(data.role)}
                 periodStart={period.start_date}
                 periodEnd={period.end_date}
                 onRefresh={async () => {

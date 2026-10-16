@@ -1,9 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { TrendingUp, TrendingDown, DollarSign, AlertCircle, FileText, Plus, ArrowRight, CalendarOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { getTherapistOptions } from '@/app/actions/transactions'
+import { TherapistServiceFilters, type TherapistOption } from '@/components/finance/TherapistServiceFilters'
+import { selectAttributedTransactions, type QueryBuilder } from '@/lib/finance/attribution'
 
 interface Report {
   id: string
@@ -79,9 +82,20 @@ function KpiCard({
 export default function FinancePage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+  // KPI refresh after a filter change — keeps the page, dims the cards
+  const [refreshing, setRefreshing] = useState(false)
+  const [therapist, setTherapist] = useState('')
+  const [category, setCategory]   = useState('')
+  const [therapistOptions, setTherapistOptions] = useState<TherapistOption[] | null>(null)
+  const loadSeq = useRef(0)
+
+  useEffect(() => {
+    getTherapistOptions().then(setTherapistOptions).catch(() => setTherapistOptions([]))
+  }, [])
 
   useEffect(() => {
     async function load() {
+      const seq = ++loadSeq.current
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -96,35 +110,60 @@ export default function FinancePage() {
       const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
       const branchId = prof?.branch_id ?? null
 
-      let incomeQ  = supabase.from('transactions').select('amount').eq('type', 'income').eq('status', 'confirmed').gte('transaction_date', firstDay)
-      let expenseQ = supabase.from('transactions').select('amount').eq('type', 'expense').eq('status', 'confirmed').gte('transaction_date', firstDay)
-      let pendingQ = supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('status', 'pending')
-      let reportsQ = supabase.from('branch_financial_reports').select('id, period_year, period_month, status, total_income, net_profit').order('period_year', { ascending: false }).order('period_month', { ascending: false }).limit(3)
-      if (branchId) {
-        incomeQ  = incomeQ.eq('branch_id', branchId)
-        expenseQ = expenseQ.eq('branch_id', branchId)
-        pendingQ = pendingQ.eq('branch_id', branchId)
-        reportsQ = reportsQ.eq('branch_id', branchId)
+      // Branch + service scope; therapist goes through the attribution helper
+      const scope = (q: QueryBuilder): QueryBuilder => {
+        if (branchId) q = q.eq('branch_id', branchId)
+        if (category) q = q.eq('category', category)
+        return q
+      }
+      const rowsOf = async <T,>(select: string, apply: (q: QueryBuilder) => QueryBuilder): Promise<T[]> =>
+        therapist
+          ? selectAttributedTransactions<T>(supabase, select, therapist, (q) => apply(scope(q))).catch(() => [])
+          : ((await apply(scope(supabase.from('transactions').select(select)))).data ?? []) as T[]
+
+      const pendingCountQ = async () => {
+        if (!therapist) {
+          const { count } = await scope(supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('status', 'pending'))
+          return count ?? 0
+        }
+        return (await rowsOf<{ id: string }>('id', (q) => q.eq('status', 'pending').limit(99999))).length
       }
 
-      const [incomeRes, expenseRes, pendingRes, reportsRes] = await Promise.all([incomeQ, expenseQ, pendingQ, reportsQ])
+      let reportsQ = supabase.from('branch_financial_reports').select('id, period_year, period_month, status, total_income, net_profit').order('period_year', { ascending: false }).order('period_month', { ascending: false }).limit(3)
+      if (branchId) reportsQ = reportsQ.eq('branch_id', branchId)
 
-      const income  = (incomeRes.data ?? []).reduce((s, r) => s + Number(r.amount), 0)
-      const expense = (expenseRes.data ?? []).reduce((s, r) => s + Number(r.amount), 0)
+      const [incomeRows, expenseRows, pendingCount, reportsRes] = await Promise.all([
+        rowsOf<{ amount: number }>('amount', (q) => q.eq('type', 'income').eq('status', 'confirmed').gte('transaction_date', firstDay).limit(99999)),
+        rowsOf<{ amount: number }>('amount', (q) => q.eq('type', 'expense').eq('status', 'confirmed').gte('transaction_date', firstDay).limit(99999)),
+        pendingCountQ(),
+        reportsQ,
+      ])
+      if (seq !== loadSeq.current) return
+
+      const income  = incomeRows.reduce((s, r) => s + Number(r.amount), 0)
+      const expense = expenseRows.reduce((s, r) => s + Number(r.amount), 0)
 
       setStats({
         income,
         expense,
         profit: income - expense,
-        pendingCount: pendingRes.count ?? 0,
+        pendingCount,
         reports: (reportsRes.data ?? []) as Report[],
         profileName: prof?.full_name ?? 'Pengguna',
         hasBranch: !!prof?.branch_id,
       })
       setLoading(false)
+      setRefreshing(false)
     }
     load()
-  }, [])
+  }, [therapist, category])
+
+  function changeFilters(next: { therapist: string; category: string }) {
+    setRefreshing(true)
+    setTherapist(next.therapist)
+    setCategory(next.category)
+  }
+  const filtered = !!(therapist || category)
 
   const now = new Date()
   const monthLabel = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
@@ -161,8 +200,21 @@ export default function FinancePage() {
         </div>
       )}
 
+      {/* Therapist + service filter (KPI cards only) */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <TherapistServiceFilters
+          therapists={therapistOptions}
+          therapist={therapist}
+          category={category}
+          onChange={changeFilters}
+        />
+        {filtered && (
+          <p className="text-xs text-muted-foreground">Kartu di bawah mengikuti filter · laporan bulanan tetap total cabang</p>
+        )}
+      </div>
+
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className={`grid grid-cols-2 gap-4 transition-opacity ${refreshing ? 'opacity-50 pointer-events-none' : ''}`}>
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (

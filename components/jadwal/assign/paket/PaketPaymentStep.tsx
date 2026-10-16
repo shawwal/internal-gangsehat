@@ -6,6 +6,7 @@ import { createTransactionManual } from '@/app/actions/transactions'
 import type { PackageCategory } from '@/lib/serviceType'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
+import { FisioSelect } from '@/components/finance/FisioSelect'
 
 export interface PaketPaymentStepProps {
   patientId: string
@@ -16,6 +17,8 @@ export interface PaketPaymentStepProps {
   hargaDefault: number
   category: PackageCategory
   branchId: string | null
+  /** Therapist of the slot / visit the package is bought from — default Fisio for the sale. */
+  defaultFisioId?: string | null
   onDone: () => void
 }
 
@@ -31,6 +34,7 @@ export function PaketPaymentStep({
   hargaDefault,
   category,
   branchId,
+  defaultFisioId,
   onDone,
 }: PaketPaymentStepProps) {
   const [harga, setHarga]   = useState(hargaDefault > 0 ? String(hargaDefault) : '')
@@ -40,6 +44,7 @@ export function PaketPaymentStep({
   const [error, setError]   = useState<string | null>(null)
   const [proofPath, setProofPath] = useState<string | null>(null)
   const [proofUploading, setProofUploading] = useState(false)
+  const [fisioId, setFisioId] = useState('')
 
   const hargaNum  = parseFloat(harga.replace(/\D/g, '')) || 0
   const amountNum = parseFloat(amount.replace(/\D/g, '')) || 0
@@ -52,6 +57,7 @@ export function PaketPaymentStep({
     if (proofUploading) return
     const needsProof = requiresPaymentProof(method)
     if (needsProof && !proofPath) { setError(PAYMENT_PROOF_REQUIRED_MSG); return }
+    if (!fisioId) { setError('Pilih Fisio yang menjual / menangani paket ini.'); return }
     setSaving(true)
     setError(null)
 
@@ -70,6 +76,7 @@ export function PaketPaymentStep({
       patient_id:       patientId,
       package_id:       packageId,
       branch_id:        branchId,
+      fisio_id:         fisioId,
       receipt_url:      needsProof ? proofPath : null,
     })
 
@@ -110,6 +117,17 @@ export function PaketPaymentStep({
             <span className="text-xs text-muted-foreground">Paket:</span>
             <span className="text-xs font-medium text-foreground">{packageName} · {jumlahSesi} sesi</span>
           </div>
+
+          <FisioSelect
+            patientId={patientId}
+            branchId={branchId}
+            value={fisioId}
+            onChange={setFisioId}
+            preferredStaffId={defaultFisioId}
+            required
+            selectClassName={inputCls}
+            labelClassName={labelCls}
+          />
 
           {/* Harga & Bayar */}
           <div className="grid grid-cols-2 gap-3">

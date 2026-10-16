@@ -8,13 +8,16 @@ import { TransactionsPagination } from '@/components/director/finance/Transactio
 import { Landmark } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { loadFinanceData, parseFinanceParams } from './data'
+import { listTherapistOptions } from '@/lib/finance/therapists'
+import { UrlTherapistServiceFilters } from '@/components/finance/TherapistServiceFilters'
+import { Suspense } from 'react'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DirectorFinancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ branch?: string; month?: string; year?: string; from?: string; to?: string; page?: string; q?: string; no_patient?: string; tx_type?: string; status?: string; pay_status?: string }>
+  searchParams: Promise<{ branch?: string; month?: string; year?: string; from?: string; to?: string; therapist?: string; category?: string; page?: string; q?: string; no_patient?: string; tx_type?: string; status?: string; pay_status?: string }>
 }) {
   const rawParams = await searchParams
   const params = parseFinanceParams(rawParams)
@@ -23,7 +26,7 @@ export default async function DirectorFinancePage({
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase
     .from('internal_profiles')
-    .select('role')
+    .select('role, branch_id')
     .eq('id', user!.id)
     .single()
   const role = profile?.role ?? null
@@ -33,12 +36,15 @@ export default async function DirectorFinancePage({
   // Only director may filter by branch; everyone else is scoped by RLS.
   if (!isDirector) params.branchId = ''
 
-  const {
+  const [{
     branchList, branchSummaries,
     totalIncome, totalCollected, totalExpense, totalOutstanding, totalNet,
     txns, txnTotal, totalPages,
     periodLabel, periodRange, selectedBranchName, baseParams,
-  } = await loadFinanceData(params)
+  }, therapistOptions] = await Promise.all([
+    loadFinanceData(params),
+    listTherapistOptions(supabase, isDirector ? params.branchId : (profile?.branch_id ?? '')),
+  ])
 
   return (
     <div className="space-y-6 relative">
@@ -69,6 +75,15 @@ export default async function DirectorFinancePage({
           />
         </div>
       </div>
+
+      {/* Therapist + service: scope KPIs, branch summary and the list */}
+      <Suspense>
+        <UrlTherapistServiceFilters
+          therapists={therapistOptions}
+          therapist={params.therapist}
+          category={params.category}
+        />
+      </Suspense>
 
       {canSeeTotals && (
       <FinanceKpiCards

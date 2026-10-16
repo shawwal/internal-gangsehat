@@ -56,6 +56,10 @@ export interface MetricDetailRow {
   patientName: string
   /** service type / transaction category */
   label: string | null
+  /** sales rows only: LUNAS / DP / PELUNASAN */
+  paymentStatus?: string | null
+  /** sales rows only: TUNAI / TRANSFER BCA / DOKU QRIS … */
+  paymentMethod?: string | null
 }
 
 export interface MetricDetail {

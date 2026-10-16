@@ -491,6 +491,7 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
           hargaDefault={pendingPayment.harga}
           category={packageCategoryForKategori(selectedLayanan?.kategori) ?? 'PAKET KLINIK'}
           branchId={target.branchId}
+          defaultFisioId={target.staffId}
           onDone={handlePaymentDone}
         />
       )}

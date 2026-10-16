@@ -79,3 +79,17 @@ export interface CategorySummary {
   selisih: number
   daily: number[]
 }
+
+// Sort options of the full-page detail list (/target-progress/detail). Lives
+// here, not in the 'use client' view, because the server page validates `?sort=`.
+export const DETAIL_SORT_OPTIONS = [
+  { value: 'date_asc',      label: 'Tanggal terlama' },
+  { value: 'date_desc',     label: 'Tanggal terbaru' },
+  { value: 'patient_asc',   label: 'Nama pasien A–Z' },
+  { value: 'therapist_asc', label: 'Nama terapis A–Z' },
+  { value: 'service_asc',   label: 'Layanan A–Z' },
+  { value: 'amount_desc',   label: 'Nominal tertinggi' },
+] as const
+export type DetailSort = typeof DETAIL_SORT_OPTIONS[number]['value']
+export const isDetailSort = (v: string | undefined): v is DetailSort =>
+  DETAIL_SORT_OPTIONS.some((o) => o.value === v)
