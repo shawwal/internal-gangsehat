@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 export default async function DirectorFinancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ branch?: string; month?: string; year?: string; page?: string; q?: string; no_patient?: string; tx_type?: string; status?: string; pay_status?: string }>
+  searchParams: Promise<{ branch?: string; month?: string; year?: string; from?: string; to?: string; page?: string; q?: string; no_patient?: string; tx_type?: string; status?: string; pay_status?: string }>
 }) {
   const rawParams = await searchParams
   const params = parseFinanceParams(rawParams)
@@ -37,7 +37,7 @@ export default async function DirectorFinancePage({
     branchList, branchSummaries,
     totalIncome, totalCollected, totalExpense, totalOutstanding, totalNet,
     txns, txnTotal, totalPages,
-    periodLabel, selectedBranchName, baseParams,
+    periodLabel, periodRange, selectedBranchName, baseParams,
   } = await loadFinanceData(params)
 
   return (
@@ -64,6 +64,8 @@ export default async function DirectorFinancePage({
             showBranchSelect={isDirector}
             month={params.month}
             year={params.year}
+            from={params.from}
+            to={params.to}
           />
         </div>
       </div>
@@ -109,6 +111,7 @@ export default async function DirectorFinancePage({
           showBranchColumn={isDirector && !params.branchId}
           q={params.q}
           baseParams={baseParams}
+          periodRange={periodRange}
         />
 
         <TransactionsPagination

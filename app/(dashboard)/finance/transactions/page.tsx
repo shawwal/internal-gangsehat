@@ -5,8 +5,10 @@ import { Plus, CheckCircle, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionType, TransactionStatus, PaymentMethod, PaymentDetailStatus } from '@/types'
 import { ExportButton } from '@/components/ui/ExportButton'
+import { DateRangeFilter } from '@/components/finance/DateRangeFilter'
+import { TherapistLink } from '@/components/finance/TherapistLink'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
-import { createTransactionManual } from '@/app/actions/transactions'
+import { createTransactionManual, getTransactionTherapists } from '@/app/actions/transactions'
 import { todayJakartaISO } from '@/lib/utils'
 import { logActivity } from '@/lib/activityLog'
 import { TableSkeleton } from '@/components/ui/Skeleton'
@@ -88,6 +90,10 @@ export default function TransactionsPage() {
   const [rejectId, setRejectId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [proofUploading, setProofUploading] = useState(false)
+  // Therapist names load after the table renders (extra lookups, non-blocking)
+  const [therapists, setTherapists] = useState<Record<string, { id: string; name: string }> | null>(null)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo]     = useState('')
 
   const [userId, setUserId]     = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
@@ -106,12 +112,25 @@ export default function TransactionsPage() {
 
     let q = supabase.from('transactions').select('*').order('transaction_date', { ascending: false }).limit(100)
     if (prof?.branch_id) q = q.eq('branch_id', prof.branch_id)
+    if (dateFrom) q = q.gte('transaction_date', dateFrom)
+    if (dateTo)   q = q.lte('transaction_date', dateTo)
     const { data } = await q
-    setRows((data ?? []) as Transaction[])
+    const list = (data ?? []) as Transaction[]
+    setRows(list)
     setLoading(false)
+    getTransactionTherapists(list.map((r) => r.id))
+      .then(setTherapists)
+      .catch(() => setTherapists({}))
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [dateFrom, dateTo]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function changeRange(from: string, to: string) {
+    setLoading(true)
+    setTherapists(null)
+    setDateFrom(from)
+    setDateTo(to)
+  }
 
   // Reset category when type changes so the value stays valid
   useEffect(() => {
@@ -224,6 +243,7 @@ export default function TransactionsPage() {
     { header: 'Tanggal',      value: (r) => r.transaction_date },
     { header: 'Tipe',         value: (r) => TYPE_LABELS[r.type] },
     { header: 'Kategori',     value: (r) => r.category },
+    { header: 'Terapis',      value: (r) => therapists?.[r.id]?.name ?? '' },
     { header: 'Harga',        value: (r) => r.harga ?? 0 },
     { header: 'Diskon',       value: (r) => r.discount ?? 0 },
     { header: 'Jumlah Bayar', value: (r) => r.amount },
@@ -237,7 +257,8 @@ export default function TransactionsPage() {
 
   function handleExportTransactions() {
     const today = new Date().toISOString().slice(0, 10)
-    exportToExcel(rows, TRANSACTION_COLS, `transaksi_${today}`)
+    const range = dateFrom || dateTo ? `${dateFrom || 'awal'}_sd_${dateTo || today}` : today
+    exportToExcel(rows, TRANSACTION_COLS, `transaksi_${range}`)
     return Promise.resolve()
   }
 
@@ -260,9 +281,18 @@ export default function TransactionsPage() {
         </div>
       </div>
 
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <DateRangeFilter from={dateFrom} to={dateTo} onChange={changeRange} />
+        {!loading && (
+          <p className="text-xs text-muted-foreground">
+            {rows.length === 100 ? 'Menampilkan 100 transaksi terbaru' : `${rows.length} transaksi`}
+            {dateFrom || dateTo ? ' dalam rentang ini' : ''}
+          </p>
+        )}
+      </div>
 
       {loading ? (
-        <TableSkeleton rows={10} cols={8} />
+        <TableSkeleton rows={10} cols={9} />
       ) : (
         <div className="bg-card rounded-2xl border border-border overflow-x-auto">
           <table className="w-full text-sm">
@@ -270,6 +300,7 @@ export default function TransactionsPage() {
               <tr className="border-b border-border">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tanggal</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Kategori</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Terapis</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tipe</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Bayar</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">Sisa</th>
@@ -284,6 +315,11 @@ export default function TransactionsPage() {
                 <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
                   <td className="px-4 py-3 text-muted-foreground">{r.transaction_date}</td>
                   <td className="px-4 py-3 font-medium text-foreground">{r.category}</td>
+                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell whitespace-nowrap">
+                    {therapists === null
+                      ? <span className="inline-block h-3 w-20 bg-muted rounded-full animate-pulse align-middle" />
+                      : <TherapistLink therapist={therapists[r.id]} range={{ from: dateFrom, to: dateTo }} />}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.type === 'income' ? 'bg-chart-4/15 text-chart-4' : 'bg-destructive/10 text-destructive'}`}>
                       {TYPE_LABELS[r.type]}
@@ -331,7 +367,7 @@ export default function TransactionsPage() {
               ))}
             </tbody>
           </table>
-          {!rows.length && <p className="text-sm text-muted-foreground text-center py-8">Belum ada transaksi.</p>}
+          {!rows.length && <p className="text-sm text-muted-foreground text-center py-8">{dateFrom || dateTo ? 'Tidak ada transaksi dalam rentang tanggal ini.' : 'Belum ada transaksi.'}</p>}
         </div>
       )}
 

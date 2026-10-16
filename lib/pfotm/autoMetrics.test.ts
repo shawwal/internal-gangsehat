@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computePfotmAutoMetrics, pfotmHits } from './autoMetrics'
+import { computePfotmAutoMetrics, pfotmHits, pfotmHitsWithGap } from './autoMetrics'
 import { rankBoard, type PointRule } from './engine'
 import type { VisitForPayroll } from '@/lib/payroll/autoActivity'
 
@@ -69,5 +69,24 @@ describe('PFOTM ranking', () => {
       { key: 'prity', name: 'PRITY', metrics: { kunjungan: 30 } },
     ], rules, 26)
     expect(board.map((r) => [r.name, r.total, r.rank])).toEqual([['PRITY', 30, 1], ['HENA', 30, 2]])
+  })
+})
+
+describe('PFOTM gap', () => {
+  it('keeps sales / visits credited to no participant out of the board but in the gap', () => {
+    const params = {
+      staffIds: ['a'], start: '2026-09-27', end: '2026-10-26', todayISO: '2026-10-07',
+      attendance: [], referrals: [],
+      periodVisits: [visit({}), visit({ attending_staff_id: 'mgr' }), visit({ attending_staff_id: null })],
+      sales: [
+        { id: 't1', staff_id: 'a', category: 'TA VISIT', transaction_date: '2026-10-03', package: null },
+        { id: 't2', staff_id: null, category: 'PAKET VISIT', transaction_date: '2026-10-05', package: null },
+        { id: 't3', staff_id: null, category: 'TA KLINIK', transaction_date: '2026-10-05', package: null }, // not a PFOTM column
+      ],
+    }
+    const { hits, gap } = pfotmHitsWithGap(params)
+    expect(hits).toEqual(pfotmHits(params))
+    expect(computePfotmAutoMetrics(params).a).toMatchObject({ kunjungan: 1, ta_sesi_visit: 1, paket_visit: 0 })
+    expect(gap.map((g) => [g.key, g.staff_id])).toEqual([['kunjungan', 'mgr'], ['kunjungan', null], ['paket_visit', null]])
   })
 })

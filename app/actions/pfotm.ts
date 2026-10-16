@@ -7,11 +7,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activityLog'
-import { buildPeriodDays, MONTH_NAMES } from '@/lib/payroll/period'
+import { addDays, buildPeriodDays, MONTH_NAMES, weekdayOf } from '@/lib/payroll/period'
 import { VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
 import type { Weekday } from '@/lib/payroll/types'
 import {
-  computePfotmAutoMetrics, DRILLDOWN_METRICS, pfotmHits, SALES_CATEGORIES, SALES_PAYMENT_STATUSES,
+  computePfotmAutoMetrics, DRILLDOWN_METRICS, pfotmHits, pfotmHitsWithGap, SALES_CATEGORIES, SALES_PAYMENT_STATUSES,
   type AttendanceForPfotm, type PackageInfo, type PfotmAutoInput, type SaleForPfotm,
 } from '@/lib/pfotm/autoMetrics'
 import {
@@ -127,6 +127,20 @@ async function loadWorkingWindow(supabase: ServerClient, branchId: string, year:
   return { start: built.start, end: built.end, workdays: built.workdays }
 }
 
+/** Working days in any date range, with the branch's weekly off days + holidays (same rules as payroll). */
+async function workdaysBetween(supabase: ServerClient, branchId: string, start: string, end: string): Promise<number> {
+  const [{ data: settingsRows }, { data: holidays }] = await Promise.all([
+    supabase.from('payroll_settings').select('branch_id, weekly_off_days').or(`branch_id.eq.${branchId},branch_id.is.null`),
+    supabase.from('payroll_holidays').select('date').or(`branch_id.eq.${branchId},branch_id.is.null`).gte('date', start).lte('date', end),
+  ])
+  const s = (settingsRows ?? []).find((r) => r.branch_id === branchId) ?? (settingsRows ?? []).find((r) => r.branch_id === null)
+  const off = new Set((s?.weekly_off_days ?? ['JUMAT']) as Weekday[])
+  const holiday = new Set((holidays ?? []).map((h) => h.date as string))
+  let n = 0
+  for (let d = start; d <= end; d = addDays(d, 1)) if (!holiday.has(d) && !off.has(weekdayOf(d))) n++
+  return n
+}
+
 async function collectAutoMetrics(supabase: ServerClient, branchId: string, staffIds: string[], start: string, end: string) {
   if (!staffIds.length) return {}
   return computePfotmAutoMetrics(await collectPfotmInput(supabase, branchId, staffIds, start, end))
@@ -139,6 +153,8 @@ async function collectAutoMetrics(supabase: ServerClient, branchId: string, staf
  */
 async function collectPfotmInput(
   supabase: ServerClient, branchId: string, staffIds: string[], start: string, end: string,
+  /** Read every visit of the branch, not just the participants' (for the gap row). */
+  allBranchVisits = false,
 ): Promise<PfotmAutoInput> {
   const today = todayJakarta()
   // `transactions` is RLS-limited to finance-capable roles, but HR prepares
@@ -147,10 +163,9 @@ async function collectPfotmInput(
   const admin = createAdminClient()
   const [attRes, visitRes, refRes, txRes] = await Promise.all([
     supabase.from('attendance').select('staff_id, date, status').in('staff_id', staffIds).gte('date', start).lte('date', end),
-    supabase.from('patient_visits')
-      .select(VISIT_FOR_PAYROLL_COLUMNS)
-      .eq('branch_id', branchId)
-      .in('attending_staff_id', staffIds)
+    (allBranchVisits
+      ? supabase.from('patient_visits').select(VISIT_FOR_PAYROLL_COLUMNS).eq('branch_id', branchId)
+      : supabase.from('patient_visits').select(VISIT_FOR_PAYROLL_COLUMNS).eq('branch_id', branchId).in('attending_staff_id', staffIds))
       .in('status', [...KUNJUNGAN_VISIT_STATUSES])
       .or(KUNJUNGAN_SERVICE_FILTER)
       .gte('visit_date', start).lte('visit_date', end)
@@ -193,13 +208,37 @@ async function collectPfotmInput(
     const { data } = await admin.from('patient_packages').select('id, jenis_paket, total_sessions, order_id').in('order_id', orderIds.slice(i, i + 300))
     for (const p of (data ?? []) as (PackageInfo & { order_id: string })[]) packageByOrder.set(p.order_id, p)
   }
-  const sales: SaleForPfotm[] = txRows.map((t) => {
+  // No Fisio and no linked visit (typical for a package recorded from the
+  // cashier / ledger): credit the therapist of the package's first visit —
+  // the same rule payroll uses for package activity.
+  const pkgOf = (t: typeof txRows[number]) => {
     const visit = t.visit_id ? visitById.get(t.visit_id) : undefined
-    const pkg = (t.order_id ? packageByOrder.get(t.order_id) : undefined)
+    return (t.order_id ? packageByOrder.get(t.order_id) : undefined)
       ?? (visit?.package_id ? packageById.get(visit.package_id) : undefined)
       ?? null
+  }
+  const orphanPkgIds = [...new Set(txRows
+    .filter((t) => !t.fisio_id && !(t.visit_id && visitById.get(t.visit_id)?.attending_staff_id))
+    .map((t) => pkgOf(t)?.id)
+    .filter((x): x is string => !!x))]
+  const firstTherapistByPkg = new Map<string, string>()
+  for (let i = 0; i < orphanPkgIds.length; i += 300) {
+    const { data } = await admin.from('patient_visits')
+      .select('package_id, attending_staff_id, visit_date')
+      .in('package_id', orphanPkgIds.slice(i, i + 300))
+      .not('attending_staff_id', 'is', null)
+      .in('status', [...KUNJUNGAN_VISIT_STATUSES])
+      .order('visit_date', { ascending: true })
+    for (const v of data ?? []) if (!firstTherapistByPkg.has(v.package_id)) firstTherapistByPkg.set(v.package_id, v.attending_staff_id)
+  }
+
+  const sales: SaleForPfotm[] = txRows.map((t) => {
+    const visit = t.visit_id ? visitById.get(t.visit_id) : undefined
+    const pkg = pkgOf(t)
     return {
-      id: t.id, staff_id: t.fisio_id ?? visit?.attending_staff_id ?? null, category: t.category,
+      id: t.id,
+      staff_id: t.fisio_id ?? visit?.attending_staff_id ?? (pkg ? firstTherapistByPkg.get(pkg.id) : undefined) ?? null,
+      category: t.category,
       transaction_date: t.transaction_date, patient_id: t.patient_id, package: pkg,
     }
   })
@@ -335,19 +374,69 @@ export async function refreshPfotmAuto(periodId: string): Promise<Result> {
   if (!period) return fail('Periode tidak ditemukan.')
   if (period.is_locked) return fail('Periode sudah dikunci.')
 
-  const { data: entries } = await supabase.from('pfotm_entries').select('id, staff_id').eq('period_id', periodId)
+  await recollectPeriod(supabase, period, actor.userId)
+  return ok(null)
+}
+
+/** Re-pull auto metrics for every entry, and working days for the period's own date range. */
+async function recollectPeriod(
+  supabase: ServerClient,
+  period: {
+    id: string; branch_id: string; period_year: number; period_month: number
+    start_date: string; end_date: string; working_days_override: boolean
+  },
+  userId: string,
+) {
+  const { data: entries } = await supabase.from('pfotm_entries').select('id, staff_id').eq('period_id', period.id)
   const staffIds = (entries ?? []).map((e) => e.staff_id).filter((x): x is string => !!x)
   const auto = await collectAutoMetrics(supabase, period.branch_id, staffIds, period.start_date, period.end_date)
   for (const e of entries ?? []) {
     if (!e.staff_id) continue
-    await supabase.from('pfotm_entries').update({ auto_metrics: auto[e.staff_id] ?? {}, updated_by: actor.userId }).eq('id', e.id)
+    await supabase.from('pfotm_entries').update({ auto_metrics: auto[e.staff_id] ?? {}, updated_by: userId }).eq('id', e.id)
   }
 
-  // Keep working days in sync with payroll unless HR overrode them.
+  // Keep working days in sync with the date range unless HR overrode them.
   if (!period.working_days_override) {
     const win = await loadWorkingWindow(supabase, period.branch_id, period.period_year, period.period_month)
-    await supabase.from('pfotm_periods').update({ working_days: win.workdays }).eq('id', periodId)
+    const workdays = win.start === period.start_date && win.end === period.end_date
+      ? win.workdays
+      : await workdaysBetween(supabase, period.branch_id, period.start_date, period.end_date)
+    await supabase.from('pfotm_periods').update({ working_days: workdays }).eq('id', period.id)
   }
+}
+
+/**
+ * Change the period's date range (default = payroll window 27 → 26). `null`
+ * resets to the payroll window. Re-pulls every auto metric for the new range.
+ */
+export async function setPfotmDates(periodId: string, range: { start: string; end: string } | null): Promise<Result> {
+  const actor = await getActor()
+  if (isErr(actor)) return actor
+  if (!INPUT_ROLES.includes(actor.role)) return fail('Anda tidak memiliki akses.')
+  const { supabase } = actor
+  const { data: period } = await supabase.from('pfotm_periods').select('*').eq('id', periodId).maybeSingle()
+  if (!period) return fail('Periode tidak ditemukan.')
+  if (period.is_locked) return fail('Periode sudah dikunci.')
+
+  let next = range
+  if (!next) {
+    const win = await loadWorkingWindow(supabase, period.branch_id, period.period_year, period.period_month)
+    next = { start: win.start, end: win.end }
+  }
+  const iso = /^\d{4}-\d{2}-\d{2}$/
+  if (!iso.test(next.start) || !iso.test(next.end)) return fail('Tanggal tidak valid.')
+  if (next.end < next.start) return fail('Tanggal akhir harus setelah tanggal mulai.')
+  if (datesBetween(next.start, next.end).length > 62) return fail('Rentang maksimal 62 hari.')
+
+  const { error } = await supabase.from('pfotm_periods').update({ start_date: next.start, end_date: next.end }).eq('id', periodId)
+  if (error) return fail(error.message)
+  await recollectPeriod(supabase, { ...period, start_date: next.start, end_date: next.end }, actor.userId)
+
+  logActivity({
+    supabase, userId: actor.userId, action: 'update', resourceType: 'pfotm_period', resourceId: periodId,
+    resourceLabel: `Rentang tanggal PFOTM ${MONTH_NAMES[period.period_month - 1]} ${period.period_year}`, branchId: period.branch_id,
+    oldValues: { start: period.start_date, end: period.end_date }, newValues: { start: next.start, end: next.end },
+  })
   return ok(null)
 }
 
@@ -442,7 +531,10 @@ export async function setPfotmWorkingDays(periodId: string, days: number | null)
   if (period.is_locked) return fail('Periode sudah dikunci.')
   let workingDays = days
   if (days === null) {
-    workingDays = (await loadWorkingWindow(supabase, period.branch_id, period.period_year, period.period_month)).workdays
+    const win = await loadWorkingWindow(supabase, period.branch_id, period.period_year, period.period_month)
+    workingDays = win.start === period.start_date && win.end === period.end_date
+      ? win.workdays
+      : await workdaysBetween(supabase, period.branch_id, period.start_date, period.end_date)
   } else if (!Number.isInteger(days) || days < 0 || days > 31) {
     return fail('Hari kerja harus 0–31.')
   }
@@ -617,6 +709,57 @@ export async function getPfotmMetricDetail(entryId: string, metricKey: string): 
     auto: hits.length,
     override: override ?? null,
   })
+}
+
+// ── Gap: counted for the branch, credited to no participant ─────────────────
+
+export type PfotmGap = Record<string, MetricDetail>
+
+/**
+ * Per drill-down metric, the visits / sales of this branch and window that no
+ * board row gets: no Fisio on the transaction (and no linked visit), or a
+ * therapist who isn't a participant, or an excluded participant (Jumlah
+ * leaves those rows out). Jumlah + gap = Progress Target for the same dates.
+ */
+export async function getPfotmGap(periodId: string): Promise<Result<PfotmGap>> {
+  const actor = await getActor()
+  if (isErr(actor)) return actor
+  if (!INPUT_ROLES.includes(actor.role)) return fail('Anda tidak memiliki akses.')
+  const { supabase } = actor
+  const [{ data: period }, { data: entries }] = await Promise.all([
+    supabase.from('pfotm_periods').select('branch_id, start_date, end_date').eq('id', periodId).maybeSingle(),
+    supabase.from('pfotm_entries').select('staff_id, display_name, excluded').eq('period_id', periodId),
+  ])
+  if (!period) return fail('Periode tidak ditemukan.')
+  const staffIds = (entries ?? []).filter((e) => !e.excluded).map((e) => e.staff_id).filter((x): x is string => !!x)
+  const excludedName = new Map((entries ?? []).filter((e) => e.excluded && e.staff_id).map((e) => [e.staff_id as string, e.display_name as string]))
+
+  const input = await collectPfotmInput(supabase, period.branch_id, staffIds, period.start_date, period.end_date, true)
+  const { gap } = pfotmHitsWithGap(input)
+  gap.sort((a, b) => a.date.localeCompare(b.date))
+
+  const otherStaff = [...new Set(gap.map((h) => h.staff_id).filter((x): x is string => !!x && !excludedName.has(x)))]
+  const [names, { data: profiles }] = await Promise.all([
+    resolvePatientNames(gap.map((h) => h.patient_id)),
+    otherStaff.length
+      ? createAdminClient().from('internal_profiles').select('id, full_name, nickname').in('id', otherStaff)
+      : Promise.resolve({ data: [] as { id: string; full_name: string; nickname: string | null }[] }),
+  ])
+  const staffName = new Map((profiles ?? []).map((p) => [p.id, p.nickname?.trim() || p.full_name]))
+
+  const out: PfotmGap = {}
+  for (const key of DRILLDOWN_METRICS) {
+    const rows = gap.filter((h) => h.key === key).map((h) => ({
+      date: h.date,
+      patientName: (h.patient_id && names.get(h.patient_id)) || '—',
+      label: `${h.label ?? ''} · ${
+        !h.staff_id ? 'tanpa Fisio'
+        : excludedName.has(h.staff_id) ? `${excludedName.get(h.staff_id)} (dikeluarkan)`
+        : `${staffName.get(h.staff_id) ?? 'staf lain'} (bukan peserta)`}`,
+    }))
+    out[key] = { rows, auto: rows.length, override: null }
+  }
+  return ok(out)
 }
 
 // ── Daily ranks (bump chart) ────────────────────────────────────────────────

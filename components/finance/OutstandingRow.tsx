@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Wallet } from 'lucide-react'
 import { EditTransactionSheet, type TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
 import { SettlePaymentDialog } from './SettlePaymentDialog'
+import { TherapistLink } from './TherapistLink'
 
 const PAY_STATUS_BADGE: Record<string, string> = {
   DP:        'bg-yellow-500/15 text-yellow-400',
@@ -33,15 +34,17 @@ export interface OutstandingTxRow {
   payment_method: string | null
   payment_status: string | null
   visitLabel: string | null
+  therapist: { id: string; name: string } | null
 }
 
 interface Props {
   tx: OutstandingTxRow
   showBranchColumn: boolean
   editTx: TransactionForEdit
+  therapistRange?: { from?: string; to?: string }
 }
 
-export function OutstandingRow({ tx, showBranchColumn, editTx }: Props) {
+export function OutstandingRow({ tx, showBranchColumn, editTx, therapistRange }: Props) {
   const [settling, setSettling] = useState(false)
   const isSettled = Number(tx.outstanding ?? 0) <= 0
 
@@ -58,6 +61,9 @@ export function OutstandingRow({ tx, showBranchColumn, editTx }: Props) {
           {tx.patient_name ?? <span className="text-muted-foreground/40">—</span>}
         </td>
         <td className="px-4 py-3 text-xs font-medium text-foreground">{tx.category}</td>
+        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+          <TherapistLink therapist={tx.therapist} range={therapistRange} />
+        </td>
         {showBranchColumn && (
           <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{tx.branch_name}</td>
         )}

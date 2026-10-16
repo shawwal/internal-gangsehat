@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
+import { resolveTherapistNames } from '@/lib/finance/therapists'
 import {
   MONTH_LABELS, PAGE_SIZE, type BranchSummary, type TransactionRow, type FinanceParams,
 } from '@/components/director/finance/types'
@@ -8,6 +9,8 @@ interface RawSearchParams {
   branch?: string
   month?: string
   year?: string
+  from?: string
+  to?: string
   page?: string
   q?: string
   no_patient?: string
@@ -16,11 +19,31 @@ interface RawSearchParams {
   pay_status?: string
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+function nextDayISO(date: string) {
+  const d = new Date(`${date}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
+function prevDayISO(date: string) {
+  const d = new Date(`${date}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
+
+function formatDay(date: string) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export function parseFinanceParams(params: RawSearchParams): FinanceParams {
   return {
     branchId:  params.branch ?? '',
     month:     params.month  ?? '',
     year:      params.year   ?? String(new Date().getFullYear()),
+    from:      params.from && ISO_DATE.test(params.from) ? params.from : '',
+    to:        params.to   && ISO_DATE.test(params.to)   ? params.to   : '',
     q:         params.q?.trim() ?? '',
     noPatient: params.no_patient === '1',
     txType:    params.tx_type === 'income' ? 'income' : params.tx_type === 'expense' ? 'expense' : '',
@@ -31,29 +54,53 @@ export function parseFinanceParams(params: RawSearchParams): FinanceParams {
 }
 
 export async function loadFinanceData(params: FinanceParams) {
-  const { branchId, month, year, q, noPatient, txType, status, payStatus, page } = params
+  const { branchId, month, year, from: rangeFrom, to: rangeTo, q, noPatient, txType, status, payStatus, page } = params
+  const hasRange = !!(rangeFrom || rangeTo)
   const from = (page - 1) * PAGE_SIZE
   const to   = from + PAGE_SIZE - 1
 
   const numYear  = Number(year)
   const numMonth = month ? Number(month) : null
 
-  const dateFrom = numMonth
-    ? `${numYear}-${String(numMonth).padStart(2, '0')}-01`
-    : `${numYear}-01-01`
-  const dateTo = numMonth
-    ? `${numMonth === 12 ? numYear + 1 : numYear}-${String(numMonth === 12 ? 1 : numMonth + 1).padStart(2, '0')}-01`
-    : `${numYear + 1}-01-01`
+  // Period as [dateFrom, dateTo) — empty string = unbounded on that side.
+  // A date range (?from/?to, inclusive) takes precedence over month/year.
+  let dateFrom: string
+  let dateTo: string
+  let periodLabel: string
+  if (hasRange) {
+    dateFrom = rangeFrom
+    dateTo   = rangeTo ? nextDayISO(rangeTo) : ''
+    periodLabel = rangeFrom && rangeTo
+      ? `${formatDay(rangeFrom)} – ${formatDay(rangeTo)}`
+      : rangeFrom ? `Sejak ${formatDay(rangeFrom)}` : `Sampai ${formatDay(rangeTo)}`
+  } else {
+    dateFrom = numMonth
+      ? `${numYear}-${String(numMonth).padStart(2, '0')}-01`
+      : `${numYear}-01-01`
+    dateTo = numMonth
+      ? `${numMonth === 12 ? numYear + 1 : numYear}-${String(numMonth === 12 ? 1 : numMonth + 1).padStart(2, '0')}-01`
+      : `${numYear + 1}-01-01`
+    periodLabel = numMonth
+      ? `${MONTH_LABELS[numMonth - 1]} ${year}`
+      : `Tahun ${year}`
+  }
 
-  const periodLabel = numMonth
-    ? `${MONTH_LABELS[numMonth - 1]} ${year}`
-    : `Tahun ${year}`
+  // Same period as inclusive YYYY-MM-DD, for drill-down links (therapist page)
+  const periodRange = {
+    from: dateFrom,
+    to:   hasRange ? rangeTo : dateTo ? prevDayISO(dateTo) : '',
+  }
 
   // Params preserved across filter/pagination links (excludes page so links can override it)
   const baseParams: Record<string, string> = {}
   if (branchId)  baseParams.branch     = branchId
-  if (month)     baseParams.month      = month
-  if (year)      baseParams.year       = year
+  if (hasRange) {
+    if (rangeFrom) baseParams.from = rangeFrom
+    if (rangeTo)   baseParams.to   = rangeTo
+  } else {
+    if (month)   baseParams.month      = month
+    if (year)    baseParams.year       = year
+  }
   if (q)         baseParams.q          = q
   if (noPatient) baseParams.no_patient = '1'
   if (txType)    baseParams.tx_type    = txType
@@ -89,9 +136,9 @@ export async function loadFinanceData(params: FinanceParams) {
         .from('transactions')
         .select('branch_id, type, harga, discount, amount, outstanding, branches!branch_id(name)')
         .neq('status', 'rejected')
-        .gte('transaction_date', dateFrom)
-        .lt('transaction_date', dateTo)
         .limit(99999)
+      if (dateFrom) q2 = q2.gte('transaction_date', dateFrom)
+      if (dateTo)   q2 = q2.lt('transaction_date', dateTo)
       if (branchId) q2 = q2.eq('branch_id', branchId)
       return q2
     })(),
@@ -101,15 +148,15 @@ export async function loadFinanceData(params: FinanceParams) {
       let q2 = supabase
         .from('transactions')
         .select(
-          'id, branch_id, patient_id, type, category, harga, discount, amount, outstanding, payment_method, payment_status, status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)',
+          'id, branch_id, patient_id, visit_id, fisio_id, type, category, harga, discount, amount, outstanding, payment_method, payment_status, status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)',
           { count: 'exact' },
         )
-        .gte('transaction_date', dateFrom)
-        .lt('transaction_date', dateTo)
         .order('transaction_date', { ascending: false })
         .order('id', { ascending: false })
         .range(from, to)
 
+      if (dateFrom)  q2 = q2.gte('transaction_date', dateFrom)
+      if (dateTo)    q2 = q2.lt('transaction_date', dateTo)
       if (branchId)  q2 = q2.eq('branch_id', branchId)
       if (noPatient) q2 = q2.is('patient_id', null)
       if (txType)    q2 = q2.eq('type', txType)
@@ -163,26 +210,27 @@ export async function loadFinanceData(params: FinanceParams) {
   const totalOutstanding = branchSummaries.reduce((s, b) => s + b.outstanding, 0)
   const totalNet         = totalIncome - totalExpense
 
-  // ── Batch-decrypt patient names for current page ───────────────────────────
+  // ── Current page: decrypt patient names + resolve therapists in parallel ──
   const patientIds = [...new Set((txnRows ?? []).map(r => r.patient_id).filter(Boolean))]
   const nameMap = new Map<string, string>()
-  if (patientIds.length > 0) {
-    const { data: patients } = await supabase
-      .from('patients')
-      .select('id, encrypted_name, encrypted_phone')
-      .in('id', patientIds)
-    for (const p of patients ?? []) {
-      try {
-        const dec = decryptPatientPII({ encrypted_name: p.encrypted_name ?? '', encrypted_phone: p.encrypted_phone ?? '' })
-        nameMap.set(p.id, dec.name || 'Pasien')
-      } catch { nameMap.set(p.id, 'Pasien') }
-    }
+  const [{ data: patients }, therapistMap] = await Promise.all([
+    patientIds.length > 0
+      ? supabase.from('patients').select('id, encrypted_name, encrypted_phone').in('id', patientIds)
+      : Promise.resolve({ data: [] as { id: string; encrypted_name: string | null; encrypted_phone: string | null }[] }),
+    resolveTherapistNames(supabase, txnRows ?? []),
+  ])
+  for (const p of patients ?? []) {
+    try {
+      const dec = decryptPatientPII({ encrypted_name: p.encrypted_name ?? '', encrypted_phone: p.encrypted_phone ?? '' })
+      nameMap.set(p.id, dec.name || 'Pasien')
+    } catch { nameMap.set(p.id, 'Pasien') }
   }
 
   const txns: TransactionRow[] = (txnRows ?? []).map(r => ({
     ...r,
     patient_name: r.patient_id ? (nameMap.get(r.patient_id) ?? 'Pasien') : null,
     branch_name:  ((r.branches as unknown as { name: string } | null))?.name ?? '—',
+    therapist: therapistMap.get(r.id) ?? null,
   }))
 
   const totalPages     = Math.max(1, Math.ceil((txnTotal ?? 0) / PAGE_SIZE))
@@ -202,6 +250,7 @@ export async function loadFinanceData(params: FinanceParams) {
     txnTotal: txnTotal ?? 0,
     totalPages,
     periodLabel,
+    periodRange,
     selectedBranchName,
     baseParams,
   }

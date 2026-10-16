@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveTherapistNames, type TherapistRef } from '@/lib/finance/therapists'
 import { computeOrderPaymentSummary, type OrderPaymentSummary, type OrderPaymentRow } from '@/lib/internal/orderPayments'
 import { logActivity } from '@/lib/activityLog'
 import { PACKAGE_CATEGORIES as PACKAGE_CATEGORY_LIST } from '@/lib/serviceType'
@@ -657,4 +658,20 @@ export async function deleteTransaction(id: string): Promise<{ error: string | n
   }
 
   return { error: error?.message ?? null }
+}
+
+/** Therapist per transaction id (see `resolveTherapistNames`). */
+export async function getTransactionTherapists(txIds: string[]): Promise<Record<string, TherapistRef>> {
+  if (!txIds.length) return {}
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return {}
+  const { data: prof } = await supabase.from('internal_profiles').select('role').eq('id', user.id).single()
+  if (!prof || !PAYMENT_ROLES.includes(prof.role)) return {}
+
+  const { data: txns } = await supabase
+    .from('transactions')
+    .select('id, fisio_id, visit_id')
+    .in('id', txIds.slice(0, 200))
+  return Object.fromEntries(await resolveTherapistNames(supabase, txns ?? []))
 }

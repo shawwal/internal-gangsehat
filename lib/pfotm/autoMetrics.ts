@@ -79,13 +79,31 @@ function packageTierKey(pkg: PackageInfo | null): 'paket_1' | 'paket_2' | 'paket
   return tier === 'P3' ? 'paket_3' : tier === 'P2' ? 'paket_2' : 'paket_1'
 }
 
+/** A visit / sale that counts for the branch but isn't credited to any participant. */
+export interface PfotmGapHit extends Omit<PfotmHit, 'staff_id'> {
+  /** null = no Fisio on the transaction / visit; else a staff member who isn't on the board */
+  staff_id: string | null
+}
+
 /** Every counted unit for the participants, in input order. */
 export function pfotmHits(params: PfotmAutoInput): PfotmHit[] {
+  return pfotmHitsWithGap(params).hits
+}
+
+/**
+ * Same walk as `pfotmHits`, but also returns the kunjungan / sales units that
+ * fall outside the participants (no Fisio, or a non-participant) — so the
+ * board's Jumlah + gap equals the branch Capaian for the same window.
+ */
+export function pfotmHitsWithGap(params: PfotmAutoInput): { hits: PfotmHit[]; gap: PfotmGapHit[] } {
   const { start, end, todayISO } = params
   const staff = new Set(params.staffIds)
   const hits: PfotmHit[] = []
-  const hit = (id: string | null | undefined, key: string, date: string, extra: Partial<PfotmHit> = {}) => {
-    if (id && staff.has(id)) hits.push({ staff_id: id, key, date, patient_id: null, ref_id: null, label: null, ...extra })
+  const gap: PfotmGapHit[] = []
+  const hit = (id: string | null | undefined, key: string, date: string, extra: Partial<PfotmHit> = {}, track = false) => {
+    const row = { key, date, patient_id: null, ref_id: null, label: null, ...extra }
+    if (id && staff.has(id)) hits.push({ ...row, staff_id: id })
+    else if (track) gap.push({ ...row, staff_id: id ?? null })
   }
 
   for (const a of params.attendance) {
@@ -97,7 +115,7 @@ export function pfotmHits(params: PfotmAutoInput): PfotmHit[] {
   // Jumlah Kunjungan: same rule as the Target Progress "Kunjungan" row.
   for (const v of params.periodVisits) {
     if (!countsAsKunjungan(v, todayISO)) continue
-    hit(v.attending_staff_id, 'kunjungan', v.visit_date, { patient_id: v.patient_id ?? null, ref_id: v.id, label: v.service_type })
+    hit(v.attending_staff_id, 'kunjungan', v.visit_date, { patient_id: v.patient_id ?? null, ref_id: v.id, label: v.service_type }, true)
   }
 
   // Paket 1/2/3, TA/Sesi Visit, Paket Visit: from income transactions.
@@ -106,13 +124,13 @@ export function pfotmHits(params: PfotmAutoInput): PfotmHit[] {
       : s.category === 'PAKET VISIT' ? 'paket_visit'
       : s.category === 'TA VISIT' || s.category === 'SESI VISIT' ? 'ta_sesi_visit'
       : null
-    if (key) hit(s.staff_id, key, s.transaction_date ?? start, { patient_id: s.patient_id ?? null, ref_id: s.id ?? null, label: s.category })
+    if (key) hit(s.staff_id, key, s.transaction_date ?? start, { patient_id: s.patient_id ?? null, ref_id: s.id ?? null, label: s.category }, true)
   }
 
   for (const r of params.referrals) {
     if (r.first_date >= start && r.first_date <= end) hit(r.staff_id, 'rujukan_sm', r.first_date, { patient_id: r.patient_id ?? null })
   }
-  return hits
+  return { hits, gap }
 }
 
 export function countHits(staffIds: string[], hits: PfotmHit[]): Record<string, Record<string, number>> {

@@ -26,6 +26,7 @@ export interface TransactionRow {
   receipt_url: string | null
   patient_name: string | null
   branch_name: string
+  therapist: { id: string; name: string } | null
 }
 
 export const PAGE_SIZE = 20
@@ -53,6 +54,9 @@ export interface FinanceParams {
   branchId: string
   month: string
   year: string
+  /** YYYY-MM-DD, inclusive. Either set → overrides month/year as the period. */
+  from: string
+  to: string
   q: string
   noPatient: boolean
   txType: 'income' | 'expense' | ''

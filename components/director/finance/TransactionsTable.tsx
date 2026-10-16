@@ -3,6 +3,7 @@ import { AlertCircle } from 'lucide-react'
 import { ReclassifyButton } from './ReclassifyButton'
 import { EditTransactionSheet, type TransactionForEdit } from './EditTransactionSheet'
 import { PaymentProofLink } from '@/components/payments/PaymentProofField'
+import { TherapistLink } from '@/components/finance/TherapistLink'
 import {
   buildFinanceUrl, formatRp, TX_STATUS_BADGE, TX_STATUS_LABEL, PAY_STATUS_BADGE, type TransactionRow,
 } from './types'
@@ -16,9 +17,10 @@ interface Props {
   showBranchColumn: boolean
   q: string
   baseParams: Record<string, string>
+  periodRange?: { from: string; to: string }
 }
 
-export function TransactionsTable({ txns, showBranchColumn, q, baseParams }: Props) {
+export function TransactionsTable({ txns, showBranchColumn, q, baseParams, periodRange }: Props) {
   if (txns.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-14 gap-2">
@@ -47,6 +49,7 @@ export function TransactionsTable({ txns, showBranchColumn, q, baseParams }: Pro
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cabang</th>
             )}
             <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pasien / Keterangan</th>
+            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Terapis</th>
             <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Harga</th>
             <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Bayar</th>
             <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
@@ -118,6 +121,9 @@ export function TransactionsTable({ txns, showBranchColumn, q, baseParams }: Pro
                     <ReclassifyButton transactionId={tx.id} />
                   )}
                 </div>
+              </td>
+              <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                <TherapistLink therapist={tx.therapist} range={periodRange} />
               </td>
               <td className="px-4 py-3 text-right font-mono text-xs text-foreground">
                 {formatRp(Number(tx.harga ?? 0))}

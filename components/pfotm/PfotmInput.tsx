@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { EyeOff, List, RefreshCw, RotateCcw, UserPlus } from 'lucide-react'
-import { getPfotmMetricDetail, type PfotmEntry } from '@/app/actions/pfotm'
+import { getPfotmMetricDetail, type PfotmEntry, type PfotmGap } from '@/app/actions/pfotm'
 import { DRILLDOWN_METRICS } from '@/lib/pfotm/autoMetrics'
 import { MetricDetailModal } from '@/components/metrics/MetricDetailModal'
 import type { BoardRow, PointRule } from '@/lib/pfotm/engine'
@@ -17,6 +17,10 @@ interface Props {
   workingDaysOverride: boolean
   editable: boolean
   refreshing: boolean
+  /** Units counted for the branch but credited to no participant; null while loading. */
+  gap: PfotmGap | null
+  periodStart: string
+  periodEnd: string
   onRefresh: () => void
   onOverride: (entryId: string, key: string, value: number | null) => void
   onExclude: (entryId: string, excluded: boolean) => void
@@ -29,6 +33,7 @@ export function PfotmInput(p: Props) {
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [wd, setWd] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ entry: PfotmEntry; rule: PointRule } | null>(null)
+  const [gapDetail, setGapDetail] = useState<PointRule | null>(null)
   const rules = p.rules.filter((r) => r.is_active !== false)
   const rowByKey = new Map(p.board.map((r) => [r.key, r]))
   const statEntries = p.entries.filter((e) => !e.excluded)
@@ -171,6 +176,28 @@ export function PfotmInput(p: Props) {
                   </tr>
                 )
               })}
+              {p.gap && (
+                <tr className="border-t border-border text-muted-foreground font-normal">
+                  <td className="sticky left-0 z-10 bg-card px-3 py-1.5 border-r border-border text-[11px] leading-tight"
+                    title="Kunjungan / transaksi cabang yang tidak masuk Jumlah: tanpa Fisio, staf bukan peserta, atau peserta yang dikeluarkan. Jumlah + baris ini = Progress Target.">
+                    Di luar Jumlah
+                  </td>
+                  {rules.map((r) => {
+                    const g = p.gap?.[r.metric_key]
+                    return (
+                      <td key={r.metric_key} className="px-1 py-1.5 text-center">
+                        {!g || r.metric_key === 'rujukan_sm' ? '' : g.auto === 0 ? '0' : (
+                          <button onClick={() => setGapDetail(r)} title="Lihat transaksi / kunjungan yang tidak teratribusi"
+                            className="font-semibold text-destructive hover:underline">
+                            {g.auto}
+                          </button>
+                        )}
+                      </td>
+                    )
+                  })}
+                  <td colSpan={3} />
+                </tr>
+              )}
             </tfoot>
           )}
         </table>
@@ -183,9 +210,21 @@ export function PfotmInput(p: Props) {
           onClose={() => setDetail(null)}
         />
       )}
+      {gapDetail && p.gap?.[gapDetail.metric_key] && (
+        <MetricDetailModal
+          title={`${gapDetail.metric_label} — di luar Jumlah`}
+          subtitle="Tidak dihitung ke siapa pun. Isi Fisio saat mencatat pembayaran, atau koreksi angka peserta yang menangani."
+          load={() => Promise.resolve({ ok: true as const, data: p.gap![gapDetail.metric_key] })}
+          onClose={() => setGapDetail(null)}
+        />
+      )}
       <p className="text-xs text-muted-foreground">
+        Angka dihitung pada rentang data <b>{p.periodStart} s/d {p.periodEnd}</b> (atur di atas) — samakan dengan mode tanggal di Progress Target.
+        Paket 1 + Paket 2 + Paket 3 (Jumlah + Di luar Jumlah) = Paket Klinik di Progress Target; transaksi paket tanpa Fisio dikreditkan ke fisioterapis kunjungan pertama paket tersebut.
         Jumlah &amp; rata-rata dihitung dari peserta yang ikut peringkat (yang dikeluarkan tidak dihitung).
+        Baris &quot;Di luar Jumlah&quot; = transaksi/kunjungan cabang yang tidak masuk Jumlah (tanpa Fisio, staf bukan peserta, atau peserta yang dikeluarkan) — Jumlah + baris ini = angka Progress Target.
         Angka otomatis: Hadir/Terlambat/Alfa dari absensi, Jumlah Kunjungan = kunjungan hadir (aturan sama dengan Progress Target, tanpa sport massage), Paket &amp; TA/Sesi Visit dari transaksi masuk LUNAS/DP, Rujukan SM dari kolom &quot;Dirujuk oleh&quot; pasien.
+        TA/Sesi Visit = TA VISIT + SESI VISIT, Paket Visit = PAKET VISIT; sedangkan &quot;Visit&quot; di Progress Target = TA VISIT + PAKET VISIT (SESI VISIT masuk &quot;Sesi&quot;).
         Klik &quot;rincian&quot; untuk melihat pasien &amp; tanggal. Ketik untuk mengoreksi (kuning). Merah = di bawah rata-rata kolom (untuk Terlambat/Alfa: di atas rata-rata). Total & peringkat langsung dihitung ulang sebelum disimpan.
       </p>
     </div>

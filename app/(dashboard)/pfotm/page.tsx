@@ -2,13 +2,13 @@
 
 import './pfotm-styles.css'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Lock, LockOpen, Trophy } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import {
-  addPfotmParticipant, getPfotmBoard, getPfotmHistory, listPfotmCandidates, lockPfotmPeriod, openPfotmPeriod,
-  refreshPfotmAuto, savePointRule, setPfotmExcluded, setPfotmOverride, setPfotmWorkingDays, unlockPfotmPeriod,
-  type PfotmBoardData, type PfotmHistoryRow,
+  addPfotmParticipant, getPayrollWindow, getPfotmBoard, getPfotmGap, getPfotmHistory, listPfotmCandidates, lockPfotmPeriod, openPfotmPeriod,
+  refreshPfotmAuto, savePointRule, setPfotmDates, setPfotmExcluded, setPfotmOverride, setPfotmWorkingDays, unlockPfotmPeriod,
+  type PfotmBoardData, type PfotmGap, type PfotmHistoryRow,
 } from '@/app/actions/pfotm'
 import { MONTH_NAMES } from '@/lib/payroll/period'
 import { mergeMetrics, rankBoard } from '@/lib/pfotm/engine'
@@ -17,6 +17,7 @@ import { PfotmInput } from '@/components/pfotm/PfotmInput'
 import { PfotmBumpChart } from '@/components/pfotm/PfotmBumpChart'
 import { PfotmHistory } from '@/components/pfotm/PfotmHistory'
 import { PfotmRules } from '@/components/pfotm/PfotmRules'
+import { PfotmDateRange } from '@/components/pfotm/PfotmDateRange'
 import { Modal, btn, inputCls, labelCls } from '@/components/payroll/Modal'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { TableSkeleton } from '@/components/ui/Skeleton'
@@ -81,6 +82,52 @@ export default function PfotmPage() {
 
   const period = data?.period ?? null
   const locked = !!period?.is_locked
+  const periodId = period?.id ?? null
+  const canInputNow = !!data?.permissions.canInput
+
+  // auto_metrics are a stored snapshot — pull fresh numbers once per open
+  // period per visit, so the board never lags behind visits / payments
+  // recorded since the last "Tarik ulang".
+  const refreshedPeriods = useRef(new Set<string>())
+  const [autoVersion, setAutoVersion] = useState(0)
+  useEffect(() => {
+    if (!periodId || locked || !canInputNow || refreshedPeriods.current.has(periodId)) return
+    refreshedPeriods.current.add(periodId)
+    let cancelled = false
+    setBusy('refresh')
+    refreshPfotmAuto(periodId).then(async (res) => {
+      if (cancelled) return
+      setBusy(null)
+      if (res.ok) { await load(); setAutoVersion((v) => v + 1) }
+    })
+    return () => { cancelled = true }
+  }, [periodId, locked, canInputNow, load])
+
+  // Payroll window for the "Periode gaji" preset of the date range.
+  const [payrollWin, setPayrollWin] = useState<{ key: string; range: { start: string; end: string } } | null>(null)
+  const winKey = data?.branchId ? `${data.branchId}:${ym.year}:${ym.month}` : null
+  const payrollWindow = payrollWin && payrollWin.key === winKey ? payrollWin.range : null
+  useEffect(() => {
+    if (!winKey || !data?.branchId || !periodId) return
+    let cancelled = false
+    getPayrollWindow(data.branchId, ym.year, ym.month).then((res) => {
+      if (!cancelled && res.ok) setPayrollWin({ key: winKey, range: res.data })
+    })
+    return () => { cancelled = true }
+  }, [winKey, data?.branchId, periodId, ym.year, ym.month])
+
+  // Visits / sales the board doesn't credit to anyone (no Fisio, non-participant).
+  const [gapState, setGap] = useState<{ key: string; gap: PfotmGap } | null>(null)
+  const gapKey = periodId ? `${periodId}:${autoVersion}` : null
+  const gap = gapState && gapState.key === gapKey ? gapState.gap : null
+  useEffect(() => {
+    if (tab !== 'input' || !periodId || !gapKey || !data?.permissions.canLock) return
+    let cancelled = false
+    getPfotmGap(periodId).then((res) => {
+      if (!cancelled && res.ok) setGap({ key: gapKey, gap: res.data })
+    })
+    return () => { cancelled = true }
+  }, [tab, periodId, gapKey, data?.permissions.canLock])
 
   // Live board for open periods; frozen metrics + snapshot weights once locked.
   const board = useMemo(() => {
@@ -173,7 +220,6 @@ export default function PfotmPage() {
           <button className="p-2 rounded-xl border border-border hover:bg-muted" onClick={() => shiftMonth(-1)} aria-label="Bulan sebelumnya"><ChevronLeft size={15} /></button>
           <div className="px-3 text-center min-w-[150px]">
             <p className="text-sm font-semibold text-foreground">{MONTH_NAMES[ym.month - 1]} {ym.year}</p>
-            {period && <p className="text-[10px] text-muted-foreground">{period.start_date} s/d {period.end_date} · {period.working_days} hari kerja</p>}
           </div>
           <button className="p-2 rounded-xl border border-border hover:bg-muted" onClick={() => shiftMonth(1)} aria-label="Bulan berikutnya"><ChevronRight size={15} /></button>
         </div>
@@ -190,6 +236,21 @@ export default function PfotmPage() {
             <button className={btn.ghost} disabled={!!busy} onClick={() => { setReason(''); setDialog('unlock') }}><LockOpen size={14} /> Buka kunci</button>
           )}
         </div>
+        {period && (
+          <PfotmDateRange
+            year={ym.year}
+            month={ym.month}
+            start={period.start_date}
+            end={period.end_date}
+            workingDays={period.working_days}
+            payrollWindow={payrollWindow}
+            editable={canInput && !locked}
+            busy={busy === 'dates' || busy === 'refresh'}
+            onChange={async (range) => {
+              if (await act('dates', () => setPfotmDates(period.id, range), 'Rentang tanggal diperbarui')) setAutoVersion((v) => v + 1)
+            }}
+          />
+        )}
       </div>
 
       <div className="flex gap-1 p-1 bg-muted/40 rounded-2xl overflow-x-auto w-fit max-w-full">
@@ -243,7 +304,12 @@ export default function PfotmPage() {
                 workingDaysOverride={period.working_days_override}
                 editable={canInput}
                 refreshing={busy === 'refresh'}
-                onRefresh={() => act('refresh', () => refreshPfotmAuto(period.id), 'Data otomatis diperbarui')}
+                gap={gap}
+                periodStart={period.start_date}
+                periodEnd={period.end_date}
+                onRefresh={async () => {
+                  if (await act('refresh', () => refreshPfotmAuto(period.id), 'Data otomatis diperbarui')) setAutoVersion((v) => v + 1)
+                }}
                 onOverride={onOverride}
                 onExclude={(id, ex) => act('exclude', () => setPfotmExcluded(id, ex))}
                 onWorkingDays={(d) => act('wd', () => setPfotmWorkingDays(period.id, d), 'Hari kerja diperbarui')}

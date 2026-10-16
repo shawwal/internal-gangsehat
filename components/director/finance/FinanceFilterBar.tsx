@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { buildFinanceUrl } from './types'
+import { DateRangeFilter } from '@/components/finance/DateRangeFilter'
 
 interface Branch { id: string; name: string }
 
@@ -17,14 +18,28 @@ interface Props {
   showBranchSelect: boolean
   month: string
   year: string
+  from: string
+  to: string
 }
 
-export function FinanceFilterBar({ branches, baseParams, branchId, showBranchSelect, month, year }: Props) {
+export function FinanceFilterBar({ branches, baseParams, branchId, showBranchSelect, month, year, from, to }: Props) {
   const router = useRouter()
   const currentYear = new Date().getFullYear()
 
-  function navigate(overrides: Partial<{ branch: string; month: string; year: string }>) {
+  const hasRange = !!(from || to)
+
+  function navigate(overrides: Partial<{ branch: string; month: string; year: string; from: string; to: string }>) {
     router.push(buildFinanceUrl(baseParams, { ...overrides, page: undefined }))
+  }
+
+  // Month/year and date range are alternative periods — picking one clears the other.
+  function pickPeriod(overrides: { month?: string; year?: string }) {
+    navigate({ month, year, ...overrides, from: undefined, to: undefined })
+  }
+
+  function pickRange(nextFrom: string, nextTo: string) {
+    if (!nextFrom && !nextTo) navigate({ from: undefined, to: undefined, month: undefined, year: undefined })
+    else navigate({ from: nextFrom, to: nextTo, month: undefined, year: undefined })
   }
 
   const cls = [
@@ -46,18 +61,21 @@ export function FinanceFilterBar({ branches, baseParams, branchId, showBranchSel
         </select>
       )}
 
-      <select className={cls} value={month} onChange={e => navigate({ month: e.target.value })}>
+      <select className={cls} value={hasRange ? 'range' : month} onChange={e => pickPeriod({ month: e.target.value })}>
+        {hasRange && <option value="range" disabled>Rentang tanggal</option>}
         <option value="">Semua Bulan</option>
         {MONTHS.map((name, i) => (
           <option key={i + 1} value={String(i + 1)}>{name}</option>
         ))}
       </select>
 
-      <select className={cls} value={year} onChange={e => navigate({ year: e.target.value })}>
+      <select className={cls} value={year} onChange={e => pickPeriod({ year: e.target.value })}>
         {[currentYear, currentYear - 1, currentYear - 2].map(y => (
           <option key={y} value={String(y)}>{y}</option>
         ))}
       </select>
+
+      <DateRangeFilter from={from} to={to} onChange={pickRange} />
     </div>
   )
 }

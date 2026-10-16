@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import { resolveTherapistNames } from '@/lib/finance/therapists'
 import { decryptPatientPII } from '@/lib/encryption'
 import { OutstandingBranchFilter } from '@/components/finance/OutstandingBranchFilter'
 import { SearchInput } from '@/components/director/finance/SearchInput'
 import { OutstandingRow } from '@/components/finance/OutstandingRow'
+import { UrlDateRangeFilter } from '@/components/finance/DateRangeFilter'
 import type { TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
 import { AlertCircle, Wallet, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
@@ -11,6 +13,7 @@ import { Suspense } from 'react'
 export const dynamic = 'force-dynamic'
 
 const PAGE_SIZE = 10
+const ISO_DATE  = /^\d{4}-\d{2}-\d{2}$/
 
 const STATUS_TABS = [
   { value: '',          label: 'Belum Lunas' },
@@ -37,12 +40,14 @@ function buildUrl(base: Record<string, string>, overrides: Record<string, string
 export default async function OutstandingPaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branch?: string; page?: string; q?: string; status?: string }>
+  searchParams: Promise<{ branch?: string; page?: string; q?: string; status?: string; from?: string; to?: string }>
 }) {
   const params = await searchParams
   const q      = params.q?.trim() ?? ''
   const status = params.status === 'DP' || params.status === 'PELUNASAN' || params.status === 'LUNAS' ? params.status : ''
   const page   = Math.max(1, Number(params.page) || 1)
+  const dateFrom = params.from && ISO_DATE.test(params.from) ? params.from : ''
+  const dateTo   = params.to   && ISO_DATE.test(params.to)   ? params.to   : ''
   const from   = (page - 1) * PAGE_SIZE
   const to     = from + PAGE_SIZE - 1
 
@@ -61,6 +66,8 @@ export default async function OutstandingPaymentsPage({
   if (branchId) baseParams.branch = branchId
   if (q)        baseParams.q      = q
   if (status)   baseParams.status = status
+  if (dateFrom) baseParams.from   = dateFrom
+  if (dateTo)   baseParams.to     = dateTo
 
   // ── Search: resolve patient IDs matching name_normalized ──────────────────
   let searchPatientIds: string[] = []
@@ -78,7 +85,7 @@ export default async function OutstandingPaymentsPage({
       ? supabase.from('branches').select('id, name').eq('is_active', true).order('name')
       : Promise.resolve({ data: [] }),
 
-    // Unpaginated aggregate — total outstanding + count, same branch scope, no search filter
+    // Unpaginated aggregate — total outstanding + count, same branch + date scope, no search filter
     (async () => {
       let q2 = supabase
         .from('transactions')
@@ -88,6 +95,8 @@ export default async function OutstandingPaymentsPage({
         .gt('outstanding', 0)
         .limit(99999)
       if (branchId) q2 = q2.eq('branch_id', branchId)
+      if (dateFrom) q2 = q2.gte('transaction_date', dateFrom)
+      if (dateTo)   q2 = q2.lte('transaction_date', dateTo)
       return q2
     })(),
 
@@ -96,7 +105,7 @@ export default async function OutstandingPaymentsPage({
       let q2 = supabase
         .from('transactions')
         .select(
-          'id, order_id, branch_id, patient_id, visit_id, category, harga, discount, amount, outstanding, payment_method, payment_status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)',
+          'id, order_id, branch_id, patient_id, visit_id, fisio_id, category, harga, discount, amount, outstanding, payment_method, payment_status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)',
           { count: 'exact' },
         )
         .eq('type', 'income')
@@ -117,6 +126,8 @@ export default async function OutstandingPaymentsPage({
       }
 
       if (branchId) q2 = q2.eq('branch_id', branchId)
+      if (dateFrom) q2 = q2.gte('transaction_date', dateFrom)
+      if (dateTo)   q2 = q2.lte('transaction_date', dateTo)
 
       if (q) {
         const orParts = [
@@ -137,34 +148,31 @@ export default async function OutstandingPaymentsPage({
   const totalOutstanding = (aggRows ?? []).reduce((s, r) => s + Number(r.outstanding ?? 0), 0)
   const totalCount       = (aggRows ?? []).length
 
-  // ── Batch-decrypt patient names for current page ───────────────────────────
+  // ── Batch lookups for the current page (patients, visits, therapists in parallel)
   const patientIds = [...new Set((txnRows ?? []).map((r) => r.patient_id).filter(Boolean))]
+  const visitIds   = [...new Set((txnRows ?? []).map((r) => r.visit_id).filter(Boolean))]
+  const [{ data: patients }, { data: visitRows }, therapistMap] = await Promise.all([
+    patientIds.length > 0
+      ? supabase.from('patients').select('id, encrypted_name, encrypted_phone').in('id', patientIds)
+      : Promise.resolve({ data: [] as { id: string; encrypted_name: string | null; encrypted_phone: string | null }[] }),
+    visitIds.length > 0
+      ? supabase.from('patient_visits').select('id, visit_date, service_type').in('id', visitIds)
+      : Promise.resolve({ data: [] as { id: string; visit_date: string; service_type: string | null }[] }),
+    resolveTherapistNames(supabase, txnRows ?? []),
+  ])
+
   const nameMap = new Map<string, string>()
-  if (patientIds.length > 0) {
-    const { data: patients } = await supabase
-      .from('patients')
-      .select('id, encrypted_name, encrypted_phone')
-      .in('id', patientIds)
-    for (const p of patients ?? []) {
-      try {
-        const dec = decryptPatientPII({ encrypted_name: p.encrypted_name ?? '', encrypted_phone: p.encrypted_phone ?? '' })
-        nameMap.set(p.id, dec.name || 'Pasien')
-      } catch { nameMap.set(p.id, 'Pasien') }
-    }
+  for (const p of patients ?? []) {
+    try {
+      const dec = decryptPatientPII({ encrypted_name: p.encrypted_name ?? '', encrypted_phone: p.encrypted_phone ?? '' })
+      nameMap.set(p.id, dec.name || 'Pasien')
+    } catch { nameMap.set(p.id, 'Pasien') }
   }
 
-  // ── Batch-fetch which visit each transaction came from ─────────────────────
-  const visitIds = [...new Set((txnRows ?? []).map((r) => r.visit_id).filter(Boolean))]
   const visitLabelMap = new Map<string, string>()
-  if (visitIds.length > 0) {
-    const { data: visitRows } = await supabase
-      .from('patient_visits')
-      .select('id, visit_date, service_type')
-      .in('id', visitIds)
-    for (const v of visitRows ?? []) {
-      const dateLabel = new Date(v.visit_date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-      visitLabelMap.set(v.id, `${dateLabel} · ${v.service_type ?? '—'}`)
-    }
+  for (const v of visitRows ?? []) {
+    const dateLabel = new Date(v.visit_date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+    visitLabelMap.set(v.id, `${dateLabel} · ${v.service_type ?? '—'}`)
   }
 
   const txns = (txnRows ?? []).map((r) => ({
@@ -172,6 +180,7 @@ export default async function OutstandingPaymentsPage({
     patient_name: r.patient_id ? (nameMap.get(r.patient_id) ?? 'Pasien') : null,
     branch_name:  ((r.branches as unknown as { name: string } | null))?.name ?? '—',
     visitLabel:   r.visit_id ? (visitLabelMap.get(r.visit_id) ?? null) : null,
+    therapist: therapistMap.get(r.id) ?? null,
   }))
 
   const totalPages = Math.max(1, Math.ceil((txnTotal ?? 0) / PAGE_SIZE))
@@ -201,7 +210,7 @@ export default async function OutstandingPaymentsPage({
         <div className="glass-card p-5">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Total Piutang</p>
           <p className="text-2xl font-bold text-[#FFB35C]">{formatRp(totalOutstanding)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Belum dilunasi</p>
+          <p className="text-xs text-muted-foreground mt-1">Belum dilunasi{dateFrom || dateTo ? ' · rentang dipilih' : ''}</p>
         </div>
         <div className="glass-card p-5">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Jumlah Transaksi</p>
@@ -233,9 +242,14 @@ export default async function OutstandingPaymentsPage({
               ))}
             </div>
           </div>
-          <Suspense>
-            <SearchInput defaultValue={q} />
-          </Suspense>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Suspense>
+              <UrlDateRangeFilter from={dateFrom} to={dateTo} />
+            </Suspense>
+            <Suspense>
+              <SearchInput defaultValue={q} />
+            </Suspense>
+          </div>
         </div>
 
         {txns.length === 0 ? (
@@ -259,6 +273,7 @@ export default async function OutstandingPaymentsPage({
                     <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tanggal</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pasien</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kategori</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Terapis</th>
                     {!branchId && (
                       <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cabang</th>
                     )}
@@ -293,6 +308,7 @@ export default async function OutstandingPaymentsPage({
                         key={tx.id}
                         tx={tx}
                         showBranchColumn={!branchId}
+                        therapistRange={{ from: dateFrom, to: dateTo }}
                         editTx={editTx}
                       />
                     )
