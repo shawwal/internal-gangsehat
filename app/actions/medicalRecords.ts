@@ -4,8 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { isRegioRequired } from '@/lib/visitRouting'
 import { getEffectivePackageServiceType } from '@/lib/serviceType'
-import { getGriyaVisitFormRoute, type GriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
-import { fetchVisitDisciplines } from '@/lib/griyaDiscipline'
+import type { GriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
+import {
+  GRIYA_RECORD_EMBED, fetchGriyaBranchIds, resolveGriyaRecordStates, type GriyaRecordVisit,
+} from '@/lib/griyaRecordCompletion'
 import type { UserRole } from '@/types'
 
 // service_types where regio is compulsory, formatted for PostgREST in.() lists
@@ -178,8 +180,11 @@ async function searchPatientIds(supabase: SupabaseServerClient, term: string): P
 // regio too — but only for assessment-type visits (TERAPI AWAL, TA VISIT), where
 // it's compulsory. Same signal sendMedicalRecordReminder() and the
 // jadwal-harian incomplete-records banner already use.
+// Griya Anak branches (`griyaIds`) keep their own rekam medis, which SQL here
+// can't see — their rows pass the completeness filter untouched and the caller
+// filters them in-app (lib/griyaRecordCompletion.ts).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyScopedFilters(query: any, viewer: ViewerContext, params: MedicalRecordsParams) {
+function applyScopedFilters(query: any, viewer: ViewerContext, params: MedicalRecordsParams, griyaIds: string[] = []) {
   query = query.eq('status', 'completed').not('attending_staff_id', 'is', null)
 
   if (viewer.scope === 'own') {
@@ -198,16 +203,32 @@ function applyScopedFilters(query: any, viewer: ViewerContext, params: MedicalRe
     if (startDate) query = query.gte('visit_date', startDate)
   }
 
+  const griyaPass = griyaIds.length > 0 ? `branch_id.in.(${griyaIds.join(',')}),` : ''
   if (params.completeness === 'incomplete') {
-    query = query.or(`diagnosis.is.null,treatment.is.null,and(service_type.in.${REGIO_REQUIRED_IN},regio.is.null)`)
+    query = query.or(`${griyaPass}diagnosis.is.null,treatment.is.null,and(service_type.in.${REGIO_REQUIRED_IN},regio.is.null)`)
   } else if (params.completeness === 'complete') {
-    query = query
-      .not('diagnosis', 'is', null)
-      .not('treatment', 'is', null)
-      .or(`regio.not.is.null,service_type.not.in.${REGIO_REQUIRED_IN}`)
+    query = query.or(
+      `${griyaPass}and(diagnosis.not.is.null,treatment.not.is.null,or(regio.not.is.null,service_type.not.in.${REGIO_REQUIRED_IN}))`,
+    )
   }
 
   return query
+}
+
+// Reads every row of a query in 1000-row pages (PostgREST's max-rows cap).
+// `build` must apply a stable order. Returns null on error.
+async function fetchAllPages<T>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>,
+): Promise<T[] | null> {
+  const PAGE = 1000
+  const out: T[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build(from, from + PAGE - 1)
+    if (error || !data) return from === 0 ? null : out
+    out.push(...data)
+    if (data.length < PAGE) return out
+  }
 }
 
 // ── Paginated list ──────────────────────────────────────────────────────────────
@@ -226,16 +247,26 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
   const ascending = params.sortOrder === 'asc'
   const groupByPatient = params.groupBy === 'patient'
 
+  // Griya completeness lives in other tables, so a completeness filter that can
+  // reach a Griya branch fetches the scoped set and filters/paginates in memory.
+  const griyaIds = await fetchGriyaBranchIds(supabase)
+  const griyaInScope = griyaIds.length > 0 && (
+    !params.branchId || params.branchId === 'all' || griyaIds.includes(params.branchId)
+  )
+  const griyaFilter = params.completeness !== 'all' && griyaInScope
+  const inMemory = groupByPatient || griyaFilter
+
   let query = supabase
     .from('patient_visits')
     .select(`
       id, patient_id, branch_id, visit_date, visit_time, service_type, package_id,
       attending_staff_id, griya_slot_id, diagnosis, treatment, regio,
       internal_profiles!attending_staff_id(full_name, nickname),
-      branches!branch_id(name)
+      branches!branch_id(name),
+      ${GRIYA_RECORD_EMBED}
     `, { count: 'exact' })
 
-  query = applyScopedFilters(query, viewer, params)
+  query = applyScopedFilters(query, viewer, params, griyaFilter ? griyaIds : [])
   if (patientIds) query = query.in('patient_id', patientIds)
   query = query
     .order('visit_date', { ascending })
@@ -248,19 +279,43 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
   // once, sorts by name in application code, then paginates in memory. The
   // default "Tanggal" mode keeps the efficient DB-level range() pagination.
   const from = (params.page - 1) * params.pageSize
-  const { data, count, error } = groupByPatient
+  const { data: fetched, count, error } = inMemory
     ? await query.limit(5000)
     : await query.range(from, from + params.pageSize - 1)
 
-  if (error || !data) return { rows: [], total: 0, scope: viewer.scope }
+  if (error || !fetched) return { rows: [], total: 0, scope: viewer.scope }
+
+  // Which of these visits belong to a Griya Anak branch — those route to the
+  // Griya intake / rekam medis pages instead of the adult forms, and their
+  // completeness follows the Griya form status instead of diagnosis/tindakan/regio.
+  const griyaBranchIds = new Set(griyaIds)
+  const griyaStates = await resolveGriyaRecordStates(
+    supabase,
+    fetched.filter((v) => griyaBranchIds.has(v.branch_id as string)) as unknown as GriyaRecordVisit[],
+  )
+
+  let data = fetched
+  let total = count ?? 0
+  if (griyaFilter) {
+    const want = params.completeness === 'complete'
+    data = fetched.filter((v) => {
+      const st = griyaStates.get(v.id as string)
+      return !st || st.complete === want
+    })
+    total = data.length
+  }
+  // In-memory date mode: paginate before the per-row lookups below.
+  if (inMemory && !groupByPatient) data = data.slice(from, from + params.pageSize)
 
   // Batch-decrypt patient names — for the full matched set in "Pasien" mode,
   // for just this page otherwise.
   const namePatientIds = [...new Set(data.map((v) => v.patient_id as string))]
-  const { data: patients } = await supabase
-    .from('patients')
-    .select('id, encrypted_name, encrypted_phone')
-    .in('id', namePatientIds)
+  const { data: patients } = namePatientIds.length > 0
+    ? await supabase
+        .from('patients')
+        .select('id, encrypted_name, encrypted_phone')
+        .in('id', namePatientIds)
+    : { data: [] }
 
   const nameMap = new Map<string, string>()
   for (const p of patients ?? []) {
@@ -302,51 +357,33 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     }
   }
 
-  // Which of these visits belong to a Griya Anak branch — those route to the
-  // Griya intake / rekam medis pages instead of the adult forms.
-  const branchIds = [...new Set(data.map((v) => v.branch_id as string))]
-  const { data: griyaBranches } = await supabase
-    .from('branch_griya_settings').select('branch_id').eq('enabled', true).in('branch_id', branchIds)
-  const griyaBranchIds = new Set((griyaBranches ?? []).map((b) => b.branch_id as string))
-  const griyaVisits = data.filter((v) => griyaBranchIds.has(v.branch_id as string))
-  const disciplines = await fetchVisitDisciplines(supabase, griyaVisits as unknown as { id: string }[])
-  const griyaStatus = new Map<string, 'completed' | 'draft'>()
-  if (griyaVisits.length > 0) {
-    const ids = griyaVisits.map((v) => v.id as string)
-    const [intakes, notes] = await Promise.all([
-      supabase.from('griya_terapi_awal').select('visit_id, status').in('visit_id', ids),
-      supabase.from('griya_session_notes').select('visit_id, status').in('visit_id', ids),
-    ])
-    for (const r of [...(intakes.data ?? []), ...(notes.data ?? [])]) {
-      griyaStatus.set(r.visit_id as string, r.status as 'completed' | 'draft')
-    }
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let rows: MedicalRecordRow[] = (data as any[]).map((v) => ({
-    id:                    v.id,
-    patient_id:            v.patient_id,
-    patient_name:          nameMap.get(v.patient_id) ?? 'Pasien',
-    branch_id:             v.branch_id,
-    branch_name:           v.branches?.name ?? '',
-    visit_date:            v.visit_date,
-    visit_time:            v.visit_time ? String(v.visit_time).slice(0, 5) : null,
-    service_type:          getEffectivePackageServiceType(v.service_type, v.package_id) ?? v.service_type,
-    attending_staff_id:    v.attending_staff_id,
-    attending_staff_name:  v.internal_profiles?.nickname || v.internal_profiles?.full_name || '—',
-    diagnosis:             v.diagnosis,
-    treatment:             v.treatment,
-    regio:                 v.regio,
-    is_complete:           griyaBranchIds.has(v.branch_id)
-      ? griyaStatus.get(v.id) === 'completed'
-      : !!(v.diagnosis && v.treatment && (!isRegioRequired(v.service_type) || v.regio)),
-    pertemuan_number:      v.package_id ? pertemuanMap.get(v.id) ?? null : null,
-    is_griya:              griyaBranchIds.has(v.branch_id),
-    griya_route:           griyaBranchIds.has(v.branch_id) ? getGriyaVisitFormRoute(v.service_type, disciplines.get(v.id)) : null,
-    griya_status:          griyaStatus.get(v.id) ?? null,
-  }))
+  let rows: MedicalRecordRow[] = (data as any[]).map((v) => {
+    const griya = griyaStates.get(v.id)
+    return {
+      id:                    v.id,
+      patient_id:            v.patient_id,
+      patient_name:          nameMap.get(v.patient_id) ?? 'Pasien',
+      branch_id:             v.branch_id,
+      branch_name:           v.branches?.name ?? '',
+      visit_date:            v.visit_date,
+      visit_time:            v.visit_time ? String(v.visit_time).slice(0, 5) : null,
+      service_type:          getEffectivePackageServiceType(v.service_type, v.package_id) ?? v.service_type,
+      attending_staff_id:    v.attending_staff_id,
+      attending_staff_name:  v.internal_profiles?.nickname || v.internal_profiles?.full_name || '—',
+      diagnosis:             v.diagnosis,
+      treatment:             v.treatment,
+      regio:                 v.regio,
+      is_complete:           griya
+        ? griya.status === 'completed'
+        : !!(v.diagnosis && v.treatment && (!isRegioRequired(v.service_type) || v.regio)),
+      pertemuan_number:      v.package_id ? pertemuanMap.get(v.id) ?? null : null,
+      is_griya:              !!griya,
+      griya_route:           griya?.route ?? null,
+      griya_status:          griya?.status ?? null,
+    }
+  })
 
-  let total = count ?? 0
   if (groupByPatient) {
     rows.sort((a, b) => {
       const byName = a.patient_name.localeCompare(b.patient_name, 'id')
@@ -378,16 +415,44 @@ export async function fetchMedicalRecordStats(
     if (patientIds.length === 0) return { complete: 0, incomplete: 0 }
   }
 
+  // Griya branches are counted from their own rekam medis, the rest in SQL.
+  const griyaIds = await fetchGriyaBranchIds(supabase)
+  const griyaIn = `(${griyaIds.join(',')})`
+
   async function countFor(completeness: RecordCompleteness) {
     let q = supabase.from('patient_visits').select('id', { count: 'exact', head: true })
     q = applyScopedFilters(q, viewer, { ...params, completeness } as MedicalRecordsParams)
+    if (griyaIds.length > 0) q = q.not('branch_id', 'in', griyaIn)
     if (patientIds) q = q.in('patient_id', patientIds)
     const { count } = await q
     return count ?? 0
   }
 
-  const [complete, incomplete] = await Promise.all([countFor('complete'), countFor('incomplete')])
-  return { complete, incomplete }
+  async function griyaCounts() {
+    if (griyaIds.length === 0) return { complete: 0, incomplete: 0 }
+    if (params.branchId && params.branchId !== 'all' && !griyaIds.includes(params.branchId)) {
+      return { complete: 0, incomplete: 0 }
+    }
+    const visits = await fetchAllPages((from, to) => {
+      let q = supabase
+        .from('patient_visits')
+        .select(`id, branch_id, service_type, griya_slot_id, attending_staff_id, ${GRIYA_RECORD_EMBED}`)
+        .in('branch_id', griyaIds)
+      q = applyScopedFilters(q, viewer, { ...params, completeness: 'all' } as MedicalRecordsParams)
+      if (patientIds) q = q.in('patient_id', patientIds)
+      return q.order('id').range(from, to)
+    })
+    const states = await resolveGriyaRecordStates(supabase, (visits ?? []) as unknown as GriyaRecordVisit[])
+    let complete = 0, incomplete = 0
+    for (const st of states.values()) {
+      if (st.complete === true) complete++
+      else if (st.complete === false) incomplete++
+    }
+    return { complete, incomplete }
+  }
+
+  const [complete, incomplete, griya] = await Promise.all([countFor('complete'), countFor('incomplete'), griyaCounts()])
+  return { complete: complete + griya.complete, incomplete: incomplete + griya.incomplete }
 }
 
 // ── Per-therapist completion rollup (team scope only) ───────────────────────────
@@ -414,20 +479,28 @@ export async function fetchTherapistRecordStats(params: {
 
   const isDirector = viewer.role === 'director'
 
-  let query = supabase
-    .from('patient_visits')
-    .select('attending_staff_id, branch_id, diagnosis, treatment, regio, service_type, visit_date')
-    .eq('status', 'completed')
-    .not('attending_staff_id', 'is', null)
-
-  if (isDirector && params.branchId && params.branchId !== 'all') {
-    query = query.eq('branch_id', params.branchId)
-  }
   const startDate = periodStartDate(params.period)
-  if (startDate) query = query.gte('visit_date', startDate)
+  // Paged — a team's visits over 30–90 days easily pass PostgREST's 1000-row cap.
+  const data = await fetchAllPages((from, to) => {
+    let query = supabase
+      .from('patient_visits')
+      .select(`id, attending_staff_id, branch_id, diagnosis, treatment, regio, service_type, visit_date, griya_slot_id, ${GRIYA_RECORD_EMBED}`)
+      .eq('status', 'completed')
+      .not('attending_staff_id', 'is', null)
+    if (isDirector && params.branchId && params.branchId !== 'all') {
+      query = query.eq('branch_id', params.branchId)
+    }
+    if (startDate) query = query.gte('visit_date', startDate)
+    return query.order('id').range(from, to)
+  })
+  if (!data) return { rows: [], isDirector }
 
-  const { data, error } = await query
-  if (error || !data) return { rows: [], isDirector }
+  // Griya Anak visits are judged by their own rekam medis (Terapi Awal / catatan sesi).
+  const griyaBranchIds = new Set(await fetchGriyaBranchIds(supabase))
+  const griyaStates = await resolveGriyaRecordStates(
+    supabase,
+    data.filter((v) => griyaBranchIds.has(v.branch_id as string)) as unknown as GriyaRecordVisit[],
+  )
 
   interface Agg {
     staff_id: string
@@ -438,7 +511,9 @@ export async function fetchTherapistRecordStats(params: {
     oldestIncompleteDate: string | null
   }
   const aggMap = new Map<string, Agg>()
-  for (const v of data as { attending_staff_id: string; branch_id: string | null; diagnosis: string | null; treatment: string | null; regio: string | null; service_type: string | null; visit_date: string }[]) {
+  for (const v of data as unknown as { id: string; attending_staff_id: string; branch_id: string | null; diagnosis: string | null; treatment: string | null; regio: string | null; service_type: string | null; visit_date: string }[]) {
+    const griya = griyaStates.get(v.id)
+    if (griya && griya.complete === null) continue  // no Griya form for this visit
     const sid = v.attending_staff_id
     let agg = aggMap.get(sid)
     if (!agg) {
@@ -446,7 +521,9 @@ export async function fetchTherapistRecordStats(params: {
       aggMap.set(sid, agg)
     }
     agg.total++
-    const isComplete = !!(v.diagnosis && v.treatment && (!isRegioRequired(v.service_type) || v.regio))
+    const isComplete = griya
+      ? griya.complete === true
+      : !!(v.diagnosis && v.treatment && (!isRegioRequired(v.service_type) || v.regio))
     if (isComplete) {
       agg.complete++
     } else {

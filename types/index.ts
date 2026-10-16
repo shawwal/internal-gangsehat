@@ -457,6 +457,7 @@ export interface PatientPackage {
   remaining_sessions: number  // computed: total_sessions - used_sessions
   scheduled_sessions: number  // linked visits booked ahead but not yet attended — display only, not deducted from remaining
   unrecorded_sessions?: number // status completed but kehadiran never recorded — not deducted; staff should set Hadir/Tidak Hadir
+  attended_sessions?: number  // legacy + HADIR, NOT payment-gated — what staff see as "dipakai"
   booked_sessions: number     // legacy + HADIR + still-scheduled linked visits (TIDAK HADIR / unrecorded excluded), NOT payment-gated — capacity check
   payment_ok: boolean         // legacy (order_id IS NULL) or has a confirmed transaction — gates used_sessions
   notes: string | null

@@ -7,6 +7,7 @@ import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
 import { CATEGORY_TO_SERVICE_TYPE } from '@/lib/serviceType'
 import { GRIYA_SERVICE_TYPES } from './types'
 import type { VisitStatus } from '@/types'
+import { ModalPortal } from '@/components/payment-links/ModalPortal'
 
 export interface EditableVisit {
   id: string
@@ -119,95 +120,97 @@ export function EditVisitDialog({ visit, branchId, onClose, onSaved }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="glass-card w-full max-w-md max-h-[88vh] flex flex-col p-5" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Ubah Kunjungan</h2>
-            {visit.patient_name && <p className="text-xs text-muted-foreground mt-0.5">{visit.patient_name}</p>}
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"><X size={16} /></button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto space-y-3">
-          <div className="grid grid-cols-2 gap-2">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="glass-card w-full max-w-md max-h-[88vh] flex flex-col p-5" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start justify-between mb-3">
             <div>
-              <label className={labelCls}>Tanggal</label>
-              <input type="date" value={form.visit_date} onChange={(e) => set('visit_date', e.target.value)} className={inputCls} />
+              <h2 className="text-base font-semibold text-foreground">Ubah Kunjungan</h2>
+              {visit.patient_name && <p className="text-xs text-muted-foreground mt-0.5">{visit.patient_name}</p>}
             </div>
-            <div>
-              <label className={labelCls}>Jam</label>
-              <input type="time" value={form.visit_time} onChange={(e) => set('visit_time', e.target.value)} className={inputCls} />
-            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"><X size={16} /></button>
           </div>
 
-          <div>
-            <label className={labelCls}>Layanan</label>
-            {layanan.length > 0 ? (
-              <select value={form.layanan_id} onChange={(e) => pickLayanan(e.target.value)} className={inputCls}>
-                <option value="">{visit.service_type ? `${visit.service_type} (saat ini)` : '— pilih layanan —'}</option>
-                {Array.from(new Set(layanan.map((l) => l.kategori))).map((kat) => (
-                  <optgroup key={kat} label={kat}>
-                    {layanan.filter((l) => l.kategori === kat).map((l) => (
-                      <option key={l.id} value={l.id}>{l.nama} · {rp(l.harga)}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            ) : (
-              <select value={form.service_type} onChange={(e) => set('service_type', e.target.value)} className={inputCls}>
+          <div className="flex-1 overflow-y-auto space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelCls}>Tanggal</label>
+                <input type="date" value={form.visit_date} onChange={(e) => set('visit_date', e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Jam</label>
+                <input type="time" value={form.visit_time} onChange={(e) => set('visit_time', e.target.value)} className={inputCls} />
+              </div>
+            </div>
+
+            <div>
+              <label className={labelCls}>Layanan</label>
+              {layanan.length > 0 ? (
+                <select value={form.layanan_id} onChange={(e) => pickLayanan(e.target.value)} className={inputCls}>
+                  <option value="">{visit.service_type ? `${visit.service_type} (saat ini)` : '— pilih layanan —'}</option>
+                  {Array.from(new Set(layanan.map((l) => l.kategori))).map((kat) => (
+                    <optgroup key={kat} label={kat}>
+                      {layanan.filter((l) => l.kategori === kat).map((l) => (
+                        <option key={l.id} value={l.id}>{l.nama} · {rp(l.harga)}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              ) : (
+                <select value={form.service_type} onChange={(e) => set('service_type', e.target.value)} className={inputCls}>
+                  <option value="">— pilih —</option>
+                  {serviceOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              )}
+            </div>
+
+            <div>
+              <label className={labelCls}>Terapis</label>
+              <select value={form.attending_staff_id} onChange={(e) => set('attending_staff_id', e.target.value)} className={inputCls}>
                 <option value="">— pilih —</option>
-                {serviceOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            )}
-          </div>
-
-          <div>
-            <label className={labelCls}>Terapis</label>
-            <select value={form.attending_staff_id} onChange={(e) => set('attending_staff_id', e.target.value)} className={inputCls}>
-              <option value="">— pilih —</option>
-              {staff.map((s) => <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>)}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className={labelCls}>Kehadiran</label>
-              <select value={form.kehadiran} onChange={(e) => set('kehadiran', e.target.value)} className={inputCls}>
-                <option value="">—</option>
-                <option value="HADIR">HADIR</option>
-                <option value="TIDAK HADIR">TIDAK HADIR</option>
+                {staff.map((s) => <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>)}
               </select>
             </div>
-            <div>
-              <label className={labelCls}>Status</label>
-              <select value={form.status} onChange={(e) => set('status', e.target.value as VisitStatus)} className={inputCls}>
-                {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelCls}>Kehadiran</label>
+                <select value={form.kehadiran} onChange={(e) => set('kehadiran', e.target.value)} className={inputCls}>
+                  <option value="">—</option>
+                  <option value="HADIR">HADIR</option>
+                  <option value="TIDAK HADIR">TIDAK HADIR</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Status</label>
+                <select value={form.status} onChange={(e) => set('status', e.target.value as VisitStatus)} className={inputCls}>
+                  {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </div>
             </div>
+
+            <div>
+              <label className={labelCls}>Catatan</label>
+              <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={3} className={`${inputCls} resize-none`} />
+            </div>
+
+            {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
 
-          <div>
-            <label className={labelCls}>Catatan</label>
-            <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={3} className={`${inputCls} resize-none`} />
+          <div className="flex items-center gap-2 pt-4">
+            <button onClick={remove} disabled={deleting || saving}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-destructive/40 text-destructive text-sm font-medium hover:bg-destructive/10 disabled:opacity-60 cursor-pointer">
+              <Trash2 size={14} /> {deleting ? '...' : 'Hapus'}
+            </button>
+            <div className="flex-1" />
+            <button onClick={onClose} className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted cursor-pointer">Batal</button>
+            <button onClick={save} disabled={saving || deleting}
+              className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 cursor-pointer">
+              {saving ? 'Menyimpan...' : 'Simpan'}
+            </button>
           </div>
-
-          {error && <p className="text-xs text-destructive">{error}</p>}
-        </div>
-
-        <div className="flex items-center gap-2 pt-4">
-          <button onClick={remove} disabled={deleting || saving}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-destructive/40 text-destructive text-sm font-medium hover:bg-destructive/10 disabled:opacity-60 cursor-pointer">
-            <Trash2 size={14} /> {deleting ? '...' : 'Hapus'}
-          </button>
-          <div className="flex-1" />
-          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted cursor-pointer">Batal</button>
-          <button onClick={save} disabled={saving || deleting}
-            className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 cursor-pointer">
-            {saving ? 'Menyimpan...' : 'Simpan'}
-          </button>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   )
 }

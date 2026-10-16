@@ -390,7 +390,9 @@ function PackagePanel({ pkg, disciplines, canEdit, onEditVisit, onChanged }: {
   const [stopping, setStopping] = useState(false)
   const { showToast } = useToast()
 
-  const remaining = pkg.total_sessions - pkg.used_sessions
+  // used_sessions is payment-gated (0 until paid) — count attended sessions directly.
+  const attended = pkg.attended_sessions ?? pkg.used_sessions
+  const remaining = pkg.total_sessions - attended
 
   function toggle() {
     const next = !open
@@ -434,12 +436,17 @@ function PackagePanel({ pkg, disciplines, canEdit, onEditVisit, onChanged }: {
           </span>
         </button>
         <span className="text-muted-foreground shrink-0">
-          {pkg.used_sessions}/{pkg.total_sessions} sesi
+          {attended}/{pkg.total_sessions} sesi
           {pkg.scheduled_sessions > 0 && ` · ${pkg.scheduled_sessions} terjadwal`}
         </span>
         <span className={`text-xs shrink-0 ${remaining <= 0 ? 'text-[#FF3B30]' : 'text-muted-foreground'}`}>
           {remaining > 0 ? `${remaining} tersisa` : '⚠ habis'}
         </span>
+        {!pkg.payment_ok && (
+          <span className="text-xs px-2 py-0.5 rounded-full shrink-0 bg-[#FFB35C]/20 text-[#FFB35C]" title="Belum ada pembayaran terkonfirmasi untuk paket ini">
+            Belum dibayar
+          </span>
+        )}
         <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${pkg.status === 'active' ? 'bg-[#34C759]/15 text-[#34C759]' : 'bg-muted text-muted-foreground'}`}>
           {PKG_STATUS_LABEL[pkg.status] ?? pkg.status}
         </span>
@@ -461,6 +468,15 @@ function PackagePanel({ pkg, disciplines, canEdit, onEditVisit, onChanged }: {
       )}
       {open && (
         <div className="bg-muted/20 border-t border-border">
+          <div className="px-4 py-2.5 border-b border-border flex flex-wrap gap-x-5 gap-y-1 text-xs">
+            <span><span className="text-muted-foreground">Tanggal beli:</span> {pkg.purchased_at ? fmtDate(pkg.purchased_at.slice(0, 10)) : '—'}</span>
+            {pkg.category && <span><span className="text-muted-foreground">Kategori:</span> {pkg.category}</span>}
+            {pkg.mulai_paket && <span><span className="text-muted-foreground">Mulai:</span> {pkg.mulai_paket}</span>}
+            {pkg.legacy_used_sessions > 0 && <span><span className="text-muted-foreground">Terpakai di luar sistem:</span> {pkg.legacy_used_sessions}</span>}
+            {pkg.completion_status && <span><span className="text-muted-foreground">Hasil akhir:</span> {pkg.completion_status}</span>}
+            {pkg.stopped_at && <span><span className="text-muted-foreground">Dihentikan:</span> {fmtDate(pkg.stopped_at.slice(0, 10))}</span>}
+            {pkg.notes && <span className="basis-full"><span className="text-muted-foreground">Catatan:</span> {pkg.notes}</span>}
+          </div>
           <SessionList
             sessions={sessions}
             loading={loading}

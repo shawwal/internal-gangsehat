@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import type { VisitStatus } from '@/types'
 import { isRegioRequired } from '@/lib/visitRouting'
+import { GRIYA_RECORD_EMBED, fetchGriyaBranchIds, resolveGriyaRecordStates, type GriyaRecordVisit } from '@/lib/griyaRecordCompletion'
 import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
 import { countBookedSessions } from '@/app/actions/packages'
@@ -678,13 +679,21 @@ export async function sendMedicalRecordReminder(
   // Fetch the visit
   const { data: visit, error: visitErr } = await supabase
     .from('patient_visits')
-    .select('id, status, diagnosis, treatment, regio, service_type, attending_staff_id, visit_date')
+    .select(`id, status, diagnosis, treatment, regio, service_type, attending_staff_id, visit_date, patient_id, branch_id, griya_slot_id, ${GRIYA_RECORD_EMBED}`)
     .eq('id', visitId)
     .single()
   if (visitErr || !visit) return { error: 'Kunjungan tidak ditemukan' }
   if (visit.status !== 'completed') return { error: 'Kunjungan belum selesai' }
+  // Griya Anak visits are complete once their own form (Terapi Awal / catatan sesi) is done.
+  const griya = (await fetchGriyaBranchIds(supabase)).includes(visit.branch_id as string)
+    ? (await resolveGriyaRecordStates(supabase, [visit as unknown as GriyaRecordVisit])).get(visit.id)
+    : undefined
   const regioRequired = isRegioRequired(visit.service_type)
-  if (visit.diagnosis && visit.treatment && (!regioRequired || visit.regio)) return { error: 'Rekam medis sudah lengkap' }
+  if (griya) {
+    if (griya.complete !== false) return { error: griya.complete ? 'Rekam medis sudah lengkap' : 'Kunjungan ini tidak memiliki form rekam medis' }
+  } else if (visit.diagnosis && visit.treatment && (!regioRequired || visit.regio)) {
+    return { error: 'Rekam medis sudah lengkap' }
+  }
   if (!visit.attending_staff_id) return { error: 'Tidak ada terapis yang ditugaskan' }
 
   // Cooldown: skip if a reminder was already sent today for this visit
@@ -705,15 +714,20 @@ export async function sendMedicalRecordReminder(
     day: 'numeric', month: 'short', year: 'numeric',
   })
   const missing: string[] = []
-  if (!visit.diagnosis) missing.push('diagnosis')
-  if (!visit.treatment) missing.push('tindakan')
-  if (regioRequired && !visit.regio) missing.push('regio')
+  if (griya) {
+    missing.push(griya.route === 'terapi-awal' ? 'form Terapi Awal' : 'catatan sesi')
+  } else {
+    if (!visit.diagnosis) missing.push('diagnosis')
+    if (!visit.treatment) missing.push('tindakan')
+    if (regioRequired && !visit.regio) missing.push('regio')
+  }
 
   await admin.from('user_notifications').insert({
     user_id: visit.attending_staff_id,
     title:   'Rekam Medis Belum Diisi',
     message: `[${visit.id}] Kunjungan ${dateStr} perlu dilengkapi: ${missing.join(', ')}`,
-    link:    visit.service_type === 'SPORT MASSAGE' ? '/jadwal-sport-massage'
+    link:    griya ? `/griya-anak/siswa/${visit.patient_id}`
+           : visit.service_type === 'SPORT MASSAGE' ? '/jadwal-sport-massage'
            : visit.service_type?.endsWith(' VISIT') ? '/home-visit'
            : '/jadwal-harian',
   })

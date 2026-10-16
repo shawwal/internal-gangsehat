@@ -22,7 +22,11 @@ export async function fetchPatientPackages(
 
   // used_sessions is payment-gated (0 until a payment exists), so an unpaid
   // package would look empty forever. Capacity checks use this raw count.
-  const bookedCounts = await countBookedSessions(supabase, data.map((p) => p.id))
+  const ids = data.map((p) => p.id)
+  const [bookedCounts, attendedCounts] = await Promise.all([
+    countBookedSessions(supabase, ids),
+    countAttendedSessions(supabase, ids),
+  ])
 
   return data.map((p) => ({
     id:                 p.id,
@@ -37,6 +41,7 @@ export async function fetchPatientPackages(
     scheduled_sessions: Number(p.scheduled_sessions ?? 0),
     unrecorded_sessions: Number(p.unrecorded_sessions ?? 0),
     booked_sessions:    Number(p.legacy_used_sessions ?? 0) + (bookedCounts.get(p.id) ?? 0),
+    attended_sessions:  Number(p.legacy_used_sessions ?? 0) + (attendedCounts.get(p.id) ?? 0),
     payment_ok:         p.payment_ok ?? p.order_id == null,
     notes:              p.notes ?? null,
     status:             p.status as PatientPackage['status'],
@@ -69,6 +74,26 @@ export async function countBookedSessions(
     .in('package_id', packageIds)
     .neq('status', 'cancelled')
     .or('kehadiran.eq.HADIR,and(status.eq.scheduled,kehadiran.is.null)')
+  for (const v of data ?? []) {
+    if (v.package_id) counts.set(v.package_id, (counts.get(v.package_id) ?? 0) + 1)
+  }
+  return counts
+}
+
+/** HADIR visits per package, regardless of payment — the session counter
+ *  staff expect; used_sessions stays 0 until the package is paid. */
+async function countAttendedSessions(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  packageIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>()
+  if (packageIds.length === 0) return counts
+  const { data } = await supabase
+    .from('patient_visits')
+    .select('package_id')
+    .in('package_id', packageIds)
+    .neq('status', 'cancelled')
+    .eq('kehadiran', 'HADIR')
   for (const v of data ?? []) {
     if (v.package_id) counts.set(v.package_id, (counts.get(v.package_id) ?? 0) + 1)
   }
@@ -250,6 +275,11 @@ export async function createPackageFromLayanan(input: {
   /** Package already in progress (and paid) in the old system: starts at
    *  `used_sessions` and has no order, so the payment gate treats it as legacy. */
   carry_over?: { used_sessions: number }
+  /** Optional overrides of the price-list defaults (name, size) plus extra details. */
+  package_name?: string
+  total_sessions?: number
+  purchased_at?: string
+  notes?: string | null
 }): Promise<{ id: string | null; order_id: string | null; error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -264,7 +294,9 @@ export async function createPackageFromLayanan(input: {
     return { id: null, order_id: null, error: layananErr?.message ?? 'Layanan tidak ditemukan.' }
   }
 
-  const total_sessions = layanan.jumlah_sesi || 1
+  const total_sessions = input.total_sessions && input.total_sessions > 0
+    ? Math.floor(input.total_sessions)
+    : layanan.jumlah_sesi || 1
   const jenis_paket = total_sessions === 5 ? 'P1' : total_sessions === 10 ? 'P2' : null
   const carryOver = input.carry_over
   const orderId = carryOver ? null : await generateOrderId(supabase)
@@ -274,15 +306,16 @@ export async function createPackageFromLayanan(input: {
     .insert({
       patient_id:     input.patient_id,
       branch_id:      input.branch_id,
-      package_name:   layanan.nama,
+      package_name:   input.package_name?.trim() || layanan.nama,
       package_type:   'fixed',
       total_sessions,
       jenis_paket,
       mulai_paket:    carryOver ? 'EXT.' : 'NEW',
+      notes:          input.notes?.trim() || null,
       category:       input.category,
       order_id:       orderId,
       legacy_used_sessions: carryOver ? Math.max(0, Math.floor(carryOver.used_sessions)) : 0,
-      purchased_at:   new Date().toISOString().slice(0, 10),
+      purchased_at:   input.purchased_at || new Date().toISOString().slice(0, 10),
       created_by:     user?.id ?? null,
       updated_at:     new Date().toISOString(),
     })
@@ -389,6 +422,7 @@ export async function updatePatientPackage(
     notes?: string | null
     total_sessions?: number
     legacy_used_sessions?: number
+    purchased_at?: string
   },
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
