@@ -6,6 +6,7 @@ import { createPatientPackage, updatePatientPackage } from '@/app/actions/packag
 import { createTransactionManual, fetchLayananHarga } from '@/app/actions/transactions'
 import type { CreateTransactionManualInput } from '@/app/actions/transactions'
 import { DEFAULT_FORM, INPUT_CLS, LABEL_CLS } from './types'
+import { PACKAGE_CATEGORIES } from '@/lib/serviceType'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 import type { PatientPackage, JenisPaket, PackageOperationalStatus, PackageCompletionStatus, PackageStatus, FormState } from './types'
@@ -200,7 +201,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
           <div>
             <label className={LABEL_CLS}>Kategori Paket</label>
             <div className="grid grid-cols-2 gap-2">
-              {(['PAKET KLINIK', 'PAKET VISIT'] as const).map((c) => (
+              {PACKAGE_CATEGORIES.map((c) => (
                 <button
                   key={c}
                   type="button"

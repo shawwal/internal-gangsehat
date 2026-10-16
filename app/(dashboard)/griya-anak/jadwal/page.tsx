@@ -320,6 +320,9 @@ export default function GriyaJadwalPage() {
             visit_date: payVisit.visit.visit_date,
             service_type: payVisit.visit.service_type,
             branch_id: branchId,
+            // a freshly materialized visit inherits the slot's package
+            package_id: payVisit.visit.package_id ?? payVisit.slot?.package_id ?? null,
+            layanan_id: payVisit.visit.layanan_id ?? null,
           }}
           onClose={() => setPayVisit(null)}
           onSuccess={afterMutation}

@@ -119,7 +119,7 @@ export default function JadwalHarianListPage() {
 
   async function handleCancelRow(row: JadwalListRow) {
     if (!row.patient_phone) return
-    await handleCancel(row.id)
+    await handleCancel(row)
     showToast('Kunjungan dibatalkan', 'success')
     const msg = `Mohon maaf, jadwal terapi Anda pada ${formatDate(row.visit_date)}${row.visit_time ? ` pukul ${row.visit_time}` : ''} telah dibatalkan. Silakan hubungi klinik untuk penjadwalan ulang.`
     const num = formatWaNumber(row.patient_phone)

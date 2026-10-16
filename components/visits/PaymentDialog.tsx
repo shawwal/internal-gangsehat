@@ -8,8 +8,12 @@ import {
 import { createTransactionForVisit, updateTransaction, getPatientOutstanding, fetchLayananHarga } from '@/app/actions/transactions'
 import type { OutstandingTransaction } from '@/app/actions/transactions'
 import { updateVisit, type VisitTransaction } from '@/app/actions/jadwal'
-import { fetchSportMassageLayanan, type LayananRow } from '@/app/actions/layanan'
-import { SERVICE_TYPES, SERVICE_TO_CATEGORY, CATEGORY_TO_SERVICE_TYPE, getEffectivePackageServiceType } from '@/lib/serviceType'
+import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
+import { createPackageForVisit, fetchPackageBrief } from '@/app/actions/packages'
+import {
+  SERVICE_TYPES, SERVICE_TO_CATEGORY, CATEGORY_TO_SERVICE_TYPE, getEffectivePackageServiceType,
+  isPackageCategory, packageCategoryForKategori,
+} from '@/lib/serviceType'
 import type { ServiceType } from '@/types'
 import { SettlePaymentDialog } from '@/components/finance/SettlePaymentDialog'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
@@ -97,11 +101,27 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   const [proofPath, setProofPath]         = useState<string | null>(existingTransaction?.receipt_url ?? null)
   const [proofUploading, setProofUploading] = useState(false)
 
-  // Sport Massage has several priced service types per branch — pick one
-  const [smLayanan, setSmLayanan]     = useState<LayananRow[]>([])
-  const [smLayananId, setSmLayananId] = useState<string | null>(visit.layanan_id ?? null)
+  // Branch price list (internal_layanan) for this kind of service — Sport Massage
+  // types, or the branch's package tariffs (e.g. Griya Anak "Paket Terapi 1/2").
+  // Picking one sets Harga; picking a package for a visit with no package yet
+  // creates the package on save, so it shows up under "Paket Aktif".
+  const [branchLayanan, setBranchLayanan] = useState<LayananRow[]>([])
+  const [layananId, setLayananId]         = useState<string | null>(visit.layanan_id ?? null)
   const isSportMassage = serviceType === 'SPORT MASSAGE'
-  const smSelected = smLayanan.find((l) => l.id === smLayananId) ?? null
+  const baseCategory = SERVICE_TO_CATEGORY[serviceType]
+  const layananOptions = branchLayanan.filter((l) => {
+    if (!l.is_active) return false
+    if (isSportMassage) return l.kategori === 'SPORT MASSAGE' || packageCategoryForKategori(l.kategori) === 'PAKET SPORT MASSAGE'
+    return isPackageCategory(baseCategory) && packageCategoryForKategori(l.kategori) === baseCategory
+  })
+  const selectedLayanan = layananOptions.find((l) => l.id === layananId) ?? null
+  // Billing category: a Sport Massage package (chosen now, or the visit already
+  // belongs to one) is income under PAKET SPORT MASSAGE.
+  const billingCategory =
+    isSportMassage && (packageCategoryForKategori(selectedLayanan?.kategori) === 'PAKET SPORT MASSAGE' || !!visit.package_id)
+      ? 'PAKET SPORT MASSAGE'
+      : baseCategory
+  const sellsNewPackage = !isEditing && !visit.package_id && isPackageCategory(billingCategory)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState<string | null>(null)
@@ -145,7 +165,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
     // would silently substitute the wrong package's price. Leave it for staff
     // to enter manually instead.
     const category = SERVICE_TO_CATEGORY[serviceType]
-    if (category === 'PAKET KLINIK' || category === 'PAKET VISIT') return
+    if (isPackageCategory(category)) return
     // Sport Massage price comes from the selected service type (effect below)
     if (serviceType === 'SPORT MASSAGE') return
     fetchLayananHarga(serviceType, visit.branch_id).then((price) => {
@@ -153,26 +173,45 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
     })
   }, [serviceType, visit.branch_id, isEditing])
 
+  const needsLayanan = isSportMassage || isPackageCategory(baseCategory)
   useEffect(() => {
-    if (!isSportMassage || !visit.branch_id) return
+    if (!needsLayanan || !visit.branch_id) { setBranchLayanan([]); return }
     let cancelled = false
-    fetchSportMassageLayanan(visit.branch_id).then((rows) => {
+    Promise.all([
+      fetchLayananByBranch(visit.branch_id),
+      visit.package_id ? fetchPackageBrief(visit.package_id) : Promise.resolve(null),
+    ]).then(([rows, pkg]) => {
       if (cancelled) return
-      setSmLayanan(rows)
-      // Booked type may have been deactivated since — fall back to the only
-      // option when there's exactly one, otherwise make staff choose.
-      const booked = rows.find((r) => r.id === visit.layanan_id)
-      const initial = booked ?? (rows.length === 1 ? rows[0] : null)
-      setSmLayananId(initial?.id ?? null)
-      if (!isEditing && initial) setHarga(String(initial.harga))
+      setBranchLayanan(rows)
+      const opts = rows.filter((l) => l.is_active && (isSportMassage
+        ? l.kategori === 'SPORT MASSAGE' || packageCategoryForKategori(l.kategori) === 'PAKET SPORT MASSAGE'
+        : packageCategoryForKategori(l.kategori) === baseCategory))
+      // Booked type (Sport Massage) → the visit's package (by name, then size) →
+      // the only option. Otherwise staff choose.
+      const initial =
+        opts.find((r) => r.id === visit.layanan_id) ??
+        (pkg ? (opts.find((r) => r.nama === pkg.package_name) ?? opts.find((r) => r.jumlah_sesi === pkg.total_sessions)) : undefined) ??
+        (opts.length === 1 ? opts[0] : null)
+      setLayananId(initial?.id ?? null)
+      if (!isEditing && initial) { setHarga(String(initial.harga)); setAmountManual(false) }
     })
     return () => { cancelled = true }
-  }, [isSportMassage, visit.branch_id, visit.layanan_id, isEditing])
+  }, [needsLayanan, isSportMassage, baseCategory, visit.branch_id, visit.layanan_id, visit.package_id, isEditing])
 
-  function handleSelectSmLayanan(id: string) {
-    setSmLayananId(id)
-    const row = smLayanan.find((l) => l.id === id)
+  function handleSelectLayanan(id: string) {
+    setLayananId(id)
+    const row = layananOptions.find((l) => l.id === id)
     if (row) { setHarga(String(row.harga)); setAmountManual(false) }
+  }
+
+  /** New package sale → create it first so the payment is tied to it. */
+  async function ensurePackage(): Promise<{ packageId: string | null; error: string | null }> {
+    if (!sellsNewPackage) return { packageId: visit.package_id ?? null, error: null }
+    // No package tariff in this branch's price list — record the payment only (old behaviour).
+    if (layananOptions.length === 0) return { packageId: null, error: null }
+    if (!selectedLayanan) return { packageId: null, error: 'Pilih paket dari daftar tarif cabang.' }
+    const res = await createPackageForVisit({ visit_id: visit.id, layanan_id: selectedLayanan.id })
+    return { packageId: res.id, error: res.error }
   }
 
   function handleClose() {
@@ -184,8 +223,12 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (submitting || proofUploading) return
-    if (isSportMassage && smLayanan.length > 0 && !smSelected) {
+    if (isSportMassage && layananOptions.length > 0 && !selectedLayanan) {
       setError('Pilih jenis layanan Sport Massage.')
+      return
+    }
+    if (sellsNewPackage && layananOptions.length > 0 && !selectedLayanan) {
+      setError('Pilih paket dari daftar tarif cabang.')
       return
     }
     if (proofRequired && !proofPath) {
@@ -195,6 +238,8 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
     if (isOnline) { await handleCreateOnlineLink(); return }
     setSubmitting(true)
     setError(null)
+    const pkg = await ensurePackage()
+    if (pkg.error) { setError(pkg.error); setSubmitting(false); return }
     const payload = {
       harga: h,
       discount: d,
@@ -203,9 +248,10 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
       payment_status: paymentStatus,
       penjamin:    penjamin    || null,
       // Record which Sport Massage type was billed when staff left no note
-      description: description || (isSportMassage && smSelected ? smSelected.nama : null),
+      description: description || selectedLayanan?.nama || null,
       transaction_date: txDate,
-      category: SERVICE_TO_CATEGORY[serviceType],
+      category: billingCategory,
+      package_id: pkg.packageId,
       // Cash/EDC payments don't keep a stale proof from a previous transfer edit
       receipt_url: requiresPaymentProof(paymentMethod) ? proofPath : null,
     }
@@ -228,7 +274,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   // ended up being saved here, so the jadwal-harian grid card (which reads
   // service_type directly) reflects the same correction the user just made.
   async function syncVisitServiceType() {
-    const nextLayananId = isSportMassage ? (smSelected?.id ?? visit.layanan_id ?? null) : null
+    const nextLayananId = isSportMassage ? (selectedLayanan?.id ?? visit.layanan_id ?? null) : null
     const visitPatch: { service_type?: string; layanan_id?: string | null } = {}
     if (serviceType !== visit.service_type) visitPatch.service_type = serviceType
     if (nextLayananId !== (visit.layanan_id ?? null)) visitPatch.layanan_id = nextLayananId
@@ -241,13 +287,15 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
     if (a < 1000) { setError('Nominal minimal Rp1.000 untuk pembayaran online'); return }
     setSubmitting(true)
     setError(null)
+    const pkg = await ensurePackage()
+    if (pkg.error) { setError(pkg.error); setSubmitting(false); return }
     const res = await createPaymentLink({
       method: onlineMethod,
       amount: a,
       harga: h || null,
       discount: d || null,
-      category: SERVICE_TO_CATEGORY[serviceType],
-      description: description || (isSportMassage && smSelected ? smSelected.nama : null),
+      category: billingCategory,
+      description: description || selectedLayanan?.nama || null,
       visitId: visit.id,
       patientId: visit.patient_id,
     })
@@ -350,19 +398,28 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                 </div>
               </div>
 
-              {isSportMassage && smLayanan.length > 0 && (
+              {layananOptions.length > 0 && (
                 <div className="rounded-xl bg-muted/30 border border-border/40 px-3 py-2.5">
-                  <label className="block text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Jenis Sport Massage</label>
+                  <label className="block text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">
+                    {isSportMassage ? 'Jenis Sport Massage' : 'Paket (tarif cabang)'}
+                  </label>
                   <select
-                    value={smLayananId ?? ''}
-                    onChange={(e) => handleSelectSmLayanan(e.target.value)}
+                    value={layananId ?? ''}
+                    onChange={(e) => handleSelectLayanan(e.target.value)}
                     className="w-full bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer -ml-0.5"
                   >
-                    {!smSelected && <option value="" disabled>Pilih jenis layanan...</option>}
-                    {smLayanan.map((l) => (
-                      <option key={l.id} value={l.id}>{l.nama} — {fmt(Number(l.harga))}</option>
+                    {!selectedLayanan && <option value="" disabled>Pilih layanan...</option>}
+                    {layananOptions.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.nama}{l.jumlah_sesi && l.jumlah_sesi > 1 ? ` (${l.jumlah_sesi} sesi)` : ''} — {fmt(Number(l.harga))}
+                      </option>
                     ))}
                   </select>
+                  {sellsNewPackage && selectedLayanan && (
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Paket baru akan dibuat untuk pasien ini dan muncul di Paket Aktif.
+                    </p>
+                  )}
                 </div>
               )}
 

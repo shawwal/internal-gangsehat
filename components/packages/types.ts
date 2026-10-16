@@ -2,6 +2,7 @@ import type {
   PatientPackage, PackageSession, JenisPaket, PackageOperationalStatus,
   PackageCompletionStatus, PackageStatus,
 } from '@/types'
+import type { PackageCategory } from '@/lib/serviceType'
 
 export type { PatientPackage, PackageSession, JenisPaket, PackageOperationalStatus, PackageCompletionStatus, PackageStatus }
 
@@ -10,7 +11,7 @@ export const DEFAULT_FORM = {
   package_name:       '',
   jenis_paket:        'P1' as JenisPaket,
   mulai_paket:        'NEW' as 'NEW' | 'EXT.',
-  category:           'PAKET KLINIK' as 'PAKET KLINIK' | 'PAKET VISIT',
+  category:           'PAKET KLINIK' as PackageCategory,
   operational_status: 'ON' as PackageOperationalStatus,
   completion_status:  '' as PackageCompletionStatus | '',
   status:             'active' as PackageStatus,

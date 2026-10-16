@@ -2,6 +2,8 @@
 // offers as one-tap chips. Pure (unit-tested); the data comes from
 // getPaymentLinkDefaults in app/actions/paymentLinks.ts.
 
+import { PACKAGE_CATEGORIES as PACKAGE_CATEGORY_LIST } from '@/lib/serviceType'
+
 export interface BillOption {
   key: string
   label: string
@@ -23,7 +25,7 @@ export interface OutstandingEntry {
 }
 
 // The price list can't tell package tiers apart (PaymentDialog has the same rule).
-const PACKAGE_CATEGORIES = new Set(['PAKET KLINIK', 'PAKET VISIT'])
+const PACKAGE_CATEGORIES = new Set<string>(PACKAGE_CATEGORY_LIST)
 
 export function visitBill(input: {
   visitId: string

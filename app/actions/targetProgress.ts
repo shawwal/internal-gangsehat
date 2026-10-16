@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
-import { VISIT_STATUS_FILTER, isAttended } from '@/components/performance/utils'
+import { countsAsKunjungan, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES, SALE_PAYMENT_STATUSES } from '@/lib/metrics/achievement'
 import { CATEGORY_TO_TRANSACTION_TYPES, EDITABLE_ROLES, TRANSACTION_CATEGORY_MAP } from '@/components/targetProgress/types'
 import type { CategoryKey, TransactionForProgress } from '@/components/targetProgress/types'
 import type { TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
@@ -34,6 +34,7 @@ interface VisitRow {
   visit_date: string
   visit_time: string | null
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
+  status: string | null
   service_type: string | null
   package_id: string | null
   diagnosis: string | null
@@ -94,7 +95,7 @@ export async function fetchTargetProgressTransactions(
     .eq('branch_id', branchId)
     .eq('type', 'income')
     .neq('status', 'rejected')
-    .in('payment_status', ['LUNAS', 'DP'])
+    .in('payment_status', [...SALE_PAYMENT_STATUSES])
     .in('category', Object.keys(TRANSACTION_CATEGORY_MAP))
     .gte('transaction_date', start)
     .lte('transaction_date', end)
@@ -145,7 +146,7 @@ export async function fetchTargetProgressDetail(
       .lte('transaction_date', endDate)
       .eq('type', 'income')
       .neq('status', 'rejected')
-      .in('payment_status', ['LUNAS', 'DP'])
+      .in('payment_status', [...SALE_PAYMENT_STATUSES])
       .in('category', txCategories)
 
     if (error || !data) return []
@@ -196,20 +197,21 @@ export async function fetchTargetProgressDetail(
   const { data, error } = await supabase
     .from('patient_visits')
     .select(
-      'id, patient_id, visit_date, visit_time, kehadiran, service_type, package_id, ' +
+      'id, patient_id, visit_date, visit_time, kehadiran, status, service_type, package_id, ' +
       'diagnosis, treatment, regio, internal_profiles!attending_staff_id(full_name, nickname)',
     )
     .eq('branch_id', branchId)
     .gte('visit_date', startDate)
     .lte('visit_date', endDate)
-    .in('status', [...VISIT_STATUS_FILTER])
+    .in('status', [...KUNJUNGAN_VISIT_STATUSES])
     // Sport massage is tracked separately — not a "kunjungan" (matches target-progress page)
-    .or('service_type.is.null,service_type.neq."SPORT MASSAGE"')
+    .or(KUNJUNGAN_SERVICE_FILTER)
 
   if (error || !data) return []
 
   const allVisits = data as unknown as VisitRow[]
-  const rows = allVisits.filter((v) => isAttended(v))
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date())
+  const rows = allVisits.filter((v) => countsAsKunjungan(v, today))
   rows.sort((a, b) =>
     a.visit_date.localeCompare(b.visit_date) || (a.visit_time ?? '').localeCompare(b.visit_time ?? ''))
 

@@ -18,7 +18,11 @@ import { StaffDetailModal } from '@/components/jadwal/StaffDetailModal'
 import { ControlsBar } from '@/components/jadwal/ControlsBar'
 import { FocusModeBar } from '@/components/jadwal/FocusModeBar'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
-import { updateVisit } from '@/app/actions/jadwal'
+import { ChangeTherapistDialog } from '@/components/jadwal/ChangeTherapistDialog'
+import { PayOnlineFlow } from '@/components/payment-links/PayOnlineFlow'
+import { sendMedicalRecordReminder, updateVisit } from '@/app/actions/jadwal'
+import { useVisitWhatsApp } from '@/hooks/useVisitWhatsApp'
+import { useToast } from '@/context/ToastContext'
 import type { AssignTarget, RefreshingCell } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { ShiftFilter } from '@/lib/shifts'
@@ -35,10 +39,13 @@ export default function JadwalSportMassagePage() {
     leavePopover, setLeavePopover,
     leaveSaving, canApproveLeave,
     userRole,
-    soreDividerHour, middleDividerHour, gridStart, gridEnd, slotHours,
+    gridStart, gridEnd, slotHours,
     branches, selectedBranchId, setSelectedBranchId,
-    loadAll, handleStatusChange, handleDelete, handleLeaveAction,
+    loadAll, handleStatusChange, handleDelete, handleMoveVisit, handleLeaveAction,
   } = useJadwalSportMassage()
+  const { showToast } = useToast()
+  // Same WhatsApp reminder / confirmation (template + order ID) as fisioterapi
+  const { handleWhatsAppReminder, handleWhatsAppConfirmation } = useVisitWhatsApp(visits, staff, branches)
 
   // Branch-flag gate: does the selected branch have sport massage enabled?
   const [branchEnabled, setBranchEnabled] = useState<boolean | null>(null)
@@ -64,6 +71,8 @@ export default function JadwalSportMassagePage() {
   const [selectedStaffId, setSelectedStaffId]       = useState<string | null>(null)
   const [paymentVisit, setPaymentVisit]             = useState<DailyVisit | null>(null)
   const [refreshingCell, setRefreshingCell]         = useState<RefreshingCell | null>(null)
+  const [payOnlineVisit, setPayOnlineVisit]         = useState<DailyVisit | null>(null)
+  const [changeTherapistVisit, setChangeTherapistVisit] = useState<DailyVisit | null>(null)
 
   useEffect(() => {
     const dateParam = searchParams.get('date')
@@ -88,7 +97,8 @@ export default function JadwalSportMassagePage() {
   useEffect(() => {
     setShowInactive(localStorage.getItem(LS_KEY) === 'true')
     const v = localStorage.getItem(LS_SHIFT_KEY)
-    if (v === 'pagi' || v === 'middle' || v === 'sore') setShiftFilter(v)
+    // A stored 'middle' (removed view) falls back to 'all'.
+    if (v === 'pagi' || v === 'sore') setShiftFilter(v)
   }, [])
 
   function handleSetShiftFilter(v: ShiftFilter) {
@@ -126,6 +136,15 @@ export default function JadwalSportMassagePage() {
     setPaymentVisit(visits.find((v) => v.id === visitId) ?? null)
   }
 
+  const canSendReminders = !!userRole && ['admin', 'director', 'manager', 'hr'].includes(userRole)
+
+  async function handleRemind(visitId: string) {
+    const result = await sendMedicalRecordReminder(visitId)
+    if (result.alreadySent) showToast('Pengingat sudah dikirim hari ini', 'info')
+    else if (result.error) showToast(result.error, 'error')
+    else showToast('Pengingat terkirim ke terapis', 'success')
+  }
+
   async function handleMarkPresent(visitId: string, present: boolean) {
     await updateVisit(visitId, present
       ? { kehadiran: 'HADIR', status: 'completed' }
@@ -139,7 +158,6 @@ export default function JadwalSportMassagePage() {
     showInactive, toggleShowInactive,
     inactiveStaff,
     shiftFilter, setShiftFilter: handleSetShiftFilter,
-    hasMiddleShift: middleDividerHour !== null,
   }
 
   const gateBlocked = branchEnabled === false && !isDirector
@@ -227,8 +245,6 @@ export default function JadwalSportMassagePage() {
                     visits={visits}
                     date={toIso(selectedDate)}
                     userRole={userRole}
-                    soreDividerHour={soreDividerHour}
-                    middleDividerHour={middleDividerHour}
                     gridStart={gridStart}
                     gridEnd={gridEnd}
                     slotHours={slotHours}
@@ -246,8 +262,13 @@ export default function JadwalSportMassagePage() {
                     onPendingLeaveClick={(staffName, leave) => setLeavePopover({ staffName, leave })}
                     onStaffClick={setSelectedStaffId}
                     onPayment={handleOpenPayment}
+                    onPayOnline={(id) => setPayOnlineVisit(visits.find((v) => v.id === id) ?? null)}
+                    onRemind={canSendReminders ? handleRemind : undefined}
+                    onWhatsApp={handleWhatsAppReminder}
+                    onWhatsAppConfirmation={handleWhatsAppConfirmation}
                     refreshingCell={refreshingCell}
                     onMarkPresent={handleMarkPresent}
+                    onChangeTherapist={(id) => setChangeTherapistVisit(visits.find((v) => v.id === id) ?? null)}
                   />
                 )}
               </div>
@@ -305,6 +326,33 @@ export default function JadwalSportMassagePage() {
           entry={staff.find((s) => s.staff_id === selectedStaffId)!}
           onClose={() => setSelectedStaffId(null)}
           onSaved={() => silentReload({ type: 'staff', staffId: selectedStaffId })}
+        />
+      )}
+
+      {payOnlineVisit && (
+        <PayOnlineFlow
+          target={{ visitId: payOnlineVisit.id, patientId: payOnlineVisit.patient_id, patientName: payOnlineVisit.patient_name }}
+          onClose={() => setPayOnlineVisit(null)}
+          onChange={(l) => {
+            if (l.status === 'paid') silentReload({ type: 'visit', visitId: payOnlineVisit.id })
+          }}
+        />
+      )}
+
+      {changeTherapistVisit && (
+        <ChangeTherapistDialog
+          visit={changeTherapistVisit}
+          staff={staff}
+          onClose={() => setChangeTherapistVisit(null)}
+          onSave={async (staffId, visitTime) => {
+            const visitId = changeTherapistVisit.id
+            const result  = await handleMoveVisit(visitId, { staffId, visitTime })
+            if (!result.error) {
+              showToast('Terapis diubah', 'success')
+              silentReload({ type: 'visit', visitId })
+            }
+            return result
+          }}
         />
       )}
 

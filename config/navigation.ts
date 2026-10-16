@@ -85,7 +85,7 @@ export const navigation: NavItem[] = [
   },
   {
     key: 'director-leave',
-    label: 'Cuti Staff',
+    label: 'Perizinan Staff',
     href: '/director/leave',
     icon: 'CalendarOff',
     roles: ['director'],
@@ -311,7 +311,7 @@ export const navigation: NavItem[] = [
   },
   {
     key: 'hr-leave',
-    label: 'Cuti',
+    label: 'Perizinan Staff',
     href: '/hr/leave',
     icon: 'CalendarOff',
     roles: ['hr'],
@@ -381,7 +381,7 @@ export const navigation: NavItem[] = [
   // Leave requests (self-service for non-HR staff)
   {
     key: 'my-leave',
-    label: 'Pengajuan Cuti',
+    label: 'Perizinan',
     href: '/leave',
     icon: 'CalendarOff',
     roles: ['finance', 'marketing', 'therapist', 'manager', 'admin', 'staff'],
@@ -391,7 +391,7 @@ export const navigation: NavItem[] = [
   // Team leave view (read-only) — admin only
   {
     key: 'admin-leave',
-    label: 'Cuti Staff',
+    label: 'Perizinan Staff',
     href: '/admin/leave',
     icon: 'CalendarOff',
     roles: ['admin'],
@@ -477,7 +477,7 @@ export const navigation: NavItem[] = [
   },
   {
     key: 'manager-leave',
-    label: 'Cuti Staff',
+    label: 'Perizinan Staff',
     href: '/hr/leave',
     icon: 'CalendarOff',
     roles: ['manager'],

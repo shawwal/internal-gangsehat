@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Building2, Calendar, Check, CheckCircle2, Clock, Trash2, XCircle } from 'lucide-react'
 import { ProofDialog } from './ProofDialog'
 import { ConfirmDialog } from './ConfirmDialog'
+import { LeaveTypeBadge } from './LeaveTypeBadge'
 import type { LeaveRow } from './types'
 import { STATUS_LABEL, STATUS_COLOR, STATUS_BORDER, formatDate, dayCount } from './types'
 
@@ -116,7 +117,8 @@ export function LeaveCard({ leave, isSelected, onToggle, onApprove, onReject, on
           </div>
         </div>
 
-        {/* Reason — always visible */}
+        {/* Type + reason — always visible */}
+        <LeaveTypeBadge type={leave.leave_type} />
         <p className="text-sm text-foreground leading-relaxed pl-0">{leave.reason}</p>
 
         {/* Proof — always visible */}

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeOrderPaymentSummary, type OrderPaymentSummary, type OrderPaymentRow } from '@/lib/internal/orderPayments'
 import { logActivity } from '@/lib/activityLog'
+import { PACKAGE_CATEGORIES as PACKAGE_CATEGORY_LIST } from '@/lib/serviceType'
 import { PAYMENT_PROOF_BUCKET, PAYMENT_PROOF_REQUIRED_MSG, isGatewayPayment, isPaymentProofRequiredOnEdit, isValidPaymentProofPath, paymentProofError, requiresPaymentProof } from '@/lib/paymentProof'
 
 const SERVICE_TO_CATEGORY: Record<string, string> = {
@@ -18,7 +19,7 @@ const SERVICE_TO_CATEGORY: Record<string, string> = {
 }
 
 const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
-const PACKAGE_CATEGORIES = new Set(['PAKET KLINIK', 'PAKET VISIT'])
+const PACKAGE_CATEGORIES = new Set<string>(PACKAGE_CATEGORY_LIST)
 
 /** Turn a raw Postgres CHECK-constraint failure into something an admin can act on. */
 function friendlyTxnError(msg: string): string {
@@ -178,6 +179,8 @@ export interface CreateTransactionInput {
   category: string
   /** Bukti transfer path in `payment-proofs`; required for transfer methods. */
   receipt_url?: string | null
+  /** Package being paid — its order_id is used so DP/Pelunasan share one order. */
+  package_id?: string | null
 }
 
 export async function createTransactionForVisit(
@@ -212,6 +215,13 @@ export async function createTransactionForVisit(
 
   const category = input.category
 
+  let orderId: string | null = visit.order_id ?? null
+  if (input.package_id) {
+    const { data: pkg } = await supabase
+      .from('patient_packages').select('order_id').eq('id', input.package_id).single()
+    orderId = pkg?.order_id ?? orderId
+  }
+
   const insertPayload = {
     visit_id:         visitId,
     patient_id:       visit.patient_id,
@@ -219,7 +229,7 @@ export async function createTransactionForVisit(
     fisio_id:         visit.attending_staff_id,
     type:             'income',
     category,
-    order_id:         visit.order_id ?? null,
+    order_id:         orderId,
     harga:            input.harga,
     discount:         input.discount,
     amount:           input.amount,

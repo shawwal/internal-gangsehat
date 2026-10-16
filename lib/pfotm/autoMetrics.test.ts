@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computePfotmAutoMetrics } from './autoMetrics'
+import { computePfotmAutoMetrics, pfotmHits } from './autoMetrics'
 import { rankBoard, type PointRule } from './engine'
 import type { VisitForPayroll } from '@/lib/payroll/autoActivity'
 
@@ -16,15 +16,17 @@ const run = (periodVisits: VisitForPayroll[], sales: Parameters<typeof computePf
   })
 
 describe('PFOTM auto metrics', () => {
-  it('counts only visits with a complete medical record', () => {
+  it('counts kunjungan with the Target Progress rule (attended, not sport massage)', () => {
     const out = run([
       visit({}),
-      visit({ treatment: null }),                                   // missing tindakan
-      visit({ service_type: 'TERAPI AWAL' }),                       // TA needs regio
-      visit({ service_type: 'TERAPI AWAL', regio: 'KNEE' }),
-      visit({ status: 'scheduled' }),                               // not completed
+      visit({ treatment: null }),                                   // record completeness no longer gates
+      visit({ status: 'scheduled' }),                               // attended scheduled visit counts
+      visit({ kehadiran: 'TIDAK HADIR' }),                          // absent
+      visit({ kehadiran: null, visit_date: '2026-10-20' }),         // unmarked, still in the future
+      visit({ service_type: 'SPORT MASSAGE' }),                     // tracked separately
+      visit({ status: 'cancelled' }),
     ])
-    expect(out.a.kunjungan).toBe(2)
+    expect(out.a.kunjungan).toBe(3)
   })
 
   it('takes package / visit sales from LUNAS/DP transactions', () => {
@@ -38,6 +40,21 @@ describe('PFOTM auto metrics', () => {
     ])
     expect(out.a).toMatchObject({ paket_1: 1, paket_2: 1 })
     expect(out.b).toMatchObject({ ta_sesi_visit: 2, paket_visit: 1 })
+  })
+})
+
+describe('PFOTM hits', () => {
+  it('lists exactly the units behind each count', () => {
+    const params = {
+      staffIds: ['a'], start: '2026-09-27', end: '2026-10-26', todayISO: '2026-10-07',
+      attendance: [], referrals: [],
+      periodVisits: [visit({ patient_id: 'p1' }), visit({ patient_id: 'p2', visit_date: '2026-10-02' })],
+      sales: [{ id: 't1', staff_id: 'a', category: 'PAKET VISIT', transaction_date: '2026-10-03', patient_id: 'p3', package: null }],
+    }
+    const hits = pfotmHits(params)
+    expect(hits.filter((h) => h.key === 'kunjungan').map((h) => h.patient_id)).toEqual(['p1', 'p2'])
+    expect(hits.find((h) => h.key === 'paket_visit')).toMatchObject({ date: '2026-10-03', patient_id: 'p3', ref_id: 't1' })
+    expect(computePfotmAutoMetrics(params).a).toMatchObject({ kunjungan: 2, paket_visit: 1 })
   })
 })
 

@@ -21,14 +21,13 @@ describe('shifts', () => {
     expect(shiftForHour(12, { middle: null, sore: 15 })).toBe('PAGI')
   })
 
-  it('filters hours and working ranges per shift', () => {
-    const d = { middle: 12, sore: 15 }
-    expect(hourInFilter(11, 'pagi', d)).toBe(true)
-    expect(hourInFilter(12, 'pagi', d)).toBe(false)
-    expect(hourInFilter(13, 'middle', d)).toBe(true)
-    expect(hourInFilter(15, 'middle', d)).toBe(false)
-    expect(rangeInFilter(11, 18, 'middle', d)).toBe(true)
-    expect(rangeInFilter(8, 12, 'middle', d)).toBe(false)
-    expect(hourInFilter(13, 'middle', { middle: null, sore: 15 })).toBe(false)
+  it('filters hours and working ranges into fixed Pagi (–14:00) / Sore (15:00–) views', () => {
+    expect([9, 13, 14].every((h) => hourInFilter(h, 'pagi'))).toBe(true)
+    expect(hourInFilter(15, 'pagi')).toBe(false)
+    expect([15, 16, 17, 20].every((h) => hourInFilter(h, 'sore'))).toBe(true)
+    expect(hourInFilter(14, 'sore')).toBe(false)
+    expect(rangeInFilter(9, 15, 'pagi')).toBe(true)
+    expect(rangeInFilter(9, 15, 'sore')).toBe(false)
+    expect(rangeInFilter(13, 18, 'sore')).toBe(true)
   })
 })

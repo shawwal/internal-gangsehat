@@ -186,7 +186,7 @@ export default function HRPage() {
           href="/hr/leave"
           className="relative flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-all duration-200 hover:scale-[1.02]"
         >
-          <Clock size={16} /> Tinjau Pengajuan Cuti
+          <Clock size={16} /> Tinjau Perizinan
           {!loading && (stats?.pendingLeaveCount ?? 0) > 0 && (
             <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 rounded-full bg-secondary text-secondary-foreground text-xs font-bold flex items-center justify-center px-1">
               {stats!.pendingLeaveCount}
@@ -205,7 +205,7 @@ export default function HRPage() {
       <div className="glass-card p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Pengajuan Cuti Terbaru</h2>
+            <h2 className="text-sm font-semibold text-foreground">Perizinan Terbaru</h2>
             <p className="text-xs text-muted-foreground mt-0.5">5 pengajuan terakhir dari seluruh staff</p>
           </div>
           <Link href="/hr/leave" className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">

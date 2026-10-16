@@ -92,7 +92,7 @@ export default function AdminLeavePage() {
     let q: any = supabase
       .from('leave_requests')
       .select(`
-        id, staff_id, branch_id, start_date, end_date, reason,
+        id, staff_id, branch_id, start_date, end_date, leave_type, reason,
         proof_url, status, rejection_note, created_at,
         internal_profiles!staff_id(full_name, email),
         branches!branch_id(name)
@@ -135,8 +135,8 @@ export default function AdminLeavePage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Cuti Staff</h1>
-          <p className="text-sm text-muted-foreground">Lihat pengajuan cuti tim cabang Anda</p>
+          <h1 className="text-xl font-semibold text-foreground">Perizinan Staff</h1>
+          <p className="text-sm text-muted-foreground">Lihat pengajuan izin tim cabang Anda</p>
         </div>
         <span className="text-xs bg-muted px-3 py-1.5 rounded-2xl text-muted-foreground shrink-0">
           {todayLabel}

@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { PatientPackage, PackageSession } from '@/types'
 import { generateOrderId } from '@/lib/internal/orderId'
-import { getEffectivePackageServiceType } from '@/lib/serviceType'
+import { getEffectivePackageServiceType, PACKAGE_CATEGORIES, packageCategoryForKategori, type PackageCategory } from '@/lib/serviceType'
 
 // ── Fetch all packages for a patient with computed session counts ───────────────
 // Reads from the patient_packages_with_stats view which joins patient_visits.
@@ -111,7 +111,7 @@ export async function fetchPatientPackagesWithPayment(
       ? supabase.from('transactions')
           .select('order_id, harga, amount, discount, status')
           .in('order_id', orderIds)
-          .in('category', ['PAKET KLINIK', 'PAKET VISIT'])
+          .in('category', [...PACKAGE_CATEGORIES])
           .neq('status', 'rejected')
       : Promise.resolve({ data: [] }),
     supabase.from('patient_visits').select('id, package_id').in('package_id', packageIds),
@@ -127,7 +127,7 @@ export async function fetchPatientPackagesWithPayment(
     ? await supabase.from('transactions')
         .select('visit_id, harga, amount, discount, status')
         .in('visit_id', visitIds)
-        .in('category', ['PAKET KLINIK', 'PAKET VISIT'])
+        .in('category', [...PACKAGE_CATEGORIES])
         .neq('status', 'rejected')
     : { data: [] }
 
@@ -206,7 +206,7 @@ export async function createPatientPackage(input: {
   package_name: string
   jenis_paket: 'P1' | 'P2'
   mulai_paket: 'NEW' | 'EXT.'
-  category: 'PAKET KLINIK' | 'PAKET VISIT'
+  category: PackageCategory
   notes?: string | null
 }): Promise<{ id: string | null; order_id: string | null; error: string | null }> {
   const supabase = await createClient()
@@ -246,7 +246,7 @@ export async function createPackageFromLayanan(input: {
   patient_id: string
   branch_id: string | null
   layanan_id: string
-  category: 'PAKET KLINIK' | 'PAKET VISIT'
+  category: PackageCategory
   /** Package already in progress (and paid) in the old system: starts at
    *  `used_sessions` and has no order, so the payment gate treats it as legacy. */
   carry_over?: { used_sessions: number }
@@ -292,6 +292,66 @@ export async function createPackageFromLayanan(input: {
   return { id: data?.id ?? null, order_id: error ? null : orderId, error: error?.message ?? null }
 }
 
+// ── Package name/size for a visit's package — PaymentDialog uses it to
+// pre-select the matching price-list entry (and so its harga). ───────────────
+export async function fetchPackageBrief(
+  id: string,
+): Promise<{ package_name: string; total_sessions: number; category: string | null; order_id: string | null } | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('patient_packages')
+    .select('package_name, total_sessions, category, order_id')
+    .eq('id', id)
+    .maybeSingle()
+  return data ?? null
+}
+
+// ── Sell a package from a visit's payment ──────────────────────────────────────
+// Paying a visit with a package tariff (PAKET KLINIK / PAKET VISIT / PAKET SPORT
+// MASSAGE) used to only insert a transaction, so the package never existed and
+// "Paket Aktif" stayed empty. This creates the patient_packages row from the
+// chosen layanan and links the visit — and, for a Griya Anak recurring slot,
+// the slot itself (so its next sessions count toward the same package).
+export async function createPackageForVisit(input: {
+  visit_id: string
+  layanan_id: string
+}): Promise<{ id: string | null; error: string | null }> {
+  const supabase = await createClient()
+
+  const [{ data: visit }, { data: layanan }] = await Promise.all([
+    supabase.from('patient_visits')
+      .select('id, patient_id, branch_id, visit_date, package_id, griya_slot_id')
+      .eq('id', input.visit_id).single(),
+    supabase.from('internal_layanan').select('kategori').eq('id', input.layanan_id).single(),
+  ])
+  if (!visit) return { id: null, error: 'Kunjungan tidak ditemukan.' }
+  if (visit.package_id) return { id: visit.package_id as string, error: null }
+  const category = packageCategoryForKategori(layanan?.kategori as string | undefined)
+  if (!category) return { id: null, error: 'Layanan yang dipilih bukan paket.' }
+
+  const pkg = await createPackageFromLayanan({
+    patient_id: visit.patient_id as string,
+    branch_id:  visit.branch_id as string | null,
+    layanan_id: input.layanan_id,
+    category,
+  })
+  if (pkg.error || !pkg.id) return { id: null, error: pkg.error ?? 'Gagal membuat paket.' }
+
+  if (visit.griya_slot_id) {
+    // Points the slot at the package and re-links this and later visits of it.
+    const { startGriyaPackage } = await import('@/app/actions/griyaPackages')
+    const res = await startGriyaPackage({
+      packageId: pkg.id, slotIds: [visit.griya_slot_id as string], fromDate: visit.visit_date as string,
+    })
+    if (res.error) return { id: pkg.id, error: res.error }
+  }
+  const { error } = await supabase
+    .from('patient_visits')
+    .update({ package_id: pkg.id, updated_at: new Date().toISOString() })
+    .eq('id', visit.id)
+  return { id: pkg.id, error: error?.message ?? null }
+}
+
 // ── Stop an active package (order-lifecycle action, not a payment/clinical
 // outcome) ───────────────────────────────────────────────────────────────────
 // Never deletes — status + stop metadata only, so history stays intact and a
@@ -322,7 +382,7 @@ export async function updatePatientPackage(
     package_name?: string
     jenis_paket?: 'P1' | 'P2'
     mulai_paket?: 'NEW' | 'EXT.'
-    category?: 'PAKET KLINIK' | 'PAKET VISIT'
+    category?: PackageCategory
     operational_status?: 'ON' | 'OFF' | 'PENDING'
     completion_status?: 'LANJUT' | 'SEMBUH' | 'TIDAK LANJUT' | 'STOP' | null
     status?: 'active' | 'completed' | 'cancelled' | 'stopped'

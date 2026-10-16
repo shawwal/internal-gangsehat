@@ -26,10 +26,8 @@ import { ChangeTherapistDialog } from '@/components/jadwal/ChangeTherapistDialog
 import { BuyPackageButton } from '@/components/jadwal/buy-package/BuyPackageButton'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders, updateVisit } from '@/app/actions/jadwal'
-import { fetchWaConfigAll, type WaConfigAll } from '@/app/actions/reminder-template'
-import { resolveWaConfig } from '@/lib/waConfig'
+import { useVisitWhatsApp } from '@/hooks/useVisitWhatsApp'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
-import { fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/utils'
 import type { AssignTarget, RefreshingCell } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import { PayOnlineFlow } from '@/components/payment-links/PayOnlineFlow'
@@ -101,11 +99,8 @@ export default function JadwalHarianPage() {
   const [remindAllLoading, setRemindAllLoading] = useState(false)
   const { showToast } = useToast()
 
-  // WhatsApp templates & admin phone — loaded once
-  const [waConfig, setWaConfig] = useState<WaConfigAll | null>(null)
-  useEffect(() => {
-    fetchWaConfigAll().then(setWaConfig)
-  }, [])
+  // WhatsApp reminder / confirmation (branch templates) — shared with Sport Massage
+  const { handleWhatsAppReminder, handleWhatsAppConfirmation } = useVisitWhatsApp(visits, staff, branches)
 
   // Toolbar state — start with the SSR-safe default; the real localStorage
   // value is applied post-mount below so the client's first render still
@@ -119,7 +114,8 @@ export default function JadwalHarianPage() {
   useEffect(() => {
     setShowInactive(localStorage.getItem(LS_KEY) === 'true')
     const v = localStorage.getItem(LS_SHIFT_KEY)
-    if (v === 'pagi' || v === 'middle' || v === 'sore') setShiftFilter(v)
+    // A stored 'middle' (removed view) falls back to 'all'.
+    if (v === 'pagi' || v === 'sore') setShiftFilter(v)
   }, [])
 
   function handleSetShiftFilter(v: ShiftFilter) {
@@ -146,14 +142,14 @@ export default function JadwalHarianPage() {
   // that shift — unless they still have a visit booked inside it.
   const toHour = (t: string | null | undefined) => (t ? parseInt(t.split(':')[0], 10) : NaN)
   const shiftDividers = { sore: soreDividerHour, middle: middleDividerHour }
-  const inShift = (h: number) => hourInFilter(h, shiftFilter, shiftDividers)
+  const inShift = (h: number) => hourInFilter(h, shiftFilter)
   const filteredStaff = shiftFilter === 'all'
     ? genderStaff
     : genderStaff.filter((s) => {
         const start = toHour(s.jam_mulai)
         const end   = toHour(s.jam_selesai)
         const worksShift = s.hasSchedule && !s.isOnLeave && !isNaN(start) && !isNaN(end)
-          && rangeInFilter(start, end, shiftFilter, shiftDividers)
+          && rangeInFilter(start, end, shiftFilter)
         return worksShift || visits.some((v) =>
           v.attending_staff_id === s.staff_id && !!v.visit_time && inShift(toHour(v.visit_time)))
       })
@@ -250,51 +246,6 @@ export default function JadwalHarianPage() {
     }
   }
 
-  function handleWhatsAppReminder(visitId: string) {
-    const visit = visits.find((v) => v.id === visitId)
-    if (!visit || !visit.patient_phone) return
-
-    const branchName    = branches.find((b) => b.id === visit.branch_id)?.name ?? ''
-    const attendingStaff = staff.find((s) => s.staff_id === visit.attending_staff_id)
-    const therapistName = attendingStaff?.nickname || attendingStaff?.full_name || ''
-
-    const msg = fillTemplate(resolveWaConfig(waConfig, visit.branch_id).reminder, {
-      nama:        visit.patient_name,
-      hari:        formatHari(visit.visit_date),
-      tanggal:     formatDate(visit.visit_date),
-      jam:         visit.visit_time ?? '',
-      layanan:     visit.service_type ?? '',
-      cabang:      branchName,
-      terapis:     therapistName,
-      order_id:    visit.order_id ?? '',
-      nomor_admin: resolveWaConfig(waConfig, visit.branch_id).phone,
-    })
-
-    const num = formatWaNumber(visit.patient_phone)
-    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank')
-  }
-
-  function handleWhatsAppConfirmation(visitId: string) {
-    const visit = visits.find((v) => v.id === visitId)
-    if (!visit || !visit.patient_phone) return
-
-    const branchName = branches.find((b) => b.id === visit.branch_id)?.name ?? ''
-
-    const msg = fillTemplate(resolveWaConfig(waConfig, visit.branch_id).confirmation, {
-      nama:        visit.patient_name,
-      hari:        formatHari(visit.visit_date),
-      tanggal:     formatDate(visit.visit_date),
-      jam:         visit.visit_time ?? '',
-      layanan:     visit.service_type ?? '',
-      cabang:      branchName,
-      order_id:    visit.order_id ?? '',
-      nomor_admin: resolveWaConfig(waConfig, visit.branch_id).phone,
-    })
-
-    const num = formatWaNumber(visit.patient_phone)
-    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank')
-  }
-
   async function handleRemindAll() {
     if (incompleteVisits.length === 0) return
     setRemindAllLoading(true)
@@ -334,7 +285,6 @@ export default function JadwalHarianPage() {
     showInactive, toggleShowInactive,
     inactiveStaff,
     shiftFilter, setShiftFilter: handleSetShiftFilter,
-    hasMiddleShift: middleDividerHour !== null,
   }
 
   return (
@@ -455,8 +405,6 @@ export default function JadwalHarianPage() {
                 visits={visits}
                 date={toIso(selectedDate)}
                 userRole={userRole}
-                soreDividerHour={soreDividerHour}
-                middleDividerHour={middleDividerHour}
                 gridStart={gridStart}
                 gridEnd={gridEnd}
                 slotHours={slotHours}

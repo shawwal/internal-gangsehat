@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { CreditCard, X } from 'lucide-react'
 import { createTransactionManual } from '@/app/actions/transactions'
+import type { PackageCategory } from '@/lib/serviceType'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 
@@ -13,7 +14,7 @@ export interface PaketPaymentStepProps {
   packageName: string
   jumlahSesi: number
   hargaDefault: number
-  category: 'PAKET KLINIK' | 'PAKET VISIT'
+  category: PackageCategory
   branchId: string | null
   onDone: () => void
 }

@@ -35,24 +35,33 @@ export function shiftForHour(hour: number, d: ShiftDividers): Shift {
   return 'PAGI'
 }
 
-export type ShiftFilter = 'all' | 'pagi' | 'middle' | 'sore'
+/**
+ * Grid view filter — only Pagi and Sore. The view split is fixed and no longer
+ * derived from schedule_slots, so a Middle slot can't hide afternoon hours:
+ * Pagi covers up to 14:00 (09–14 in practice), Sore covers 15:00 onwards.
+ */
+export type ShiftFilter = 'all' | 'pagi' | 'sore'
+export const SHIFT_FILTERS = ['pagi', 'sore'] as const
+export const VIEW_SORE_START = 15
 
-/** [start, end) hour range a shift filter covers on the grid. */
-function filterRange(filter: Exclude<ShiftFilter, 'all'>, d: ShiftDividers): [number, number] {
-  if (filter === 'pagi') return [0, d.middle ?? d.sore]
-  if (filter === 'middle') return d.middle === null ? [0, 0] : [d.middle, d.sore]
-  return [d.sore, 24]
+export function isShiftFilter(v: unknown): v is ShiftFilter {
+  return v === 'all' || v === 'pagi' || v === 'sore'
 }
 
-export function hourInFilter(hour: number, filter: ShiftFilter, d: ShiftDividers): boolean {
+/** [start, end) hour range a shift filter covers on the grid. */
+function filterRange(filter: Exclude<ShiftFilter, 'all'>): [number, number] {
+  return filter === 'pagi' ? [0, VIEW_SORE_START] : [VIEW_SORE_START, 24]
+}
+
+export function hourInFilter(hour: number, filter: ShiftFilter): boolean {
   if (filter === 'all') return true
-  const [lo, hi] = filterRange(filter, d)
+  const [lo, hi] = filterRange(filter)
   return hour >= lo && hour < hi
 }
 
 /** Does a working-hours range (jam_mulai → jam_selesai) overlap the filtered shift? */
-export function rangeInFilter(start: number, end: number, filter: ShiftFilter, d: ShiftDividers): boolean {
+export function rangeInFilter(start: number, end: number, filter: ShiftFilter): boolean {
   if (filter === 'all') return true
-  const [lo, hi] = filterRange(filter, d)
+  const [lo, hi] = filterRange(filter)
   return start < hi && end > lo
 }

@@ -1,11 +1,12 @@
 import { useRef } from 'react'
 import { CalendarRange, FileText, Upload, X } from 'lucide-react'
-import { dayCount } from './types'
+import { dayCount, LEAVE_TYPES, LEAVE_TYPE_LABEL, type LeaveType } from './types'
 
 const today = new Date().toISOString().split('T')[0]
 const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 interface FormState {
+  leave_type: LeaveType
   start_date: string
   end_date: string
   reason: string
@@ -52,7 +53,7 @@ export function MyLeaveForm({
     <div className="glass-card p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Form Pengajuan Cuti</h2>
+          <h2 className="text-sm font-semibold text-foreground">Form Perizinan</h2>
           <p className="text-xs text-muted-foreground mt-0.5">Isi data di bawah dan klik kirim</p>
         </div>
         <button
@@ -64,6 +65,19 @@ export function MyLeaveForm({
       </div>
 
       <form onSubmit={onSubmit} className="space-y-4">
+        {/* Type */}
+        <div>
+          <label className="block text-xs font-medium text-foreground mb-1.5">Jenis Izin</label>
+          <select
+            required
+            value={form.leave_type}
+            onChange={e => onChange({ ...form, leave_type: e.target.value as LeaveType })}
+            className="w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {LEAVE_TYPES.map(t => <option key={t} value={t}>{LEAVE_TYPE_LABEL[t]}</option>)}
+          </select>
+        </div>
+
         {/* Dates */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -92,7 +106,7 @@ export function MyLeaveForm({
         {form.start_date && form.end_date && form.end_date >= form.start_date && (
           <div className="flex items-center gap-2 text-xs text-primary font-medium">
             <CalendarRange size={13} />
-            {dayCount(form.start_date, form.end_date)} hari cuti
+            {dayCount(form.start_date, form.end_date)} hari
           </div>
         )}
 
@@ -103,7 +117,7 @@ export function MyLeaveForm({
             required rows={3}
             value={form.reason}
             onChange={e => onChange({ ...form, reason: e.target.value })}
-            placeholder="Jelaskan alasan pengajuan cuti Anda..."
+            placeholder="Jelaskan alasan pengajuan izin Anda..."
             className="w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           />
         </div>

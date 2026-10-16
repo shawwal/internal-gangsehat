@@ -139,25 +139,33 @@ export function renderPatientResumeBody(data: PublicResumeData, includePrintButt
     ${box(data.plan, 'plan')}
   </div>
 
+  ${data.recommendation?.trim() ? `
+  <div class="resume-section">
+    <h3>3. Rekomendasi Fisioterapis</h3>
+    <p class="resume-content" style="margin-bottom: 10px;">Berikut rekomendasi fisioterapis untuk Anda:</p>
+    ${box(data.recommendation, 'plan')}
+  </div>` : ''}
+
   <div class="education-box" data-pdf-break-before>
     <h4>Kenapa Anda Membutuhkan Program Terapi Lanjutan?</h4>
     <p>
-      Seringkali, saat rasa nyeri mereda setelah 1-2 sesi terapi perdana, pasien merasa sudah sembuh total.
-      Padahal, hilangnya nyeri baru tahap awal. Jaringan tubuh membutuhkan waktu adaptasi agar masalah tidak
-      kambuh di kemudian hari.
+      Seringkali saat rasa nyeri mereda setelah 1-2 sesi terapi perdana, pasien merasa sudah sembuh total.
+      Padahal, hilangnya nyeri baru tahap awal (Fase 1). Jaringan tubuh membutuhkan waktu adaptasi secara
+      bertahap agar jaringan cedera pulih secara sempurna sehingga dapat kembali beraktifitas dengan aman dan
+      nyaman tanpa perlu ragu cedera berulang.
     </p>
     <div class="healing-phases">
       <div class="phase">
         <span class="phase-title">Fase 1: Manajemen Nyeri</span>
-        <span class="phase-desc">Meredakan peradangan dan sinyal bahaya pada tubuh Anda.</span>
+        <span class="phase-desc">Memfasilitasi proses peradangan dan menurunkan sinyal bahaya pada jaringan tubuh Anda sehingga rasa nyeri berkurang.</span>
       </div>
       <div class="phase">
         <span class="phase-title">Fase 2: Perbaikan Jaringan</span>
-        <span class="phase-desc">Mengembalikan kelenturan sendi dan memulihkan kualitas jaringan.</span>
+        <span class="phase-desc">Memberikan stimulus pada pondasi jaringan baru yang dibentuk tubuh agar lentur dan kokoh menahan beban.</span>
       </div>
       <div class="phase">
-        <span class="phase-title">Fase 3: Penguatan</span>
-        <span class="phase-desc">Membangun kembali ketahanan otot agar keluhan Anda tidak kambuh lagi.</span>
+        <span class="phase-title">Fase 3: Penguatan Jaringan</span>
+        <span class="phase-desc">Memperkuat jaringan baru yang telah matang agar terhindar dari faktor resiko cedera berulang atau kambuh.</span>
       </div>
     </div>
   </div>

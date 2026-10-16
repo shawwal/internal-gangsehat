@@ -9,11 +9,10 @@ import type { CategoryKey, CategorySummary } from './types'
 
 interface ClassicTableProps {
   summaries: CategorySummary[]
-  days: number
+  /** ISO dates of the window, one column each (calendar month or payroll period) */
+  dates: string[]
   monthLabel: string
   branchId: string
-  month: number
-  year: number
   canEdit: boolean
   onDataChanged?: () => void
 }
@@ -25,19 +24,19 @@ interface DetailTarget {
   label: string
 }
 
-export function ClassicTable({ summaries, days, monthLabel, branchId, month, year, canEdit, onDataChanged }: ClassicTableProps) {
-  const dayNumbers = Array.from({ length: days }, (_, i) => i + 1)
+export function ClassicTable({ summaries, dates, monthLabel, branchId, canEdit, onDataChanged }: ClassicTableProps) {
+  // Column header = day of month; the payroll window crosses a month boundary,
+  // so headers can run 27 … 31, 1 … 26.
+  const dayNumbers = dates.map((d) => Number(d.slice(8, 10)))
   const [detail, setDetail] = useState<DetailTarget | null>(null)
 
-  function openDetail(category: CategoryKey, label: string, day: number) {
-    const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    setDetail({ date, category, label })
+  function openDetail(category: CategoryKey, label: string, index: number) {
+    setDetail({ date: dates[index], category, label })
   }
 
-  // Capaian = the whole month's list for that category.
+  // Capaian = the whole window's list for that category.
   function openMonthDetail(category: CategoryKey, label: string) {
-    const ym = `${year}-${String(month).padStart(2, '0')}`
-    setDetail({ date: `${ym}-01`, endDate: `${ym}-${String(days).padStart(2, '0')}`, category, label })
+    setDetail({ date: dates[0], endDate: dates[dates.length - 1], category, label })
   }
 
   function handleExport() {
@@ -50,7 +49,7 @@ export function ClassicTable({ summaries, days, monthLabel, branchId, month, yea
         Selisih: s.selisih,
         Progress: formatPct(s.actual, s.target),
       }
-      dayNumbers.forEach(d => { row[String(d)] = s.daily[d - 1] ?? 0 })
+      dates.forEach((d, i) => { row[d] = s.daily[i] ?? 0 })
       return row
     })
     const cols: ExportColumn<Row>[] = [
@@ -59,7 +58,7 @@ export function ClassicTable({ summaries, days, monthLabel, branchId, month, yea
       { header: 'Capaian', value: r => r['Capaian'] },
       { header: 'Selisih', value: r => r['Selisih'] },
       { header: 'Progress', value: r => r['Progress'] },
-      ...dayNumbers.map(d => ({ header: String(d), value: (r: Row) => r[String(d)] })),
+      ...dates.map(d => ({ header: d, value: (r: Row) => r[d] })),
     ]
     exportToExcel(rows, cols, `progress_target_${monthLabel.replace(' ', '_')}`)
     return Promise.resolve()
@@ -79,8 +78,8 @@ export function ClassicTable({ summaries, days, monthLabel, branchId, month, yea
               <th className="px-2 py-2.5 font-semibold text-muted-foreground text-right min-w-[60px] border-b border-border">CAPAIAN</th>
               <th className="px-2 py-2.5 font-semibold text-muted-foreground text-right min-w-[60px] border-b border-border">SELISIH</th>
               <th className="px-2 py-2.5 font-semibold text-muted-foreground text-right min-w-[70px] border-b border-border">PROGRESS</th>
-              {dayNumbers.map(d => (
-                <th key={d} className="px-1 py-2.5 font-medium text-muted-foreground text-center min-w-[28px] border-b border-border">{d}</th>
+              {dayNumbers.map((d, i) => (
+                <th key={dates[i]} className="px-1 py-2.5 font-medium text-muted-foreground text-center min-w-[28px] border-b border-border">{d}</th>
               ))}
             </tr>
           </thead>
@@ -112,7 +111,7 @@ export function ClassicTable({ summaries, days, monthLabel, branchId, month, yea
                   {s.daily.map((v, i) => (
                     <td
                       key={i}
-                      onClick={v > 0 ? () => openDetail(s.key, s.label, i + 1) : undefined}
+                      onClick={v > 0 ? () => openDetail(s.key, s.label, i) : undefined}
                       className={`px-1 py-2 text-center font-medium ${v > 0 ? 'cursor-pointer hover:underline' : ''}`}
                       style={{ color: v > 0 ? 'var(--chart-5)' : 'var(--muted-foreground)' }}
                     >

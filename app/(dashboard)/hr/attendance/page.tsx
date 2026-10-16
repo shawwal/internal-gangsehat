@@ -42,6 +42,8 @@ export default function AttendancePage() {
 
   const [userId, setUserId]     = useState<string | null>(null)
   const [branchId, setBranchId] = useState<string | null>(null)
+  // HR reads every branch (migration 107) and can switch; others see only their own.
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
 
   const days = daysInMonth(year, month)
   const dayNumbers = Array.from({ length: days }, (_, i) => i + 1)
@@ -57,6 +59,8 @@ export default function AttendancePage() {
       .single()
     setUserId(user.id)
     setBranchId(profile?.branch_id ?? null)
+    const { data: branchRows } = await supabase.from('branches').select('id, name').eq('is_active', true).order('name')
+    setBranches(branchRows ?? [])
   }
 
   async function load() {
@@ -176,6 +180,16 @@ export default function AttendancePage() {
           <p className="text-sm text-muted-foreground">Kelola kehadiran staff bulanan</p>
         </div>
         <div className="flex items-center gap-2">
+          {branches.length > 1 && branchId && (
+            <select
+              className="px-3 py-1.5 rounded-xl border border-border bg-background text-sm"
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              aria-label="Cabang"
+            >
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          )}
           {!loading && staff.length > 0 && (
             <ExportButton onExport={handleExportAttendance} />
           )}

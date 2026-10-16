@@ -7,7 +7,7 @@ import { shortDayLabel } from '@/lib/payroll/period'
 import type { AttendanceCode } from '@/lib/payroll/types'
 import { staffDisplayName, type PayrollWorkspace, type WorkspaceRow } from '@/lib/payroll/workspace'
 import { CODE_STYLE } from './format'
-import { avgOf, formatStat, sumOf } from '@/lib/tableStats'
+import { avgOf, belowAvgTest, BELOW_AVG_CLS, formatStat, sumOf } from '@/lib/tableStats'
 import { btn } from './Modal'
 
 export interface CellChange {
@@ -33,6 +33,9 @@ export function AttendanceGrid({ ws, rows, onChange }: Props) {
   const editable = permissions.canEdit
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [invalid, setInvalid] = useState<string | null>(null)
+  // Red cell = worse than the Rata-rata row: HADIR below it, TLBT/IZIN/SAKIT/CUTI/ALFA above it.
+  const summaryBelowAvg = (['hadir', 'lateMinutes', 'izin', 'sakit', 'cuti', 'alfa'] as const).map((k) =>
+    belowAvgTest(rows.map((r) => r.attendance[k]), k === 'hadir' ? 'higher' : 'lower'))
   const gridRef = useRef<HTMLTableElement>(null)
 
   const key = (staffId: string, date: string) => `${staffId}|${date}`
@@ -165,7 +168,7 @@ export function AttendanceGrid({ ws, rows, onChange }: Props) {
                   {[a.hadir, a.lateMinutes, a.izin, a.sakit, a.cuti, a.alfa].map((v, i) => (
                     <td key={i} className={`px-2 text-center font-semibold border-l border-border ${
                       i === 5 && v > 0 ? 'text-destructive' : i === 1 && v > 0 ? 'text-secondary-foreground' : 'text-foreground'
-                    }`}>{v}</td>
+                    } ${summaryBelowAvg[i](v) ? BELOW_AVG_CLS : ''}`}>{v}</td>
                   ))}
                 </tr>
               )

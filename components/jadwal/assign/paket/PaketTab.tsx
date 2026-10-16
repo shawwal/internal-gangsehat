@@ -3,17 +3,19 @@
 import { Package } from 'lucide-react'
 import type { LayananRow } from '@/app/actions/layanan'
 import { LayananPicker } from './LayananPicker'
+import type { PackageCategory } from '@/lib/serviceType'
 
 interface Props {
   branchId: string | null
   selectedLayanan: LayananRow | null
   onSelectLayanan: (layanan: LayananRow) => void
+  categories?: PackageCategory[]
 }
 
-export function PaketTab({ branchId, selectedLayanan, onSelectLayanan }: Props) {
+export function PaketTab({ branchId, selectedLayanan, onSelectLayanan, categories }: Props) {
   return (
     <div className="space-y-3">
-      <LayananPicker branchId={branchId} selected={selectedLayanan} onSelect={onSelectLayanan} />
+      <LayananPicker branchId={branchId} selected={selectedLayanan} onSelect={onSelectLayanan} categories={categories} />
 
       {selectedLayanan && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20">

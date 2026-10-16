@@ -34,7 +34,7 @@ export function PendingLeaveModal({ state, canApprove, saving, onClose, onAction
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
-                  Pengajuan Cuti
+                  Perizinan
                 </p>
                 <p className="text-sm font-semibold text-foreground">{staffName}</p>
               </div>

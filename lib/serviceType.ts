@@ -35,3 +35,21 @@ export function getEffectivePackageServiceType(
   }
   return serviceType as ServiceType | null
 }
+
+// Categories a patient_packages row (and its income transactions) can carry.
+export const PACKAGE_CATEGORIES = ['PAKET KLINIK', 'PAKET VISIT', 'PAKET SPORT MASSAGE'] as const
+export type PackageCategory = typeof PACKAGE_CATEGORIES[number]
+
+export function isPackageCategory(c: string | null | undefined): c is PackageCategory {
+  return (PACKAGE_CATEGORIES as readonly string[]).includes(c ?? '')
+}
+
+/** Package category for a branch price-list kategori (internal_layanan.kategori),
+ *  or null when the layanan isn't a package. */
+export function packageCategoryForKategori(kategori: string | null | undefined): PackageCategory | null {
+  const k = (kategori ?? '').toUpperCase()
+  if (!k.includes('PAKET')) return null
+  if (k.includes('SPORT MASSAGE')) return 'PAKET SPORT MASSAGE'
+  if (k.includes('VISIT')) return 'PAKET VISIT'
+  return 'PAKET KLINIK'
+}

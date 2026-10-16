@@ -4,6 +4,7 @@ export interface LeaveRow {
   branch_id: string
   start_date: string
   end_date: string
+  leave_type: LeaveType
   reason: string
   proof_url: string | null
   status: 'pending' | 'approved' | 'rejected'
@@ -11,6 +12,25 @@ export interface LeaveRow {
   created_at: string
   internal_profiles: { full_name: string; email: string } | null
   branches: { name: string } | null
+}
+
+export const LEAVE_TYPES = [
+  'TUGAS', 'TERLAMBAT', 'CUTI', 'SAKIT', 'TUKAR SHIFT', 'TUKAR OFF', 'IZIN BELAJAR',
+] as const
+export type LeaveType = (typeof LEAVE_TYPES)[number]
+
+export const LEAVE_TYPE_LABEL: Record<LeaveType, string> = {
+  TUGAS: 'Tugas',
+  TERLAMBAT: 'Terlambat',
+  CUTI: 'Cuti',
+  SAKIT: 'Sakit',
+  'TUKAR SHIFT': 'Tukar Shift',
+  'TUKAR OFF': 'Tukar Off',
+  'IZIN BELAJAR': 'Izin Belajar',
+}
+
+export function leaveTypeLabel(t: string | null | undefined) {
+  return LEAVE_TYPE_LABEL[(t ?? 'CUTI') as LeaveType] ?? t ?? 'Cuti'
 }
 
 export interface BranchOption {

@@ -11,7 +11,8 @@ export const CATEGORY_DEFS: CategoryDef[] = [
   { key: 'ta',           label: 'TA',           color: 'var(--primary)' },
   { key: 'paket_klinik', label: 'Paket Klinik', color: 'var(--chart-4)' },
   { key: 'kunjungan',    label: 'Kunjungan',    color: 'var(--secondary)' },
-  { key: 'paket_visit',  label: 'Paket Visit',  color: 'var(--destructive)' },
+  // Visit target = TA VISIT + PAKET VISIT (home visit), compared against target_visit
+  { key: 'paket_visit',  label: 'Visit',        color: 'var(--destructive)' },
   { key: 'sesi',         label: 'Sesi',         color: 'var(--chart-5)' },
 ]
 
@@ -24,6 +25,8 @@ export interface VisitForProgress {
   id: string
   visit_date: string
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
+  status?: string | null
+  service_type?: string | null
 }
 
 export interface TransactionForProgress {
@@ -31,12 +34,11 @@ export interface TransactionForProgress {
   transaction_date: string
 }
 
-// TA/Sesi stay merged Klinik+Visit (matches current product behavior — only the
-// payment-status gate was wrong, not the Klinik/Visit grouping). Paket already
-// splits Klinik vs Visit into separate rows/categories.
+// TA = clinic only (TA KLINIK → target_ta). Home-visit TA counts toward the
+// Visit target together with PAKET VISIT. Sesi stays merged Klinik+Visit.
 export const TRANSACTION_CATEGORY_MAP: Record<string, CategoryKey> = {
   'TA KLINIK': 'ta',
-  'TA VISIT': 'ta',
+  'TA VISIT': 'paket_visit',
   'SESI KLINIK': 'sesi',
   'SESI VISIT': 'sesi',
   'PAKET KLINIK': 'paket_klinik',

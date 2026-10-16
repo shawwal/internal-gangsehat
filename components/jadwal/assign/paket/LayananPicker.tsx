@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Package, AlertTriangle } from 'lucide-react'
 import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
+import { packageCategoryForKategori, type PackageCategory } from '@/lib/serviceType'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('id-ID').format(n)
@@ -12,9 +13,13 @@ interface Props {
   branchId: string | null
   selected: LayananRow | null
   onSelect: (layanan: LayananRow) => void
+  /** Which package kinds to offer (Sport Massage packages are sold elsewhere). */
+  categories?: PackageCategory[]
 }
 
-export function LayananPicker({ branchId, selected, onSelect }: Props) {
+const DEFAULT_CATEGORIES: PackageCategory[] = ['PAKET KLINIK', 'PAKET VISIT']
+
+export function LayananPicker({ branchId, selected, onSelect, categories = DEFAULT_CATEGORIES }: Props) {
   const [rows, setRows]       = useState<LayananRow[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -22,10 +27,14 @@ export function LayananPicker({ branchId, selected, onSelect }: Props) {
     if (!branchId) { setRows([]); return }
     setLoading(true)
     fetchLayananByBranch(branchId).then((data) => {
-      setRows(data.filter((r) => r.kategori.includes('PAKET') && r.is_active))
+      setRows(data.filter((r) => {
+        const c = packageCategoryForKategori(r.kategori)
+        return r.is_active && !!c && categories.includes(c)
+      }))
       setLoading(false)
     })
-  }, [branchId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId, categories.join()])
 
   if (!branchId) {
     return (

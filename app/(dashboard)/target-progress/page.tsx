@@ -4,8 +4,9 @@ import './target-progress-styles.css'
 import { useCallback, useEffect, useState } from 'react'
 import { Table2, TrendingUp, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { VISIT_STATUS_FILTER } from '@/components/performance/utils'
+import { datesBetween, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES } from '@/lib/metrics/achievement'
 import { fetchTargetProgressTransactions } from '@/app/actions/targetProgress'
+import { getPayrollWindow } from '@/app/actions/pfotm'
 import { MonthPicker } from '@/components/targetProgress/MonthPicker'
 import { BranchPicker } from '@/components/targetProgress/BranchPicker'
 import { ClassicTable } from '@/components/targetProgress/ClassicTable'
@@ -19,10 +20,12 @@ import {
   type BranchTargetForProgress,
   type VisitForProgress,
 } from '@/components/targetProgress/types'
-import { daysInMonth, buildDailyCounts, buildTransactionDailyCounts, mergeDailyCounts, sum, getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR } from '@/components/targetProgress/utils'
+import { buildDailyCounts, buildTransactionDailyCounts, mergeDailyCounts, sum, getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR } from '@/components/targetProgress/utils'
 import { SkeletonRegion, StatCardsSkeleton, TableSkeleton } from '@/components/ui/Skeleton'
 
 type Tab = 'klasik' | 'visual'
+/** Calendar month, or the payroll / PFOTM window (27 → 26) so Capaian matches those pages one-to-one. */
+type WindowMode = 'month' | 'payroll'
 type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'admin' | null
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
@@ -43,6 +46,8 @@ export default function TargetProgressPage() {
   const [month, setMonth] = useState(CURRENT_MONTH)
   const [year, setYear] = useState(CURRENT_YEAR)
   const [tab, setTab] = useState<Tab>('klasik')
+  const [windowMode, setWindowMode] = useState<WindowMode>('month')
+  const [dates, setDates] = useState<string[]>([])
 
   const [loading, setLoading] = useState(true)
   const [hasApprovedTarget, setHasApprovedTarget] = useState(true)
@@ -85,7 +90,11 @@ export default function TargetProgressPage() {
     if (!selectedBranchId) { setLoading(false); return }
     setLoading(true)
     const supabase = createClient()
-    const range = getMonthRange(month, year)
+    let range = getMonthRange(month, year)
+    if (windowMode === 'payroll') {
+      const win = await getPayrollWindow(selectedBranchId, year, month)
+      if (win.ok) range = win.data
+    }
 
     const [{ data: targetRow }, { data: visits }, transactionRows, { data: categorySettings }] = await Promise.all([
       supabase
@@ -98,13 +107,13 @@ export default function TargetProgressPage() {
         .maybeSingle(),
       supabase
         .from('patient_visits')
-        .select('id, visit_date, kehadiran')
+        .select('id, visit_date, kehadiran, status, service_type')
         .eq('branch_id', selectedBranchId)
         .gte('visit_date', range.start)
         .lte('visit_date', range.end)
-        .in('status', [...VISIT_STATUS_FILTER])
+        .in('status', [...KUNJUNGAN_VISIT_STATUSES])
         // Sport massage is tracked separately — not a "kunjungan"
-        .or('service_type.is.null,service_type.neq."SPORT MASSAGE"'),
+        .or(KUNJUNGAN_SERVICE_FILTER),
       // Server action — therapist/staff can't read `transactions` under RLS
       fetchTargetProgressTransactions(selectedBranchId, range.start, range.end),
       supabase
@@ -117,9 +126,10 @@ export default function TargetProgressPage() {
 
     const visitRows = (visits ?? []) as VisitForProgress[]
 
-    const days = daysInMonth(year, month)
-    const visitDaily = buildDailyCounts(visitRows, days)
-    const transactionDaily = buildTransactionDailyCounts(transactionRows, days)
+    const windowDates = datesBetween(range.start, range.end)
+    setDates(windowDates)
+    const visitDaily = buildDailyCounts(visitRows, windowDates)
+    const transactionDaily = buildTransactionDailyCounts(transactionRows, windowDates)
     const daily = mergeDailyCounts(visitDaily, transactionDaily)
     const t = targetRow as BranchTargetForProgress | null
     const targetFields: Record<CategoryKey, number> = {
@@ -139,7 +149,7 @@ export default function TargetProgressPage() {
         return { key: def.key, label: def.label, color: def.color, target, actual, selisih: actual - target, daily: daily[def.key] }
       }))
     setLoading(false)
-  }, [selectedBranchId, month, year])
+  }, [selectedBranchId, month, year, windowMode])
 
   useEffect(() => { load() }, [load])
 
@@ -148,7 +158,7 @@ export default function TargetProgressPage() {
     setSelectedBranchName(branchList.find(b => b.id === id)?.name ?? '')
   }
 
-  const days = daysInMonth(year, month)
+  const days = dates.length
   const monthLabel = `${MONTHS[month - 1]} ${year}`
 
   return (
@@ -161,7 +171,24 @@ export default function TargetProgressPage() {
           </h1>
           <p className="text-sm text-muted-foreground">Laporan capaian target cabang bulanan</p>
         </div>
-        <MonthPicker month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y) }} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center bg-muted/40 rounded-2xl p-1 gap-0.5" role="group" aria-label="Rentang tanggal">
+            {([['month', 'Bulan kalender'], ['payroll', 'Periode gaji']] as const).map(([value, label]) => (
+              <button
+                key={value}
+                onClick={() => setWindowMode(value)}
+                aria-pressed={windowMode === value}
+                title={value === 'payroll' ? 'Rentang yang sama dengan PFOTM & Penggajian (default 27–26)' : undefined}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                  windowMode === value ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <MonthPicker month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y) }} />
+        </div>
       </div>
 
       {/* Branch picker (director only) */}
@@ -217,11 +244,9 @@ export default function TargetProgressPage() {
             {tab === 'klasik' && (
               <ClassicTable
                 summaries={summaries}
-                days={days}
+                dates={dates}
                 monthLabel={monthLabel}
                 branchId={selectedBranchId}
-                month={month}
-                year={year}
                 canEdit={canEdit}
                 onDataChanged={load}
               />

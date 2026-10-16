@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchJadwalListRows, type JadwalListRow } from '@/app/actions/jadwalList'
 import { updateVisit, updateVisitStatus } from '@/app/actions/jadwal'
+import { ensureSlotVisit } from '@/app/actions/griyaJadwal'
 import { toIso } from '@/components/jadwal/utils'
 
 export function useJadwalList() {
@@ -57,8 +58,18 @@ export function useJadwalList() {
     loadRows(selectedDate)
   }, [selectedDate, selectedBranchId, loadRows])
 
-  async function handleCancel(visitId: string) {
-    await updateVisitStatus(visitId, 'cancelled')
+  /** Griya virtual rows (master slot, no visit yet) get a real visit row first. */
+  async function realVisitId(row: JadwalListRow): Promise<{ id?: string; error?: string }> {
+    if (!row.is_virtual) return { id: row.id }
+    if (!row.griya_slot_id) return { error: 'Slot tidak ditemukan' }
+    const { error, visit } = await ensureSlotVisit(row.griya_slot_id, row.visit_date)
+    if (error || !visit) return { error: error ?? 'Gagal membuat kunjungan' }
+    return { id: visit.id }
+  }
+
+  async function handleCancel(row: JadwalListRow) {
+    const { id } = await realVisitId(row)
+    if (id) await updateVisitStatus(id, 'cancelled')
     await loadRows(selectedDate)
   }
 
@@ -75,8 +86,15 @@ export function useJadwalList() {
     },
     local: Partial<JadwalListRow> = {},
   ): Promise<string | null> {
-    const { error } = await updateVisit(row.id, patch)
+    const real = await realVisitId(row)
+    if (!real.id) return real.error ?? 'Gagal menyimpan'
+    const { error } = await updateVisit(real.id, patch)
     if (error) return error
+    if (row.is_virtual) {
+      // The new visit row carries order_id/status etc. — reload rather than patch.
+      await loadRows(selectedDate)
+      return null
+    }
     if (patch.visit_date && patch.visit_date !== toIso(selectedDate)) {
       setRows((prev) => prev.filter((r) => r.id !== row.id))
     } else {

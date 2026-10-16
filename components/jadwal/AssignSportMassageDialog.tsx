@@ -5,6 +5,8 @@ import { X, User, Clock, Check } from 'lucide-react'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { createVisit } from '@/app/actions/jadwal'
 import { fetchSportMassageLayanan, type LayananRow } from '@/app/actions/layanan'
+import { fetchPatientPackages } from '@/app/actions/packages'
+import type { PatientPackage } from '@/types'
 import type { AssignTarget } from './types'
 import type { VisitStatus } from '@/types'
 
@@ -24,9 +26,9 @@ function fmtRp(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 }
 
-// Single-session Sport Massage booking — no package/recurring logic, unlike
-// the regular AssignDialog. Sport massage is a standalone service booked
-// per-visit with its own dedicated therapist role.
+// Sport Massage booking. A patient with an active Sport Massage package (sold
+// from the payment dialog with a PAKET SPORT MASSAGE tariff) gets the session
+// linked to it, like fisio package sessions; otherwise it's a single session.
 export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
   const [view, setView]                = useState<DialogView>('search')
 
@@ -45,6 +47,10 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
   const [layananList, setLayananList]  = useState<LayananRow[]>([])
   const [layananLoading, setLayananLoading] = useState(!!target.branchId)
   const [layananId, setLayananId]      = useState<string | null>(null)
+
+  // Active Sport Massage package with sessions left → link the booking to it
+  const [smPackage, setSmPackage]      = useState<PatientPackage | null>(null)
+  const [usePackage, setUsePackage]    = useState(true)
 
   const [saving, setSaving]            = useState(false)
   const [error, setError]              = useState<string | null>(null)
@@ -78,6 +84,13 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
   function handleSelectPatient(p: PatientPlain) {
     setSelected(p)
     setView('details')
+    setSmPackage(null)
+    fetchPatientPackages(p.id).then((pkgs) => {
+      const active = pkgs.find((k) =>
+        k.status === 'active' && k.category === 'PAKET SPORT MASSAGE' && k.booked_sessions < k.total_sessions)
+      setSmPackage(active ?? null)
+      setUsePackage(true)
+    })
   }
 
   function handleClearPatient() {
@@ -91,7 +104,8 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
       setError('Terapis tidak memiliki branch. Hubungi HR.')
       return
     }
-    if (layananList.length > 0 && !layananId) {
+    const pkgId = smPackage && usePackage ? smPackage.id : null
+    if (!pkgId && layananList.length > 0 && !layananId) {
       setError('Pilih jenis layanan Sport Massage.')
       return
     }
@@ -109,8 +123,8 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
       chief_complaint:    chiefComplaint.trim() || null,
       status,
       notes:              notes.trim() || null,
-      package_id:         null,
-      layanan_id:         layananId,
+      package_id:         pkgId,
+      layanan_id:         pkgId ? null : layananId,
     })
     setSaving(false)
     if (err) { setError(err); return }
@@ -182,6 +196,25 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
                   />
                 </div>
 
+                {smPackage && (
+                  <label className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl border border-primary/30 bg-primary/5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={usePackage}
+                      onChange={(e) => setUsePackage(e.target.checked)}
+                      className="mt-0.5 accent-[var(--primary)]"
+                    />
+                    <span className="text-xs">
+                      <span className="block font-semibold text-foreground">Pakai paket: {smPackage.package_name}</span>
+                      <span className="text-muted-foreground">
+                        Sesi ke-{smPackage.booked_sessions + 1} dari {smPackage.total_sessions}
+                        {smPackage.order_id ? ` · ${smPackage.order_id}` : ''}
+                      </span>
+                    </span>
+                  </label>
+                )}
+
+                {!(smPackage && usePackage) && (
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1.5">Jenis Layanan</label>
                   {layananLoading ? (
@@ -222,6 +255,7 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
                     </div>
                   )}
                 </div>
+                )}
 
                 <VisitFields
                   chiefComplaint={chiefComplaint}

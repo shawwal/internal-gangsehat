@@ -1,6 +1,6 @@
 'use client'
 
-import { Users, User, ArrowUpAZ, ArrowDownAZ, Maximize2, Sun, Sunset, SunMedium } from 'lucide-react'
+import { Users, User, ArrowUpAZ, ArrowDownAZ, Maximize2, Sun, Sunset } from 'lucide-react'
 import type { DayStaffEntry } from './types'
 import type { ShiftFilter } from '@/lib/shifts'
 
@@ -17,7 +17,6 @@ interface Props {
   shiftFilter: ShiftFilter
   setShiftFilter: (v: ShiftFilter) => void
   /** Branch has Middle slots — shows the Middle pill */
-  hasMiddleShift?: boolean
   onFocus: () => void
 }
 
@@ -26,7 +25,7 @@ export function ControlsBar({
   sortOrder, setSortOrder,
   showInactive, toggleShowInactive,
   inactiveStaff, baseStaff, visibleStaff,
-  shiftFilter, setShiftFilter, hasMiddleShift,
+  shiftFilter, setShiftFilter,
   onFocus,
 }: Props) {
   return (
@@ -77,7 +76,6 @@ export function ControlsBar({
         {([
           { value: 'all',  label: 'Semua Shift', icon: null },
           { value: 'pagi', label: 'Pagi',         icon: <Sun    size={13} /> },
-          ...(hasMiddleShift ? [{ value: 'middle', label: 'Middle', icon: <SunMedium size={13} /> }] as const : []),
           { value: 'sore', label: 'Sore',         icon: <Sunset size={13} /> },
         ] as const).map(({ value, label, icon }) => (
           <button

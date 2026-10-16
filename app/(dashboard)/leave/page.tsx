@@ -8,13 +8,14 @@ import { LeaveStats } from '@/components/leave/LeaveStats'
 import { MyLeaveHeader } from '@/components/leave/MyLeaveHeader'
 import { MyLeaveForm } from '@/components/leave/MyLeaveForm'
 import { MyLeaveList } from '@/components/leave/MyLeaveList'
-import type { StatusFilter } from '@/components/leave/types'
+import type { LeaveType, StatusFilter } from '@/components/leave/types'
 import { CardListSkeleton } from '@/components/ui/Skeleton'
 
 interface LeaveRow {
   id: string
   start_date: string
   end_date: string
+  leave_type: LeaveType
   reason: string
   proof_url: string | null
   status: 'pending' | 'approved' | 'rejected'
@@ -23,6 +24,7 @@ interface LeaveRow {
 }
 
 interface FormState {
+  leave_type: LeaveType
   start_date: string
   end_date: string
   reason: string
@@ -31,7 +33,7 @@ interface FormState {
 const today = new Date().toISOString().split('T')[0]
 
 function defaultForm(): FormState {
-  return { start_date: today, end_date: today, reason: '' }
+  return { leave_type: 'CUTI', start_date: today, end_date: today, reason: '' }
 }
 
 export default function MyLeavePage() {
@@ -51,7 +53,7 @@ export default function MyLeavePage() {
     if (!user) return
     const { data } = await supabase
       .from('leave_requests')
-      .select('id, start_date, end_date, reason, status, rejection_note, proof_url, created_at')
+      .select('id, start_date, end_date, leave_type, reason, status, rejection_note, proof_url, created_at')
       .eq('staff_id', user.id)
       .order('created_at', { ascending: false })
     setRequests((data ?? []) as LeaveRow[])
@@ -112,15 +114,16 @@ export default function MyLeavePage() {
       branch_id: profile?.branch_id,
       start_date: form.start_date,
       end_date: form.end_date,
+      leave_type: form.leave_type,
       reason: form.reason.trim(),
       proof_url: proofUrl,
     })
 
     setSaving(false)
     if (error) {
-      showToast('Gagal mengajukan cuti.', 'error')
+      showToast('Gagal mengajukan izin.', 'error')
     } else {
-      showToast('Pengajuan cuti berhasil dikirim!', 'success')
+      showToast('Pengajuan izin berhasil dikirim!', 'success')
       closeForm()
       load()
     }

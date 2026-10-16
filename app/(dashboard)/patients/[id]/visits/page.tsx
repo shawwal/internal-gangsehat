@@ -19,6 +19,7 @@ import { EditPackageTransactionDialog } from '@/components/visits/EditPackageTra
 import { PaymentProofLink } from '@/components/payments/PaymentProofField'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { getVisitFormRoute } from '@/lib/visitRouting'
+import { PACKAGE_CATEGORIES as PACKAGE_CATEGORY_LIST } from '@/lib/serviceType'
 import { getGriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
 import { fetchIsGriyaStudent } from '@/app/actions/griyaStudents'
 import { SessionNoteModal } from '@/components/griya/SessionNoteModal'
@@ -116,7 +117,7 @@ function formatDate(d: string) {
 
 interface LinkedTx { id: string; category: string | null; harga: number | null; payment_status: string | null; outstanding: number; status: string; amount: number }
 
-const PACKAGE_CATEGORIES = new Set(['PAKET VISIT', 'PAKET KLINIK'])
+const PACKAGE_CATEGORIES = new Set<string>(PACKAGE_CATEGORY_LIST)
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat('id-ID', {
@@ -338,7 +339,7 @@ export default function PatientVisitsPage() {
         .select('id, category, harga, discount, amount, outstanding, payment_method, payment_status, penjamin, status, transaction_date, description, receipt_url')
         .eq('patient_id', id)
         .is('visit_id', null)
-        .in('category', ['PAKET KLINIK', 'PAKET VISIT'])
+        .in('category', [...PACKAGE_CATEGORIES])
         .neq('status', 'rejected')
         .order('transaction_date', { ascending: false }),
       fetchPatientPackagesWithPayment(id),

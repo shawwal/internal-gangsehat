@@ -12,8 +12,8 @@ export function DirectorLeaveHeader({ loading, hasRows, selectMode, todayLabel, 
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">Cuti Staff</h1>
-        <p className="text-sm text-muted-foreground">Tinjau dan kelola pengajuan cuti seluruh cabang</p>
+        <h1 className="text-xl font-semibold text-foreground">Perizinan Staff</h1>
+        <p className="text-sm text-muted-foreground">Tinjau dan kelola pengajuan izin seluruh cabang</p>
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {!loading && hasRows && (

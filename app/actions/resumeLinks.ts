@@ -15,6 +15,9 @@ export interface PublicResumeData {
   chiefComplaint: string | null
   diagnosis: string | null
   plan: string | null
+  // "3. Rekomendasi Fisioterapis" — terapi_awal_assessments.treatment_plan_today
+  // (labelled "Physiotherapist Recommendation" in the form). Section hidden when empty.
+  recommendation?: string | null
   // Full name shown in the signature block; null falls back to a generic label.
   therapistName: string | null
 }
@@ -213,7 +216,7 @@ async function buildResumeData(admin: AdminClient, visitId: string): Promise<Pub
 
   const { data: assessment } = await admin
     .from('terapi_awal_assessments')
-    .select('history_moi, diagnosis_primer, icf_body_functions_notes, short_term_goals, long_term_goals, created_by')
+    .select('history_moi, diagnosis_primer, icf_body_functions_notes, short_term_goals, long_term_goals, treatment_plan_today, created_by')
     .eq('visit_id', visitId)
     .maybeSingle()
 
@@ -261,6 +264,7 @@ async function buildResumeData(admin: AdminClient, visitId: string): Promise<Pub
     chiefComplaint,
     diagnosis: assessment?.diagnosis_primer || sessionNote?.clinical_impression || visit.diagnosis,
     plan,
+    recommendation: assessment?.treatment_plan_today ?? null,
     therapistName,
   }
 }

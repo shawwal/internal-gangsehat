@@ -11,9 +11,13 @@ import { buildPeriodDays, MONTH_NAMES } from '@/lib/payroll/period'
 import { VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
 import type { Weekday } from '@/lib/payroll/types'
 import {
-  computePfotmAutoMetrics, CLINIC_VISIT_TYPES, SALES_CATEGORIES, SALES_PAYMENT_STATUSES,
-  type AttendanceForPfotm, type PackageInfo, type SaleForPfotm,
+  computePfotmAutoMetrics, DRILLDOWN_METRICS, pfotmHits, SALES_CATEGORIES, SALES_PAYMENT_STATUSES,
+  type AttendanceForPfotm, type PackageInfo, type PfotmAutoInput, type SaleForPfotm,
 } from '@/lib/pfotm/autoMetrics'
+import {
+  datesBetween, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES, type MetricDetail,
+} from '@/lib/metrics/achievement'
+import { resolvePatientNames } from '@/lib/metrics/patientNames'
 import { mergeMetrics, rankBoard, sanitizeMetricValue, type Metrics, type PointRule } from '@/lib/pfotm/engine'
 
 type Ok<T> = { ok: true; data: T }
@@ -125,33 +129,48 @@ async function loadWorkingWindow(supabase: ServerClient, branchId: string, year:
 
 async function collectAutoMetrics(supabase: ServerClient, branchId: string, staffIds: string[], start: string, end: string) {
   if (!staffIds.length) return {}
+  return computePfotmAutoMetrics(await collectPfotmInput(supabase, branchId, staffIds, start, end))
+}
+
+/**
+ * Raw rows behind the auto metrics. Visits and sales use the Target Progress
+ * rules (lib/metrics/achievement.ts) scoped to this branch, so each column's
+ * sum equals the branch Capaian for the same window.
+ */
+async function collectPfotmInput(
+  supabase: ServerClient, branchId: string, staffIds: string[], start: string, end: string,
+): Promise<PfotmAutoInput> {
   const today = todayJakarta()
   // `transactions` is RLS-limited to finance-capable roles, but HR prepares
   // PFOTM too — callers have already checked INPUT_ROLES, so the sales read
   // uses the service role, scoped to this branch and period.
   const admin = createAdminClient()
   const [attRes, visitRes, refRes, txRes] = await Promise.all([
-    supabase.from('attendance').select('staff_id, status').in('staff_id', staffIds).gte('date', start).lte('date', end),
+    supabase.from('attendance').select('staff_id, date, status').in('staff_id', staffIds).gte('date', start).lte('date', end),
     supabase.from('patient_visits')
       .select(VISIT_FOR_PAYROLL_COLUMNS)
+      .eq('branch_id', branchId)
       .in('attending_staff_id', staffIds)
-      .in('service_type', CLINIC_VISIT_TYPES)
-      .eq('status', 'completed')
+      .in('status', [...KUNJUNGAN_VISIT_STATUSES])
+      .or(KUNJUNGAN_SERVICE_FILTER)
       .gte('visit_date', start).lte('visit_date', end)
       .limit(20000),
     supabase.from('patients').select('id, referred_by_staff_id, created_at').in('referred_by_staff_id', staffIds),
     admin.from('transactions')
-      .select('id, fisio_id, visit_id, order_id, category')
+      .select('id, fisio_id, visit_id, order_id, category, transaction_date, patient_id')
       .eq('branch_id', branchId)
       .eq('type', 'income')
       .neq('status', 'rejected')
-      .in('payment_status', SALES_PAYMENT_STATUSES)
+      .in('payment_status', [...SALES_PAYMENT_STATUSES])
       .in('category', SALES_CATEGORIES)
       .gte('transaction_date', start).lte('transaction_date', end)
       .limit(20000),
   ])
   const periodVisits = (visitRes.data ?? []) as unknown as VisitForPayroll[]
-  const txRows = (txRes.data ?? []) as { id: string; fisio_id: string | null; visit_id: string | null; order_id: string | null; category: string }[]
+  const txRows = (txRes.data ?? []) as {
+    id: string; fisio_id: string | null; visit_id: string | null; order_id: string | null; category: string
+    transaction_date: string; patient_id: string | null
+  }[]
 
   // Attribute each sale: the transaction's Fisio, else the linked visit's
   // therapist. PAKET KLINIK also needs its package (by order_id or via the
@@ -179,7 +198,10 @@ async function collectAutoMetrics(supabase: ServerClient, branchId: string, staf
     const pkg = (t.order_id ? packageByOrder.get(t.order_id) : undefined)
       ?? (visit?.package_id ? packageById.get(visit.package_id) : undefined)
       ?? null
-    return { staff_id: t.fisio_id ?? visit?.attending_staff_id ?? null, category: t.category, package: pkg }
+    return {
+      id: t.id, staff_id: t.fisio_id ?? visit?.attending_staff_id ?? null, category: t.category,
+      transaction_date: t.transaction_date, patient_id: t.patient_id, package: pkg,
+    }
   })
 
   // Referral date = the referred patient's first visit (fallback: registration date).
@@ -193,15 +215,16 @@ async function collectAutoMetrics(supabase: ServerClient, branchId: string, staf
     for (const v of fv ?? []) if (!firstVisitByPatient.has(v.patient_id)) firstVisitByPatient.set(v.patient_id, v.visit_date)
   }
   const referrals = referred.map((r) => ({
+    patient_id: r.id,
     staff_id: r.referred_by_staff_id,
     first_date: firstVisitByPatient.get(r.id) ?? r.created_at.slice(0, 10),
   }))
 
-  return computePfotmAutoMetrics({
+  return {
     staffIds, start, end, todayISO: today,
     attendance: (attRes.data ?? []) as AttendanceForPfotm[],
     periodVisits, sales, referrals,
-  })
+  }
 }
 
 // ── Board ───────────────────────────────────────────────────────────────────
@@ -565,4 +588,125 @@ export async function getPfotmHistory(branchId: string, year: number): Promise<R
       .map((e) => ({ name: e.display_name, staff_id: e.staff_id, metrics: e.metrics ?? {}, total_points: Number(e.total_points), rank: e.rank!, kpis: e.kpis ?? {} }))
       .sort((a, b) => a.rank - b.rank),
   })))
+}
+
+// ── Drill-down: which patients make up a number ─────────────────────────────
+
+/** Patient + date list behind one auto metric cell; its length equals the auto value. */
+export async function getPfotmMetricDetail(entryId: string, metricKey: string): Promise<Result<MetricDetail>> {
+  const actor = await getActor()
+  if (isErr(actor)) return actor
+  if (!INPUT_ROLES.includes(actor.role)) return fail('Anda tidak memiliki akses.')
+  if (!(DRILLDOWN_METRICS as readonly string[]).includes(metricKey)) return fail('Metrik ini tidak punya rincian.')
+  const { supabase } = actor
+  const { data: entry } = await supabase
+    .from('pfotm_entries')
+    .select('staff_id, override_metrics, pfotm_periods!period_id(branch_id, start_date, end_date)')
+    .eq('id', entryId).maybeSingle()
+  if (!entry) return fail('Data tidak ditemukan.')
+  const per = entry.pfotm_periods as unknown as { branch_id: string; start_date: string; end_date: string } | null
+  if (!per) return fail('Periode tidak ditemukan.')
+  const override = ((entry.override_metrics ?? {}) as Metrics)[metricKey]
+  if (!entry.staff_id) return ok({ rows: [], auto: 0, override: override ?? null })
+
+  const input = await collectPfotmInput(supabase, per.branch_id, [entry.staff_id], per.start_date, per.end_date)
+  const hits = pfotmHits(input).filter((h) => h.key === metricKey).sort((a, b) => a.date.localeCompare(b.date))
+  const names = await resolvePatientNames(hits.map((h) => h.patient_id))
+  return ok({
+    rows: hits.map((h) => ({ date: h.date, patientName: (h.patient_id && names.get(h.patient_id)) || '—', label: h.label })),
+    auto: hits.length,
+    override: override ?? null,
+  })
+}
+
+// ── Daily ranks (bump chart) ────────────────────────────────────────────────
+
+export interface PfotmDailyMetrics {
+  dates: string[]
+  /** per entry id: metrics as of each date (cumulative), aligned with `dates` */
+  entries: { entryId: string; metricsByDay: Metrics[] }[]
+}
+
+/**
+ * Cumulative metrics per day so the client can rank each day with the same
+ * rules and working days as the board. Dated metrics grow day by day; manual
+ * metrics and HR corrections have no date, so they count in full from day 1.
+ * The last day equals the board's own metrics (frozen ones once locked).
+ */
+export async function getPfotmDailyMetrics(periodId: string): Promise<Result<PfotmDailyMetrics>> {
+  const actor = await getActor()
+  if (isErr(actor)) return actor
+  const { supabase } = actor
+  const [{ data: period }, { data: entryRows }] = await Promise.all([
+    supabase.from('pfotm_periods').select('branch_id, start_date, end_date, is_locked').eq('id', periodId).maybeSingle(),
+    supabase.from('pfotm_entries').select('id, staff_id, auto_metrics, override_metrics, metrics, excluded').eq('period_id', periodId),
+  ])
+  if (!period) return fail('Periode tidak ditemukan.')
+  const entries = ((entryRows ?? []) as {
+    id: string; staff_id: string | null; auto_metrics: Metrics; override_metrics: Metrics; metrics: Metrics | null; excluded: boolean
+  }[]).filter((e) => !e.excluded)
+
+  const today = todayJakarta()
+  const lastDate = period.end_date < today ? period.end_date : today
+  if (lastDate < period.start_date) return ok({ dates: [], entries: [] })
+  const dates = datesBetween(period.start_date, lastDate)
+
+  // Supabase rejects these reads for viewers without access (e.g. therapists
+  // can't read other staff's attendance), so collect with the service role —
+  // the caller already passed RLS on the period + entries above.
+  const staffIds = entries.map((e) => e.staff_id).filter((x): x is string => !!x)
+  const input = staffIds.length
+    ? await collectPfotmInput(createAdminClient() as unknown as ServerClient, period.branch_id, staffIds, period.start_date, period.end_date)
+    : null
+  const hits = input ? pfotmHits(input) : []
+  const datedKeys = new Set(['hadir', 'terlambat', 'alfa', ...DRILLDOWN_METRICS])
+
+  const dayIndex = new Map(dates.map((d, i) => [d, i]))
+  const out = entries.map((e) => {
+    const final = period.is_locked && e.metrics ? e.metrics : mergeMetrics(e.auto_metrics ?? {}, e.override_metrics ?? {})
+    // per-day increments for dated keys
+    const inc: Record<string, number[]> = {}
+    for (const h of hits) {
+      if (h.staff_id !== e.staff_id) continue
+      const i = dayIndex.get(h.date)
+      if (i === undefined) continue
+      ;(inc[h.key] ??= Array(dates.length).fill(0))[i]++
+    }
+    const overridden = new Set(Object.keys(e.override_metrics ?? {}))
+    const running: Record<string, number> = {}
+    const metricsByDay = dates.map((_, i) => {
+      if (i === dates.length - 1) return final
+      const m: Metrics = {}
+      for (const [k, v] of Object.entries(final)) {
+        if (datedKeys.has(k) && !overridden.has(k) && !period.is_locked) {
+          running[k] = (running[k] ?? 0) + (inc[k]?.[i] ?? 0)
+          m[k] = running[k]
+        } else if (datedKeys.has(k) && !overridden.has(k)) {
+          running[k] = (running[k] ?? 0) + (inc[k]?.[i] ?? 0)
+          m[k] = Math.min(running[k], Number(v))
+        } else {
+          m[k] = Number(v)
+        }
+      }
+      return m
+    })
+    return { entryId: e.id, metricsByDay }
+  })
+  return ok({ dates, entries: out })
+}
+
+// ── Shared window (Target Progress "Periode gaji") ──────────────────────────
+
+/**
+ * The payroll / PFOTM window (27 → 26 by default) for a branch-month, so Target
+ * Progress can show Capaian over the exact same dates. Any staff of the branch
+ * may ask (the dates aren't sensitive); read with the service role because
+ * payroll tables are HR/finance-only under RLS.
+ */
+export async function getPayrollWindow(branchId: string, year: number, month: number): Promise<Result<{ start: string; end: string }>> {
+  const actor = await getActor()
+  if (isErr(actor)) return actor
+  if (actor.role !== 'director' && actor.role !== 'hr' && actor.branchId !== branchId) return fail('Anda tidak memiliki akses.')
+  const win = await loadWorkingWindow(createAdminClient() as unknown as ServerClient, branchId, year, month)
+  return ok({ start: win.start, end: win.end })
 }

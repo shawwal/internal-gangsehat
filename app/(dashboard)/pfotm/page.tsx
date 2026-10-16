@@ -14,6 +14,7 @@ import { MONTH_NAMES } from '@/lib/payroll/period'
 import { mergeMetrics, rankBoard } from '@/lib/pfotm/engine'
 import { PfotmBoard } from '@/components/pfotm/PfotmBoard'
 import { PfotmInput } from '@/components/pfotm/PfotmInput'
+import { PfotmBumpChart } from '@/components/pfotm/PfotmBumpChart'
 import { PfotmHistory } from '@/components/pfotm/PfotmHistory'
 import { PfotmRules } from '@/components/pfotm/PfotmRules'
 import { Modal, btn, inputCls, labelCls } from '@/components/payroll/Modal'
@@ -220,7 +221,12 @@ export default function PfotmPage() {
             </div>
           )}
 
-          {tab === 'board' && period && <PfotmBoard board={board} rules={data.rules} wins={data.wins} live={!locked} />}
+          {tab === 'board' && period && (
+            <>
+              <PfotmBoard board={board} rules={data.rules} wins={data.wins} live={!locked} />
+              <PfotmBumpChart periodId={period.id} entries={data.entries.filter((e) => !e.excluded)} rules={data.rules} workingDays={period.working_days} />
+            </>
+          )}
 
           {tab === 'input' && period && (
             <>

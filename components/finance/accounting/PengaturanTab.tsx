@@ -17,7 +17,7 @@ interface Props {
   branchId: string
 }
 
-const KATEGORI_OPTIONS = ['TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA']
+const KATEGORI_OPTIONS = ['TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'PAKET SPORT MASSAGE', 'LAINNYA']
 
 export function PengaturanTab({ branchId }: Props) {
   return (

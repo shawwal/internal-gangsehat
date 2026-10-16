@@ -8,7 +8,7 @@ import {
   SLOT_H, TIME_COL_W, STAFF_COL_W,
 } from './types'
 import type { VisitStatus } from '@/types'
-import { hourInFilter, type ShiftFilter } from '@/lib/shifts'
+import { hourInFilter, VIEW_SORE_START, type ShiftFilter } from '@/lib/shifts'
 import { VisitCard } from './VisitCard'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -101,9 +101,6 @@ interface Props {
   visits: DailyVisit[]
   date: string           // ISO yyyy-mm-dd
   userRole?: string | null
-  soreDividerHour?: number
-  /** First hour of the Middle shift; null when the branch has no Middle slots */
-  middleDividerHour?: number | null
   gridStart?: number
   gridEnd?: number
   /** Hours of the branch's active schedule_slots — when set, the grid shows exactly these rows */
@@ -132,7 +129,7 @@ interface Props {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14, middleDividerHour = null, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onPayOnline, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onPayOnline, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const canDrop = !!onMoveVisit
 
@@ -181,13 +178,14 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
   // slots, fall back to the gridStart–gridEnd range minus the default breaks.
   const SKIP_HOURS = new Set([12, 18])
   const bookedHours = [...visitMap.values()].flatMap((hourMap) => [...hourMap.keys()])
-  const dividers = { sore: soreDividerHour, middle: middleDividerHour }
   const baseHours = slotHours && slotHours.length > 0
     ? slotHours
     : Array.from({ length: gridEnd - gridStart }, (_, i) => gridStart + i).filter((h) => !SKIP_HOURS.has(h))
   const HOURS_VISIBLE = [...new Set([...baseHours, ...bookedHours])]
     .sort((a, b) => a - b)
-    .filter(h => hourInFilter(h, shiftFilter, dividers))
+    .filter(h => hourInFilter(h, shiftFilter))
+  // Sore boundary for the "all" view divider — same fixed split as the Pagi/Sore filter.
+  const soreRowIdx = HOURS_VISIBLE.findIndex((h) => h >= VIEW_SORE_START)
   const effectiveStart = HOURS_VISIBLE[0] ?? gridStart
   const effectiveEnd   = (HOURS_VISIBLE[HOURS_VISIBLE.length - 1] ?? gridEnd - 1) + 1
 
@@ -225,7 +223,7 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
 
   // Current time line
   const showNow = date === today && curH >= effectiveStart && curH < effectiveEnd
-    && hourInFilter(Math.floor(curH), shiftFilter, dividers)
+    && hourInFilter(Math.floor(curH), shiftFilter)
   const nowTop  = hourToPx(curH)
 
   if (staff.length === 0) {
@@ -401,17 +399,17 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
             style={{ left: TIME_COL_W, right: 0, top: 0, bottom: 0 }}
           >
             {/* Afternoon tint — subtle warm overlay from the Sore shift boundary onwards */}
-            {shiftFilter === 'all' && HOURS_VISIBLE.includes(soreDividerHour) && (
+            {shiftFilter === 'all' && soreRowIdx >= 0 && (
               <div
                 className="absolute inset-x-0 bottom-0 pointer-events-none"
                 style={{
-                  top: rowOffsets[HOURS_VISIBLE.indexOf(soreDividerHour)],
+                  top: rowOffsets[soreRowIdx],
                   background: 'linear-gradient(180deg, rgba(255,179,92,0.04) 0%, rgba(255,0,144,0.03) 100%)',
                 }}
               />
             )}
             {HOURS_VISIBLE.map((h, i) => (
-              shiftFilter === 'all' && h === soreDividerHour ? (
+              shiftFilter === 'all' && i === soreRowIdx ? (
                 <div
                   key={h}
                   className="absolute inset-x-0 pointer-events-none"
@@ -437,19 +435,6 @@ export function DailyGrid({ staff, visits, date, userRole, soreDividerHour = 14,
                       }}
                     >
                       ☀ Shift Sore
-                    </span>
-                  </div>
-                </div>
-              ) : shiftFilter === 'all' && h === middleDividerHour ? (
-                <div
-                  key={h}
-                  className="absolute inset-x-0 pointer-events-none"
-                  style={{ top: rowOffsets[i] }}
-                >
-                  <div className="h-px w-full bg-chart-4/60" />
-                  <div className="absolute inset-x-0 flex justify-center" style={{ top: 0, transform: 'translateY(-50%)' }}>
-                    <span className="text-[9px] font-bold uppercase tracking-widest px-3 py-0.5 rounded-full border border-chart-4/40 bg-card/80 text-chart-4 backdrop-blur-sm">
-                      Shift Middle
                     </span>
                   </div>
                 </div>

@@ -1,11 +1,13 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { RefreshCw, RotateCcw } from 'lucide-react'
+import { List, RefreshCw, RotateCcw } from 'lucide-react'
+import { getPayrollActivityDetail } from '@/app/actions/payroll'
+import { MetricDetailModal } from '@/components/metrics/MetricDetailModal'
 import { staffDisplayName, type PayrollWorkspace, type WorkspaceRow } from '@/lib/payroll/workspace'
 import { formatIDR } from './format'
 import { btn } from './Modal'
-import { avgOf, formatStat, sumOf } from '@/lib/tableStats'
+import { avgOf, belowAvgTest, BELOW_AVG_CLS, formatStat, sumOf } from '@/lib/tableStats'
 
 interface Props {
   ws: PayrollWorkspace
@@ -20,6 +22,7 @@ const insentifOf = (row: WorkspaceRow) => row.result?.lines.find((l) => l.code =
 export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Props) {
   const [showAll, setShowAll] = useState(false)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [detail, setDetail] = useState<{ staffId: string; name: string; code: string; label: string } | null>(null)
   const editable = ws.permissions.canEdit
 
   // Columns: types somebody is paid on (incentive codes / rates) or that have data.
@@ -47,6 +50,11 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
     const cell = ws.activity[staffId]?.[code]
     return cell?.override ?? cell?.auto ?? 0
   }
+
+  // Red cell = below the column's Rata-rata (all columns here are "higher is better").
+  const activityBelowAvg = new Map(columns.map((t) => [t.code, belowAvgTest(rows.map((r) => activityValue(r.staff.id, t.code)))]))
+  const insentifBelowAvg = belowAvgTest(rows.map(insentifOf))
+  const visitBelowAvg = belowAvgTest(rows.map((r) => r.result?.visit ?? 0))
 
   function commit(staffId: string, code: string, raw: string, auto: number) {
     const k = `${staffId}|${code}`
@@ -134,8 +142,18 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
                             over ? 'border-destructive bg-destructive/10 text-destructive'
                               : cell?.override != null ? 'border-secondary bg-secondary/10 text-foreground'
                               : 'border-transparent bg-muted/40 text-foreground'
-                          }`}
+                          } ${!over && activityBelowAvg.get(t.code)!(value) ? BELOW_AVG_CLS : ''}`}
                         />
+                        {t.count_mode !== 'manual' && auto > 0 && (
+                          <button
+                            onClick={() => setDetail({ staffId: s.id, name: staffDisplayName(s), code: t.code, label: t.label })}
+                            title="Lihat pasien & tanggal"
+                            aria-label={`Rincian ${t.label} ${s.full_name}`}
+                            className="mx-auto flex items-center gap-0.5 text-[9px] text-primary hover:underline"
+                          >
+                            <List size={9} /> rincian
+                          </button>
+                        )}
                         {cell?.override != null && (
                           <div className="flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground mt-0.5">
                             oto: {auto}
@@ -152,8 +170,8 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
                   <td className="px-2 text-center border-l border-border text-muted-foreground whitespace-nowrap">
                     {comp && comp.incentive_target > 0 ? `${row.result?.incentiveQty ?? 0}/${comp.incentive_target}` : '—'}
                   </td>
-                  <td className="px-2 text-right font-semibold text-foreground whitespace-nowrap">{formatIDR(insentif)}</td>
-                  <td className="px-2 text-right font-semibold text-foreground whitespace-nowrap">{formatIDR(row.result?.visit ?? 0)}</td>
+                  <td className={`px-2 text-right font-semibold text-foreground whitespace-nowrap ${insentifBelowAvg(insentif) ? BELOW_AVG_CLS : ''}`}>{formatIDR(insentif)}</td>
+                  <td className={`px-2 text-right font-semibold text-foreground whitespace-nowrap ${visitBelowAvg(row.result?.visit ?? 0) ? BELOW_AVG_CLS : ''}`}>{formatIDR(row.result?.visit ?? 0)}</td>
                 </tr>
               )
             })}
@@ -180,8 +198,16 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
           )}
         </table>
       </div>
+      {detail && (
+        <MetricDetailModal
+          title={`${detail.label} — ${detail.name}`}
+          subtitle="Pasien & tanggal yang dihitung otomatis pada periode ini"
+          load={() => getPayrollActivityDetail(ws.period.id, detail.staffId, detail.code)}
+          onClose={() => setDetail(null)}
+        />
+      )}
       <p className="text-xs text-muted-foreground">
-        Kolom kuning = dikoreksi manual · merah = melebihi batas wajar · kolom pudar = tidak dipakai di skema gaji karyawan tsb.
+        Kolom kuning = dikoreksi manual · merah berbingkai = melebihi batas wajar · merah penuh = di bawah rata-rata kolom · kolom pudar = tidak dipakai di skema gaji karyawan tsb.
       </p>
     </div>
   )

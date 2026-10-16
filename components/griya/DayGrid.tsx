@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
-import { UserX } from 'lucide-react'
+import { UserX, Check, RotateCcw } from 'lucide-react'
 import type { GriyaWeek, GriyaTherapist, Hari } from '@/app/actions/griyaJadwal'
 import { GRIYA_HOURS, DISCIPLINE_LABEL, DISCIPLINE_COLOR, HARI_LABEL } from './constants'
 import { TherapistAvatar } from './TherapistAvatar'
@@ -24,6 +24,13 @@ interface Props {
 export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, onDrop }: Props) {
   const cols = therapistColumns(week.therapists)
   const { cells, unassigned } = resolveDay(week, dateIso)
+  // Izin / tidak hadir are hidden from the daily grid (same as fisio jadwal
+  // harian) so the freed spot reads as open; the visit stays in patient_visits
+  // and is listed in the strip above the grid for undo/edit.
+  const isAbsent = (c: ResolvedCell) =>
+    c.state === 'izin' || c.state === 'alpa' ||
+    (c.state === 'adhoc' && ['cancelled', 'no_show'].includes(c.visit?.status ?? ''))
+  const absent = [...cells.values()].flat().filter(isAbsent)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [detailTherapist, setDetailTherapist] = useState<GriyaTherapist | null>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -92,6 +99,44 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
         </div>
       </div>
     )}
+    {absent.length > 0 && (
+      <div className="glass-card p-3 space-y-2 mb-3">
+        <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+          <UserX size={13} /> Izin / Tidak Hadir hari ini ({absent.length})
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {absent.map((a) => (
+            <div
+              key={`${a.key}-${a.visit?.id ?? a.slot?.id}`}
+              className={`flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-lg border text-xs ${
+                a.state === 'alpa' || a.visit?.status === 'no_show'
+                  ? 'border-[#FF3B30]/40 bg-[#FF3B30]/5' : 'border-[#FFB35C]/50 bg-[#FFB35C]/10'
+              }`}
+            >
+              <span>{a.studentName} · {a.hour}{a.reason ? ` · ${a.reason}` : ''}</span>
+              {canEdit && (
+                <>
+                  <button
+                    type="button" title="Ubah jadi Hadir" aria-label={`Tandai ${a.studentName} hadir`}
+                    onClick={() => onCellAction('markPresent', a, a.key)}
+                    className="p-1 rounded-md hover:bg-[#34C759]/15 text-[#34C759] cursor-pointer"
+                  >
+                    <Check size={12} />
+                  </button>
+                  <button
+                    type="button" title="Batalkan tanda" aria-label={`Batalkan tanda ${a.studentName}`}
+                    onClick={() => onCellAction('unmarkAttendance', a, a.key)}
+                    className="p-1 rounded-md hover:bg-muted text-muted-foreground cursor-pointer"
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="glass-card overflow-auto" style={{ maxHeight: 'calc(100dvh - 14rem)' }}>
         <div style={{ minWidth: gutter + cols.length * colWidth }}>
@@ -141,7 +186,11 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
               </div>
               {cols.map((c) => {
                 const key = `${c.therapist_id}|${hour}`
-                const stacked = cells.get(key) ?? []
+                const all = cells.get(key) ?? []
+                const stacked = all.filter((c) => !isAbsent(c))
+                // A spot freed by an absence: clicking it finds a pengganti for today
+                // (not a new recurring booking, which is what a truly empty cell does).
+                const freedBy = stacked.length === 0 ? all.find(isAbsent) : undefined
                 const therapistOn = isTherapistOn(week, c.therapist_id, hari, hour)
                 return (
                   <div key={c.id} style={{ width: colWidth }} className="p-1 border-l border-border/40 space-y-1">
@@ -173,7 +222,10 @@ export function DayGrid({ week, dateIso, hari, canEdit, moveMode, onCellAction, 
                         therapistOn={therapistOn}
                         canEdit={canEdit}
                         moveMode={moveMode}
-                        onAction={(a, actedCell) => onCellAction(a, actedCell, key)}
+                        onAction={(a, actedCell) =>
+                          freedBy && a === 'assign'
+                            ? onCellAction('substitute', freedBy, key)
+                            : onCellAction(a, actedCell, key)}
                       />
                     )}
                   </div>

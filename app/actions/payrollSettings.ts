@@ -34,9 +34,13 @@ function friendly(msg: string): string {
   return msg
 }
 
-/** Director edits global rows (branchId null) or any branch; others only their own branch. */
+/** Director and HR (migration 107) work on every branch. */
+const crossBranch = (actor: Actor) => actor.role === 'director' || actor.role === 'hr'
+
+/** Director edits global rows (branchId null) or any branch; HR any branch row; others only their own branch. */
 function assertBranchScope(actor: Actor, branchId: string | null): Err | null {
   if (actor.role === 'director') return null
+  if (actor.role === 'hr' && branchId) return null
   if (!branchId || branchId !== actor.branchId) return fail('Anda hanya dapat mengubah pengaturan cabang sendiri.')
   return null
 }
@@ -85,9 +89,9 @@ export async function getPayrollSettingsData(branchIdParam?: string | null): Pro
   const { supabase } = actor
 
   let bq = supabase.from('branches').select('id, name').eq('is_active', true).order('name')
-  if (actor.role !== 'director') bq = bq.eq('id', actor.branchId ?? '')
+  if (!crossBranch(actor)) bq = bq.eq('id', actor.branchId ?? '')
   const { data: branches } = await bq
-  const branchId = branchIdParam && (actor.role === 'director' || branchIdParam === actor.branchId)
+  const branchId = branchIdParam && (crossBranch(actor) || branchIdParam === actor.branchId)
     ? branchIdParam
     : (actor.branchId ?? branches?.[0]?.id ?? '')
   if (!branchId) return fail('Belum ada cabang.')
@@ -334,7 +338,7 @@ export async function saveActivityType(input: Omit<ActivityType, 'sort_order'> &
 // ── Employees & compensation ────────────────────────────────────────────────
 
 async function assertStaffInScope(actor: Actor, staffId: string): Promise<Err | null> {
-  if (actor.role === 'director') return null
+  if (crossBranch(actor)) return null
   const { data } = await actor.supabase.from('internal_profiles').select('branch_id').eq('id', staffId).maybeSingle()
   if (!data || data.branch_id !== actor.branchId) return fail('Karyawan bukan dari cabang Anda.')
   return null

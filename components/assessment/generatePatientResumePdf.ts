@@ -22,6 +22,7 @@ export async function generatePatientResumePdf(visit: VisitWithPatient, assessme
     chiefComplaint,
     diagnosis: assessment.diagnosis_primer || visit.diagnosis,
     plan,
+    recommendation: assessment.treatment_plan_today,
     therapistName: await fetchResumeTherapistName(visit.id).catch(() => null),
   }
 

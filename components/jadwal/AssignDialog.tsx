@@ -9,6 +9,7 @@ import { fetchPatientPackages, createPackageFromLayanan } from '@/app/actions/pa
 import type { LayananRow } from '@/app/actions/layanan'
 import type { AssignTarget } from './types'
 import type { PatientPackage, VisitStatus } from '@/types'
+import { packageCategoryForKategori } from '@/lib/serviceType'
 
 import { fmtHour, toIso } from './assign/constants'
 import { PatientSearch } from './assign/PatientSearch'
@@ -29,6 +30,10 @@ interface Props {
 }
 
 type DialogView = 'search' | 'details'
+
+function isClinicPackage(p: PatientPackage) {
+  return p.category !== 'PAKET VISIT' && p.category !== 'PAKET SPORT MASSAGE'
+}
 
 export function AssignDialog({ target, onClose, onSaved, canManagePackages = false }: Props) {
   // ── View ────────────────────────────────────────────────────────────────────
@@ -67,6 +72,10 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
 
   // ── Packages ─────────────────────────────────────────────────────────────────
   const [packages, setPackages]          = useState<PatientPackage[]>([])
+  // Jadwal harian is the clinic schedule — home-visit and Sport Massage packages
+  // are booked on their own pages, so they're never offered/auto-picked here
+  // (a PAKET VISIT session used to land here as a clinic SESI TERAPI).
+  const clinicPackages = packages.filter(isClinicPackage)
   const [pkgLoading, setPkgLoading]      = useState(false)
   const [selectedPkgId, setSelectedPkg]  = useState<string | null>(null)
   const [selectedLayanan, setSelectedLayanan] = useState<LayananRow | null>(null)
@@ -133,7 +142,7 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
     setPkgLoading(true)
     fetchPatientPackages(selectedPatient.id).then((pkgs) => {
       setPackages(pkgs)
-      setSelectedPkg(pkgs.find((p) => p.status === 'active')?.id ?? null)
+      setSelectedPkg(pkgs.find((p) => p.status === 'active' && isClinicPackage(p))?.id ?? null)
       setPkgLoading(false)
     })
   }, [selectedPatient])
@@ -142,7 +151,7 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
     if (!selectedPatient) return
     const pkgs = await fetchPatientPackages(selectedPatient.id)
     setPackages(pkgs)
-    setSelectedPkg(pkgs.find((p) => p.status === 'active')?.id ?? null)
+    setSelectedPkg(pkgs.find((p) => p.status === 'active' && isClinicPackage(p))?.id ?? null)
   }
 
   // ── Save from the Paket tab ───────────────────────────────────────────────────
@@ -160,7 +169,7 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
       patient_id: selectedPatient.id,
       branch_id:  target.branchId,
       layanan_id: selectedLayanan.id,
-      category:   selectedLayanan.kategori.includes('VISIT') ? 'PAKET VISIT' : 'PAKET KLINIK',
+      category:   packageCategoryForKategori(selectedLayanan.kategori) ?? 'PAKET KLINIK',
     })
     if (err || !id) {
       setPkgSaving(false)
@@ -404,6 +413,7 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
                     branchId={target.branchId}
                     selectedLayanan={selectedLayanan}
                     onSelectLayanan={setSelectedLayanan}
+                    categories={['PAKET KLINIK']}
                   />
                 ) : (
                   <>
@@ -421,9 +431,9 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
                     {mode === 'single' && (
                       pkgLoading ? (
                         <div className="h-10 rounded-xl bg-white/5 animate-pulse" />
-                      ) : packages.length > 0 ? (
+                      ) : clinicPackages.length > 0 ? (
                         <ExistingPackagePicker
-                          packages={packages}
+                          packages={clinicPackages}
                           pkgLoading={pkgLoading}
                           selectedPkgId={selectedPkgId}
                           setSelectedPkgId={setSelectedPkg}
@@ -479,7 +489,7 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
           packageName={pendingPayment.packageName}
           jumlahSesi={pendingPayment.jumlahSesi}
           hargaDefault={pendingPayment.harga}
-          category={selectedLayanan?.kategori.includes('VISIT') ? 'PAKET VISIT' : 'PAKET KLINIK'}
+          category={packageCategoryForKategori(selectedLayanan?.kategori) ?? 'PAKET KLINIK'}
           branchId={target.branchId}
           onDone={handlePaymentDone}
         />

@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { EyeOff, RefreshCw, RotateCcw, UserPlus } from 'lucide-react'
-import type { PfotmEntry } from '@/app/actions/pfotm'
+import { EyeOff, List, RefreshCw, RotateCcw, UserPlus } from 'lucide-react'
+import { getPfotmMetricDetail, type PfotmEntry } from '@/app/actions/pfotm'
+import { DRILLDOWN_METRICS } from '@/lib/pfotm/autoMetrics'
+import { MetricDetailModal } from '@/components/metrics/MetricDetailModal'
 import type { BoardRow, PointRule } from '@/lib/pfotm/engine'
 import { btn } from '@/components/payroll/Modal'
-import { avgOf, formatStat, sumOf } from '@/lib/tableStats'
+import { avgOf, belowAvgTest, BELOW_AVG_CLS, formatStat, sumOf } from '@/lib/tableStats'
 
 interface Props {
   entries: PfotmEntry[]
@@ -26,10 +28,18 @@ interface Props {
 export function PfotmInput(p: Props) {
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [wd, setWd] = useState<string | null>(null)
+  const [detail, setDetail] = useState<{ entry: PfotmEntry; rule: PointRule } | null>(null)
   const rules = p.rules.filter((r) => r.is_active !== false)
   const rowByKey = new Map(p.board.map((r) => [r.key, r]))
   const statEntries = p.entries.filter((e) => !e.excluded)
   const metricValue = (e: PfotmEntry, key: string) => Number(e.override_metrics[key] ?? e.auto_metrics[key] ?? 0)
+  // Red cell = worse than the column's Rata-rata. Negative-weight metrics
+  // (Terlambat, Alfa) are "lower is better", so above average is flagged there.
+  const isBelowAvg = new Map(rules.map((r) => [
+    r.metric_key,
+    belowAvgTest(statEntries.map((e) => metricValue(e, r.metric_key)), Number(r.weight) < 0 ? 'lower' : 'higher'),
+  ]))
+  const totalBelowAvg = belowAvgTest(statEntries.map((e) => rowByKey.get(e.id)?.total ?? 0))
 
   function commit(e: PfotmEntry, key: string, raw: string) {
     const k = `${e.id}|${key}`
@@ -95,6 +105,7 @@ export function PfotmInput(p: Props) {
                     const auto = Number(e.auto_metrics[r.metric_key] ?? 0)
                     const over = e.override_metrics[r.metric_key]
                     const value = over ?? auto
+                    const below = !e.excluded && isBelowAvg.get(r.metric_key)!(Number(value))
                     return (
                       <td key={r.metric_key} className="px-1 py-1 text-center">
                         <input
@@ -107,8 +118,18 @@ export function PfotmInput(p: Props) {
                           onFocus={(ev) => ev.target.select()}
                           className={`w-12 h-7 rounded-md text-center font-semibold border focus:outline-none focus:ring-2 focus:ring-primary ${
                             over != null ? 'border-secondary bg-secondary/10' : 'border-transparent bg-muted/40'
-                          }`}
+                          } ${below ? BELOW_AVG_CLS : ''}`}
                         />
+                        {(DRILLDOWN_METRICS as readonly string[]).includes(r.metric_key) && auto > 0 && e.staff_id && (
+                          <button
+                            onClick={() => setDetail({ entry: e, rule: r })}
+                            title="Lihat pasien & tanggal"
+                            aria-label={`Rincian ${r.metric_label} ${e.display_name}`}
+                            className="mx-auto flex items-center gap-0.5 text-[9px] text-primary hover:underline"
+                          >
+                            <List size={9} /> rincian
+                          </button>
+                        )}
                         {over != null && (
                           <div className="flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground">
                             oto {r.source === 'manual' ? '—' : auto}
@@ -118,7 +139,7 @@ export function PfotmInput(p: Props) {
                       </td>
                     )
                   })}
-                  <td className="px-2 text-right font-black text-primary text-sm border-l border-border">{row ? row.total : '—'}</td>
+                  <td className={`px-2 text-right font-black text-primary text-sm border-l border-border ${row && !e.excluded && totalBelowAvg(row.total) ? BELOW_AVG_CLS : ''}`}>{row ? row.total : '—'}</td>
                   <td className="px-2 text-center font-semibold">{row ? `#${row.rank}` : '—'}</td>
                   <td className="px-1">
                     {p.editable && (
@@ -154,10 +175,18 @@ export function PfotmInput(p: Props) {
           )}
         </table>
       </div>
+      {detail && (
+        <MetricDetailModal
+          title={`${detail.rule.metric_label} — ${detail.entry.display_name}`}
+          subtitle="Pasien & tanggal yang dihitung otomatis pada periode ini"
+          load={() => getPfotmMetricDetail(detail.entry.id, detail.rule.metric_key)}
+          onClose={() => setDetail(null)}
+        />
+      )}
       <p className="text-xs text-muted-foreground">
         Jumlah &amp; rata-rata dihitung dari peserta yang ikut peringkat (yang dikeluarkan tidak dihitung).
-        Angka otomatis: Hadir/Terlambat/Alfa dari absensi, Jumlah Kunjungan dari rekam medis yang sudah lengkap, Paket &amp; TA/Sesi Visit dari transaksi masuk LUNAS/DP, Rujukan SM dari kolom &quot;Dirujuk oleh&quot; pasien.
-        Ketik untuk mengoreksi (kuning). Total & peringkat langsung dihitung ulang sebelum disimpan.
+        Angka otomatis: Hadir/Terlambat/Alfa dari absensi, Jumlah Kunjungan = kunjungan hadir (aturan sama dengan Progress Target, tanpa sport massage), Paket &amp; TA/Sesi Visit dari transaksi masuk LUNAS/DP, Rujukan SM dari kolom &quot;Dirujuk oleh&quot; pasien.
+        Klik &quot;rincian&quot; untuk melihat pasien &amp; tanggal. Ketik untuk mengoreksi (kuning). Merah = di bawah rata-rata kolom (untuk Terlambat/Alfa: di atas rata-rata). Total & peringkat langsung dihitung ulang sebelum disimpan.
       </p>
     </div>
   )

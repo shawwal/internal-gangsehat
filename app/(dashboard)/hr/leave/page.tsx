@@ -7,12 +7,15 @@ import { logActivity } from '@/lib/activityLog'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { CardListSkeleton } from '@/components/ui/Skeleton'
+import { LeaveTypeBadge } from '@/components/leave/LeaveTypeBadge'
+import { leaveTypeLabel } from '@/components/leave/types'
 
 interface LeaveRow {
   id: string
   branch_id: string
   start_date: string
   end_date: string
+  leave_type: string | null
   reason: string
   proof_url: string | null
   status: 'pending' | 'approved' | 'rejected'
@@ -139,7 +142,7 @@ export default function HRLeavePage() {
     const { data: { user } } = await supabase.auth.getUser()
     let q = supabase
       .from('leave_requests')
-      .select('id, branch_id, start_date, end_date, reason, status, rejection_note, proof_url, created_at, internal_profiles!staff_id(full_name, email)')
+      .select('id, branch_id, start_date, end_date, leave_type, reason, status, rejection_note, proof_url, created_at, internal_profiles!staff_id(full_name, email)')
       .order('created_at', { ascending: false })
     if (user) {
       const { data: prof } = await supabase.from('internal_profiles').select('branch_id').eq('id', user.id).single()
@@ -222,6 +225,7 @@ export default function HRLeavePage() {
     { header: 'Tgl Mulai',         value: (r) => r.start_date },
     { header: 'Tgl Selesai',       value: (r) => r.end_date },
     { header: 'Jumlah Hari',       value: (r) => dayCount(r.start_date, r.end_date) },
+    { header: 'Jenis Izin',        value: (r) => leaveTypeLabel(r.leave_type) },
     { header: 'Alasan',            value: (r) => r.reason },
     { header: 'Status',            value: (r) => STATUS_LABEL[r.status] },
     { header: 'Catatan Penolakan', value: (r) => r.rejection_note ?? '' },
@@ -230,7 +234,7 @@ export default function HRLeavePage() {
   function handleExportLeave() {
     const today = new Date().toISOString().slice(0, 10)
     const suffix = activeTab !== 'all' ? `_${activeTab}` : ''
-    exportToExcel(filtered, LEAVE_COLS, `cuti${suffix}_${today}`)
+    exportToExcel(filtered, LEAVE_COLS, `perizinan${suffix}_${today}`)
     return Promise.resolve()
   }
 
@@ -239,8 +243,8 @@ export default function HRLeavePage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Pengajuan Cuti</h1>
-          <p className="text-sm text-muted-foreground">Tinjau dan kelola permintaan cuti staff</p>
+          <h1 className="text-xl font-semibold text-foreground">Perizinan Staff</h1>
+          <p className="text-sm text-muted-foreground">Tinjau dan kelola permintaan izin staff</p>
         </div>
         {!loading && requests.length > 0 && (
           <ExportButton onExport={handleExportLeave} />
@@ -290,9 +294,9 @@ export default function HRLeavePage() {
             <CalendarOff size={22} className="text-primary" />
           </div>
           <p className="text-sm font-medium text-foreground">
-            {activeTab === 'all' ? 'Belum ada pengajuan cuti' : `Tidak ada cuti "${STATUS_LABEL[activeTab]}"`}
+            {activeTab === 'all' ? 'Belum ada pengajuan izin' : `Tidak ada izin "${STATUS_LABEL[activeTab]}"`}
           </p>
-          <p className="text-xs text-muted-foreground">Pengajuan cuti dari staff akan muncul di sini.</p>
+          <p className="text-xs text-muted-foreground">Pengajuan izin dari staff akan muncul di sini.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -322,7 +326,8 @@ export default function HRLeavePage() {
                         </p>
                       </div>
 
-                      {/* Reason */}
+                      {/* Type + reason */}
+                      <div className="mt-1.5"><LeaveTypeBadge type={r.leave_type} /></div>
                       <p className="text-sm text-foreground mt-1">{r.reason}</p>
 
                       {/* Proof */}

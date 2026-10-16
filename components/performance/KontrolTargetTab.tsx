@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchConfirmedVisitIds } from '@/lib/internal/paymentGating'
+import { getEffectivePackageServiceType } from '@/lib/serviceType'
 import { TargetKpiCard } from './TargetKpiCard'
 import { FisioBarChart } from './FisioBarChart'
 import { RecentVisitsTable } from './RecentVisitsTable'
@@ -10,7 +11,7 @@ import { KpiDetailModal, type KpiDetailRow } from './KpiDetailModal'
 import { KpiSkeleton, ChartSkeleton, TableSkeleton } from './Skeletons'
 import {
   MONTHS, CURRENT_MONTH, YEARS, VISIT_STATUS_FILTER, TODAY_ISO,
-  TA_TYPES, PAKET_TYPES, classifyServiceType, isAttended, firstPackageVisits,
+  PAKET_TYPES, classifyServiceType, isAttended, firstPackageVisits,
   getMonthRange, getWeekRangeInMonth, getMonthsInRange, addDaysISO, formatDateShort,
 } from './utils'
 import type {
@@ -109,11 +110,17 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
   // confirmed payment behind them.
   const attended = visits.filter(v => isAttended(v, TODAY_ISO))
   const paidAttended = attended.filter(v => paidVisitIds.has(v.id))
-  const paketAttended = paidAttended.filter(v => (PAKET_TYPES as readonly string[]).includes(v.service_type ?? ''))
+  // package_id is the source of truth — package sessions may be stored as SESI TERAPI/SESI VISIT.
+  const effType = (v: VisitRow) => getEffectivePackageServiceType(v.service_type, v.package_id) ?? ''
+  const paketAttended = paidAttended.filter(v => (PAKET_TYPES as readonly string[]).includes(effType(v)))
 
-  const taVisits      = paidAttended.filter(v => (TA_TYPES as readonly string[]).includes(v.service_type ?? ''))
-  const paketVisits   = firstPackageVisits(paketAttended)
-  const visitVisits   = firstPackageVisits(paketAttended.filter(v => v.service_type === 'PAKET VISIT'))
+  // TA target = clinic TA only. TA VISIT belongs to the Visit target (with PAKET VISIT).
+  const taVisits      = paidAttended.filter(v => v.service_type === 'TERAPI AWAL')
+  const paketVisits   = firstPackageVisits(paketAttended.filter(v => effType(v) === 'PAKET TERAPI'))
+  const visitVisits   = [
+    ...paidAttended.filter(v => v.service_type === 'TA VISIT'),
+    ...firstPackageVisits(paketAttended.filter(v => effType(v) === 'PAKET VISIT')),
+  ]
 
   const actualTA     = taVisits.length
   const actualPaket  = paketVisits.length
@@ -135,7 +142,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
     if (!v.attending_staff_id) continue
     const name = (v.internal_profiles as any)?.full_name ?? 'Unknown'
     const cur = fisioMap.get(v.attending_staff_id) ?? { fullName: name, ta: 0 }
-    if ((TA_TYPES as readonly string[]).includes(v.service_type ?? '') && paidVisitIds.has(v.id)) {
+    if (v.service_type === 'TERAPI AWAL' && paidVisitIds.has(v.id)) {
       fisioMap.set(v.attending_staff_id, { ...cur, ta: cur.ta + 1 })
     } else if (!fisioMap.has(v.attending_staff_id)) {
       fisioMap.set(v.attending_staff_id, cur)
@@ -242,7 +249,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
           <TargetKpiCard label="Terapi Awal"       actual={actualTA}        target={targetTA}        color="var(--primary)"    delay={0}   onClick={() => setOpenKpi('ta')} />
           <TargetKpiCard label="Paket Masuk"       actual={actualPaket}     target={targetPaket}     color="var(--chart-4)"   delay={80}  onClick={() => setOpenKpi('paket')} />
           <TargetKpiCard label="Jumlah Kunjungan"  actual={actualKunjungan} target={targetKunjungan} color="var(--secondary)"  delay={160} onClick={() => setOpenKpi('kunjungan')} />
-          <TargetKpiCard label="Paket Visit"       actual={actualVisit}     target={targetVisit}     color="var(--destructive)" delay={240} onClick={() => setOpenKpi('visit')} />
+          <TargetKpiCard label="Visit (TA + Paket)" actual={actualVisit}     target={targetVisit}     color="var(--destructive)" delay={240} onClick={() => setOpenKpi('visit')} />
         </div>
       )}
 
@@ -263,7 +270,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
         title={
           openKpi === 'ta' ? 'Terapi Awal' :
           openKpi === 'paket' ? 'Paket Masuk' :
-          openKpi === 'visit' ? 'Paket Visit' : 'Jumlah Kunjungan'
+          openKpi === 'visit' ? 'Visit (TA + Paket)' : 'Jumlah Kunjungan'
         }
         periodLabel={periodLabel}
         rows={

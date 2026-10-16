@@ -11,7 +11,9 @@ import { logActivity } from '@/lib/activityLog'
 import { buildPeriodDays, countWorkdays, MONTH_NAMES } from '@/lib/payroll/period'
 import { codeFromRow, rowFromCode, type AttendanceDbRow } from '@/lib/payroll/attendance'
 import { pickCompensation } from '@/lib/payroll/engine'
-import { computeAutoActivity, VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
+import { computeAutoActivity, payrollActivityHits, VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
+import type { MetricDetail } from '@/lib/metrics/achievement'
+import { resolvePatientNames } from '@/lib/metrics/patientNames'
 import {
   computeWorkspaceRows, type ActivityCell, type PayrollWorkspace, type SlipRecord, type WorkspaceAdjustment,
   type WorkspaceSettings, type WorkspaceStaff,
@@ -200,7 +202,8 @@ export async function getPayrollBootstrap(): Promise<Result<{
   const actor = await getActor(VIEW_ROLES)
   if (isErr(actor)) return actor
   let q = actor.supabase.from('branches').select('id, name').eq('is_active', true).order('name')
-  if (actor.role !== 'director') {
+  // Director and HR (migration 107) work on every branch; others stay on their own.
+  if (actor.role !== 'director' && actor.role !== 'hr') {
     if (!actor.branchId) return fail('Akun Anda belum terhubung ke cabang.')
     q = q.eq('id', actor.branchId)
   }
@@ -530,6 +533,53 @@ export async function saveAttendanceCells(periodId: string, cells: AttendanceCel
 
 // ── Activity counts (AUTO INS / INS) ────────────────────────────────────────
 
+/** Visits behind the auto activity counts (shared by refresh + drill-down). */
+async function loadActivityInput(
+  period: { start_date: string; end_date: string }, staffIds: string[], autoTypes: ActivityType[],
+): Promise<Parameters<typeof payrollActivityHits>[0]> {
+  const serviceTypes = [...new Set(autoTypes.flatMap((t) => t.source_service_types))]
+  // Visits are read with the service role: the period (and its bound staff)
+  // already passed RLS above, and HR — which prepares payroll for every branch
+  // (migration 107) — has no patient_visits access of its own. Same rows the
+  // director sees.
+  const admin = createAdminClient()
+  const { data: visits, error } = await admin
+    .from('patient_visits')
+    .select(VISIT_FOR_PAYROLL_COLUMNS)
+    .in('attending_staff_id', staffIds)
+    .in('service_type', serviceTypes)
+    .in('status', ['scheduled', 'completed'])
+    .gte('visit_date', period.start_date)
+    .lte('visit_date', period.end_date)
+    .limit(20000)
+  if (error) throw new Error(error.message)
+  const periodVisits = (visits ?? []) as VisitForPayroll[]
+
+  // Earliest attended session of every package seen this period, to credit each
+  // package sale exactly once (in the period its first session falls in).
+  const today = todayJakarta()
+  const packageIds = [...new Set(periodVisits.map((v) => v.package_id).filter((x): x is string => !!x))]
+  const firstPackageVisit = new Map<string, VisitForPayroll>()
+  for (let i = 0; i < packageIds.length; i += 300) {
+    const { data: pv } = await admin
+      .from('patient_visits')
+      .select(VISIT_FOR_PAYROLL_COLUMNS)
+      .in('package_id', packageIds.slice(i, i + 300))
+      .in('status', ['scheduled', 'completed'])
+      .lte('visit_date', period.end_date)
+      .order('visit_date', { ascending: true })
+    for (const v of (pv ?? []) as VisitForPayroll[]) {
+      if (!v.package_id || firstPackageVisit.has(v.package_id)) continue
+      if (v.kehadiran === 'HADIR' || (v.kehadiran == null && v.visit_date < today)) firstPackageVisit.set(v.package_id, v)
+    }
+  }
+
+  return {
+    types: autoTypes, periodVisits, firstPackageVisit, staffIds,
+    start: period.start_date, end: period.end_date, todayISO: today,
+  }
+}
+
 async function refreshActivityFor(supabase: ServerClient, periodId: string, userId: string): Promise<Result<{ updated: number }>> {
   const period = await loadPeriod(supabase, periodId)
   if (!period) return fail('Periode tidak ditemukan.')
@@ -543,42 +593,12 @@ async function refreshActivityFor(supabase: ServerClient, periodId: string, user
   const autoTypes = types.filter((t) => t.is_active && t.count_mode !== 'manual' && t.source_service_types.length)
   if (!staffIds.length || !autoTypes.length) return ok({ updated: 0 })
 
-  const serviceTypes = [...new Set(autoTypes.flatMap((t) => t.source_service_types))]
-  const { data: visits, error } = await supabase
-    .from('patient_visits')
-    .select(VISIT_FOR_PAYROLL_COLUMNS)
-    .in('attending_staff_id', staffIds)
-    .in('service_type', serviceTypes)
-    .in('status', ['scheduled', 'completed'])
-    .gte('visit_date', period.start_date)
-    .lte('visit_date', period.end_date)
-    .limit(20000)
-  if (error) return fail(error.message)
-  const periodVisits = (visits ?? []) as VisitForPayroll[]
-
-  // Earliest attended session of every package seen this period, to credit each
-  // package sale exactly once (in the period its first session falls in).
-  const today = todayJakarta()
-  const packageIds = [...new Set(periodVisits.map((v) => v.package_id).filter((x): x is string => !!x))]
-  const firstPackageVisit = new Map<string, VisitForPayroll>()
-  for (let i = 0; i < packageIds.length; i += 300) {
-    const { data: pv } = await supabase
-      .from('patient_visits')
-      .select(VISIT_FOR_PAYROLL_COLUMNS)
-      .in('package_id', packageIds.slice(i, i + 300))
-      .in('status', ['scheduled', 'completed'])
-      .lte('visit_date', period.end_date)
-      .order('visit_date', { ascending: true })
-    for (const v of (pv ?? []) as VisitForPayroll[]) {
-      if (!v.package_id || firstPackageVisit.has(v.package_id)) continue
-      if (v.kehadiran === 'HADIR' || (v.kehadiran == null && v.visit_date < today)) firstPackageVisit.set(v.package_id, v)
-    }
+  let counts: Record<string, Record<string, number>>
+  try {
+    counts = computeAutoActivity(await loadActivityInput(period, staffIds, autoTypes))
+  } catch (e) {
+    return fail((e as Error).message)
   }
-
-  const counts = computeAutoActivity({
-    types: autoTypes, periodVisits, firstPackageVisit, staffIds,
-    start: period.start_date, end: period.end_date, todayISO: today,
-  })
 
   const rows = staffIds.flatMap((staffId) =>
     autoTypes.map((t) => ({
@@ -608,6 +628,38 @@ export async function refreshAutoActivity(periodId: string): Promise<Result<{ up
     })
   }
   return res
+}
+
+/** Patient + date list behind one auto activity cell; its length equals the auto value. */
+export async function getPayrollActivityDetail(periodId: string, staffId: string, code: string): Promise<Result<MetricDetail>> {
+  const actor = await getActor(VIEW_ROLES)
+  if (isErr(actor)) return actor
+  const { supabase } = actor
+  const period = await loadPeriod(supabase, periodId)
+  if (!period) return fail('Periode tidak ditemukan.')
+  const [types, { data: cell }] = await Promise.all([
+    loadActivityTypes(supabase),
+    supabase.from('payroll_activity_counts').select('override_qty')
+      .eq('period_id', periodId).eq('staff_id', staffId).eq('activity_code', code).maybeSingle(),
+  ])
+  const type = types.find((t) => t.code === code)
+  if (!type || type.count_mode === 'manual' || !type.source_service_types.length) return fail('Aktivitas ini diisi manual — tidak ada rincian.')
+  try {
+    const hits = payrollActivityHits(await loadActivityInput(period, [staffId], [type]))
+      .sort((a, b) => a.visit.visit_date.localeCompare(b.visit.visit_date))
+    const names = await resolvePatientNames(hits.map((h) => h.visit.patient_id))
+    return ok({
+      rows: hits.map((h) => ({
+        date: h.visit.visit_date,
+        patientName: (h.visit.patient_id && names.get(h.visit.patient_id)) || '—',
+        label: h.visit.service_type,
+      })),
+      auto: hits.length,
+      override: cell?.override_qty ?? null,
+    })
+  } catch (e) {
+    return fail((e as Error).message)
+  }
 }
 
 export async function setActivityOverride(

@@ -15,7 +15,7 @@ import { RowsSkeleton } from '@/components/ui/Skeleton'
 
 const KATEGORI_OPTIONS = [
   'TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK',
-  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
+  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'PAKET SPORT MASSAGE', 'LAINNYA',
 ]
 
 function fmt(n: number) {

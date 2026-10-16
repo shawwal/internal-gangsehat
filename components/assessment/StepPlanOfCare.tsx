@@ -43,11 +43,11 @@ export function StepPlanOfCare({ value, onChange, readOnly }: Props) {
       </div>
 
       <div>
-        <label className={labelCls}>Treatment Plan for Today</label>
+        <label className={labelCls}>Physiotherapist Recommendation</label>
         <RichTextEditor
           value={value.treatment_plan_today}
           onChange={(html) => onChange({ treatment_plan_today: html })}
-          placeholder="What specific interventions were performed today?"
+          placeholder="Rekomendasi fisioterapis untuk pasien (latihan, aktivitas, program lanjutan)..."
           readOnly={readOnly}
         />
       </div>

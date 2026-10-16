@@ -2,17 +2,19 @@
 // Pure — the server action does the querying and hands rows in.
 
 import type { ActivityType } from './types'
-import { isRegioRequired } from '@/lib/visitRouting'
+import { visitAttended } from '@/lib/metrics/achievement'
+
+export { visitAttended }
 
 export interface VisitForPayroll {
   id: string
+  patient_id?: string
   attending_staff_id: string | null
   service_type: string | null
   layanan_id: string | null
   visit_date: string
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
   package_id: string | null
-  // Medical-record fields — session counts only credit complete records.
   status?: string | null
   diagnosis?: string | null
   treatment?: string | null
@@ -21,28 +23,7 @@ export interface VisitForPayroll {
 
 /** Columns to select from patient_visits for VisitForPayroll rows. */
 export const VISIT_FOR_PAYROLL_COLUMNS =
-  'id, attending_staff_id, service_type, layanan_id, visit_date, kehadiran, package_id, status, diagnosis, treatment, regio'
-
-/**
- * Same convention as the performance dashboards (components/performance/utils
- * isAttended): explicit HADIR counts; an unmarked visit counts only once its
- * date has passed.
- */
-export function visitAttended(v: Pick<VisitForPayroll, 'kehadiran' | 'visit_date'>, todayISO: string): boolean {
-  if (v.kehadiran === 'HADIR') return true
-  return v.kehadiran == null && v.visit_date < todayISO
-}
-
-/**
- * "Lengkap" on the Rekam Medis page (app/actions/medicalRecords.ts): a
- * completed visit with diagnosis + treatment, plus regio for TERAPI AWAL /
- * TA VISIT. Visit counts for incentives and PFOTM only credit these.
- */
-export function isRecordComplete(v: Pick<VisitForPayroll, 'status' | 'diagnosis' | 'treatment' | 'regio' | 'service_type' | 'kehadiran'>): boolean {
-  if (v.status !== 'completed' || v.kehadiran === 'TIDAK HADIR') return false
-  if (!v.diagnosis || !v.treatment) return false
-  return !isRegioRequired(v.service_type) || !!v.regio
-}
+  'id, patient_id, attending_staff_id, service_type, layanan_id, visit_date, kehadiran, package_id, status, diagnosis, treatment, regio'
 
 function matchesType(t: ActivityType, v: VisitForPayroll): boolean {
   if (!v.service_type || !t.source_service_types.includes(v.service_type)) return false
@@ -50,12 +31,23 @@ function matchesType(t: ActivityType, v: VisitForPayroll): boolean {
   return true
 }
 
+/** One counted unit: +1 on `code` for `staff_id`, from `visit`. */
+export interface PayrollActivityHit {
+  staff_id: string
+  code: string
+  visit: VisitForPayroll
+}
+
 /**
+ * Every counted unit. Session mode counts each attended visit — the same rule
+ * as Target Progress "Kunjungan" (lib/metrics/achievement.ts), no longer gated
+ * on a complete medical record — so the activity columns reconcile with it.
+ *
  * @param periodVisits      visits dated inside the period
  * @param firstPackageVisit earliest attended visit of each package seen in the period
  *                          (may lie before the period — then the sale belongs to an earlier period)
  */
-export function computeAutoActivity(params: {
+export function payrollActivityHits(params: {
   types: ActivityType[]
   periodVisits: VisitForPayroll[]
   firstPackageVisit: Map<string, VisitForPayroll>
@@ -63,21 +55,18 @@ export function computeAutoActivity(params: {
   start: string
   end: string
   todayISO: string
-}): Record<string, Record<string, number>> {
+}): PayrollActivityHit[] {
   const { types, periodVisits, firstPackageVisit, staffIds, start, end, todayISO } = params
   const staff = new Set(staffIds)
-  const out: Record<string, Record<string, number>> = {}
-  const bump = (staffId: string, code: string) => {
-    out[staffId] ??= {}
-    out[staffId][code] = (out[staffId][code] ?? 0) + 1
-  }
+  const hits: PayrollActivityHit[] = []
+  const bump = (staffId: string, code: string, visit: VisitForPayroll) => { hits.push({ staff_id: staffId, code, visit }) }
 
   const attended = periodVisits.filter((v) => v.attending_staff_id && staff.has(v.attending_staff_id) && visitAttended(v, todayISO))
 
   for (const t of types) {
     if (!t.is_active || t.count_mode === 'manual' || t.source_service_types.length === 0) continue
     if (t.count_mode === 'session') {
-      for (const v of attended) if (matchesType(t, v) && isRecordComplete(v)) bump(v.attending_staff_id!, t.code)
+      for (const v of attended) if (matchesType(t, v)) bump(v.attending_staff_id!, t.code, v)
       continue
     }
     // package: one sale per package, credited to whoever ran its first attended
@@ -86,7 +75,7 @@ export function computeAutoActivity(params: {
     for (const v of attended) {
       if (!matchesType(t, v)) continue
       if (!v.package_id) {
-        bump(v.attending_staff_id!, t.code) // legacy visit without a package row
+        bump(v.attending_staff_id!, t.code, v) // legacy visit without a package row
         continue
       }
       if (counted.has(v.package_id)) continue
@@ -94,8 +83,17 @@ export function computeAutoActivity(params: {
       const first = firstPackageVisit.get(v.package_id) ?? v
       if (first.visit_date < start || first.visit_date > end) continue
       if (!first.attending_staff_id || !staff.has(first.attending_staff_id)) continue
-      bump(first.attending_staff_id, t.code)
+      bump(first.attending_staff_id, t.code, first)
     }
+  }
+  return hits
+}
+
+export function computeAutoActivity(params: Parameters<typeof payrollActivityHits>[0]): Record<string, Record<string, number>> {
+  const out: Record<string, Record<string, number>> = {}
+  for (const h of payrollActivityHits(params)) {
+    out[h.staff_id] ??= {}
+    out[h.staff_id][h.code] = (out[h.staff_id][h.code] ?? 0) + 1
   }
   return out
 }

@@ -129,7 +129,7 @@ export async function generateAssessmentPdf(visit: VisitWithPatient, assessment:
       <div class="section-title">6. Plan of Care &amp; Goals</div>
       ${pdfField('Short-Term Goals', assessment.short_term_goals)}
       ${pdfField('Long-Term Goals', assessment.long_term_goals)}
-      ${pdfField('Treatment Plan for Today', assessment.treatment_plan_today)}
+      ${pdfField('Physiotherapist Recommendation', assessment.treatment_plan_today)}
     </div>
 
     <div class="sigs">

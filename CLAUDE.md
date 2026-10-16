@@ -21,7 +21,7 @@ Enum: `director | finance | hr | marketing | staff | therapist | manager | admin
 |-----------|-----------------|--------------|-------------------|--------------|--------------|
 | director  | all             | all          | all               | all          | yes          |
 | finance   | read (own)      | full (own)   | —                 | —            | no           |
-| hr        | —               | —            | full (own)        | —            | no           |
+| hr        | —               | —            | full (own); payroll + attendance all branches (mig 107) | — | payroll only |
 | marketing | —               | —            | —                 | full (own)   | no           |
 | therapist | visits (own br) | —            | own only          | —            | no           |
 | manager   | all (own br)    | all (own br) | all (own br)      | all (own br) | no           |
@@ -71,7 +71,7 @@ DOKU Checkout (hosted page; merchant shared with human-atlas/bansa-web). Code: `
 | Table | Key columns |
 |-------|-------------|
 | `attendance` | staff_id, branch_id, date, check_in, check_out, status(present/absent/late/leave/sick), notes, recorded_by — UNIQUE(staff_id, date) |
-| `leave_requests` | staff_id, branch_id, start_date, end_date, reason, proof_url, status(pending/approved/rejected), rejection_note, reviewed_by |
+| `leave_requests` | staff_id, branch_id, start_date, end_date, leave_type(TUGAS/TERLAMBAT/CUTI/SAKIT/TUKAR SHIFT/TUKAR OFF/IZIN BELAJAR — label only, migration 106), reason, proof_url, status(pending/approved/rejected), rejection_note, reviewed_by |
 | `staff_targets` | staff_id, branch_id, bulan(1-12), tahun, target_ta, target_paket_klinik, target_kunjungan, target_visit, status(pending/approved/rejected) — UNIQUE(staff_id, bulan, tahun) |
 
 ### Payroll (migration 095 — replaces `payroll_records` / `salary_settings` / `employee_salaries`)
@@ -91,6 +91,9 @@ Engine: `lib/payroll/engine.ts` (pure, tested against the Excel in `reference/`)
 
 ### PFOTM leaderboard (migration 096)
 `pfotm_point_rules` (metric_key, weight — never hardcode weights), `pfotm_periods` (is_locked, rules_snapshot), `pfotm_entries` (auto_metrics, override_metrics; metrics/total_points/rank/kpis frozen at lock). `patients.referred_by_staff_id` feeds Rujukan SM. Engine: `lib/pfotm/engine.ts`. Only director may edit/unlock a locked period.
+
+### Achievement counting — one rule (`lib/metrics/achievement.ts`)
+Target Progress (branch), PFOTM and payroll auto-activity (per therapist) share it: Kunjungan = visit status scheduled/completed, not SPORT MASSAGE, attended (HADIR, or unmarked and past) — no record-completeness gate; sales = income, not rejected, payment_status LUNAS/DP. Engines emit dated "hits" (`pfotmHits`, `payrollActivityHits`) that drive the counts, the drill-down lists (`MetricDetailModal`) and the PFOTM daily bump chart, so a number and its list never disagree. Target Progress has a "Periode gaji" toggle (payroll window via `getPayrollWindow`) to compare 1:1.
 
 ### Toko (shop) — migrations 068, 103
 Tables keep historical `griya_` names but serve **every branch** (scoped by branch_id): `griya_products` (stock), `griya_sales` (status completed/void/**pending_payment**, payment_method incl. `DOKU QRIS`/`DOKU VA`, transaction_id), `griya_sale_items`, `griya_stock_movements`. RPCs: `griya_create_sale(p jsonb)` (atomic stock decrement; optional `status`), `toko_move_sale_stock(sale, ±1, reason, user)` (atomic restock / re-deduct). Pages: `/toko` (fisioterapi, nav key `toko`) and `/griya-anak/toko` (Griya flag-gated) share `components/toko/` (`TokoWorkspace`, Kasir/Produk/Riwayat) and `app/actions/toko.ts`. Every completed sale = one income `transactions` row, category **TOKO** → all finance views. Online sale: sale `pending_payment` (stock reserved) + `payment_links.toko_sale_id`; settle (`lib/doku/settle.ts`) inserts the TOKO transaction and completes the sale on paid; expiry/cancel → `releaseTokoSale` voids + restocks.
@@ -112,7 +115,11 @@ get_my_branch()        → uuid   -- branch_id of auth.uid(); NULL for director
 
 **Service types** (`patient_visits.service_type`): `TERAPI AWAL` | `SESI TERAPI` | `PAKET TERAPI` | `TA VISIT` | `SESI VISIT` | `PAKET VISIT` | `SPORT MASSAGE` | `LAINNYA`
 
-**Income categories**: `TA KLINIK` | `PAKET KLINIK` | `SESI KLINIK` | `TA VISIT` | `SESI VISIT` | `PAKET VISIT` | `SPORT MASSAGE` | `LAINNYA`
+**Income categories**: `TA KLINIK` | `PAKET KLINIK` | `SESI KLINIK` | `TA VISIT` | `SESI VISIT` | `PAKET VISIT` | `SPORT MASSAGE` | `PAKET SPORT MASSAGE` | `LAINNYA`
+
+**Package categories** (`patient_packages.category`, migration 105): `PAKET KLINIK` | `PAKET VISIT` | `PAKET SPORT MASSAGE` — use `PACKAGE_CATEGORIES` / `packageCategoryForKategori()` in `lib/serviceType.ts`, never hardcode. Paying a visit with a package tariff in `PaymentDialog` creates the package (`createPackageForVisit`).
+
+**Targets**: TA target = `TERAPI AWAL`/`TA KLINIK` only; Visit target = `TA VISIT` + `PAKET VISIT`.
 
 **Expense categories**: `BEBAN PELAYANAN` | `GAJI` | `SEWA` | `LISTRIK` | `MARKETING` | `TUKAR TUNAI` | `LAINNYA`
 

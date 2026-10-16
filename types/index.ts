@@ -465,7 +465,7 @@ export interface PatientPackage {
   mulai_paket: 'NEW' | 'EXT.' | null
   operational_status: PackageOperationalStatus
   completion_status: PackageCompletionStatus | null
-  category: 'PAKET KLINIK' | 'PAKET VISIT' | null
+  category: 'PAKET KLINIK' | 'PAKET VISIT' | 'PAKET SPORT MASSAGE' | null
   order_id: string | null
   purchased_at: string
   stopped_at: string | null

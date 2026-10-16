@@ -2,11 +2,13 @@ import { CalendarOff, CalendarRange, PlusCircle, XCircle } from 'lucide-react'
 import { ProofDialog } from './ProofDialog'
 import { STATUS_LABEL, STATUS_COLOR, STATUS_BORDER, formatDate, dayCount } from './types'
 import type { StatusFilter } from './types'
+import { LeaveTypeBadge } from './LeaveTypeBadge'
 
 interface LeaveRow {
   id: string
   start_date: string
   end_date: string
+  leave_type?: string | null
   reason: string
   proof_url: string | null
   status: 'pending' | 'approved' | 'rejected'
@@ -64,11 +66,11 @@ export function MyLeaveList({ requests, activeTab, pendingCount, onTabChange, on
             <CalendarOff size={22} className="text-primary" />
           </div>
           <p className="text-sm font-medium text-foreground">
-            {activeTab === 'all' ? 'Belum ada pengajuan cuti' : `Tidak ada cuti "${STATUS_LABEL[activeTab]}"`}
+            {activeTab === 'all' ? 'Belum ada pengajuan izin' : `Tidak ada izin "${STATUS_LABEL[activeTab]}"`}
           </p>
           <p className="text-xs text-muted-foreground text-center">
             {activeTab === 'all'
-              ? 'Klik "Ajukan Cuti" untuk memulai pengajuan pertama Anda.'
+              ? 'Klik "Ajukan Izin" untuk memulai pengajuan pertama Anda.'
               : 'Coba pilih tab filter yang lain.'}
           </p>
           {activeTab === 'all' && (
@@ -76,7 +78,7 @@ export function MyLeaveList({ requests, activeTab, pendingCount, onTabChange, on
               onClick={onRequestLeave}
               className="mt-1 flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
             >
-              <PlusCircle size={14} /> Ajukan Cuti
+              <PlusCircle size={14} /> Ajukan Izin
             </button>
           )}
         </div>
@@ -97,6 +99,7 @@ export function MyLeaveList({ requests, activeTab, pendingCount, onTabChange, on
                     <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                       {dayCount(r.start_date, r.end_date)} hari
                     </span>
+                    <LeaveTypeBadge type={r.leave_type} />
                   </div>
 
                   <p className="text-sm text-foreground leading-relaxed">{r.reason}</p>

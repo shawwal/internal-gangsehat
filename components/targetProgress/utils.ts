@@ -1,4 +1,4 @@
-import { isAttended } from '@/components/performance/utils'
+import { countsAsKunjungan } from '@/lib/metrics/achievement'
 import { TRANSACTION_CATEGORY_MAP } from './types'
 import type { DailyCounts, VisitForProgress, TransactionForProgress } from './types'
 
@@ -11,23 +11,30 @@ export function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate()
 }
 
-// Kunjungan comes from patient_visits attendance alone (kehadiran), unconditionally —
-// no payment gating at all.
-export function buildDailyCounts(visits: VisitForProgress[], days: number): DailyCounts {
-  const daily: DailyCounts = {
-    ta: Array(days).fill(0),
-    paket_klinik: Array(days).fill(0),
-    kunjungan: Array(days).fill(0),
-    paket_visit: Array(days).fill(0),
-    sesi: Array(days).fill(0),
+function emptyDaily(n: number): DailyCounts {
+  return {
+    ta: Array(n).fill(0),
+    paket_klinik: Array(n).fill(0),
+    kunjungan: Array(n).fill(0),
+    paket_visit: Array(n).fill(0),
+    sesi: Array(n).fill(0),
   }
+}
 
+const todayISO = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date())
+
+// Kunjungan: lib/metrics/achievement countsAsKunjungan — the same rule PFOTM and
+// payroll use per therapist. `dates` is the window's day list (calendar month
+// or payroll period); index i of every array is dates[i].
+export function buildDailyCounts(visits: VisitForProgress[], dates: string[]): DailyCounts {
+  const daily = emptyDaily(dates.length)
+  const index = new Map(dates.map((d, i) => [d, i]))
+  const today = todayISO()
   for (const v of visits) {
-    const day = Number(v.visit_date.slice(8, 10))
-    if (!day || day < 1 || day > days) continue
-    if (isAttended(v)) daily.kunjungan[day - 1] += 1
+    const i = index.get(v.visit_date)
+    if (i === undefined) continue
+    if (countsAsKunjungan(v, today)) daily.kunjungan[i] += 1
   }
-
   return daily
 }
 
@@ -35,23 +42,16 @@ export function buildDailyCounts(visits: VisitForProgress[], days: number): Dail
 // income row with payment_status LUNAS or DP = one countable event (the caller
 // already filtered for that). Excluding PELUNASAN rows is what keeps a single
 // package/session from being counted twice when it's settled in installments.
-export function buildTransactionDailyCounts(transactions: TransactionForProgress[], days: number): DailyCounts {
-  const daily: DailyCounts = {
-    ta: Array(days).fill(0),
-    paket_klinik: Array(days).fill(0),
-    kunjungan: Array(days).fill(0),
-    paket_visit: Array(days).fill(0),
-    sesi: Array(days).fill(0),
-  }
-
+export function buildTransactionDailyCounts(transactions: TransactionForProgress[], dates: string[]): DailyCounts {
+  const daily = emptyDaily(dates.length)
+  const index = new Map(dates.map((d, i) => [d, i]))
   for (const t of transactions) {
     const key = TRANSACTION_CATEGORY_MAP[t.category]
     if (!key) continue
-    const day = Number(t.transaction_date.slice(8, 10))
-    if (!day || day < 1 || day > days) continue
-    daily[key][day - 1] += 1
+    const i = index.get(t.transaction_date)
+    if (i === undefined) continue
+    daily[key][i] += 1
   }
-
   return daily
 }
 

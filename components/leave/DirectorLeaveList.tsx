@@ -35,11 +35,11 @@ export function DirectorLeaveList({
           <CalendarOff size={22} className="text-primary" />
         </div>
         <p className="text-sm font-medium text-foreground">
-          {totalStats === 0 ? 'Belum ada pengajuan cuti' : 'Tidak ada hasil yang cocok'}
+          {totalStats === 0 ? 'Belum ada pengajuan izin' : 'Tidak ada hasil yang cocok'}
         </p>
         <p className="text-xs text-muted-foreground text-center">
           {totalStats === 0
-            ? 'Pengajuan cuti dari staff semua cabang akan muncul di sini.'
+            ? 'Pengajuan izin dari staff semua cabang akan muncul di sini.'
             : 'Coba ubah kata kunci pencarian atau filter.'}
         </p>
       </div>

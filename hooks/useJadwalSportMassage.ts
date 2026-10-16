@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { fetchDailyVisits, updateVisitStatus, deleteVisit } from '@/app/actions/jadwal'
+import { fetchDailyVisits, updateVisitStatus, updateVisit, deleteVisit } from '@/app/actions/jadwal'
 import { toIso, toHariIndonesia, getMondayOf } from '@/components/jadwal/utils'
 import { getWeekGroupForDate } from '@/lib/schedule/weekGroup'
 import type { DayStaffEntry, PendingLeaveInfo } from '@/components/jadwal/types'
@@ -322,6 +322,21 @@ export function useJadwalSportMassage() {
     deleteVisit(visitId)
   }
 
+  // Reassign a visit to another therapist and/or time — same as jadwal-harian.
+  async function handleMoveVisit(
+    visitId: string,
+    dest: { staffId: string; visitTime: string | null },
+  ): Promise<{ error: string | null }> {
+    const prev = visits.find((v) => v.id === visitId)
+    if (!prev) return { error: 'Kunjungan tidak ditemukan' }
+    setVisits((vs) => vs.map((v) => v.id === visitId
+      ? { ...v, attending_staff_id: dest.staffId, visit_time: dest.visitTime }
+      : v))
+    const { error } = await updateVisit(visitId, { attending_staff_id: dest.staffId, visit_time: dest.visitTime })
+    if (error) setVisits((vs) => vs.map((v) => v.id === visitId ? prev : v))
+    return { error }
+  }
+
   async function handleLeaveAction(leaveId: string, action: 'approve' | 'reject') {
     setLeaveSaving(true)
     const supabase = createClient()
@@ -364,6 +379,7 @@ export function useJadwalSportMassage() {
     loadAll,
     handleStatusChange,
     handleDelete,
+    handleMoveVisit,
     handleLeaveAction,
   }
 }

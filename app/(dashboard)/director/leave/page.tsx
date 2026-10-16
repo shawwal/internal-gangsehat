@@ -124,7 +124,7 @@ export default function DirectorLeavePage() {
     let q: any = supabase
       .from('leave_requests')
       .select(`
-        id, staff_id, branch_id, start_date, end_date, reason,
+        id, staff_id, branch_id, start_date, end_date, leave_type, reason,
         proof_url, status, rejection_note, created_at,
         internal_profiles!staff_id(full_name, email),
         branches!branch_id(name)
@@ -323,7 +323,7 @@ export default function DirectorLeavePage() {
       {bulkConfirm && (
         <ConfirmDialog
           title="Hapus Permanen"
-          description={`${selected.size} data cuti akan dihapus secara permanen termasuk semua file bukti. Tindakan ini tidak dapat dibatalkan.`}
+          description={`${selected.size} data izin akan dihapus secara permanen termasuk semua file bukti. Tindakan ini tidak dapat dibatalkan.`}
           confirmLabel={`Hapus ${selected.size} Data`}
           danger
           loading={bulkDeleting}

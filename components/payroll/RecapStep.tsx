@@ -8,6 +8,7 @@ import type { PayrollWorkspace, WorkspaceRow } from '@/lib/payroll/workspace'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { formatIDR, formatRupiah } from './format'
 import { Modal } from './Modal'
+import { belowAvgTest, BELOW_AVG_CLS } from '@/lib/tableStats'
 
 interface Props {
   ws: PayrollWorkspace
@@ -41,6 +42,13 @@ export function RecapStep({ ws, rows }: Props) {
   type Col = 'klinik' | 'visit' | 'late' | 'alfa' | 'denda' | 'net'
   const sum = (k: Col) => cols.reduce((s, c) => s + c[k], 0)
   const avg = (k: Col) => (cols.length ? Math.round(sum(k) / cols.length) : 0)
+  // Red cell = worse than the Rata-rata row: income/net below it, deductions above it.
+  // Rows without compensation data have no numbers, so they don't count.
+  const scored = cols.filter((c) => c.row.result)
+  const belowAvg = Object.fromEntries((['klinik', 'visit', 'late', 'alfa', 'denda', 'net'] as const).map((k) => [
+    k, belowAvgTest(scored.map((c) => c[k]), k === 'klinik' || k === 'visit' || k === 'net' ? 'higher' : 'lower'),
+  ])) as Record<Col, (v: number) => boolean>
+  const red = (k: Col, v: number) => (belowAvg[k](v) ? BELOW_AVG_CLS : '')
   const warnCount = rows.reduce((s, r) => s + r.warnings.length, 0)
 
   function handleExport() {
@@ -126,12 +134,12 @@ export function RecapStep({ ws, rows }: Props) {
                   <td className="px-3 py-2 text-muted-foreground">{s.jabatan ?? '—'}</td>
                   {c.row.result ? (
                     <>
-                      <td className="px-3 py-2 text-right border-l border-border">{formatIDR(c.klinik)}</td>
-                      <td className="px-3 py-2 text-right">{formatIDR(c.visit)}</td>
-                      <td className="px-3 py-2 text-right border-l border-border text-destructive">{c.late ? formatIDR(c.late) : '–'}</td>
-                      <td className="px-3 py-2 text-right text-destructive">{c.alfa ? formatIDR(c.alfa) : '–'}</td>
-                      <td className="px-3 py-2 text-right text-destructive">{c.denda ? formatIDR(c.denda) : '–'}</td>
-                      <td className="px-3 py-2 text-right font-bold text-foreground border-l border-border">{formatIDR(c.net)}</td>
+                      <td className={`px-3 py-2 text-right border-l border-border ${red('klinik', c.klinik)}`}>{formatIDR(c.klinik)}</td>
+                      <td className={`px-3 py-2 text-right ${red('visit', c.visit)}`}>{formatIDR(c.visit)}</td>
+                      <td className={`px-3 py-2 text-right border-l border-border text-destructive ${red('late', c.late)}`}>{c.late ? formatIDR(c.late) : '–'}</td>
+                      <td className={`px-3 py-2 text-right text-destructive ${red('alfa', c.alfa)}`}>{c.alfa ? formatIDR(c.alfa) : '–'}</td>
+                      <td className={`px-3 py-2 text-right text-destructive ${red('denda', c.denda)}`}>{c.denda ? formatIDR(c.denda) : '–'}</td>
+                      <td className={`px-3 py-2 text-right font-bold text-foreground border-l border-border ${red('net', c.net)}`}>{formatIDR(c.net)}</td>
                     </>
                   ) : (
                     <td colSpan={6} className="px-3 py-2 text-center text-destructive border-l border-border">Data kompensasi belum diisi</td>
