@@ -206,6 +206,14 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
             />
           )}
           {visit.patient_name}
+          {visit.booking_source === 'online' && (
+            <span
+              className="ml-1 inline-flex items-center rounded px-1 py-px align-middle text-[8px] font-bold uppercase tracking-wide bg-chart-5/15 text-chart-5"
+              title="Dipesan pasien lewat gangsehat.com"
+            >
+              Online
+            </span>
+          )}
         </button>
         {/* Roles without the quick-action menu (therapist/staff) get an explicit
             shortcut straight to the session note. */}

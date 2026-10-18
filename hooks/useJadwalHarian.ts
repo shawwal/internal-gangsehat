@@ -9,8 +9,8 @@ import type { DayStaffEntry, PendingLeaveInfo } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { VisitStatus } from '@/types'
 import { dividersFromSlots } from '@/lib/shifts'
+import { buildScheduledStaff, HIDDEN_ROLES } from '@/lib/jadwal/dayStaff'
 
-const HIDDEN_ROLES = ['director', 'sport_massage_therapist']
 
 export interface LeavePopoverState {
   staffName: string
@@ -160,99 +160,17 @@ export function useJadwalHarian() {
 
     applySlots(slotsData)
 
-    // Directors and sport massage therapists (who have their own jadwal) never get a column on the daily grid
-    const isHidden = (row: { internal_profiles?: { role?: string } | null }) => HIDDEN_ROLES.includes(row.internal_profiles?.role ?? '')
-    const inSelectedBranch = (branchId: string | null) =>
-      !selectedBranchId || branchId === selectedBranchId
-
-    // Separate approved vs pending leaves
-    const approvedLeaveMap = new Map<string, string>()
-    const pendingLeaveMap  = new Map<string, { id: string; reason: string; start_date: string; end_date: string }>()
-    for (const l of leavesRes.data ?? []) {
-      if (l.status === 'approved') {
-        approvedLeaveMap.set(l.staff_id, l.reason ?? '')
-      } else if (l.status === 'pending' && !pendingLeaveMap.has(l.staff_id)) {
-        pendingLeaveMap.set(l.staff_id, {
-          id:         l.id,
-          reason:     l.reason ?? '',
-          start_date: l.start_date,
-          end_date:   l.end_date,
-        })
-      }
-    }
-
-    // Build override maps
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const overrideRows = (overridesRes.data ?? []) as any[]
-    // Staff whose override targets TODAY's hari → appear today with override details
-    const overrideForToday = new Map<string, typeof overrideRows[0]>()
-    // Staff whose override targets a DIFFERENT hari → suppress their regular schedule today
-    const suppressedToday  = new Set<string>()
-    for (const ov of overrideRows) {
-      if (isHidden(ov)) continue
-      if (ov.hari === hari && inSelectedBranch(ov.branch_id ?? null)) {
-        overrideForToday.set(ov.staff_id, ov)
-      } else {
-        // Moved to another day, or to another branch today
-        suppressedToday.add(ov.staff_id)
-      }
-    }
-
-    // Build staff entries from schedules
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const entries = new Map<string, DayStaffEntry>()
-    for (const row of (schedulesRes.data ?? []) as any[]) {
-      const sid = row.staff_id as string
-      if (entries.has(sid)) continue
-      if (isHidden(row)) continue
-      const ov = overrideForToday.get(sid)
-      // Skip staff who have been moved to a different day/branch via override
-      if (!ov && suppressedToday.has(sid)) continue
-      // A regular schedule counts at the staff's home branch; the row's own
-      // branch_id is only a fallback for staff without one. Covering a shift
-      // at another branch goes through schedule_overrides instead.
-      const homeBranch = (row.internal_profiles?.branch_id ?? row.branch_id ?? null) as string | null
-      if (!ov && !inSelectedBranch(homeBranch)) continue
-      entries.set(sid, {
-        staff_id:    sid,
-        full_name:   row.internal_profiles?.full_name ?? 'Unknown',
-        nickname:    row.internal_profiles?.nickname ?? null,
-        avatar_url:  row.internal_profiles?.avatar_url ?? null,
-        branch_id:   ov?.branch_id ?? homeBranch,
-        gender:      (row.internal_profiles?.gender ?? null) as 'male' | 'female' | null,
-        shift:       ov?.shift ?? row.shift,
-        jam_mulai:   (ov?.jam_mulai ?? row.jam_mulai)?.slice(0, 5) ?? '08:00',
-        jam_selesai: (ov?.jam_selesai ?? row.jam_selesai)?.slice(0, 5) ?? '17:00',
-        isOnLeave:   approvedLeaveMap.has(sid),
-        leaveReason: approvedLeaveMap.get(sid) ?? null,
-        hasSchedule: true,
-        pendingLeave: pendingLeaveMap.get(sid) ?? null,
-        isOverride:  !!ov,
-        overrideId:  ov?.id ?? null,
-      })
-    }
-
-    // Add staff who appear via override but whose original schedule is on a different day
-    for (const [sid, ov] of overrideForToday) {
-      if (entries.has(sid)) continue  // already added from regular schedules or rolling
-      entries.set(sid, {
-        staff_id:    sid,
-        full_name:   ov.internal_profiles?.full_name ?? 'Unknown',
-        nickname:    ov.internal_profiles?.nickname ?? null,
-        avatar_url:  ov.internal_profiles?.avatar_url ?? null,
-        branch_id:   ov.branch_id ?? null,
-        gender:      (ov.internal_profiles?.gender ?? null) as 'male' | 'female' | null,
-        shift:       ov.shift,
-        jam_mulai:   ov.jam_mulai?.slice(0, 5) ?? '08:00',
-        jam_selesai: ov.jam_selesai?.slice(0, 5) ?? '17:00',
-        isOnLeave:   approvedLeaveMap.has(sid),
-        leaveReason: approvedLeaveMap.get(sid) ?? null,
-        hasSchedule: true,
-        pendingLeave: pendingLeaveMap.get(sid) ?? null,
-        isOverride:  true,
-        overrideId:  ov.id,
-      })
-    }
+    // Scheduled staff (regular schedules + overrides + leave) — shared with
+    // online booking availability, see lib/jadwal/dayStaff.ts.
+    const { entries, approvedLeave: approvedLeaveMap, pendingLeave: pendingLeaveMap } = buildScheduledStaff({
+      hari,
+      branchId: selectedBranchId ?? null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      schedules: (schedulesRes.data ?? []) as any[],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      overrides: (overridesRes.data ?? []) as any[],
+      leaves: leavesRes.data ?? [],
+    })
 
     // Include staff who have visits today but no schedule (edge case)
     for (const v of visitsData) {

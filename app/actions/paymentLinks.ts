@@ -4,8 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import { logActivity } from '@/lib/activityLog'
-import { createCheckout, dokuEnabled, gatewayMode } from '@/lib/doku/client'
-import { DEFAULT_DUE_MINUTES, paymentMethodTypes, type PaymentLinkMethod } from '@/lib/doku/channels'
+import { dokuEnabled, gatewayMode } from '@/lib/doku/client'
+import { DEFAULT_DUE_MINUTES, type PaymentLinkMethod } from '@/lib/doku/channels'
+import { insertPaymentLinkWithCheckout } from '@/lib/doku/createLink'
 import { newInvoiceNumber } from '@/lib/doku/invoice'
 import { findLink, releaseTokoSale, syncPaymentLink } from '@/lib/doku/settle'
 import { PAYMENT_RECEIPT_BUCKET } from '@/lib/paymentProof'
@@ -182,39 +183,16 @@ export async function createPaymentLink(
     customer_email: input.customerEmail?.trim() || null,
     invoice_number: invoiceNumber,
     environment: mode,
-    status: 'pending',
+    status: 'pending' as const,
     expires_at: new Date(Date.now() + dueMinutes * 60_000).toISOString(),
     created_by: user.id,
   }
 
-  const { data: inserted, error: insErr } = await supabase.from('payment_links').insert(row).select('id').single()
-  if (insErr || !inserted) return { data: null, error: insErr?.message ?? 'Gagal menyimpan link pembayaran' }
-
-  try {
-    const checkout = await createCheckout(mode, {
-      invoiceNumber,
-      amount,
-      itemName: row.description ? `${row.category} - ${row.description}` : row.category,
-      category: row.category,
-      paymentMethodTypes: paymentMethodTypes(input.method, process.env.DOKU_VA_CHANNELS),
-      dueMinutes,
-      customerName,
-      customerPhone,
-      customerEmail: row.customer_email,
-      returnUrl: process.env.PAYMENT_RETURN_URL || 'https://gangsehat.com',
-    })
-    await supabase.from('payment_links').update({ checkout_url: checkout.url, updated_at: new Date().toISOString() }).eq('id', inserted.id)
-  } catch (error) {
-    console.error('DOKU createCheckout failed', error)
-    await supabase.from('payment_links').delete().eq('id', inserted.id)
-    if (String(error).includes('PAYMENT CHANNEL IS INACTIVE')) {
-      return {
-        data: null,
-        error: `Channel ${input.method === 'QRIS' ? 'QRIS' : 'Virtual Account'} belum aktif di merchant DOKU (${mode === 'production' ? 'live' : 'sandbox'}). Aktifkan di dashboard DOKU.`,
-      }
-    }
-    return { data: null, error: 'DOKU menolak pembuatan link. Coba lagi atau periksa konfigurasi merchant.' }
-  }
+  const inserted = await insertPaymentLinkWithCheckout(supabase, mode, row, {
+    dueMinutes,
+    returnUrl: process.env.PAYMENT_RETURN_URL || 'https://gangsehat.com',
+  })
+  if (inserted.error !== null) return { data: null, error: inserted.error }
 
   await logActivity({
     supabase,

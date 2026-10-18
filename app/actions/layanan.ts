@@ -11,13 +11,17 @@ export interface LayananRow {
   harga: number
   is_active: boolean
   created_at: string
+  /** NULL = not bookable on gangsehat.com; else the visit service_type it books (110-online-booking.sql) */
+  online_service_type?: OnlineServiceType | null
 }
+
+export type OnlineServiceType = 'TERAPI AWAL' | 'SESI TERAPI'
 
 export async function fetchLayananByBranch(branchId: string): Promise<LayananRow[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('internal_layanan')
-    .select('id, branch_id, nama, kategori, jumlah_sesi, harga, is_active, created_at')
+    .select('id, branch_id, nama, kategori, jumlah_sesi, harga, is_active, created_at, online_service_type')
     .eq('branch_id', branchId)
     .order('kategori')
   return (data ?? []) as LayananRow[]
@@ -77,6 +81,20 @@ export async function upsertLayanan(
   const { error } = await supabase
     .from('internal_layanan')
     .upsert(payload, { onConflict: 'id' })
+  return { error: error?.message ?? null }
+}
+
+/** Director setting: which services patients can book + pay online. */
+export async function setLayananOnlineServiceType(
+  id: string,
+  value: OnlineServiceType | null,
+): Promise<{ error: string | null }> {
+  if (value !== null && value !== 'TERAPI AWAL' && value !== 'SESI TERAPI') return { error: 'Nilai tidak valid' }
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('internal_layanan')
+    .update({ online_service_type: value })
+    .eq('id', id)
   return { error: error?.message ?? null }
 }
 

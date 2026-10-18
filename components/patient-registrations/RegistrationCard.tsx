@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import {
-  AlertTriangle, Baby, Building2, Check, Clock, ExternalLink, Gift, Handshake, MapPin, Megaphone, Pencil, Phone, Trash2, Users, XCircle,
+  AlertTriangle, Baby, Building2, Check, Clock, ExternalLink, Gift, Handshake, Home, MapPin, Megaphone, Pencil, Phone, Trash2, Users, XCircle,
 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import type { RegistrationRow } from '@/app/actions/patientRegistrations'
@@ -121,6 +121,16 @@ export function RegistrationCard({ row, showBranch, onReview, onReject, onDelete
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Clock size={11} /> {formatDateTime(row.createdAt)}
             </span>
+            {row.visitType && (
+              <span
+                className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                  row.visitType === 'home_visit' ? 'bg-chart-2/15 text-chart-2' : 'bg-chart-5/15 text-chart-5'
+                }`}
+                title="Pilihan pasien saat mendaftar"
+              >
+                {row.visitType === 'home_visit' ? <><Home size={11} /> Home Visit</> : <><Building2 size={11} /> Datang ke Klinik</>}
+              </span>
+            )}
             {row.affiliateCode && (
               row.referrerPatientId ? (
                 <span className="flex items-center gap-1 text-xs font-medium text-primary" title="Kode referral pasien">

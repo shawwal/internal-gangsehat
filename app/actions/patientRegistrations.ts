@@ -62,6 +62,8 @@ export interface RegistrationRow extends RegistrationFields {
   /** Set when the code was another patient's referral code (108-patient-referral-rewards.sql). */
   referrerPatientId: string | null
   referrerName: string | null
+  /** Fisioterapi registrations: 'clinic' or 'home_visit' (111-registration-visit-type.sql); null for Griya / older rows. */
+  visitType: 'clinic' | 'home_visit' | null
 }
 
 export interface RegistrationStats {
@@ -215,6 +217,7 @@ export async function fetchRegistrationsPage(params: {
     affiliateCode: r.affiliate_code ?? null,
     referrerPatientId: r.referrer_patient_id ?? null,
     referrerName: null,
+    visitType: r.visit_type ?? null,
     ...decryptFields(r),
   }))
 

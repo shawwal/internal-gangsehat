@@ -71,6 +71,8 @@ export interface DailyVisit {
   // "Pasien yang perlu diperhatikan hari ini": TA, first SESI after a TA, or the
   // last session of a package.
   is_priority: boolean
+  /** 'online' = booked by the patient on gangsehat.com */
+  booking_source: string | null
 }
 
 const PACKAGE_CATEGORIES = new Set(['PAKET VISIT', 'PAKET KLINIK'])
@@ -137,7 +139,7 @@ export async function fetchDailyVisits(
 
   let query = supabase
     .from('patient_visits')
-    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, order_id, layanan_id, chief_complaint, diagnosis, treatment, regio, status, notes, branch_id, kehadiran')
+    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, order_id, layanan_id, chief_complaint, diagnosis, treatment, regio, status, notes, branch_id, kehadiran, booking_source')
     .eq('visit_date', date)
     .order('visit_time', { ascending: true })
   if (branchId) query = query.eq('branch_id', branchId)
@@ -287,6 +289,7 @@ export async function fetchDailyVisits(
       package_payment_ok:  v.package_id ? (packagePaymentOkMap.get(v.package_id) ?? false) : null,
       is_priority:          isTaServiceType(v.service_type) || firstSesiAfterTa.has(v.id)
         || (!!v.package_id && isLastPackageSession(v.id)),
+      booking_source:       v.booking_source ?? null,
     }
   })
 }

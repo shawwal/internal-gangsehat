@@ -24,6 +24,8 @@ export const ACTIVITY_RESOURCE_TYPES = {
   reward_points: 'Poin Hadiah Pasien',
   reward_item: 'Katalog Hadiah',
   reward_redemption: 'Penukaran Hadiah',
+  online_booking: 'Booking Online',
+  account_link: 'Hubungkan Akun Pasien',
   patient_package: 'Paket Pasien',
   payroll_period: 'Periode Penggajian',
   payroll_activity: 'Aktivitas Insentif',

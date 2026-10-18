@@ -12,6 +12,7 @@ import {
   type RegistrationStats as Stats,
 } from '@/app/actions/patientRegistrations'
 import { RegistrationStats } from '@/components/patient-registrations/RegistrationStats'
+import { RegistrationTabs } from '@/components/patient-registrations/RegistrationTabs'
 import { RegistrationFilters } from '@/components/patient-registrations/RegistrationFilters'
 import { RegistrationCard } from '@/components/patient-registrations/RegistrationCard'
 import { ReviewDialog } from '@/components/patient-registrations/ReviewDialog'
@@ -148,6 +149,9 @@ export default function PatientRegistrationsPage() {
           Pendaftaran online dari gangsehat.com — tinjau, perbaiki, lalu setujui menjadi pasien
           (pendaftaran Griya Anak otomatis masuk daftar siswa).
         </p>
+        <div className="mt-3">
+          <RegistrationTabs />
+        </div>
       </div>
         {!loading && rows.length > 0 && (
           <button

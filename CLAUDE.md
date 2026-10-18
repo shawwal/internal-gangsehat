@@ -108,6 +108,13 @@ Points: `reward_points` ledger (kind referral/redemption/adjustment, signed poin
 Catalog `reward_items` (points_cost, stock NULL = unlimited) and `reward_redemptions` (name/cost snapshots). Redeem/cancel only via RPCs `redeem_reward` / `cancel_redemption` (role check + row locks; cancel voids the ledger row and restores stock), called with the user-session client. Pages `/rewards`, `/rewards/redeem`, `/rewards/items` (director/manager/admin/marketing; `app/actions/rewards.ts`, `components/rewards/`). Rate + adjustments: director only.
 Patients may set a custom code or roll a random one (migration 109, `set_patient_referral_code()`, service role): 4–20 A–Z/0–9, reserved-word list, unique across patients + affiliates. Earned points are keyed by `referrer_patient_id`, so a code change never affects them; old shared links stop working.
 
+### Online clinic booking + account linking — migration 110
+gangsehat.com patients book real clinic slots into Jadwal Harian. gangsehat never writes patient_visits or calls DOKU: it calls `POST /api/public/booking` here (actions options/availability/create/status), HMAC-signed with `PUBLIC_API_SECRET` (`lib/onlineBooking/auth.ts`; `proxy.ts` exempts `/api/public/`). gangsehat env: `INTERNAL_API_URL`, `PUBLIC_API_SECRET`.
+- Availability (`lib/onlineBooking/availability.ts`): therapists from `buildScheduledStaff` (`lib/jadwal/dayStaff.ts`, shared with `useJadwalHarian`), branch `schedule_slots`, minus non-cancelled visits and live `online_bookings` holds, ≥2h lead, 30 days ahead. Role `therapist` only.
+- `reserve_online_booking()` claims the hour atomically (advisory locks, also checks package capacity). Package mode → visit created immediately (`PAKET TERAPI` + package_id). Pay mode → 60-min hold + DOKU link (`lib/doku/createLink.ts`, `payment_links.online_booking_id`, created_by NULL); `settle.ts` creates the visit (`lib/onlineBooking/confirm.ts`) before the income transaction so it carries visit_id. Online visits have `booking_source='online'` (badge in VisitCard).
+- Services bookable online: `internal_layanan.online_service_type` ('TERAPI AWAL' | 'SESI TERAPI'), set in /director/layanan.
+- Account linking: signup rows have `account_linked_at` NULL. `link_patient_account(web, target)` repoints every FK to patients(id) from the web row to the clinic record and moves profile_id/referral code. Auto on phone_hash + birth date match (gangsehat), else `patient_link_requests` reviewed at /patient-registrations/accounts (`app/actions/accountLinks.ts`).
+
 ### Marketing
 `campaigns`: branch_id, title, description, channel(social_media/whatsapp/email/flyer/other), start_date, end_date, budget, actual_spend, target_reach, actual_reach, status(draft/active/completed/cancelled), created_by
 

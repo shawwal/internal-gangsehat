@@ -11,6 +11,7 @@ import { getOrder, normalizeOrder, type GatewayMode, type NormalizedOrder } from
 import { channelLabel, type PaymentLinkMethod } from './channels'
 import { buildIncomePayload, buildTokoIncomePayload, type OrderContext, type PaidLink, type VisitContext } from './payload'
 import { buildReceiptPdf, receiptPath } from './receipt'
+import { confirmPaidOnlineBooking } from '@/lib/onlineBooking/confirm'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -25,12 +26,13 @@ export interface PaymentLinkRow extends PaidLink {
   receipt_path: string | null
   customer_name: string
   toko_sale_id: string | null
+  online_booking_id: string | null
 }
 
 const LINK_COLS =
   'id, branch_id, patient_id, visit_id, order_id, method, amount, harga, discount, category, description, ' +
   'invoice_number, created_by, status, environment, expires_at, paid_at, payment_channel, doku_reference, ' +
-  'transaction_id, receipt_path, customer_name, toko_sale_id'
+  'transaction_id, receipt_path, customer_name, toko_sale_id, online_booking_id'
 
 function toRow(r: Record<string, unknown>): PaymentLinkRow {
   return {
@@ -90,6 +92,11 @@ export async function syncPaymentLink(link: PaymentLinkRow, admin: Admin = creat
       .update({ status: 'expired', raw_status: raw, updated_at: now })
       .eq('id', link.id).eq('status', 'pending')
     if (link.toko_sale_id) await releaseTokoSale(link.toko_sale_id, admin)
+    if (link.online_booking_id) {
+      await admin.from('online_bookings')
+        .update({ status: 'expired', updated_at: now })
+        .eq('id', link.online_booking_id).eq('status', 'pending_payment')
+    }
     return { status: 'expired', changed: true }
   }
 
@@ -110,6 +117,15 @@ function parseDokuDate(value: string): string {
  * is skipped when already done, so a failed step is retried by the next sync.
  */
 async function ensureSettlementArtifacts(link: PaymentLinkRow, admin: Admin, order?: NormalizedOrder) {
+  // Online booking (gangsehat.com): the visit must exist first so the income
+  // transaction carries visit_id and Jadwal Harian shows it as paid.
+  if (link.online_booking_id && !link.visit_id) {
+    const visitId = await confirmPaidOnlineBooking(admin, link.online_booking_id)
+    if (!visitId) return
+    await admin.from('payment_links').update({ visit_id: visitId }).eq('id', link.id)
+    link = { ...link, visit_id: visitId }
+  }
+
   let transactionId = link.transaction_id
   const paidAt = link.paid_at ?? new Date().toISOString()
 

@@ -7,6 +7,7 @@ import {
   fetchLayananByBranch,
   updateLayananHarga,
   toggleLayananActive,
+  setLayananOnlineServiceType,
   upsertLayanan,
   deleteLayanan,
   type LayananRow,
@@ -84,6 +85,12 @@ export default function LayananPage() {
     await updateLayananHarga(id, val)
     setSaving(false)
     setEditId(null)
+    reload()
+  }
+
+  // ── Online booking (gangsehat.com) ─────────────────────────────────────────
+  async function handleOnline(id: string, value: string) {
+    await setLayananOnlineServiceType(id, value === 'TERAPI AWAL' || value === 'SESI TERAPI' ? value : null)
     reload()
   }
 
@@ -182,6 +189,7 @@ export default function LayananPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kategori</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sesi</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Harga (Rp)</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide" title="Bisa dipesan & dibayar pasien di gangsehat.com">Booking Online</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Aktif</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -245,6 +253,24 @@ export default function LayananPage() {
                           </span>
                           <Pencil size={12} className="opacity-0 group-hover:opacity-60 transition-opacity" />
                         </button>
+                      )}
+                    </td>
+
+                    {/* Online booking: which visit type a gangsehat.com booking creates */}
+                    <td className="px-4 py-3 text-center">
+                      {row.kategori.toUpperCase().includes('PAKET') ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : (
+                        <select
+                          value={row.online_service_type ?? ''}
+                          onChange={(e) => handleOnline(row.id, e.target.value)}
+                          className="px-2 py-1 border border-border rounded-lg text-xs bg-input focus:outline-none focus:ring-2 focus:ring-primary"
+                          aria-label={`Booking online untuk ${row.nama}`}
+                        >
+                          <option value="">Tidak</option>
+                          <option value="TERAPI AWAL">Terapi Awal</option>
+                          <option value="SESI TERAPI">Sesi Terapi</option>
+                        </select>
                       )}
                     </td>
 

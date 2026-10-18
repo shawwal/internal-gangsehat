@@ -20,6 +20,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // gangsehat.com server-to-server API; each route verifies the HMAC
+  // signature (lib/onlineBooking/auth.ts).
+  if (pathname.startsWith('/api/public/')) {
+    return NextResponse.next({ request })
+  }
+
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
