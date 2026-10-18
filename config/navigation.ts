@@ -519,6 +519,31 @@ export const navigation: NavItem[] = [
     group: 'clinic',
   },
   {
+    // Patient referral reward points (108-patient-referral-rewards.sql).
+    key: 'rewards',
+    label: 'Poin Hadiah',
+    href: '/rewards',
+    icon: 'Coins',
+    roles: ['director', 'manager', 'admin', 'marketing'],
+    group: 'clinic',
+  },
+  {
+    key: 'rewards-redeem',
+    label: 'Tukar Hadiah',
+    href: '/rewards/redeem',
+    icon: 'Gift',
+    roles: ['director', 'manager', 'admin', 'marketing'],
+    group: 'clinic',
+  },
+  {
+    key: 'rewards-items',
+    label: 'Katalog Hadiah',
+    href: '/rewards/items',
+    icon: 'PackageOpen',
+    roles: ['director', 'manager', 'admin', 'marketing'],
+    group: 'clinic',
+  },
+  {
     // Fisioterapi shop — same tables/actions as Toko Griya Anak (griya-toko),
     // any branch; not a griya- key, so it isn't gated by the Griya feature flag.
     key: 'toko',

@@ -21,6 +21,9 @@ export const ACTIVITY_RESOURCE_TYPES = {
   patient_registration: 'Pendaftaran Pasien',
   affiliate: 'Afiliasi',
   affiliate_points: 'Poin Afiliasi',
+  reward_points: 'Poin Hadiah Pasien',
+  reward_item: 'Katalog Hadiah',
+  reward_redemption: 'Penukaran Hadiah',
   patient_package: 'Paket Pasien',
   payroll_period: 'Periode Penggajian',
   payroll_activity: 'Aktivitas Insentif',
@@ -56,6 +59,7 @@ const PATIENT_LINKED_TABLES: Partial<Record<ActivityResourceType, string>> = {
   payment_link: 'payment_links',
   griya_slot: 'griya_schedule_slots',
   patient_package: 'patient_packages',
+  reward_redemption: 'reward_redemptions',
 }
 
 /**

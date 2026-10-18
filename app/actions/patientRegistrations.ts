@@ -57,8 +57,11 @@ export interface RegistrationRow extends RegistrationFields {
   isGriya: boolean
   /** Existing patient with the same phone number, if any. */
   duplicatePatientId: string | null
-  /** Affiliate code the patient registered with (gangsehat.com/daftar?ref=). */
+  /** Affiliate or patient referral code the patient registered with (gangsehat.com/daftar?ref=). */
   affiliateCode: string | null
+  /** Set when the code was another patient's referral code (108-patient-referral-rewards.sql). */
+  referrerPatientId: string | null
+  referrerName: string | null
 }
 
 export interface RegistrationStats {
@@ -210,6 +213,8 @@ export async function fetchRegistrationsPage(params: {
     isGriya: r.registration_type === 'griya',
     duplicatePatientId: null,
     affiliateCode: r.affiliate_code ?? null,
+    referrerPatientId: r.referrer_patient_id ?? null,
+    referrerName: null,
     ...decryptFields(r),
   }))
 
@@ -225,6 +230,17 @@ export async function fetchRegistrationsPage(params: {
     )
     filteredTotal = rows.length
     rows = rows.slice(from, to + 1)
+  }
+
+  // Name of the referring patient (patient referral codes earn reward points).
+  const referrerIds = [...new Set(rows.map((r) => r.referrerPatientId).filter((id): id is string => !!id))]
+  if (referrerIds.length > 0) {
+    const { data: referrers } = await admin
+      .from('patients')
+      .select('id, encrypted_name')
+      .in('id', referrerIds)
+    const names = new Map((referrers ?? []).map((p) => [p.id, safeDecrypt(p.encrypted_name)]))
+    for (const r of rows) if (r.referrerPatientId) r.referrerName = names.get(r.referrerPatientId) || null
   }
 
   // Flag pending registrations whose phone already belongs to a patient.
