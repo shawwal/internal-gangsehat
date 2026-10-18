@@ -47,9 +47,44 @@ export interface LinkRequestRow {
   reviewedAt: string | null
   webPatientId: string | null
   matchedPatient: { id: string; name: string; noRm: string | null } | null
-  /** Unlinked clinic patient with the same phone number, if any. */
-  suggestion: { id: string; name: string; noRm: string | null; birthDate: string } | null
+  /** Clinic patient with the same phone number, if any (may already be linked to another account). */
+  suggestion: LinkCandidate | null
 }
+
+export interface LinkCandidate {
+  id: string
+  name: string
+  noRm: string | null
+  birthDate: string
+  /** Email of the gangsehat.com account this record is already connected to, if any. */
+  linkedEmail: string | null
+}
+
+type Admin = ReturnType<typeof createAdminClient>
+
+/** Clinic records → candidates, resolving which account (if any) already owns each. */
+async function toCandidates(
+  admin: Admin,
+  rows: { id: string; encrypted_name: string; encrypted_birth_date: string | null; no_rm: string | null; profile_id: string | null }[],
+): Promise<LinkCandidate[]> {
+  const profileIds = [...new Set(rows.map((r) => r.profile_id).filter((v): v is string => !!v))]
+  const emails = new Map<string, string>()
+  if (profileIds.length > 0) {
+    const { data } = await admin.from('profiles').select('id, email').in('id', profileIds)
+    for (const p of data ?? []) emails.set(p.id, p.email)
+  }
+  return rows.map((p) => ({
+    id: p.id,
+    name: safeDecrypt(p.encrypted_name),
+    noRm: p.no_rm,
+    birthDate: safeDecrypt(p.encrypted_birth_date),
+    linkedEmail: p.profile_id ? emails.get(p.profile_id) ?? 'akun lain' : null,
+  }))
+}
+
+// Clinic records = rows staff created/approved (name_normalized set) or rows
+// already linked; bare signup rows of other accounts are never candidates.
+const CANDIDATE_COLS = 'id, encrypted_name, encrypted_birth_date, no_rm, profile_id, phone_hash'
 
 export async function fetchLinkRequests(
   status: LinkRequestStatus,
@@ -75,19 +110,15 @@ export async function fetchLinkRequests(
   if (error) return { error: error.message, rows: [], pending: 0 }
 
   const hashes = [...new Set((data ?? []).map((r) => r.phone_hash).filter(Boolean))]
-  const byHash = new Map<string, { id: string; name: string; noRm: string | null; birthDate: string }>()
+  const byHash = new Map<string, LinkCandidate>()
   if (hashes.length > 0) {
     const { data: matches } = await admin
       .from('patients')
-      .select('id, encrypted_name, encrypted_birth_date, no_rm, phone_hash')
+      .select(CANDIDATE_COLS)
       .in('phone_hash', hashes)
-      .is('profile_id', null)
       .eq('is_active', true)
-    for (const m of matches ?? []) {
-      byHash.set(m.phone_hash, {
-        id: m.id, name: safeDecrypt(m.encrypted_name), noRm: m.no_rm, birthDate: safeDecrypt(m.encrypted_birth_date),
-      })
-    }
+    const candidates = await toCandidates(admin, matches ?? [])
+    ;(matches ?? []).forEach((m, i) => byHash.set(m.phone_hash, candidates[i]))
   }
 
   const rows: LinkRequestRow[] = (data ?? []).map((r) => ({
@@ -107,28 +138,31 @@ export async function fetchLinkRequests(
     matchedPatient: r.matched
       ? { id: r.matched.id, name: safeDecrypt(r.matched.encrypted_name), noRm: r.matched.no_rm }
       : null,
-    suggestion: r.phone_hash ? byHash.get(r.phone_hash) ?? null : null,
+    // Never suggest the requester's own signup row.
+    suggestion: r.phone_hash && byHash.get(r.phone_hash)?.id !== r.web_patient_id ? byHash.get(r.phone_hash) ?? null : null,
   }))
   return { error: null, rows, pending: count ?? 0 }
 }
 
-/** Clinic patients not yet linked to an account, by name or No. RM. */
-export async function searchUnlinkedPatients(
-  term: string,
-): Promise<{ id: string; name: string; noRm: string | null; birthDate: string }[]> {
+/**
+ * Clinic patients by name or No. RM, including ones already connected to
+ * another account (shown with that account's email so staff can move them).
+ */
+export async function searchPatientsForLink(term: string, excludeId?: string | null): Promise<LinkCandidate[]> {
   const reviewer = await getReviewer()
-  const q = term.trim().toLowerCase()
+  const q = term.trim().toLowerCase().replace(/[%,()]/g, '')
   if (!reviewer || q.length < 2) return []
-  const { data } = await createAdminClient()
+  const admin = createAdminClient()
+  let query = admin
     .from('patients')
-    .select('id, encrypted_name, encrypted_birth_date, no_rm')
-    .is('profile_id', null)
+    .select(CANDIDATE_COLS)
     .eq('is_active', true)
-    .or(`name_normalized.ilike.%${q.replace(/[%,()]/g, '')}%,no_rm.ilike.%${q.replace(/[%,()]/g, '')}%`)
+    .or(`name_normalized.ilike.%${q}%,no_rm.ilike.%${q}%`)
+    .order('name_normalized')
     .limit(15)
-  return (data ?? []).map((p) => ({
-    id: p.id, name: safeDecrypt(p.encrypted_name), noRm: p.no_rm, birthDate: safeDecrypt(p.encrypted_birth_date),
-  }))
+  if (excludeId) query = query.neq('id', excludeId)
+  const { data } = await query
+  return toCandidates(admin, data ?? [])
 }
 
 async function loadScopedRequest(reviewer: Reviewer, id: string) {
@@ -161,12 +195,21 @@ async function release(id: string) {
 }
 
 const LINK_ERRORS: Record<string, string> = {
-  target_already_linked: 'Pasien ini sudah terhubung dengan akun lain.',
+  target_already_linked: 'Pasien ini sudah terhubung dengan akun lain. Gunakan "Pindahkan ke akun ini".',
   target_not_found: 'Pasien tidak ditemukan.',
   web_not_found: 'Akun pasien sudah tidak tersedia.',
 }
 
-export async function linkRequestToPatient(id: string, patientId: string): Promise<{ error: string | null }> {
+/**
+ * Connect the request's account to a clinic record. If the record already
+ * belongs to another account, `move` must be true: that account is detached
+ * (relink_patient_account, migration 112) and this one takes over.
+ */
+export async function linkRequestToPatient(
+  id: string,
+  patientId: string,
+  opts: { move?: boolean } = {},
+): Promise<{ error: string | null }> {
   const reviewer = await getReviewer()
   if (!reviewer) return { error: 'Tidak memiliki akses.' }
   const req = await loadScopedRequest(reviewer, id)
@@ -177,7 +220,15 @@ export async function linkRequestToPatient(id: string, patientId: string): Promi
   }
 
   const admin = createAdminClient()
-  const { error } = await admin.rpc('link_patient_account', { p_web: req.web_patient_id, p_target: patientId })
+  const { data: target } = await admin.from('patients').select('profile_id').eq('id', patientId).maybeSingle()
+  const takenByOther = !!target?.profile_id && target.profile_id !== req.profile_id
+  if (takenByOther && !opts.move) {
+    await release(id)
+    return { error: LINK_ERRORS.target_already_linked }
+  }
+  const { error } = takenByOther
+    ? await admin.rpc('relink_patient_account', { p_web: req.web_patient_id, p_target: patientId })
+    : await admin.rpc('link_patient_account', { p_web: req.web_patient_id, p_target: patientId })
   if (error) {
     await release(id)
     const code = Object.keys(LINK_ERRORS).find((k) => error.message.includes(k))
@@ -187,7 +238,8 @@ export async function linkRequestToPatient(id: string, patientId: string): Promi
   await logActivity({
     supabase: await createClient(), userId: reviewer.id, action: 'update', resourceType: 'account_link',
     resourceId: id, resourceLabel: safeDecrypt(req.encrypted_name), branchId: req.branch_id, patientId,
-    newValues: { linked_patient_id: patientId },
+    oldValues: takenByOther ? { previous_profile_id: target!.profile_id } : undefined,
+    newValues: { linked_patient_id: patientId, moved_from_other_account: takenByOther },
   })
   return { error: null }
 }

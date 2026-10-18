@@ -7,7 +7,8 @@ import {
   fetchLinkRequests,
   linkRequestToPatient,
   rejectLinkRequest,
-  searchUnlinkedPatients,
+  searchPatientsForLink,
+  type LinkCandidate,
   type LinkRequestRow,
   type LinkRequestStatus,
 } from '@/app/actions/accountLinks'
@@ -22,7 +23,7 @@ const STATUS_TABS: { key: LinkRequestStatus; label: string }[] = [
 ]
 
 type Dialog =
-  | { kind: 'search'; row: LinkRequestRow }
+  | { kind: 'search'; row: LinkRequestRow; preset?: LinkCandidate }
   | { kind: 'create'; row: LinkRequestRow }
   | { kind: 'reject'; row: LinkRequestRow }
   | null
@@ -48,9 +49,9 @@ export default function AccountLinkRequestsPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
-  async function link(row: LinkRequestRow, patientId: string, patientName: string) {
+  async function link(row: LinkRequestRow, patientId: string, patientName: string, move = false) {
     setBusyId(row.id)
-    const { error } = await linkRequestToPatient(row.id, patientId)
+    const { error } = await linkRequestToPatient(row.id, patientId, { move })
     setBusyId(null)
     setDialog(null)
     setNotice(error
@@ -131,13 +132,18 @@ export default function AccountLinkRequestsPage() {
                         {row.suggestion.name}
                         {row.suggestion.noRm && <span className="font-mono"> · {row.suggestion.noRm}</span>}
                         {' '}· lahir {row.suggestion.birthDate || '—'}
+                        {row.suggestion.linkedEmail && (
+                          <span className="block mt-0.5 text-[#C93400] dark:text-[#FFB340]">
+                            Sudah terhubung ke akun {row.suggestion.linkedEmail}
+                          </span>
+                        )}
                       </p>
                       <button
-                        onClick={() => link(row, row.suggestion!.id, row.suggestion!.name)}
+                        onClick={() => setDialog({ kind: 'search', row, preset: row.suggestion! })}
                         disabled={busyId === row.id}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 disabled:opacity-60"
                       >
-                        <UserRoundCheck size={13} /> Hubungkan
+                        <UserRoundCheck size={13} /> {row.suggestion.linkedEmail ? 'Tinjau' : 'Hubungkan'}
                       </button>
                     </div>
                   )}
@@ -169,7 +175,13 @@ export default function AccountLinkRequestsPage() {
       )}
 
       {dialog?.kind === 'search' && (
-        <SearchDialog row={dialog.row} busy={busyId === dialog.row.id} onClose={() => setDialog(null)} onPick={(id, name) => link(dialog.row, id, name)} />
+        <SearchDialog
+          row={dialog.row}
+          preset={dialog.preset}
+          busy={busyId === dialog.row.id}
+          onClose={() => setDialog(null)}
+          onPick={(c, move) => link(dialog.row, c.id, c.name, move)}
+        />
       )}
       {dialog?.kind === 'create' && (
         <CreateDialog
@@ -189,18 +201,29 @@ export default function AccountLinkRequestsPage() {
   )
 }
 
-function SearchDialog({ row, busy, onClose, onPick }: {
-  row: LinkRequestRow; busy: boolean; onClose: () => void; onPick: (id: string, name: string) => void
+function SearchDialog({ row, preset, busy, onClose, onPick }: {
+  row: LinkRequestRow
+  preset?: LinkCandidate
+  busy: boolean
+  onClose: () => void
+  onPick: (candidate: LinkCandidate, move: boolean) => void
 }) {
-  const [term, setTerm] = useState(row.name)
-  const [results, setResults] = useState<Awaited<ReturnType<typeof searchUnlinkedPatients>> | null>(null)
+  const [term, setTerm] = useState(preset?.name ?? row.name)
+  const [results, setResults] = useState<LinkCandidate[] | null>(null)
+  // A record owned by another account needs an explicit second click.
+  const [confirmMove, setConfirmMove] = useState<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => { searchUnlinkedPatients(term).then(setResults) }, 300)
+    timer.current = setTimeout(() => {
+      searchPatientsForLink(term, row.webPatientId).then((list) => {
+        // Keep the suggested record visible even if the name search misses it.
+        setResults(preset && !list.some((c) => c.id === preset.id) ? [preset, ...list] : list)
+      })
+    }, 300)
     return () => { if (timer.current) clearTimeout(timer.current) }
-  }, [term])
+  }, [term, row.webPatientId, preset])
 
   return (
     <ModalShell onClose={onClose} title={`Hubungkan akun ${row.name}`} subtitle={`HP ${row.phone || '—'} · lahir ${row.birthDate || '—'}`}>
@@ -209,24 +232,51 @@ function SearchDialog({ row, busy, onClose, onPick }: {
         {results === null ? (
           <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-muted-foreground" /></div>
         ) : results.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">Tidak ada pasien (yang belum terhubung) yang cocok.</p>
+          <p className="text-sm text-muted-foreground text-center py-6">Tidak ada pasien yang cocok.</p>
         ) : (
           <div className="divide-y divide-border rounded-xl border border-border">
-            {results.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-2 px-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
-                  <p className="text-xs text-muted-foreground">{p.noRm ?? 'Tanpa No. RM'} · lahir {p.birthDate || '—'}</p>
+            {results.map((p) => {
+              const confirming = confirmMove === p.id
+              return (
+                <div key={p.id} className="px-3 py-2 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
+                      <p className="text-xs text-muted-foreground">{p.noRm ?? 'Tanpa No. RM'} · lahir {p.birthDate || '—'}</p>
+                      {p.linkedEmail && (
+                        <p className="text-xs text-[#C93400] dark:text-[#FFB340]">Terhubung ke {p.linkedEmail}</p>
+                      )}
+                    </div>
+                    {!confirming && (
+                      <button
+                        onClick={() => (p.linkedEmail ? setConfirmMove(p.id) : onPick(p, false))}
+                        disabled={busy}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-60 shrink-0 ${
+                          p.linkedEmail ? 'border border-border hover:bg-muted' : 'bg-primary text-white hover:bg-primary/90'
+                        }`}
+                      >
+                        {p.linkedEmail ? 'Pindahkan ke akun ini' : 'Hubungkan'}
+                      </button>
+                    )}
+                  </div>
+                  {confirming && (
+                    <div className="rounded-lg bg-[#FF9500]/10 p-2.5 space-y-2">
+                      <p className="text-xs text-foreground">
+                        Data pasien ini akan dipindahkan dari akun <b>{p.linkedEmail}</b> ke akun yang meminta.
+                        Akun lama tetap bisa login tetapi tidak lagi melihat data klinik, paket, dan poinnya.
+                        Lanjutkan hanya jika keduanya orang yang sama.
+                      </p>
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => setConfirmMove(null)} disabled={busy} className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted">Batal</button>
+                        <button onClick={() => onPick(p, true)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 disabled:opacity-60">
+                          {busy ? 'Memindahkan…' : 'Ya, pindahkan'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={() => onPick(p.id, p.name)}
-                  disabled={busy}
-                  className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 disabled:opacity-60 shrink-0"
-                >
-                  Hubungkan
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
