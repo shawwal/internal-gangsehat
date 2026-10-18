@@ -18,6 +18,8 @@ export interface AvailableTherapist {
   name: string
   nickname: string | null
   gender: 'male' | 'female' | null
+  /** The therapist's own shift that day — stored on the visit (the slot row's shift can differ). */
+  shift: string
 }
 
 export interface AvailableHour {
@@ -65,7 +67,7 @@ export function computeAvailability(input: {
     if (minutesUntil(input.date, hour, input.now) < MIN_LEAD_MINUTES) continue
     const therapists = input.staff
       .filter((s) => isInShift(s, hour) && !busy.has(`${s.staff_id}:${hour}`))
-      .map((s) => ({ id: s.staff_id, name: s.full_name, nickname: s.nickname, gender: s.gender }))
+      .map((s) => ({ id: s.staff_id, name: s.full_name, nickname: s.nickname, gender: s.gender, shift: s.shift || shift }))
       .sort((a, b) => a.name.localeCompare(b.name, 'id'))
     if (therapists.length > 0) result.push({ hour, shift, therapists })
   }

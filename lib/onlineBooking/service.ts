@@ -21,6 +21,55 @@ type Admin = ReturnType<typeof createAdminClient>
 
 /** How long an unpaid slot is held (also the DOKU payment window). */
 export const PAY_HOLD_MINUTES = 60
+
+const VISIT_SHIFTS = new Set(['PAGI', 'MIDDLE', 'SORE'])
+
+interface LayananRow {
+  id: string
+  nama: string
+  kategori: string
+  harga: number | string
+  branch_id: string
+  is_active?: boolean
+  online_service_type: string | null
+}
+
+/**
+ * Which visit type an internal_layanan row books online, or null if it can't
+ * be booked. The director's explicit setting (online_service_type) wins for
+ * the branch; a branch with nothing configured falls back to its regular
+ * clinic prices: TA KLINIK → Terapi Awal, SESI KLINIK → Sesi Terapi
+ * (skipping Rp 0 adjustment rows and sport massage, which has its own jadwal).
+ */
+export function onlineServiceTypeFor(l: LayananRow, branchConfigured: boolean): 'TERAPI AWAL' | 'SESI TERAPI' | null {
+  if (Number(l.harga) < 1000) return null
+  if (branchConfigured) {
+    return l.online_service_type === 'TERAPI AWAL' || l.online_service_type === 'SESI TERAPI' ? l.online_service_type : null
+  }
+  if (/sport|massage/i.test(l.nama)) return null
+  if (l.kategori === 'TA KLINIK') return 'TERAPI AWAL'
+  if (l.kategori === 'SESI KLINIK') return 'SESI TERAPI'
+  return null
+}
+
+/** Bookable services of the active layanan list, with the branch fallback applied. */
+function bookableServices(rows: LayananRow[]) {
+  const configured = new Set(rows.filter((l) => l.online_service_type).map((l) => l.branch_id))
+  return rows
+    .map((l) => ({ l, type: onlineServiceTypeFor(l, configured.has(l.branch_id)) }))
+    .filter((x): x is { l: LayananRow; type: 'TERAPI AWAL' | 'SESI TERAPI' } => x.type !== null)
+}
+
+/** Terapi Awal is the first visit; afterwards patients book regular sessions. */
+async function hasHadAssessment(admin: Admin, patientId: string) {
+  const { count } = await admin
+    .from('patient_visits')
+    .select('id', { count: 'exact', head: true })
+    .eq('patient_id', patientId)
+    .in('service_type', ['TERAPI AWAL', 'TA VISIT'])
+    .neq('status', 'cancelled')
+  return (count ?? 0) > 0
+}
 /** How far ahead patients can book. */
 export const MAX_DAYS_AHEAD = 30
 
@@ -74,7 +123,7 @@ export async function getBookingOptions(patientId: string, profileId: string): P
   const admin = createAdminClient()
   await loadLinkedPatient(admin, patientId, profileId)
 
-  const [{ data: branches }, { data: lastVisit }, { data: pkgs }, { data: layanan }] = await Promise.all([
+  const [{ data: branches }, { data: lastVisit }, { data: pkgs }, { data: layanan }, hadAssessment] = await Promise.all([
     admin.from('branches').select('id, name').eq('is_active', true).order('name'),
     admin.from('patient_visits').select('branch_id').eq('patient_id', patientId)
       .order('visit_date', { ascending: false }).limit(1).maybeSingle(),
@@ -82,8 +131,9 @@ export async function getBookingOptions(patientId: string, profileId: string): P
       .select('id, package_name, branch_id, total_sessions, legacy_used_sessions, category')
       .eq('patient_id', patientId).eq('status', 'active'),
     admin.from('internal_layanan')
-      .select('id, nama, harga, branch_id, online_service_type')
-      .eq('is_active', true).not('online_service_type', 'is', null).order('nama'),
+      .select('id, nama, kategori, harga, branch_id, online_service_type')
+      .eq('is_active', true).order('harga'),
+    hasHadAssessment(admin, patientId),
   ])
 
   const clinicPkgs = (pkgs ?? []).filter((p) => (p.category ?? 'PAKET KLINIK') === 'PAKET KLINIK')
@@ -111,9 +161,10 @@ export async function getBookingOptions(patientId: string, profileId: string): P
         remaining: p.total_sessions - (p.legacy_used_sessions ?? 0) - (used.get(p.id) ?? 0),
       }))
       .filter((p) => p.remaining > 0),
-    services: (layanan ?? [])
-      .filter((l) => Number(l.harga) >= 1000)
-      .map((l) => ({ id: l.id, name: l.nama, branchId: l.branch_id, price: Number(l.harga), serviceType: l.online_service_type })),
+    // New patients start with Terapi Awal; patients who had one book sessions.
+    services: bookableServices((layanan ?? []) as LayananRow[])
+      .filter(({ type }) => (hadAssessment ? type === 'SESI TERAPI' : type === 'TERAPI AWAL'))
+      .map(({ l, type }) => ({ id: l.id, name: l.nama, branchId: l.branch_id, price: Number(l.harga), serviceType: type })),
   }
 }
 
@@ -219,15 +270,21 @@ export async function createOnlineBooking(input: CreateBookingInput): Promise<Cr
     if (!input.layananId) throw new BookingError('invalid_service', 'Pilih layanan.')
     if (input.method !== 'QRIS' && input.method !== 'VA') throw new BookingError('invalid_method', 'Pilih metode pembayaran.')
     if (!dokuEnabled()) throw new BookingError('payment_unavailable', 'Pembayaran online belum tersedia.')
-    const { data: l } = await admin
+    const { data: branchLayanan } = await admin
       .from('internal_layanan')
-      .select('id, nama, harga, branch_id, is_active, online_service_type')
-      .eq('id', input.layananId)
-      .maybeSingle()
-    if (!l || !l.is_active || !l.online_service_type || l.branch_id !== input.branchId || Number(l.harga) < 1000) {
-      throw new BookingError('invalid_service', 'Layanan tidak tersedia untuk booking online.')
+      .select('id, nama, kategori, harga, branch_id, is_active, online_service_type')
+      .eq('branch_id', input.branchId)
+      .eq('is_active', true)
+    const match = bookableServices((branchLayanan ?? []) as LayananRow[]).find(({ l }) => l.id === input.layananId)
+    if (!match) throw new BookingError('invalid_service', 'Layanan tidak tersedia untuk booking online.')
+    const hadAssessment = await hasHadAssessment(admin, input.patientId)
+    if (hadAssessment !== (match.type === 'SESI TERAPI')) {
+      throw new BookingError('invalid_service', hadAssessment
+        ? 'Anda sudah pernah Terapi Awal. Silakan pilih sesi terapi.'
+        : 'Pasien baru dimulai dengan Terapi Awal.')
     }
-    serviceType = l.online_service_type
+    const l = match.l
+    serviceType = match.type
     amount = Math.round(Number(l.harga))
     layananName = l.nama
   } else {
@@ -238,13 +295,12 @@ export async function createOnlineBooking(input: CreateBookingInput): Promise<Cr
   const hours = await getAvailability(input.branchId, input.date)
   const slot = hours.find((h) => h.hour === input.hour)
   const candidates = (slot?.therapists ?? [])
-    .map((t) => t.id)
-    .filter((id) => !input.staffId || id === input.staffId)
+    .filter((t) => !input.staffId || t.id === input.staffId)
   if (candidates.length === 0) throw new BookingError('slot_taken', 'Jam ini sudah tidak tersedia. Silakan pilih jam lain.')
 
   const expiresAt = input.mode === 'pay' ? new Date(Date.now() + PAY_HOLD_MINUTES * 60_000).toISOString() : null
   let bookingId: string | null = null
-  for (const staffId of candidates) {
+  for (const { id: staffId, shift: staffShift } of candidates) {
     const { data, error } = await admin.rpc('reserve_online_booking', {
       p_patient: input.patientId,
       p_profile: input.profileId,
@@ -252,7 +308,7 @@ export async function createOnlineBooking(input: CreateBookingInput): Promise<Cr
       p_staff: staffId,
       p_date: input.date,
       p_hour: input.hour,
-      p_shift: slot!.shift,
+      p_shift: VISIT_SHIFTS.has(staffShift) ? staffShift : slot!.shift,
       p_mode: input.mode,
       p_package: input.mode === 'package' ? input.packageId : null,
       p_layanan: input.mode === 'pay' ? input.layananId : null,
