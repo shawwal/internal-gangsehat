@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'crypto'
 
 // Server-to-server auth for /api/public/* (called by gangsehat.com server
 // actions, never by browsers). Signature = hex HMAC-SHA256 of
-// `${timestamp}.${rawBody}` with PUBLIC_API_SECRET, sent as X-GS-Signature
+// `${timestamp}.${rawBody}` with GS_API_SECRET, sent as X-GS-Signature
 // with X-GS-Timestamp (unix seconds). The same signer lives in the gangsehat
 // repo at lib/internal-api.ts — keep both in sync.
 

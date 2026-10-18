@@ -9,7 +9,7 @@ import {
 } from '@/lib/onlineBooking/service'
 
 // Online clinic booking API for gangsehat.com (server-to-server only).
-// Every request is HMAC-signed with PUBLIC_API_SECRET (lib/onlineBooking/auth.ts);
+// Every request is HMAC-signed with GS_API_SECRET (lib/onlineBooking/auth.ts);
 // proxy.ts lets /api/public/* through without a session for that reason.
 // Body: { action: 'options' | 'availability' | 'create' | 'status', ...params }
 
@@ -20,7 +20,7 @@ const str = (v: unknown) => (typeof v === 'string' && v.length > 0 && v.length <
 export async function POST(request: Request) {
   const raw = await request.text()
   if (!verifyPublicRequest(
-    process.env.PUBLIC_API_SECRET,
+    process.env.GS_API_SECRET,
     request.headers.get('x-gs-timestamp'),
     request.headers.get('x-gs-signature'),
     raw,
