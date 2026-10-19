@@ -87,8 +87,8 @@ function resolvePackageId(serviceType: string | null | undefined, packageId: str
 }
 
 // Rejects linking more visits to a package than it has sessions. Counts every
-// live linked visit regardless of payment — the view's used_sessions stays 0
-// for unpaid packages, which let one P1 absorb 12 sessions.
+// live linked visit, scheduled ones included — the view's used_sessions only
+// counts attended sessions, which once let one P1 absorb 12 sessions.
 async function checkPackageCapacity(
   supabase: Awaited<ReturnType<typeof createClient>>,
   inputs: { service_type?: string | null; package_id?: string | null }[],
