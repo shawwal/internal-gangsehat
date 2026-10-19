@@ -11,7 +11,7 @@ import { newInvoiceNumber } from '@/lib/doku/invoice'
 import { findLink, releaseTokoSale, syncPaymentLink } from '@/lib/doku/settle'
 import { PAYMENT_RECEIPT_BUCKET } from '@/lib/paymentProof'
 import { orderBills, visitBill, type BillOption } from '@/lib/doku/bills'
-import { SERVICE_TO_CATEGORY } from '@/lib/serviceType'
+import { CATEGORY_TO_SERVICE_TYPE, SERVICE_TO_CATEGORY, isPackageCategory } from '@/lib/serviceType'
 import { fetchLayananHarga, getPatientOutstanding } from '@/app/actions/transactions'
 import type { ServiceType } from '@/types'
 import type { PaymentLinkView, PaymentLinkFilters, PaymentLinkStatus } from '@/components/payment-links/types'
@@ -250,14 +250,25 @@ export async function getPaymentLinkDefaults(target: {
       patientId = patientId ?? v.patient_id
       branchId = v.branch_id
       // Package sessions are billed through the package order, not per visit.
-      if (!paidCount && !v.package_id && v.service_type) {
-        const category = SERVICE_TO_CATEGORY[v.service_type as ServiceType] ?? 'LAINNYA'
+      if (!paidCount && !v.package_id && (v.service_type || v.layanan_id)) {
+        let category = (v.service_type && SERVICE_TO_CATEGORY[v.service_type as ServiceType]) || 'LAINNYA'
         let price: number | null = null
         let description: string | null = null
-        if (v.service_type === 'SPORT MASSAGE' && v.layanan_id) {
-          const { data: l } = await supabase.from('internal_layanan').select('nama, harga').eq('id', v.layanan_id).maybeSingle()
+        const { data: l } = v.layanan_id
+          ? await supabase.from('internal_layanan').select('nama, harga, kategori').eq('id', v.layanan_id).maybeSingle()
+          : { data: null }
+        if (v.service_type === 'SPORT MASSAGE') {
           if (l) { price = Number(l.harga); description = l.nama }
-        } else if (v.service_type !== 'SPORT MASSAGE') {
+        } else if (
+          // Booked layanan (Griya) sets the bill when it matches, or when the
+          // visit itself only says LAINNYA — same rule as PaymentDialog.
+          l && CATEGORY_TO_SERVICE_TYPE[l.kategori] && !isPackageCategory(l.kategori)
+          && (category === 'LAINNYA' || l.kategori === category)
+        ) {
+          category = l.kategori
+          price = Number(l.harga)
+          description = l.nama
+        } else if (v.service_type) {
           price = await fetchLayananHarga(v.service_type, v.branch_id)
         }
         visit = visitBill({ visitId: target.visitId, category, price, description })

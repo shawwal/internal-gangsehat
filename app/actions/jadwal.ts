@@ -3,11 +3,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
-import type { VisitStatus } from '@/types'
+import type { ServiceType, VisitStatus } from '@/types'
 import { isRegioRequired } from '@/lib/visitRouting'
 import { GRIYA_RECORD_EMBED, fetchGriyaBranchIds, resolveGriyaRecordStates, type GriyaRecordVisit } from '@/lib/griyaRecordCompletion'
 import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
+import { SERVICE_TO_CATEGORY, isPackageCategory } from '@/lib/serviceType'
 import { countBookedSessions } from '@/app/actions/packages'
 import { fetchFirstSesiAfterTa, fetchPackagePositions, isTaServiceType } from '@/lib/internal/visitInsights'
 
@@ -599,9 +600,47 @@ export async function updateVisit(
       oldValues: oldFields,
       newValues: { ...oldFields, ...data },
     })
+    if (data.service_type !== undefined && data.service_type !== oldRow.service_type) {
+      await moveVisitPaymentsToServiceType(supabase, user?.id, visitId, oldRow, data.service_type)
+    }
   }
 
   return { error: error?.message ?? null }
+}
+
+// A visit re-typed after it was paid (e.g. LAINNYA → TERAPI AWAL) takes its
+// payments along: Target Progress / PFOTM read the transaction category, not the
+// visit. Only payments still filed under the old type's category move; package
+// payments stay with their package. Best-effort — RLS skips roles without
+// transaction access.
+async function moveVisitPaymentsToServiceType(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string | undefined,
+  visitId: string,
+  oldRow: { service_type: string | null; patient_id: string; branch_id: string },
+  newType: string | null,
+) {
+  const oldCat = (oldRow.service_type && SERVICE_TO_CATEGORY[oldRow.service_type as ServiceType]) || 'LAINNYA'
+  const newCat = newType ? SERVICE_TO_CATEGORY[newType as ServiceType] : undefined
+  if (!newCat || newCat === oldCat || isPackageCategory(oldCat) || isPackageCategory(newCat)) return
+
+  const { data: moved } = await supabase
+    .from('transactions')
+    .update({ category: newCat, updated_at: new Date().toISOString() })
+    .eq('visit_id', visitId)
+    .eq('type', 'income')
+    .eq('category', oldCat)
+    .select('id, amount')
+
+  for (const t of moved ?? []) {
+    await logActivity({
+      supabase, userId, action: 'update', resourceType: 'transaction',
+      resourceId: t.id as string, resourceLabel: `${newCat} — Rp${t.amount}`,
+      branchId: oldRow.branch_id, patientId: oldRow.patient_id,
+      oldValues: { category: oldCat },
+      newValues: { category: newCat },
+    })
+  }
 }
 
 // ── Fetch active staff for a branch (therapist dropdown) ──────────────────────

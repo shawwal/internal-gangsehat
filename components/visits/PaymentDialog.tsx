@@ -34,7 +34,7 @@ export interface PaymentVisitInfo {
   branch_id?: string | null
   /** set → visit is part of a package; used to normalize a mislabeled service_type */
   package_id?: string | null
-  /** Sport Massage service type booked on the visit (internal_layanan id) */
+  /** Price-list item booked on the visit (internal_layanan id) — Sport Massage type, Griya layanan */
   layanan_id?: string | null
   attending_staff_name?: string
 }
@@ -107,6 +107,11 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   // creates the package on save, so it shows up under "Paket Aktif".
   const [branchLayanan, setBranchLayanan] = useState<LayananRow[]>([])
   const [layananId, setLayananId]         = useState<string | null>(visit.layanan_id ?? null)
+  // The price-list item the visit was booked with (Griya books every visit from
+  // one). undefined = still loading; null = none.
+  const [bookedLayanan, setBookedLayanan] = useState<LayananRow | null | undefined>(
+    visit.layanan_id && visit.branch_id ? undefined : null,
+  )
   const isSportMassage = serviceType === 'SPORT MASSAGE'
   const baseCategory = SERVICE_TO_CATEGORY[serviceType]
   const layananOptions = branchLayanan.filter((l) => {
@@ -155,10 +160,38 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
 
   useEffect(refreshOutstanding, [visit.patient_id])
 
+  // A visit saved as LAINNYA (or with no type) but booked with a TA/Sesi/…
+  // layanan is billed under that layanan's kategori — otherwise the payment
+  // lands in LAINNYA and never reaches Target Progress.
+  useEffect(() => {
+    if (!visit.layanan_id || !visit.branch_id) return
+    let cancelled = false
+    fetchLayananByBranch(visit.branch_id).then((rows) => {
+      if (cancelled) return
+      const row = rows.find((l) => l.id === visit.layanan_id) ?? null
+      setBookedLayanan(row)
+      if (!row) return
+      const mapped = CATEGORY_TO_SERVICE_TYPE[row.kategori]
+      const useLayanan = !!mapped && (!visit.service_type || visit.service_type === 'LAINNYA')
+      if (useLayanan) setServiceType(mapped)
+      // Its price is the bill when it is what's being billed (packages and
+      // Sport Massage pick their tariff in the effect further down).
+      const billed = useLayanan ? mapped : getEffectivePackageServiceType(visit.service_type, visit.package_id)
+      if (!isEditing && billed && billed !== 'SPORT MASSAGE' && !isPackageCategory(row.kategori)
+          && SERVICE_TO_CATEGORY[billed] === row.kategori) {
+        setHarga(String(row.harga))
+        setAmountManual(false)
+      }
+    })
+    return () => { cancelled = true }
+  }, [visit.layanan_id, visit.branch_id, visit.service_type, visit.package_id, isEditing])
+
   useEffect(() => {
     // Editing an existing transaction already has its real harga — never
     // silently overwrite it with a price-list guess.
     if (isEditing) return
+    // Wait for the booked layanan; when it matches the category, its price wins.
+    if (bookedLayanan === undefined) return
     // Package categories (PAKET KLINIK / PAKET VISIT) can have several price
     // tiers per branch (different package variants/session counts); this
     // lookup has no way to know which one is intended, so auto-filling here
@@ -168,10 +201,12 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
     if (isPackageCategory(category)) return
     // Sport Massage price comes from the selected service type (effect below)
     if (serviceType === 'SPORT MASSAGE') return
+    // Priced from the booked layanan (effect above)
+    if (bookedLayanan && bookedLayanan.kategori === category) return
     fetchLayananHarga(serviceType, visit.branch_id).then((price) => {
       if (price != null) setHarga(String(price))
     })
-  }, [serviceType, visit.branch_id, isEditing])
+  }, [serviceType, visit.branch_id, isEditing, bookedLayanan])
 
   const needsLayanan = isSportMassage || isPackageCategory(baseCategory)
   useEffect(() => {
@@ -274,7 +309,14 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   // ended up being saved here, so the jadwal-harian grid card (which reads
   // service_type directly) reflects the same correction the user just made.
   async function syncVisitServiceType() {
-    const nextLayananId = isSportMassage ? (selectedLayanan?.id ?? visit.layanan_id ?? null) : null
+    // Keep the booked layanan (payroll auto-activity matches on it) unless the
+    // billed type no longer fits it, e.g. a Sport Massage visit re-typed as Sesi.
+    const layananStillFits = !bookedLayanan
+      || CATEGORY_TO_SERVICE_TYPE[bookedLayanan.kategori] === serviceType
+      || packageCategoryForKategori(bookedLayanan.kategori) === billingCategory
+    const nextLayananId = isSportMassage
+      ? (selectedLayanan?.id ?? visit.layanan_id ?? null)
+      : (layananStillFits ? (visit.layanan_id ?? null) : null)
     const visitPatch: { service_type?: string; layanan_id?: string | null } = {}
     if (serviceType !== visit.service_type) visitPatch.service_type = serviceType
     if (nextLayananId !== (visit.layanan_id ?? null)) visitPatch.layanan_id = nextLayananId
