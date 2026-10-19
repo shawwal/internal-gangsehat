@@ -15,11 +15,10 @@
  *   (patient, date, time, service) are skipped.
  */
 
-import { normalizeBirthDate } from '../lib/dates'
 import { dividersFromSlots, shiftForHour } from '../lib/shifts'
 import {
-  DRY_RUN, SINGKAWANG_BRANCH_ID as BRANCH, createAdmin, decryptOrNull, nameKey,
-  namesMatch, normalizeName, readRoster, readSheet, serialToDate, str,
+  DRY_RUN, SINGKAWANG_BRANCH_ID as BRANCH, anyDate, createAdmin, fetchAll, loadPatientResolver,
+  readSheet, serialToDate, str,
 } from './lib/singkawang.mjs'
 
 const IMPORT_NOTE = 'Import FISIOTERAPI.xlsx'
@@ -56,14 +55,6 @@ const VISIT_PACKAGE_CATEGORY: Record<string, string> = {
   'PAKET VISIT':  'PAKET VISIT',
 }
 
-type DbPatient = {
-  id: string
-  no_rm: string | null
-  phone_hash: string | null
-  name_normalized: string | null
-  encrypted_birth_date: string | null
-}
-
 type PackageRow = {
   rowNo: number
   key: string
@@ -95,84 +86,13 @@ function toTime(v: unknown): string | null {
   return `${m[1].padStart(2, '0')}:${m[2]}`
 }
 
-function anyDate(v: unknown): string | null {
-  if (typeof v === 'number') return serialToDate(v)
-  const s = str(v)
-  if (!s) return null
-  const d = new Date(s)
-  return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-CA')
-}
-
-async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
-  const out: T[] = []
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await build(from, from + 999)
-    if (error) throw new Error(error.message)
-    out.push(...(data ?? []))
-    if (!data || data.length < 1000) break
-  }
-  return out
-}
 
 async function main() {
   if (DRY_RUN) console.log('🧪 DRY RUN — no writes will be made\n')
   const supabase = createAdmin()
 
-  // ── Patients: build RM / name → patient id ────────────────────────────────
   console.log('🔍 Loading patients...')
-  const dbPatients = await fetchAll<DbPatient>((f, t) => supabase.from('patients')
-    .select('id, no_rm, phone_hash, name_normalized, encrypted_birth_date').order('id').range(f, t))
-  const byRm = new Map<string, string>()
-  const byHash = new Map<string, DbPatient[]>()
-  for (const p of dbPatients) {
-    if (p.no_rm) byRm.set(p.no_rm.toUpperCase(), p.id)
-    if (p.phone_hash) byHash.set(p.phone_hash, [...(byHash.get(p.phone_hash) ?? []), p])
-  }
-
-  const roster = readRoster()
-  const rosterByRm = new Map(roster.map(r => [r.no_rm, r]))
-  const rosterIdCache = new Map<string, string | null>()
-
-  // A roster RM that isn't in the DB was either merged into a twin row or matched an existing patient.
-  function rosterId(rm: string): string | null {
-    if (rosterIdCache.has(rm)) return rosterIdCache.get(rm)!
-    const r = rosterByRm.get(rm)
-    let id: string | null = byRm.get(rm) ?? null
-    if (!id && r?.hash) {
-      const db = (byHash.get(r.hash) ?? []).find(p =>
-        namesMatch(p.name_normalized ?? '', r.name, normalizeBirthDate(decryptOrNull(p.encrypted_birth_date)), r.birthDate))
-      id = db?.id ?? null
-      if (!id) {
-        const twin = roster.find(o => o !== r && o.hash === r.hash && byRm.has(o.no_rm)
-          && namesMatch(o.name, r.name, o.birthDate, r.birthDate))
-        id = twin ? byRm.get(twin.no_rm)! : null
-      }
-    }
-    rosterIdCache.set(rm, id)
-    return id
-  }
-
-  const viaName: string[] = []
-  function resolvePatient(rmRaw: unknown, nameRaw: unknown): string | null {
-    const rm = str(rmRaw).toUpperCase()
-    const name = normalizeName(str(nameRaw))
-    const direct = rm ? byRm.get(rm) ?? (rosterByRm.has(rm) ? rosterId(rm) : null) : null
-    if (direct) return direct
-    if (!name) return null
-    // Unique name in the Singkawang roster — exact first, then fuzzy
-    for (const exact of [true, false]) {
-      const ids = new Set(roster
-        .filter(r => exact ? nameKey(r.name) === nameKey(name) : namesMatch(r.name, name, null, null))
-        .map(r => rosterId(r.no_rm)))
-      ids.delete(null)
-      if (ids.size === 1) {
-        viaName.push(`${name} (sheet RM "${rm || '—'}")`)
-        return [...ids][0]
-      }
-      if (ids.size > 1) return null
-    }
-    return null
-  }
+  const { dbCount, roster, rosterId, resolvePatient, viaName } = await loadPatientResolver(supabase)
 
   const regioByPatient = new Map<string, string>()
   for (const r of roster) {
@@ -214,7 +134,7 @@ async function main() {
   const { data: slots } = await supabase.from('schedule_slots').select('shift, slot_time').eq('branch_id', BRANCH)
   const dividers = dividersFromSlots(slots ?? null)
 
-  console.log(`   ${dbPatients.length} patients · ${existingPackages.length} Singkawang packages · ${existingVisits.length} Singkawang visits`)
+  console.log(`   ${dbCount} patients · ${existingPackages.length} Singkawang packages · ${existingVisits.length} Singkawang visits`)
   console.log(`   Therapist accounts: ${[...therapistByFirstName.keys()].join(', ') || 'none'}`)
 
   // ── Parse packages ────────────────────────────────────────────────────────

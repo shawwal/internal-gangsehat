@@ -9,6 +9,8 @@ import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import XLSX from 'xlsx'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { normalizeBirthDate } from '../../lib/dates'
 
 export { XLSX }
 
@@ -29,7 +31,8 @@ export const SUPABASE_URL     = env['NEXT_PUBLIC_SUPABASE_URL']  ?? ''
 export const SERVICE_ROLE_KEY = env['SUPABASE_SERVICE_ROLE_KEY'] ?? ''
 export const ENCRYPTION_KEY   = env['ENCRYPTION_KEY']            ?? ''
 
-export const XLSX_PATH = join(__dirname, '../../FISIOTERAPI.xlsx')
+// FISIO_XLSX=/path/to/FISIOTERAPI.xlsx overrides the default repo-root location
+export const XLSX_PATH = process.env.FISIO_XLSX ?? join(__dirname, '../../FISIOTERAPI.xlsx')
 
 export const encKey = Buffer.from(ENCRYPTION_KEY, 'hex')
 
@@ -236,4 +239,96 @@ export function readRoster(): RosterPatient[] {
     })
   }
   return out
+}
+
+export function anyDate(v: unknown): string | null {
+  if (typeof v === 'number') return serialToDate(v)
+  const s = str(v)
+  if (!s) return null
+  const d = new Date(s)
+  return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-CA')
+}
+
+
+export async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
+  const out: T[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await build(from, from + 999)
+    if (error) throw new Error(error.message)
+    out.push(...(data ?? []))
+    if (!data || data.length < 1000) break
+  }
+  return out
+}
+
+type DbPatient = {
+  id: string
+  no_rm: string | null
+  phone_hash: string | null
+  name_normalized: string | null
+  encrypted_birth_date: string | null
+}
+
+
+/**
+ * RM / name → patients.id for Singkawang sheets. Order: exact no_rm; a DATA PASIEN RM that
+ * was merged into a twin row or matched an existing patient; a unique name in the roster
+ * (exact, then fuzzy). `viaName` collects name-only matches for the report.
+ */
+export async function loadPatientResolver(supabase: SupabaseClient) {
+  const dbPatients = await fetchAll<DbPatient>((f, t) => supabase.from('patients')
+    .select('id, no_rm, phone_hash, name_normalized, encrypted_birth_date').order('id').range(f, t))
+  const byRm = new Map<string, string>()
+  const byHash = new Map<string, DbPatient[]>()
+  for (const p of dbPatients) {
+    if (p.no_rm) byRm.set(p.no_rm.toUpperCase(), p.id)
+    if (p.phone_hash) byHash.set(p.phone_hash, [...(byHash.get(p.phone_hash) ?? []), p])
+  }
+
+  const roster = readRoster()
+  const rosterByRm = new Map(roster.map(r => [r.no_rm, r]))
+  const rosterIdCache = new Map<string, string | null>()
+
+  // A roster RM that isn't in the DB was either merged into a twin row or matched an existing patient.
+  function rosterId(rm: string): string | null {
+    if (rosterIdCache.has(rm)) return rosterIdCache.get(rm)!
+    const r = rosterByRm.get(rm)
+    let id: string | null = byRm.get(rm) ?? null
+    if (!id && r?.hash) {
+      const db = (byHash.get(r.hash) ?? []).find(p =>
+        namesMatch(p.name_normalized ?? '', r.name, normalizeBirthDate(decryptOrNull(p.encrypted_birth_date)), r.birthDate))
+      id = db?.id ?? null
+      if (!id) {
+        const twin = roster.find(o => o !== r && o.hash === r.hash && byRm.has(o.no_rm)
+          && namesMatch(o.name, r.name, o.birthDate, r.birthDate))
+        id = twin ? byRm.get(twin.no_rm)! : null
+      }
+    }
+    rosterIdCache.set(rm, id)
+    return id
+  }
+
+  const viaName: string[] = []
+  function resolvePatient(rmRaw: unknown, nameRaw: unknown): string | null {
+    const rm = str(rmRaw).toUpperCase()
+    const name = normalizeName(str(nameRaw))
+    const direct = rm ? byRm.get(rm) ?? (rosterByRm.has(rm) ? rosterId(rm) : null) : null
+    if (direct) return direct
+    if (!name) return null
+    // Unique name in the Singkawang roster — exact first, then fuzzy
+    for (const exact of [true, false]) {
+      const ids = new Set(roster
+        .filter(r => exact ? nameKey(r.name) === nameKey(name) : namesMatch(r.name, name, null, null))
+        .map(r => rosterId(r.no_rm)))
+      ids.delete(null)
+      if (ids.size === 1) {
+        viaName.push(`${name} (sheet RM "${rm || '—'}")`)
+        return [...ids][0]
+      }
+      if (ids.size > 1) return null
+    }
+    return null
+  }
+
+  return { dbCount: dbPatients.length, roster, rosterId, resolvePatient, viaName }
 }

@@ -20,8 +20,7 @@ export async function fetchPatientPackages(
 
   if (error || !data?.length) return []
 
-  // used_sessions is payment-gated (0 until a payment exists), so an unpaid
-  // package would look empty forever. Capacity checks use this raw count.
+  // Capacity checks use these raw counts (booked includes scheduled visits).
   const ids = data.map((p) => p.id)
   const [bookedCounts, attendedCounts] = await Promise.all([
     countBookedSessions(supabase, ids),
@@ -80,8 +79,8 @@ export async function countBookedSessions(
   return counts
 }
 
-/** HADIR visits per package, regardless of payment — the session counter
- *  staff expect; used_sessions stays 0 until the package is paid. */
+/** HADIR visits per package, regardless of payment (same rule as the view's
+ *  used_sessions since supabase/113-…). */
 async function countAttendedSessions(
   supabase: Awaited<ReturnType<typeof createClient>>,
   packageIds: string[],

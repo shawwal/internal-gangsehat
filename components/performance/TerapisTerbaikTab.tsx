@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchConfirmedVisitIds } from '@/lib/internal/paymentGating'
+import { fetchAllRows } from '@/lib/supabase/fetchAll'
 import { LeaderboardPodium } from './LeaderboardPodium'
 import { LeaderboardTable } from './LeaderboardTable'
 import { TherapistPatientsModal } from './TherapistPatientsModal'
@@ -30,74 +31,85 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
   const [targets, setTargets] = useState<StaffTargetRow[]>([])
   const [selected, setSelected] = useState<FisioStats | null>(null)
 
+  const reqId = useRef(0)
+
   const load = useCallback(async () => {
+    const id = ++reqId.current
     setLoading(true)
     const supabase = createClient()
     const { start, end } = getMonthRange(month, year)
 
-    const [visitsRes, targetsRes] = await Promise.all([
-      (() => {
-        let q = supabase
-          .from('patient_visits')
-          .select(
-            'id, attending_staff_id, service_type, visit_date, kehadiran, ' +
-            'internal_profiles!attending_staff_id(full_name, avatar_url)',
-          )
-          .gte('visit_date', start)
-          .lte('visit_date', end)
-          .in('status', [...VISIT_STATUS_FILTER])
-          .not('attending_staff_id', 'is', null)
-        if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
-        return q
-      })(),
-      (() => {
-        let q = supabase
-          .from('staff_targets')
-          .select(
-            'staff_id, target_ta, target_paket_klinik, target_kunjungan, target_visit, ' +
-            'internal_profiles!staff_id(full_name)',
-          )
-          .eq('bulan', month)
-          .eq('tahun', year)
-          .eq('status', 'approved')
-        if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
-        return q
-      })(),
-    ])
+    try {
+      const [visitRows, targetsRes] = await Promise.all([
+        fetchAllRows<VisitForLeaderboard>((from, to) => {
+          let q = supabase
+            .from('patient_visits')
+            .select(
+              'id, attending_staff_id, service_type, visit_date, kehadiran, ' +
+              'internal_profiles!attending_staff_id(full_name, avatar_url)',
+            )
+            .gte('visit_date', start)
+            .lte('visit_date', end)
+            .in('status', [...VISIT_STATUS_FILTER])
+            .not('attending_staff_id', 'is', null)
+            .order('id')
+            .range(from, to)
+          if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
+          return q as unknown as PromiseLike<{ data: VisitForLeaderboard[] | null; error: unknown }>
+        }),
+        (() => {
+          let q = supabase
+            .from('staff_targets')
+            .select(
+              'staff_id, target_ta, target_paket_klinik, target_kunjungan, target_visit, ' +
+              'internal_profiles!staff_id(full_name)',
+            )
+            .eq('bulan', month)
+            .eq('tahun', year)
+            .eq('status', 'approved')
+          if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
+          return q
+        })(),
+      ])
 
-    const vData = ((visitsRes.data ?? []) as unknown as VisitForLeaderboard[]).filter(v => isAttended(v, TODAY_ISO))
-    const tData = (targetsRes.data ?? []) as unknown as StaffTargetRow[]
-    setTargets(tData)
+      const vData = visitRows.filter(v => isAttended(v, TODAY_ISO))
+      const tData = (targetsRes.data ?? []) as unknown as StaffTargetRow[]
 
-    // Kehadiran ≠ Pembayaran: `total` (kunjungan) stays attendance-only, but the
-    // TA/Paket/Sesi breakdown only counts visits with a confirmed payment.
-    const paidVisitIds = await fetchConfirmedVisitIds(supabase, vData.map(v => v.id))
+      // Kehadiran ≠ Pembayaran: `total` (kunjungan) stays attendance-only, but the
+      // TA/Paket/Sesi breakdown only counts visits with a confirmed payment.
+      const paidVisitIds = await fetchConfirmedVisitIds(supabase, vData.map(v => v.id))
 
-    // Aggregate by attending_staff_id
-    const statsMap = new Map<string, FisioStats>()
-    for (const v of vData) {
-      const sid = v.attending_staff_id!
-      const ip  = v.internal_profiles as any
-      if (!statsMap.has(sid)) {
-        statsMap.set(sid, {
-          staff_id:   sid,
-          name:       ip?.full_name ?? sid,
-          avatar_url: ip?.avatar_url ?? null,
-          ta: 0, paket: 0, sesi: 0, total: 0,
-        })
+      // Aggregate by attending_staff_id
+      const statsMap = new Map<string, FisioStats>()
+      for (const v of vData) {
+        const sid = v.attending_staff_id!
+        const ip  = v.internal_profiles as any
+        if (!statsMap.has(sid)) {
+          statsMap.set(sid, {
+            staff_id:   sid,
+            name:       ip?.full_name ?? sid,
+            avatar_url: ip?.avatar_url ?? null,
+            ta: 0, paket: 0, sesi: 0, total: 0,
+          })
+        }
+        const s = statsMap.get(sid)!
+        s.total++
+        if (!paidVisitIds.has(v.id)) continue
+        const svcType = v.service_type ?? ''
+        if ((TA_TYPES    as readonly string[]).includes(svcType)) s.ta++
+        else if ((PAKET_TYPES as readonly string[]).includes(svcType)) s.paket++
+        else if ((SESI_TYPES  as readonly string[]).includes(svcType)) s.sesi++
       }
-      const s = statsMap.get(sid)!
-      s.total++
-      if (!paidVisitIds.has(v.id)) continue
-      const svcType = v.service_type ?? ''
-      if ((TA_TYPES    as readonly string[]).includes(svcType)) s.ta++
-      else if ((PAKET_TYPES as readonly string[]).includes(svcType)) s.paket++
-      else if ((SESI_TYPES  as readonly string[]).includes(svcType)) s.sesi++
-    }
 
-    const sorted = Array.from(statsMap.values()).sort((a, b) => b.total - a.total)
-    setRanked(sorted)
-    setLoading(false)
+      const sorted = Array.from(statsMap.values()).sort((a, b) => b.total - a.total)
+      if (id !== reqId.current) return
+      setTargets(tData)
+      setRanked(sorted)
+    } catch (err) {
+      console.error('[TerapisTerbaikTab] load failed', err)
+    } finally {
+      if (id === reqId.current) setLoading(false)
+    }
   }, [month, year, branchFilter])
 
   useEffect(() => { load() }, [load])

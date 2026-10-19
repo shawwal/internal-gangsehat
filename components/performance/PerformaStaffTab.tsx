@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { fetchAllRows } from '@/lib/supabase/fetchAll'
 import { FisioSelector } from './FisioSelector'
 import { ServiceDonutChart } from './ServiceDonutChart'
 import { MonthlyTrendChart } from './MonthlyTrendChart'
@@ -27,60 +28,75 @@ export function PerformaStaffTab({ year, branchFilter }: PerformaStaffTabProps) 
   const [prevVisits, setPrevVisits]     = useState<VisitForPerforma[]>([])
   const [fisioList, setFisioList]       = useState<FisioInfo[]>([])
 
+  const reqId = useRef(0)
+
   const load = useCallback(async () => {
+    const id = ++reqId.current
     setLoading(true)
     const supabase = createClient()
 
-    const buildQ = (y: number) => {
+    // A full year across branches is well past PostgREST's 1000-row cap — page it.
+    const fetchYear = (y: number) => fetchAllRows<VisitForPerforma>((from, to) => {
       let q = supabase
         .from('patient_visits')
         .select('visit_date, service_type, attending_staff_id, kehadiran')
         .gte('visit_date', `${y}-01-01`)
         .lte('visit_date', `${y}-12-31`)
         .in('status', [...VISIT_STATUS_FILTER])
+        .order('id')
+        .range(from, to)
       if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
       if (viewMode === 'individual' && selectedFisioId)
         q = q.eq('attending_staff_id', selectedFisioId)
-      return q
-    }
+      return q as unknown as PromiseLike<{ data: VisitForPerforma[] | null; error: unknown }>
+    })
 
-    const [curRes, prevRes] = await Promise.all([
-      buildQ(year),
-      buildQ(year - 1),
-    ])
+    try {
+      const [curRows, prevRows] = await Promise.all([fetchYear(year), fetchYear(year - 1)])
+      if (id !== reqId.current) return
 
-    const curData  = ((curRes.data  ?? []) as VisitForPerforma[]).filter(v => isAttended(v, TODAY_ISO))
-    const prevData = ((prevRes.data ?? []) as VisitForPerforma[]).filter(v => isAttended(v, TODAY_ISO))
-    setVisits(curData)
-    setPrevVisits(prevData)
+      const curData  = curRows.filter(v => isAttended(v, TODAY_ISO))
+      const prevData = prevRows.filter(v => isAttended(v, TODAY_ISO))
+      setVisits(curData)
+      setPrevVisits(prevData)
 
-    // Build fisio list from distinct attending_staff_id across current year (all visits)
-    const idSet = new Set<string>()
-    const nameMap = new Map<string, string>()
+      // Build fisio list from distinct attending_staff_id across current year (all visits)
+      const idSet = new Set<string>()
+      const nameMap = new Map<string, string>()
 
-    if (fisioList.length === 0) {
-      let allQ = supabase
-        .from('patient_visits')
-        .select('attending_staff_id, visit_date, kehadiran, internal_profiles!attending_staff_id(full_name)')
-        .gte('visit_date', `${year}-01-01`)
-        .lte('visit_date', `${year}-12-31`)
-        .not('attending_staff_id', 'is', null)
-        .in('status', [...VISIT_STATUS_FILTER])
-      if (branchFilter !== 'all') allQ = allQ.eq('branch_id', branchFilter)
-      const { data: allVisits } = await allQ
-      for (const v of (allVisits ?? []).filter(v => isAttended(v, TODAY_ISO))) {
-        const id = v.attending_staff_id as string
-        if (!idSet.has(id)) {
-          idSet.add(id)
-          nameMap.set(id, (v.internal_profiles as any)?.full_name ?? id)
+      if (fisioList.length === 0) {
+        type StaffVisit = { attending_staff_id: string; visit_date: string; kehadiran: VisitForPerforma['kehadiran']; internal_profiles: unknown }
+        const allVisits = await fetchAllRows<StaffVisit>((from, to) => {
+          let allQ = supabase
+            .from('patient_visits')
+            .select('attending_staff_id, visit_date, kehadiran, internal_profiles!attending_staff_id(full_name)')
+            .gte('visit_date', `${year}-01-01`)
+            .lte('visit_date', `${year}-12-31`)
+            .not('attending_staff_id', 'is', null)
+            .in('status', [...VISIT_STATUS_FILTER])
+            .order('id')
+            .range(from, to)
+          if (branchFilter !== 'all') allQ = allQ.eq('branch_id', branchFilter)
+          return allQ as unknown as PromiseLike<{ data: StaffVisit[] | null; error: unknown }>
+        })
+        if (id !== reqId.current) return
+        for (const v of allVisits.filter(v => isAttended(v, TODAY_ISO))) {
+          const sid = v.attending_staff_id
+          if (!idSet.has(sid)) {
+            idSet.add(sid)
+            nameMap.set(sid, (v.internal_profiles as any)?.full_name ?? sid)
+          }
         }
+        setFisioList(
+          Array.from(idSet).map(id => ({ id, name: nameMap.get(id) ?? id })),
+        )
       }
-      setFisioList(
-        Array.from(idSet).map(id => ({ id, name: nameMap.get(id) ?? id })),
-      )
-    }
 
-    setLoading(false)
+    } catch (err) {
+      console.error('[PerformaStaffTab] load failed', err)
+    } finally {
+      if (id === reqId.current) setLoading(false)
+    }
   }, [year, branchFilter, viewMode, selectedFisioId])
 
   useEffect(() => { load() }, [load])

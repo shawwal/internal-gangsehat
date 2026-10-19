@@ -20,6 +20,7 @@ interface Visit {
   kehadiran: string | null
   // Supabase returns object at runtime for many-to-one FK joins
   internal_profiles: TherapistInfo | TherapistInfo[] | null
+  branches: { name: string } | { name: string }[] | null
 }
 
 interface PatientVisitHistoryProps {
@@ -31,6 +32,12 @@ interface PatientVisitHistoryProps {
 function getTherapist(raw: Visit['internal_profiles']): TherapistInfo | null {
   if (!raw) return null
   return Array.isArray(raw) ? (raw[0] ?? null) : raw
+}
+
+// "Fisioterapi Gang Sehat Singkawang" → "Singkawang"; other branches keep their name
+function branchLabel(raw: Visit['branches']): string | null {
+  const name = (Array.isArray(raw) ? raw[0]?.name : raw?.name) ?? null
+  return name ? name.replace(/^Fisioterapi Gang Sehat\s+/i, '') : null
 }
 
 export function PatientVisitHistory({ visits, totalVisits, patientId }: PatientVisitHistoryProps) {
@@ -63,6 +70,7 @@ export function PatientVisitHistory({ visits, totalVisits, patientId }: PatientV
               <tr className="border-b border-border/60">
                 <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4">Tanggal</th>
                 <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 hidden sm:table-cell">Layanan</th>
+                <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 hidden sm:table-cell">Cabang</th>
                 <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 hidden md:table-cell">Terapis</th>
                 <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 hidden md:table-cell">Kehadiran</th>
                 <th className="text-left text-xs font-medium text-muted-foreground pb-2">Status</th>
@@ -71,6 +79,7 @@ export function PatientVisitHistory({ visits, totalVisits, patientId }: PatientV
             <tbody>
               {visits.map((v, i) => {
                 const therapist = getTherapist(v.internal_profiles)
+                const branch = branchLabel(v.branches)
                 return (
                   <tr
                     key={v.id}
@@ -86,6 +95,9 @@ export function PatientVisitHistory({ visits, totalVisits, patientId }: PatientV
                     </td>
                     <td className="py-2.5 pr-4 hidden sm:table-cell">
                       <span className="text-xs text-muted-foreground">{v.service_type ?? '—'}</span>
+                    </td>
+                    <td className="py-2.5 pr-4 hidden sm:table-cell">
+                      <span className="text-xs text-foreground">{branch ?? '—'}</span>
                     </td>
                     <td className="py-2.5 pr-4 hidden md:table-cell">
                       {therapist ? (

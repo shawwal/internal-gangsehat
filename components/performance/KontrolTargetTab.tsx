@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchConfirmedVisitIds } from '@/lib/internal/paymentGating'
+import { fetchAllRows, fetchInChunks } from '@/lib/supabase/fetchAll'
 import { getEffectivePackageServiceType } from '@/lib/serviceType'
 import { TargetKpiCard } from './TargetKpiCard'
 import { FisioBarChart } from './FisioBarChart'
@@ -40,7 +41,12 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
   const [paidVisitIds, setPaidVisitIds] = useState<Set<string>>(new Set())
   const [openKpi, setOpenKpi] = useState<'ta' | 'paket' | 'kunjungan' | 'visit' | null>(null)
 
+  // Guards against a slower, older request (e.g. the previous branch) landing
+  // after the latest one and overwriting its data.
+  const reqId = useRef(0)
+
   const load = useCallback(async () => {
+    const id = ++reqId.current
     setLoading(true)
     const supabase = createClient()
 
@@ -51,55 +57,66 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
           ? getWeekRangeInMonth(week, month, year)
           : { start: customStart, end: customEnd }
 
-    // Parallel: visits + targets
-    const [visitsRes, targetsRes] = await Promise.all([
-      (() => {
-        let q = supabase
-          .from('patient_visits')
-          .select(
-            'id, patient_id, service_type, attending_staff_id, visit_date, kehadiran, package_id, ' +
-            'internal_profiles!attending_staff_id(full_name)',
-          )
-          .gte('visit_date', range.start)
-          .lte('visit_date', range.end)
-          .in('status', [...VISIT_STATUS_FILTER])
-          .order('visit_date', { ascending: false })
-        if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
-        return q
-      })(),
-      (() => {
-        let q = supabase
-          .from('staff_targets')
-          .select(
-            'staff_id, target_ta, target_paket_klinik, target_kunjungan, target_visit, ' +
-            'internal_profiles!staff_id(full_name)',
-          )
-          .eq('status', 'approved')
-        if (periodMode === 'custom') {
-          const months = getMonthsInRange(customStart, customEnd)
-          q = q.or(months.map(({ bulan, tahun }) => `and(bulan.eq.${bulan},tahun.eq.${tahun})`).join(','))
-        } else {
-          q = q.eq('bulan', month).eq('tahun', year)
-        }
-        if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
-        return q
-      })(),
-    ])
+    try {
+      // Parallel: visits (paged — a month across all branches exceeds
+      // PostgREST's 1000-row cap) + targets
+      const [rawVisits, targetsRes] = await Promise.all([
+        fetchAllRows<VisitRow & { patient_id: string }>((from, to) => {
+          let q = supabase
+            .from('patient_visits')
+            .select(
+              'id, patient_id, service_type, attending_staff_id, visit_date, kehadiran, package_id, ' +
+              'internal_profiles!attending_staff_id(full_name)',
+            )
+            .gte('visit_date', range.start)
+            .lte('visit_date', range.end)
+            .in('status', [...VISIT_STATUS_FILTER])
+            .order('visit_date', { ascending: false })
+            .order('id')
+            .range(from, to)
+          if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
+          return q as unknown as PromiseLike<{ data: (VisitRow & { patient_id: string })[] | null; error: unknown }>
+        }),
+        (() => {
+          let q = supabase
+            .from('staff_targets')
+            .select(
+              'staff_id, target_ta, target_paket_klinik, target_kunjungan, target_visit, ' +
+              'internal_profiles!staff_id(full_name)',
+            )
+            .eq('status', 'approved')
+          if (periodMode === 'custom') {
+            const months = getMonthsInRange(customStart, customEnd)
+            q = q.or(months.map(({ bulan, tahun }) => `and(bulan.eq.${bulan},tahun.eq.${tahun})`).join(','))
+          } else {
+            q = q.eq('bulan', month).eq('tahun', year)
+          }
+          if (branchFilter !== 'all') q = q.eq('branch_id', branchFilter)
+          return q
+        })(),
+      ])
 
-    // patient_visits has no FK relationship registered for `patient_id` in the
-    // PostgREST schema cache, so `patients!patient_id(...)` embedding silently
-    // errors out the whole query — fetch patients separately instead (two-step).
-    const rawVisits = (visitsRes.data ?? []) as unknown as (VisitRow & { patient_id: string })[]
-    const patientIds = [...new Set(rawVisits.map(v => v.patient_id))]
-    const { data: patientsData } = patientIds.length
-      ? await supabase.from('patients').select('id, no_rm').in('id', patientIds)
-      : { data: [] as { id: string; no_rm: string | null }[] }
-    const noRmById = new Map((patientsData ?? []).map(p => [p.id, p.no_rm]))
+      // patient_visits has no FK relationship registered for `patient_id` in the
+      // PostgREST schema cache, so `patients!patient_id(...)` embedding silently
+      // errors out the whole query — fetch patients separately instead (two-step).
+      const [patientsData, paid] = await Promise.all([
+        fetchInChunks<{ id: string; no_rm: string | null }>(
+          rawVisits.map(v => v.patient_id),
+          chunk => supabase.from('patients').select('id, no_rm').in('id', chunk),
+        ),
+        fetchConfirmedVisitIds(supabase, rawVisits.map(v => v.id)),
+      ])
+      if (id !== reqId.current) return
+      const noRmById = new Map(patientsData.map(p => [p.id, p.no_rm]))
 
-    setVisits(rawVisits.map(v => ({ ...v, patients: { no_rm: noRmById.get(v.patient_id) ?? null } })))
-    setTargets((targetsRes.data ?? []) as unknown as StaffTargetRow[])
-    setPaidVisitIds(await fetchConfirmedVisitIds(supabase, rawVisits.map(v => v.id)))
-    setLoading(false)
+      setVisits(rawVisits.map(v => ({ ...v, patients: { no_rm: noRmById.get(v.patient_id) ?? null } })))
+      setTargets((targetsRes.data ?? []) as unknown as StaffTargetRow[])
+      setPaidVisitIds(paid)
+    } catch (err) {
+      console.error('[KontrolTargetTab] load failed', err)
+    } finally {
+      if (id === reqId.current) setLoading(false)
+    }
   }, [year, branchFilter, periodMode, month, week, customStart, customEnd])
 
   useEffect(() => { load() }, [load])

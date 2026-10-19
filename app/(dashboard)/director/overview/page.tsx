@@ -1,9 +1,11 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { ChartsSection } from '@/components/dashboard/charts/ChartsSection'
 import { KpiCards } from '@/components/overview/KpiCards'
 import { PendingTargets } from '@/components/overview/PendingTargets'
 import { PendingReports } from '@/components/overview/PendingReports'
 import { BranchFilter } from '@/components/overview/BranchFilter'
+import { OverviewBodySkeleton } from '@/components/overview/OverviewSkeleton'
 import { buildTrendFromTransactions, buildBranchChartFromTransactions } from '@/components/overview/dataHelpers'
 
 export const dynamic = 'force-dynamic'
@@ -31,6 +33,72 @@ export default async function DirectorOverviewPage({
     ? `${numMonth === 12 ? numYear + 1 : numYear}-${String(numMonth === 12 ? 1 : numMonth + 1).padStart(2, '0')}-01`
     : null
 
+  const supabase   = await createClient()
+  const { data: branchList } = await supabase
+    .from('branches').select('id, name').eq('is_active', true).order('name')
+
+  const MONTH_LABELS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des']
+  const periodLabel = numMonth
+    ? `${MONTH_LABELS[numMonth - 1]} ${year}`
+    : 'Semua Waktu'
+
+  const selectedBranchName = branchId
+    ? ((branchList ?? []).find(b => b.id === branchId)?.name ?? '...')
+    : 'Semua Cabang'
+
+  const dateStr = new Date().toLocaleDateString('id-ID', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+
+  return (
+    <div className="space-y-6 relative">
+      <div className="absolute top-0 right-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none -z-10" />
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Overview</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {selectedBranchName} · {periodLabel}
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <BranchFilter
+            branches={branchList ?? []}
+            branchId={branchId}
+            month={month}
+            year={year}
+          />
+          <span className="text-xs font-medium text-muted-foreground bg-muted px-3 py-1.5 rounded-2xl hidden sm:block">
+            {dateStr}
+          </span>
+        </div>
+      </div>
+
+      {/* Changing only searchParams doesn't re-trigger loading.tsx, so key the
+          boundary on the filters — each change remounts it and shows the skeleton. */}
+      <Suspense key={`${branchId}|${month}|${year}`} fallback={<OverviewBodySkeleton />}>
+        <OverviewContent
+          branchId={branchId}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          branchList={branchList ?? []}
+          periodLabel={periodLabel}
+        />
+      </Suspense>
+    </div>
+  )
+}
+
+async function OverviewContent({
+  branchId, dateFrom, dateTo, branchList, periodLabel,
+}: {
+  branchId: string
+  dateFrom: string | null
+  dateTo: string | null
+  branchList: { id: string; name: string }[]
+  periodLabel: string
+}) {
   const supabase = await createClient()
 
   // PostgREST caps any unpaginated select at 1000 rows. With `month=all` the
@@ -148,12 +216,8 @@ export default async function DirectorOverviewPage({
     .order('created_at', { ascending: false })
     .limit(5)
 
-  // ── Branches list for selector ────────────────────────────────────────────
-  const branchListQ = supabase.from('branches').select('id, name').eq('is_active', true).order('name')
-
   // ── Execute all in parallel ───────────────────────────────────────────────
   const [
-    { data: branchList },
     patientVisitRows,
     { count: totalStaff },
     { count: visits },
@@ -165,7 +229,6 @@ export default async function DirectorOverviewPage({
     { data: pendingReports },
     { data: pendingTargets },
   ] = await Promise.all([
-    branchListQ,
     patientRowsP,
     staffQ,
     visitQ,
@@ -186,44 +249,8 @@ export default async function DirectorOverviewPage({
   const trendData  = buildTrendFromTransactions(trendTx)
   const branchData = branchId ? [] : buildBranchChartFromTransactions(branchTx, branchList)
 
-  const MONTH_LABELS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des']
-  const periodLabel = numMonth
-    ? `${MONTH_LABELS[numMonth - 1]} ${year}`
-    : 'Semua Waktu'
-
-  const selectedBranchName = branchId
-    ? ((branchList ?? []).find(b => b.id === branchId)?.name ?? '...')
-    : 'Semua Cabang'
-
-  const dateStr = now.toLocaleDateString('id-ID', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
-
   return (
-    <div className="space-y-6 relative">
-      <div className="absolute top-0 right-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none -z-10" />
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Overview</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {selectedBranchName} · {periodLabel}
-          </p>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <BranchFilter
-            branches={branchList ?? []}
-            branchId={branchId}
-            month={month}
-            year={year}
-          />
-          <span className="text-xs font-medium text-muted-foreground bg-muted px-3 py-1.5 rounded-2xl hidden sm:block">
-            {dateStr}
-          </span>
-        </div>
-      </div>
-
+    <>
       <KpiCards
         totalPatients={totalPatients ?? 0}
         totalStaff={totalStaff ?? 0}
@@ -238,6 +265,6 @@ export default async function DirectorOverviewPage({
 
       <PendingTargets pendingTargets={pendingTargets ?? []} />
       <PendingReports pendingReports={pendingReports ?? []} />
-    </div>
+    </>
   )
 }
