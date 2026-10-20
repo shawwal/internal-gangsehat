@@ -123,6 +123,10 @@ export interface AccountingTxnRow {
   fisio_id: string | null
   transaction_date: string
   status: string
+  patient_id: string | null
+  description: string | null
+  payment_method: string | null
+  payment_status: string | null
 }
 
 /** Fetches confirmed+pending (non-rejected) transactions for a branch/date range, for in-app aggregation. */
@@ -134,7 +138,7 @@ export async function fetchTransactionsForRange(
   const supabase = await createClient()
   const { data } = await supabase
     .from('transactions')
-    .select('id, type, category, amount, harga, discount, fisio_id, transaction_date, status')
+    .select('id, type, category, amount, harga, discount, fisio_id, transaction_date, status, patient_id, description, payment_method, payment_status')
     .eq('branch_id', branchId)
     .neq('status', 'rejected')
     .gte('transaction_date', dateFrom)

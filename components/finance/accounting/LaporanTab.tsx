@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react'
 import { fetchTransactionsForRange, fetchBranchAdmins, type AccountingTxnRow, type AdminOption } from '@/app/actions/accounting'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { openPrintableReport } from '@/lib/pdf-export'
 import { ExportMenu } from './ExportMenu'
+import { TransactionDetailModal } from './TransactionDetailModal'
 import { formatRp, formatNum, inputCls } from './shared'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 
@@ -20,10 +21,13 @@ interface Props {
 
 interface RekapRow { key: string; label: string; count: number; total: number }
 
-function KpiCard({ icon: Icon, label, value, tone }: { icon: typeof TrendingUp; label: string; value: string; tone: 'up' | 'down' | 'neutral' }) {
+interface Detail { title: string; rows: AccountingTxnRow[] }
+
+function KpiCard({ icon: Icon, label, value, tone, onClick }: { icon: typeof TrendingUp; label: string; value: string; tone: 'up' | 'down' | 'neutral'; onClick?: () => void }) {
   const toneCls = tone === 'up' ? 'text-chart-4 bg-chart-4/10' : tone === 'down' ? 'text-destructive bg-destructive/10' : 'text-primary bg-primary/10'
   return (
-    <div className="glass-card p-4 flex items-center gap-3">
+    <button type="button" onClick={onClick}
+      className="glass-card p-4 flex items-center gap-3 text-left w-full cursor-pointer hover:ring-2 hover:ring-primary/40 transition-shadow">
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${toneCls}`}>
         <Icon size={18} />
       </div>
@@ -31,7 +35,7 @@ function KpiCard({ icon: Icon, label, value, tone }: { icon: typeof TrendingUp; 
         <p className="text-xs text-muted-foreground truncate">{label}</p>
         <p className="text-base font-semibold text-foreground truncate">{value}</p>
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -41,6 +45,7 @@ export function LaporanTab({ branchId, branchName, dateFrom, dateToExclusive, pe
   const [loading, setLoading] = useState(true)
   const [customFrom, setCustomFrom] = useState(dateFrom)
   const [customTo, setCustomTo] = useState(dateFrom)
+  const [detail, setDetail] = useState<Detail | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -83,6 +88,17 @@ export function LaporanTab({ branchId, branchName, dateFrom, dateToExclusive, pe
     }
     return [...m.values()].sort((a, b) => b.total - a.total)
   }, [income, adminName])
+
+  const closeDetail = useCallback(() => setDetail(null), [])
+
+  function openLayanan(category: string) {
+    setDetail({ title: `Layanan · ${category}`, rows: income.filter((t) => t.category === category) })
+  }
+
+  function openAdmin(r: RekapRow) {
+    const fisio = r.key === '__none__' ? null : r.key
+    setDetail({ title: `Admin · ${r.label}`, rows: income.filter((t) => (t.fisio_id ?? null) === fisio) })
+  }
 
   function applyCustomRange() {
     const toExclusive = new Date(new Date(customTo).getTime() + 86400000).toISOString().slice(0, 10)
@@ -146,10 +162,14 @@ export function LaporanTab({ branchId, branchName, dateFrom, dateToExclusive, pe
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <KpiCard icon={Activity} label="Total Layanan" value={formatNum(income.length)} tone="neutral" />
-            <KpiCard icon={TrendingUp} label="Nilai Transaksi" value={formatRp(totalNilaiTransaksi)} tone="up" />
-            <KpiCard icon={TrendingDown} label="Total Pengeluaran" value={formatRp(totalPengeluaran)} tone="down" />
-            <KpiCard icon={Wallet} label="Laba Bersih" value={formatRp(labaBersih)} tone={labaBersih >= 0 ? 'up' : 'down'} />
+            <KpiCard icon={Activity} label="Total Layanan" value={formatNum(income.length)} tone="neutral"
+              onClick={() => setDetail({ title: 'Total Layanan', rows: income })} />
+            <KpiCard icon={TrendingUp} label="Nilai Transaksi" value={formatRp(totalNilaiTransaksi)} tone="up"
+              onClick={() => setDetail({ title: 'Nilai Transaksi', rows: income })} />
+            <KpiCard icon={TrendingDown} label="Total Pengeluaran" value={formatRp(totalPengeluaran)} tone="down"
+              onClick={() => setDetail({ title: 'Total Pengeluaran', rows: expense })} />
+            <KpiCard icon={Wallet} label="Laba Bersih" value={formatRp(labaBersih)} tone={labaBersih >= 0 ? 'up' : 'down'}
+              onClick={() => setDetail({ title: 'Laba Bersih (pemasukan − pengeluaran)', rows: txns })} />
           </div>
 
           <div className="grid lg:grid-cols-2 gap-4">
@@ -167,7 +187,8 @@ export function LaporanTab({ branchId, branchName, dateFrom, dateToExclusive, pe
                 </thead>
                 <tbody>
                   {rekapLayanan.map((r) => (
-                    <tr key={r.key} className="border-b border-border last:border-0">
+                    <tr key={r.key} onClick={() => openLayanan(r.key)}
+                      className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 transition-colors">
                       <td className="px-4 py-2 text-foreground">{r.label}</td>
                       <td className="px-4 py-2 text-center text-muted-foreground">{r.count}</td>
                       <td className="px-4 py-2 text-right font-medium text-chart-4">{formatRp(r.total)}</td>
@@ -192,7 +213,8 @@ export function LaporanTab({ branchId, branchName, dateFrom, dateToExclusive, pe
                 </thead>
                 <tbody>
                   {rekapAdmin.map((r) => (
-                    <tr key={r.key} className="border-b border-border last:border-0">
+                    <tr key={r.key} onClick={() => openAdmin(r)}
+                      className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 transition-colors">
                       <td className="px-4 py-2 text-foreground">{r.label}</td>
                       <td className="px-4 py-2 text-center text-muted-foreground">{r.count}</td>
                       <td className="px-4 py-2 text-right font-medium text-chart-4">{formatRp(r.total)}</td>
@@ -204,6 +226,11 @@ export function LaporanTab({ branchId, branchName, dateFrom, dateToExclusive, pe
             </div>
           </div>
         </>
+      )}
+
+      {detail && (
+        <TransactionDetailModal title={detail.title} subtitle={periodLabel}
+          rows={detail.rows} adminName={adminName} onClose={closeDetail} />
       )}
     </div>
   )
