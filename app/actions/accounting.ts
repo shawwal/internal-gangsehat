@@ -136,15 +136,25 @@ export async function fetchTransactionsForRange(
   dateToExclusive: string,
 ): Promise<AccountingTxnRow[]> {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('transactions')
-    .select('id, type, category, amount, harga, discount, fisio_id, transaction_date, status, patient_id, description, payment_method, payment_status')
-    .eq('branch_id', branchId)
-    .neq('status', 'rejected')
-    .gte('transaction_date', dateFrom)
-    .lt('transaction_date', dateToExclusive)
-    .limit(99999)
-  return (data ?? []) as AccountingTxnRow[]
+  // PostgREST caps every response at 1000 rows whatever .limit() asks for, so a
+  // busy branch's year was cut off mid-year — read in pages until exhausted.
+  const PAGE = 1000
+  const rows: AccountingTxnRow[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, type, category, amount, harga, discount, fisio_id, transaction_date, status, patient_id, description, payment_method, payment_status')
+      .eq('branch_id', branchId)
+      .neq('status', 'rejected')
+      .gte('transaction_date', dateFrom)
+      .lt('transaction_date', dateToExclusive)
+      .order('id')
+      .range(from, from + PAGE - 1)
+    if (error) throw new Error(error.message)
+    rows.push(...((data ?? []) as AccountingTxnRow[]))
+    if (!data || data.length < PAGE) break
+  }
+  return rows
 }
 
 export interface AdminOption { id: string; full_name: string }
