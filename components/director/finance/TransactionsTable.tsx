@@ -92,6 +92,9 @@ export function TransactionsTable({ txns, showBranchColumn, q, baseParams, perio
                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${tx.type === 'income' ? 'bg-[#34C759]' : 'bg-destructive'}`} />
                   <span className="text-xs font-medium text-foreground">{tx.category}</span>
                 </div>
+                {tx.service_name && (
+                  <p className="text-[11px] text-muted-foreground mt-0.5 pl-3">{tx.service_name}</p>
+                )}
               </td>
               {showBranchColumn && (
                 <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{tx.branch_name}</td>

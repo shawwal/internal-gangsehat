@@ -27,6 +27,7 @@ export interface TransactionRow {
   patient_name: string | null
   branch_name: string
   therapist: { id: string; name: string } | null
+  service_name: string | null
 }
 
 export const PAGE_SIZE = 20

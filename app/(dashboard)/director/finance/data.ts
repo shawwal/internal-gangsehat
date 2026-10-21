@@ -130,7 +130,7 @@ export async function loadFinanceData(params: FinanceParams) {
   const AGG_COLS  = 'branch_id, type, harga, discount, amount, outstanding, branches!branch_id(name)'
   const LIST_COLS = 'id, branch_id, patient_id, visit_id, fisio_id, type, category, harga, discount, amount, outstanding, payment_method, payment_status, status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)'
   type AggRow  = { branch_id: string; type: string; harga: number | null; discount: number | null; amount: number | null; outstanding: number | null; branches: unknown }
-  type ListRow = Omit<TransactionRow, 'patient_name' | 'branch_name' | 'therapist'> & { visit_id: string | null; fisio_id: string | null; branches: unknown }
+  type ListRow = Omit<TransactionRow, 'patient_name' | 'branch_name' | 'therapist' | 'service_name'> & { visit_id: string | null; fisio_id: string | null; branches: unknown }
 
   // Scope shared by KPI aggregate and list: period, branch, service. The
   // therapist filter is applied by selectAttributedTransactions (two queries).
@@ -236,6 +236,33 @@ export async function loadFinanceData(params: FinanceParams) {
       : Promise.resolve({ data: [] as { id: string; encrypted_name: string | null; encrypted_phone: string | null }[] }),
     resolveTherapistNames(supabase, txnRows ?? []),
   ])
+
+  // Service name from the branch price list (director/layanan): the visit's
+  // booked layanan, else the branch's layanan in this category at this price,
+  // else the category's only layanan.
+  const rows = txnRows ?? []
+  const visitIds = [...new Set(rows.map(r => r.visit_id).filter((id): id is string => !!id))]
+  const txBranchIds = [...new Set(rows.map(r => r.branch_id).filter(Boolean))]
+  const [{ data: visits }, { data: layananRows }] = await Promise.all([
+    visitIds.length > 0
+      ? supabase.from('patient_visits').select('id, layanan_id').in('id', visitIds)
+      : Promise.resolve({ data: [] as { id: string; layanan_id: string | null }[] }),
+    txBranchIds.length > 0
+      ? supabase.from('internal_layanan').select('id, branch_id, nama, kategori, harga').in('branch_id', txBranchIds)
+      : Promise.resolve({ data: [] as { id: string; branch_id: string; nama: string; kategori: string; harga: number }[] }),
+  ])
+  const visitLayanan = new Map((visits ?? []).map(v => [v.id, v.layanan_id]))
+  const layananById = new Map((layananRows ?? []).map(l => [l.id, l]))
+  function serviceName(r: { branch_id: string; category: string; harga: number | null; visit_id: string | null }): string | null {
+    const booked = r.visit_id ? visitLayanan.get(r.visit_id) : null
+    if (booked && layananById.has(booked)) return layananById.get(booked)!.nama
+    const sameCat = (layananRows ?? []).filter(l => l.branch_id === r.branch_id && l.kategori === r.category)
+    const byPrice = sameCat.filter(l => Number(l.harga) === Number(r.harga))
+    if (byPrice.length === 1) return byPrice[0].nama
+    if (sameCat.length === 1) return sameCat[0].nama
+    return null
+  }
+
   for (const p of patients ?? []) {
     try {
       const dec = decryptPatientPII({ encrypted_name: p.encrypted_name ?? '', encrypted_phone: p.encrypted_phone ?? '' })
@@ -248,6 +275,7 @@ export async function loadFinanceData(params: FinanceParams) {
     patient_name: r.patient_id ? (nameMap.get(r.patient_id) ?? 'Pasien') : null,
     branch_name:  ((r.branches as unknown as { name: string } | null))?.name ?? '—',
     therapist: therapistMap.get(r.id) ?? null,
+    service_name: r.type === 'income' ? serviceName(r) : null,
   }))
 
   const totalPages     = Math.max(1, Math.ceil((txnTotal ?? 0) / PAGE_SIZE))
