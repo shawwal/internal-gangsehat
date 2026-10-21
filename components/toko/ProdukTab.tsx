@@ -162,7 +162,7 @@ function ProductForm({ branchId, product, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="glass-card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="glass-card w-full max-w-sm p-5 max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-semibold text-foreground mb-4">{product ? 'Edit Produk' : 'Produk Baru'}</h2>
         <form onSubmit={save} className="space-y-3">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama produk" className={inputCls} />
@@ -206,7 +206,7 @@ function RestockForm({ product, onClose, onSaved }: { product: GriyaProduct; onC
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="glass-card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="glass-card w-full max-w-sm p-5 max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-semibold text-foreground mb-1">Sesuaikan Stok</h2>
         <p className="text-xs text-muted-foreground mb-4">{product.name} · stok sekarang {product.stock}</p>
         <form onSubmit={save} className="space-y-3">

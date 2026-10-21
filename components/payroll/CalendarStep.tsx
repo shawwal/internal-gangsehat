@@ -54,7 +54,7 @@ export function CalendarStep({ ws, onToggleDay }: Props) {
               type="button"
               disabled={!permissions.canEdit}
               onClick={() => setEditing({ date: d.date, workday: d.workday, note: d.note ?? '' })}
-              className={`rounded-xl border p-2 text-left min-h-[64px] transition disabled:cursor-default ${
+              className={`min-w-0 overflow-hidden rounded-lg sm:rounded-xl border p-1 sm:p-2 text-left min-h-[56px] sm:min-h-[64px] transition disabled:cursor-default ${
                 d.workday
                   ? 'border-chart-4/30 bg-chart-4/5 hover:bg-chart-4/10'
                   : 'border-border bg-muted/40 hover:bg-muted'
@@ -63,9 +63,9 @@ export function CalendarStep({ ws, onToggleDay }: Props) {
             >
               <div className="flex items-baseline justify-between">
                 <span className={`text-sm font-semibold ${d.workday ? 'text-foreground' : 'text-muted-foreground'}`}>{dayNum}</span>
-                <span className="text-[9px] text-muted-foreground">{shortDayLabel(d.date)}</span>
+                <span className="hidden sm:inline text-[9px] text-muted-foreground">{shortDayLabel(d.date)}</span>
               </div>
-              <p className={`text-[10px] mt-1 leading-tight ${d.workday ? 'text-chart-4' : 'text-muted-foreground'}`}>
+              <p className={`text-[9px] sm:text-[10px] mt-1 leading-tight truncate ${d.workday ? 'text-chart-4' : 'text-muted-foreground'}`}>
                 {d.workday ? 'Kerja' : (d.note ?? 'Libur')}
               </p>
             </button>

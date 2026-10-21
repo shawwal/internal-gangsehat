@@ -432,6 +432,14 @@ export const navigation: NavItem[] = [
     roles: ['director', 'manager', 'finance', 'hr', 'marketing', 'staff', 'therapist', 'admin'],
     group: 'hr',
   },
+  {
+    key: 'target-audit',
+    label: 'Audit Capaian',
+    href: '/target-progress/audit',
+    icon: 'ShieldCheck',
+    roles: ['director', 'manager', 'hr'],
+    group: 'hr',
+  },
 
   // Marketing
   {

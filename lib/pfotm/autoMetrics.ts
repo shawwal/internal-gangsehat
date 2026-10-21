@@ -75,13 +75,37 @@ export interface PfotmAutoInput {
   sales: SaleForPfotm[]
   /** referred patients: referring staff + date of the patient's first visit (or registration) */
   referrals: PfotmReferral[]
+  /** Closing rate: valid TA KLINIK sales dated inside the period */
+  taSales?: { id: string; staff_id: string | null; patient_id: string | null; transaction_date: string }[]
+  /** Closing rate: valid SESI KLINIK / PAKET KLINIK sales of those patients (any therapist, any date) */
+  returnSales?: { patient_id: string | null; transaction_date: string }[]
 }
 
-const EMPTY_METRICS = () => ({ hadir: 0, terlambat: 0, alfa: 0, kunjungan: 0, paket_1: 0, paket_2: 0, paket_3: 0, ta_sesi_visit: 0, paket_visit: 0, rujukan_sm: 0 })
+/** A TA patient "closes" when they buy SESI / PAKET KLINIK within this many days of the TA. */
+export const CLOSING_WINDOW_DAYS = 4
 
-function packageTierKey(pkg: PackageInfo | null): 'paket_1' | 'paket_2' | 'paket_3' {
-  const tier = pkg?.jenis_paket ?? (pkg && pkg.total_sessions >= 10 ? 'P2' : 'P1')
-  return tier === 'P3' ? 'paket_3' : tier === 'P2' ? 'paket_2' : 'paket_1'
+function addDaysISO(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+const EMPTY_METRICS = () => ({
+  hadir: 0, terlambat: 0, alfa: 0, kunjungan: 0, paket_1: 0, paket_2: 0, paket_3: 0, ta_sesi_visit: 0, paket_visit: 0, rujukan_sm: 0,
+  ta_klinik: 0, ta_closing: 0,
+})
+
+/**
+ * Paket 1 / 2 / 3 = a PAKET KLINIK of 5 / 10 / 20 sessions (the layanan's
+ * Sesi in /director/layanan). Any other size is not a tiered package.
+ */
+export function packageTierKey(pkg: PackageInfo | null): 'paket_1' | 'paket_2' | 'paket_3' | null {
+  switch (pkg?.total_sessions) {
+    case 5: return 'paket_1'
+    case 10: return 'paket_2'
+    case 20: return 'paket_3'
+    default: return null
+  }
 }
 
 /** A visit / sale that counts for the branch but isn't credited to any participant. */
@@ -133,6 +157,17 @@ export function pfotmHitsWithGap(params: PfotmAutoInput): { hits: PfotmHit[]; ga
       patient_id: s.patient_id ?? null, ref_id: s.id ?? null, label: s.category,
       payment_status: s.payment_status ?? null, payment_method: s.payment_method ?? null,
     }, true)
+  }
+
+  // Closing rate: each TA KLINIK sale, and whether that patient bought SESI /
+  // PAKET KLINIK within CLOSING_WINDOW_DAYS (credit stays with the TA therapist).
+  for (const ta of params.taSales ?? []) {
+    const extra = { patient_id: ta.patient_id, ref_id: ta.id, label: 'TA KLINIK' }
+    hit(ta.staff_id, 'ta_klinik', ta.transaction_date, extra)
+    const until = addDaysISO(ta.transaction_date, CLOSING_WINDOW_DAYS)
+    const closed = !!ta.patient_id && (params.returnSales ?? []).some((r) =>
+      r.patient_id === ta.patient_id && r.transaction_date >= ta.transaction_date && r.transaction_date <= until)
+    if (closed) hit(ta.staff_id, 'ta_closing', ta.transaction_date, extra)
   }
 
   for (const r of params.referrals) {

@@ -43,13 +43,13 @@ function StatCard({
   label, value, icon, color,
 }: { label: string; value: number; icon: React.ReactNode; color: string }) {
   return (
-    <div className="bg-card rounded-2xl border border-border p-3 flex items-center gap-3">
+    <div className="bg-card rounded-2xl border border-border p-3 flex flex-col items-center text-center gap-1.5 sm:flex-row sm:text-left sm:gap-3">
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
         {icon}
       </div>
-      <div>
+      <div className="min-w-0">
         <p className="text-lg font-bold text-foreground leading-none">{value}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+        <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 leading-tight">{label}</p>
       </div>
     </div>
   )
@@ -222,8 +222,8 @@ export default function MySchedulePage() {
     <div className="space-y-5">
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">Jadwal Saya</h1>
           <p className="text-sm text-muted-foreground">
             {userName ? `Jadwal kerja mingguan — ${userName}` : 'Lihat dan kelola jadwal kerja Anda'}
@@ -280,7 +280,7 @@ export default function MySchedulePage() {
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className={`overflow-x-auto ${!loading && sorted.length > 0 ? 'hidden sm:block' : ''}`}>
           <table className="w-full min-w-[480px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
@@ -390,6 +390,48 @@ export default function MySchedulePage() {
           </table>
         </div>
 
+        {/* Phones: one card per row instead of a sideways-scrolling table */}
+        {!loading && sorted.length > 0 && (
+          <ul className="sm:hidden divide-y divide-border">
+            {sorted.map((row) => (
+              <li key={row.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-sm text-foreground">{row.hari}</span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      row.shift === 'PAGI'
+                        ? 'bg-[color:var(--secondary)]/20 text-secondary'
+                        : 'bg-primary/10 text-primary'
+                    }`}>
+                      {row.shift}
+                    </span>
+                    <StatusBadge status={row.status} />
+                  </div>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {row.jam_mulai?.slice(0, 5) ?? '—'} – {row.jam_selesai?.slice(0, 5) ?? '—'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => openEdit(row)}
+                    aria-label="Edit"
+                    className="p-2.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    onClick={() => setDeleteId(row.id)}
+                    aria-label="Hapus"
+                    className="p-2.5 rounded-lg hover:bg-[#FF3B30]/10 text-muted-foreground hover:text-[#FF3B30] transition-colors cursor-pointer"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
         {/* Row count footer */}
         {!loading && sorted.length > 0 && (
           <div className="px-4 py-3 border-t border-border">
@@ -426,7 +468,7 @@ export default function MySchedulePage() {
           onClick={closeModal}
         >
           <div
-            className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md"
+            className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -571,7 +613,7 @@ export default function MySchedulePage() {
           onClick={() => setDeleteId(null)}
         >
           <div
-            className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-sm p-6 text-center"
+            className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-sm p-6 text-center max-h-[90dvh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-12 h-12 rounded-2xl bg-[#FF3B30]/10 flex items-center justify-center mx-auto mb-4">

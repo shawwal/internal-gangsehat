@@ -17,25 +17,25 @@ function GlassStatCard({ title, value, icon, color, sub, href, fullValue }: Stat
     <>
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
-        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${color}`}>
+        <div className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-2xl flex items-center justify-center ${color}`}>
           {icon}
         </div>
       </div>
-      <p className="text-2xl font-bold text-foreground tracking-tight tabular-nums whitespace-nowrap" title={fullValue}>{value}</p>
+      <p className="text-lg sm:text-2xl font-bold text-foreground tracking-tight tabular-nums whitespace-nowrap" title={fullValue}>{value}</p>
       {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
     </>
   )
 
   if (href) {
     return (
-      <Link href={href} className="glass-card p-5 min-w-0 hover:scale-[1.02] hover:ring-1 hover:ring-primary/30 transition-all duration-200 cursor-pointer block">
+      <Link href={href} className="glass-card p-3.5 sm:p-5 min-w-0 hover:scale-[1.02] hover:ring-1 hover:ring-primary/30 transition-all duration-200 cursor-pointer block">
         {inner}
       </Link>
     )
   }
 
   return (
-    <div className="glass-card p-5 min-w-0 hover:scale-[1.02] transition-transform duration-200 cursor-default">
+    <div className="glass-card p-3.5 sm:p-5 min-w-0 hover:scale-[1.02] transition-transform duration-200 cursor-default">
       {inner}
     </div>
   )
@@ -63,7 +63,7 @@ export function KpiCards({
   const netProfit = totalIncome - totalExpense
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
       <GlassStatCard
         title="Total Pasien"
         value={totalPatients.toLocaleString('id-ID')}

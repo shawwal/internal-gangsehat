@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { List, RefreshCw, RotateCcw } from 'lucide-react'
-import { getPayrollActivityDetail } from '@/app/actions/payroll'
+import { getPayrollActivityDetail, getPayrollPendingRecords } from '@/app/actions/payroll'
 import { MetricDetailModal } from '@/components/metrics/MetricDetailModal'
 import { staffDisplayName, type PayrollWorkspace, type WorkspaceRow } from '@/lib/payroll/workspace'
 import { formatIDR } from './format'
@@ -24,6 +24,13 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [detail, setDetail] = useState<{ staffId: string; name: string; code: string; label: string } | null>(null)
   const editable = ws.permissions.canEdit
+  // Attended sessions whose record is still open — not counted until completed.
+  const [pending, setPending] = useState<Record<string, Record<string, number>>>({})
+  useEffect(() => {
+    let cancelled = false
+    getPayrollPendingRecords(ws.period.id).then((res) => { if (!cancelled && res.ok) setPending(res.data) })
+    return () => { cancelled = true }
+  }, [ws.period.id, refreshing])
 
   // Columns: types somebody is paid on (incentive codes / rates) or that have data.
   const columns = useMemo(() => {
@@ -70,10 +77,11 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground max-w-2xl">
-          Angka otomatis diambil dari kunjungan pasien yang <b>hadir</b> (Jadwal Harian) dalam periode ini.
+          Angka otomatis diambil dari kunjungan pasien yang <b>hadir</b> dan rekam medisnya <b>sudah ditangani / diperiksa</b> (Jadwal Harian)
+          dalam periode ini; kolom Visit dari transaksi yang sudah lunas. &ldquo;belum&rdquo; = sesi hadir yang rekam medisnya belum selesai (belum dihitung).
           Ketik angka untuk mengoreksi; kosongkan untuk kembali ke nilai otomatis.
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button className={btn.ghost} onClick={() => setShowAll((v) => !v)}>
             {showAll ? 'Sembunyikan kolom kosong' : 'Tampilkan semua aktivitas'}
           </button>
@@ -96,7 +104,7 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
               <th colSpan={3} className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary border-l border-border">Hasil</th>
             </tr>
             <tr className="bg-muted/50 border-b border-border">
-              <th className="sticky left-0 z-10 bg-muted px-3 py-2 text-left font-medium text-muted-foreground min-w-[150px]">Karyawan</th>
+              <th className="sticky left-0 z-10 bg-muted px-3 py-2 text-left font-medium text-muted-foreground min-w-[110px] sm:min-w-[150px]">Karyawan</th>
               {columns.map((t) => (
                 <th key={t.code} className="px-2 py-2 text-center font-medium text-muted-foreground border-l border-border min-w-[78px]" title={t.code}>
                   {t.label}
@@ -153,6 +161,11 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
                           >
                             <List size={9} /> rincian
                           </button>
+                        )}
+                        {(pending[s.id]?.[t.code] ?? 0) > 0 && (
+                          <div className="text-[9px] text-secondary" title="Sesi hadir dengan rekam medis belum selesai — belum dihitung">
+                            +{pending[s.id][t.code]} belum
+                          </div>
                         )}
                         {cell?.override != null && (
                           <div className="flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground mt-0.5">

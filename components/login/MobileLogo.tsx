@@ -8,7 +8,7 @@ export function MobileLogo() {
         alt="Gang Sehat"
         width={160}
         height={46}
-        style={{ height: 'auto' }}
+        style={{ width: 160, height: 'auto' }}
         className="object-contain dark:hidden"
         priority
       />
@@ -17,7 +17,7 @@ export function MobileLogo() {
         alt="Gang Sehat"
         width={160}
         height={46}
-        style={{ height: 'auto' }}
+        style={{ width: 160, height: 'auto' }}
         className="object-contain hidden dark:block"
         priority
       />

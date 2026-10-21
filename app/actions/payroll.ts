@@ -8,10 +8,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activityLog'
-import { buildPeriodDays, countWorkdays, MONTH_NAMES } from '@/lib/payroll/period'
+import { addDays, buildPeriodDays, countWorkdays, MONTH_NAMES } from '@/lib/payroll/period'
 import { codeFromRow, rowFromCode, type AttendanceDbRow } from '@/lib/payroll/attendance'
 import { pickCompensation } from '@/lib/payroll/engine'
-import { computeAutoActivity, payrollActivityHits, VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
+import {
+  computeAutoActivity, isTransactionSourced, payrollActivityHits, pendingRecordCounts, TRANSACTION_SOURCED_SERVICE_TYPES,
+  VISIT_FOR_PAYROLL_COLUMNS, type PayrollSale, type VisitForPayroll,
+} from '@/lib/payroll/autoActivity'
+import { evaluateSales, SALE_TX_COLUMNS, withRecordStatus, type SaleTxRow } from '@/lib/metrics/achievementData'
 import type { MetricDetail } from '@/lib/metrics/achievement'
 import { resolvePatientNames } from '@/lib/metrics/patientNames'
 import {
@@ -533,49 +537,81 @@ export async function saveAttendanceCells(periodId: string, cells: AttendanceCel
 
 // ── Activity counts (AUTO INS / INS) ────────────────────────────────────────
 
-/** Visits behind the auto activity counts (shared by refresh + drill-down). */
+/**
+ * Visits and home-visit sales behind the auto activity counts (shared by
+ * refresh, drill-down and the open-record hint).
+ */
 async function loadActivityInput(
-  period: { start_date: string; end_date: string }, staffIds: string[], autoTypes: ActivityType[],
+  period: { branch_id: string; start_date: string; end_date: string }, staffIds: string[], autoTypes: ActivityType[],
 ): Promise<Parameters<typeof payrollActivityHits>[0]> {
-  const serviceTypes = [...new Set(autoTypes.flatMap((t) => t.source_service_types))]
+  const sessionTypes = autoTypes.filter((t) => !isTransactionSourced(t))
+  const saleTypes = autoTypes.filter(isTransactionSourced)
+  // A package session may be booked as SESI TERAPI (effectiveServiceType), so
+  // PAKET TERAPI pulls those in too.
+  const serviceTypes = [...new Set(sessionTypes.flatMap((t) => t.source_service_types))]
+  if (serviceTypes.includes('PAKET TERAPI') && !serviceTypes.includes('SESI TERAPI')) serviceTypes.push('SESI TERAPI')
   // Visits are read with the service role: the period (and its bound staff)
   // already passed RLS above, and HR — which prepares payroll for every branch
   // (migration 107) — has no patient_visits access of its own. Same rows the
   // director sees.
   const admin = createAdminClient()
-  const { data: visits, error } = await admin
-    .from('patient_visits')
-    .select(VISIT_FOR_PAYROLL_COLUMNS)
-    .in('attending_staff_id', staffIds)
-    .in('service_type', serviceTypes)
-    .in('status', ['scheduled', 'completed'])
-    .gte('visit_date', period.start_date)
-    .lte('visit_date', period.end_date)
-    .limit(20000)
-  if (error) throw new Error(error.message)
-  const periodVisits = (visits ?? []) as VisitForPayroll[]
-
-  // Earliest attended session of every package seen this period, to credit each
-  // package sale exactly once (in the period its first session falls in).
   const today = todayJakarta()
-  const packageIds = [...new Set(periodVisits.map((v) => v.package_id).filter((x): x is string => !!x))]
+  let periodVisits: VisitForPayroll[] = []
   const firstPackageVisit = new Map<string, VisitForPayroll>()
-  for (let i = 0; i < packageIds.length; i += 300) {
-    const { data: pv } = await admin
+  if (serviceTypes.length) {
+    const { data: visits, error } = await admin
       .from('patient_visits')
       .select(VISIT_FOR_PAYROLL_COLUMNS)
-      .in('package_id', packageIds.slice(i, i + 300))
+      .in('attending_staff_id', staffIds)
+      .in('service_type', serviceTypes)
       .in('status', ['scheduled', 'completed'])
+      .gte('visit_date', period.start_date)
       .lte('visit_date', period.end_date)
-      .order('visit_date', { ascending: true })
-    for (const v of (pv ?? []) as VisitForPayroll[]) {
-      if (!v.package_id || firstPackageVisit.has(v.package_id)) continue
-      if (v.kehadiran === 'HADIR' || (v.kehadiran == null && v.visit_date < today)) firstPackageVisit.set(v.package_id, v)
+      .limit(20000)
+    if (error) throw new Error(error.message)
+    periodVisits = await withRecordStatus(admin, (visits ?? []) as unknown as Omit<VisitForPayroll, 'record_complete'>[])
+
+    // Earliest attended session of every package seen this period, to credit each
+    // package sale exactly once (in the period its first session falls in).
+    const packageIds = [...new Set(periodVisits.map((v) => v.package_id).filter((x): x is string => !!x))]
+    for (let i = 0; i < packageIds.length; i += 300) {
+      const { data: pv } = await admin
+        .from('patient_visits')
+        .select(VISIT_FOR_PAYROLL_COLUMNS)
+        .in('package_id', packageIds.slice(i, i + 300))
+        .in('status', ['scheduled', 'completed'])
+        .lte('visit_date', period.end_date)
+        .order('visit_date', { ascending: true })
+      for (const v of (pv ?? []) as unknown as Omit<VisitForPayroll, 'record_complete'>[]) {
+        if (!v.package_id || firstPackageVisit.has(v.package_id)) continue
+        if (v.kehadiran === 'HADIR' || (v.kehadiran == null && v.visit_date < today)) firstPackageVisit.set(v.package_id, { ...v, record_complete: true })
+      }
     }
   }
 
+  // Home-visit sales: valid first payments of the branch (a package's DP may lie
+  // up to a year before the payment that completes it inside this period).
+  let sales: PayrollSale[] = []
+  if (saleTypes.length) {
+    const categories = [...new Set(saleTypes.flatMap((t) => t.source_service_types.map((s) => TRANSACTION_SOURCED_SERVICE_TYPES[s])))]
+    const { data: txs, error } = await admin
+      .from('transactions')
+      .select(SALE_TX_COLUMNS)
+      .eq('branch_id', period.branch_id)
+      .eq('type', 'income')
+      .neq('status', 'rejected')
+      .in('payment_status', ['LUNAS', 'DP'])
+      .in('category', categories)
+      .gte('transaction_date', addDays(period.start_date, -366))
+      .lte('transaction_date', period.end_date)
+      .limit(20000)
+    if (error) throw new Error(error.message)
+    const evaluated = await evaluateSales(admin, (txs ?? []) as unknown as SaleTxRow[])
+    sales = evaluated.sales.filter((e) => e.issues.length === 0).map((e) => ({ tx: e.tx, purchase: e.purchase }))
+  }
+
   return {
-    types: autoTypes, periodVisits, firstPackageVisit, staffIds,
+    types: autoTypes, periodVisits, firstPackageVisit, sales, staffIds,
     start: period.start_date, end: period.end_date, todayISO: today,
   }
 }
@@ -646,13 +682,13 @@ export async function getPayrollActivityDetail(periodId: string, staffId: string
   if (!type || type.count_mode === 'manual' || !type.source_service_types.length) return fail('Aktivitas ini diisi manual — tidak ada rincian.')
   try {
     const hits = payrollActivityHits(await loadActivityInput(period, [staffId], [type]))
-      .sort((a, b) => a.visit.visit_date.localeCompare(b.visit.visit_date))
-    const names = await resolvePatientNames(hits.map((h) => h.visit.patient_id))
+      .sort((a, b) => a.date.localeCompare(b.date))
+    const names = await resolvePatientNames(hits.map((h) => h.patient_id))
     return ok({
       rows: hits.map((h) => ({
-        date: h.visit.visit_date,
-        patientName: (h.visit.patient_id && names.get(h.visit.patient_id)) || '—',
-        label: h.visit.service_type,
+        date: h.date,
+        patientName: (h.patient_id && names.get(h.patient_id)) || '—',
+        label: h.label,
       })),
       auto: hits.length,
       override: cell?.override_qty ?? null,
@@ -1019,4 +1055,31 @@ export async function getMyPayslips(): Promise<Result<{ slips: SlipRecord[]; hea
     }
   }
   return ok({ slips, headers })
+}
+
+/**
+ * Attended sessions whose record is still open ("Belum Ditangani / Diperiksa"),
+ * per staff + activity code — they don't count until the therapist completes
+ * the record. Empty once the period is locked (counts are frozen then).
+ */
+export async function getPayrollPendingRecords(periodId: string): Promise<Result<Record<string, Record<string, number>>>> {
+  const actor = await getActor(VIEW_ROLES)
+  if (isErr(actor)) return actor
+  const { supabase } = actor
+  const period = await loadPeriod(supabase, periodId)
+  if (!period) return fail('Periode tidak ditemukan.')
+  if (period.status !== 'draft' && period.status !== 'submitted') return ok({})
+  const [{ data: bound }, types] = await Promise.all([
+    supabase.from('payroll_period_staff').select('staff_id').eq('period_id', periodId),
+    loadActivityTypes(supabase),
+  ])
+  const staffIds = (bound ?? []).map((b) => b.staff_id)
+  const sessionTypes = types.filter((t) => t.is_active && t.count_mode === 'session' && t.source_service_types.length && !isTransactionSourced(t))
+  if (!staffIds.length || !sessionTypes.length) return ok({})
+  try {
+    const input = await loadActivityInput(period, staffIds, sessionTypes)
+    return ok(pendingRecordCounts({ types: sessionTypes, periodVisits: input.periodVisits, staffIds, todayISO: input.todayISO }))
+  } catch (e) {
+    return fail((e as Error).message)
+  }
 }

@@ -166,6 +166,18 @@ export async function getPatientOutstanding(patientId: string): Promise<Outstand
   return result.sort((a, b) => b.transaction_date.localeCompare(a.transaction_date))
 }
 
+// A new package purchase is refused while an earlier one of the same category
+// still has a balance — the remaining amount must be recorded as a payment on
+// that order (PELUNASAN), not as a second purchase. Same-order payments pass.
+async function unfinishedPackageError(patientId: string | null, category: string, orderId: string | null): Promise<string | null> {
+  if (!patientId || !PACKAGE_CATEGORIES.has(category)) return null
+  const open = (await getPatientOutstanding(patientId))
+    .find((t) => t.category === category && t.outstanding > 0 && (!orderId || t.order_id !== orderId))
+  if (!open) return null
+  return `Pasien masih punya ${category} yang belum lunas (sisa Rp${Number(open.outstanding).toLocaleString('id-ID')}, ${open.transaction_date}). ` +
+    'Catat pelunasan pada pembayaran tersebut, bukan transaksi baru.'
+}
+
 // ── Create transaction linked to a visit (from PaymentDialog) ─────────────────
 
 export interface CreateTransactionInput {
@@ -222,6 +234,9 @@ export async function createTransactionForVisit(
       .from('patient_packages').select('order_id').eq('id', input.package_id).single()
     orderId = pkg?.order_id ?? orderId
   }
+
+  const unfinished = await unfinishedPackageError(visit.patient_id, category, orderId)
+  if (unfinished) return { error: unfinished }
 
   const insertPayload = {
     visit_id:         visitId,
@@ -566,6 +581,11 @@ export async function createTransactionManual(
       .eq('id', input.visit_id)
       .single()
     orderId = visit?.order_id ?? null
+  }
+
+  if (input.type === 'income') {
+    const unfinished = await unfinishedPackageError(input.patient_id ?? null, input.category, orderId)
+    if (unfinished) return { error: unfinished }
   }
 
   const autoConfirm =

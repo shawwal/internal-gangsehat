@@ -4,12 +4,19 @@ import { useState } from 'react'
 import { Crown, Medal, Trophy } from 'lucide-react'
 import type { BoardRow, PointRule } from '@/lib/pfotm/engine'
 import { Modal } from '@/components/payroll/Modal'
+import { MetricDetailModal } from '@/components/metrics/MetricDetailModal'
+import { getPfotmMetricDetail } from '@/app/actions/pfotm'
+import { DRILLDOWN_METRICS } from '@/lib/pfotm/autoMetrics'
 
 interface Props {
   board: BoardRow[]
   rules: PointRule[]
   wins: Record<string, number>
   live: boolean
+  /** board row key → pfotm_entries id, for the drill-down */
+  entryIdByKey?: Record<string, string>
+  /** Whether the viewer may open a row's patient lists (own row, or every row for director/manager/HR). */
+  canDrill?: (row: BoardRow) => boolean
 }
 
 const PODIUM = [
@@ -42,8 +49,10 @@ function WinBadge({ count }: { count: number }) {
   )
 }
 
-export function PfotmBoard({ board, rules, wins, live }: Props) {
+export function PfotmBoard({ board, rules, wins, live, entryIdByKey, canDrill }: Props) {
   const [detail, setDetail] = useState<BoardRow | null>(null)
+  const [drill, setDrill] = useState<{ entryId: string; key: string; label: string; name: string } | null>(null)
+  const drillEntry = detail && canDrill?.(detail) ? entryIdByKey?.[detail.key] : undefined
   const top = board.slice(0, 3)
   const rest = board.slice(3)
   const max = Math.max(1, ...board.map((r) => r.total))
@@ -135,7 +144,14 @@ export function PfotmBoard({ board, rules, wins, live }: Props) {
                 return (
                   <tr key={r.metric_key} className="border-b border-border last:border-0">
                     <td className="py-1.5 text-foreground">{r.metric_label}</td>
-                    <td className="py-1.5 text-right">{detail.metrics[r.metric_key] ?? 0}</td>
+                    <td className="py-1.5 text-right">
+                      {drillEntry && (DRILLDOWN_METRICS as readonly string[]).includes(r.metric_key) ? (
+                        <button className="underline decoration-dotted underline-offset-2 text-primary hover:opacity-80"
+                          onClick={() => setDrill({ entryId: drillEntry, key: r.metric_key, label: r.metric_label, name: detail.name })}>
+                          {detail.metrics[r.metric_key] ?? 0}
+                        </button>
+                      ) : (detail.metrics[r.metric_key] ?? 0)}
+                    </td>
                     <td className="py-1.5 text-right text-muted-foreground">×{Number(r.weight)}</td>
                     <td className={`py-1.5 text-right font-semibold ${pts < 0 ? 'text-destructive' : 'text-foreground'}`}>{pts}</td>
                   </tr>
@@ -143,11 +159,13 @@ export function PfotmBoard({ board, rules, wins, live }: Props) {
               })}
             </tbody>
           </table>
-          <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 text-center">
             {[
               ['% Kehadiran', pct(detail.kpis.kehadiran)],
               ['% Disiplin', pct(detail.kpis.disiplin)],
               ['Kunjungan / hadir', detail.kpis.kunjungan_per_hadir.toFixed(2)],
+              [`Closing rate${detail.metrics.ta_klinik ? ` (${detail.metrics.ta_closing ?? 0}/${detail.metrics.ta_klinik})` : ''}`,
+                detail.kpis.closing_rate === null ? '—' : pct(detail.kpis.closing_rate)],
             ].map(([l, v]) => (
               <div key={l} className="rounded-xl bg-muted/50 p-2">
                 <p className="text-base font-bold text-foreground">{v}</p>
@@ -156,6 +174,14 @@ export function PfotmBoard({ board, rules, wins, live }: Props) {
             ))}
           </div>
         </Modal>
+      )}
+      {drill && (
+        <MetricDetailModal
+          title={`${drill.label} — ${drill.name}`}
+          subtitle="Pasien & tanggal yang dihitung pada periode ini"
+          load={() => getPfotmMetricDetail(drill.entryId, drill.key)}
+          onClose={() => setDrill(null)}
+        />
       )}
     </div>
   )

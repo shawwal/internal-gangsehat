@@ -74,7 +74,7 @@ export function ProofCamera({ onCancel, onCapture, onPickFile }: Props) {
 
   return createPortal(
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[300] p-4" onClick={onCancel}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-2xl shadow-2xl max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3 border-b border-border">
           <p className="text-sm font-semibold text-foreground flex items-center gap-2"><Camera size={15} className="text-primary" /> Foto Bukti Transfer</p>
           <button type="button" onClick={onCancel} aria-label="Tutup" className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer">

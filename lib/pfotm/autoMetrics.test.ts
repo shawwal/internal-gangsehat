@@ -6,7 +6,7 @@ import type { VisitForPayroll } from '@/lib/payroll/autoActivity'
 const visit = (over: Partial<VisitForPayroll>): VisitForPayroll => ({
   id: Math.random().toString(36), attending_staff_id: 'a', service_type: 'SESI TERAPI', layanan_id: null,
   visit_date: '2026-10-01', kehadiran: 'HADIR', package_id: null,
-  status: 'completed', diagnosis: 'PFPS', treatment: 'TENS', regio: null, ...over,
+  status: 'completed', diagnosis: 'PFPS', treatment: 'TENS', regio: null, record_complete: true, ...over,
 })
 
 const run = (periodVisits: VisitForPayroll[], sales: Parameters<typeof computePfotmAutoMetrics>[0]['sales'] = []) =>
@@ -32,7 +32,7 @@ describe('PFOTM auto metrics', () => {
   it('takes package / visit sales from LUNAS/DP transactions', () => {
     const out = run([], [
       { staff_id: 'a', category: 'PAKET KLINIK', package: { id: 'p1', jenis_paket: 'P1', total_sessions: 5 } },
-      { staff_id: 'a', category: 'PAKET KLINIK', package: { id: 'p2', jenis_paket: null, total_sessions: 10 } },
+      { staff_id: 'a', category: 'PAKET KLINIK', package: { id: 'p2', jenis_paket: 'P1', total_sessions: 10 } },
       { staff_id: 'b', category: 'TA VISIT', package: null },
       { staff_id: 'b', category: 'SESI VISIT', package: null },
       { staff_id: 'b', category: 'PAKET VISIT', package: null },

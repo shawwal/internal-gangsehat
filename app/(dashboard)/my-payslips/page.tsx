@@ -29,7 +29,7 @@ export default function MyPayslipsPage() {
   }, [])
 
   return (
-    <div className="space-y-5 p-4 md:p-6 max-w-3xl">
+    <div className="space-y-5 md:p-6 max-w-3xl">
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
           <ReceiptText size={18} className="text-primary" />

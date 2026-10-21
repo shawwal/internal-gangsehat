@@ -152,7 +152,7 @@ export function PatientTable({ patients, onDelete }: Props) {
                     {onDelete && (
                       <button
                         onClick={() => onDelete(p)}
-                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive cursor-pointer"
+                        className="p-1.5 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-all hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive cursor-pointer"
                         title="Hapus pasien"
                       >
                         <Trash2 size={13} />

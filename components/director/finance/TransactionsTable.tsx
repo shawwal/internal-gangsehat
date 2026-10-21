@@ -146,7 +146,7 @@ export function TransactionsTable({ txns, showBranchColumn, q, baseParams, perio
                 )}
               </td>
               {/* Edit action */}
-              <td className="px-3 py-3 text-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <td className="px-3 py-3 text-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <EditTransactionSheet transaction={editTx} />
               </td>
             </tr>

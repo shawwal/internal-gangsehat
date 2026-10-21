@@ -69,7 +69,7 @@ export function ActivityLogDetailDialog({ log, onClose }: { log: ActivityLogRow;
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Perubahan</p>
             {log.action === 'update' && log.changed_fields && log.changed_fields.length > 0 ? (
-              <div className="rounded-xl border border-border overflow-hidden">
+              <div className="rounded-xl border border-border overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-muted/50">

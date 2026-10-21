@@ -110,7 +110,7 @@ export function ScheduleOverrideDialog({ staffId, staffName, branchId, onClose, 
               <p className="text-white/60 text-[11px]">{staffName}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors">
+          <button onClick={onClose} className="p-2 -m-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors">
             <X size={15} />
           </button>
         </div>

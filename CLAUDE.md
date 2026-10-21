@@ -93,7 +93,14 @@ Engine: `lib/payroll/engine.ts` (pure, tested against the Excel in `reference/`)
 `pfotm_point_rules` (metric_key, weight — never hardcode weights), `pfotm_periods` (is_locked, rules_snapshot), `pfotm_entries` (auto_metrics, override_metrics; metrics/total_points/rank/kpis frozen at lock). `patients.referred_by_staff_id` feeds Rujukan SM. Engine: `lib/pfotm/engine.ts`. Only director may edit/unlock a locked period.
 
 ### Achievement counting — one rule (`lib/metrics/achievement.ts`)
-Target Progress (branch), PFOTM and payroll auto-activity (per therapist) share it: Kunjungan = visit status scheduled/completed, not SPORT MASSAGE, attended (HADIR, or unmarked and past) — no record-completeness gate; sales = income, not rejected, payment_status LUNAS/DP. Engines emit dated "hits" (`pfotmHits`, `payrollActivityHits`) that drive the counts, the drill-down lists (`MetricDetailModal`) and the PFOTM daily bump chart, so a number and its list never disagree. Target Progress has a "Periode gaji" toggle (payroll window via `getPayrollWindow`) to compare 1:1.
+Target Progress (branch), PFOTM and payroll auto-activity (per therapist) share it (server loaders in `lib/metrics/achievementData.ts`):
+- **Kunjungan** = visit status scheduled/completed, not SPORT MASSAGE, attended (HADIR, or unmarked and past) **and record form completed** ("Sudah Ditangani/Diperiksa", `withRecordStatus`). An open record is an unfinished treatment.
+- **Sale** = income, not rejected, the *first* LUNAS/DP payment of a purchase (order_id + category). PAKET KLINIK / PAKET VISIT must also have a patient, a Fisio, a proof of payment (cash included), and amounts that match the price: LUNAS = harga−discount, DP < harga−discount, order total ≤ harga−discount (`saleIssues`).
+- Payroll: PT = every package session (a `package_id` visit booked as SESI TERAPI counts as PAKET TERAPI, `effectiveServiceType`). Home-visit columns (TA/ST/PT Visit) count transactions, credited to the transaction's Fisio and dated on the payment that completes the purchase.
+- PFOTM Paket 1/2/3 = PAKET KLINIK of 5/10/20 sessions (other sizes excluded). Closing rate = the therapist's TA KLINIK sales whose patient buys SESI/PAKET KLINIK within 4 days (any therapist).
+- New package payments are refused while an earlier one of the same category still has a balance (`unfinishedPackageError`).
+
+Engines emit dated "hits" (`pfotmHits`, `payrollActivityHits`) that drive the counts, the drill-down lists (`MetricDetailModal`) and the PFOTM daily bump chart, so a number and its list never disagree. `/target-progress/audit` (director/manager/HR) lists every visit/sale with the reasons it is excluded. Target Progress has a "Periode gaji" toggle (payroll window via `getPayrollWindow`) to compare 1:1.
 
 ### Toko (shop) — migrations 068, 103
 Tables keep historical `griya_` names but serve **every branch** (scoped by branch_id): `griya_products` (stock), `griya_sales` (status completed/void/**pending_payment**, payment_method incl. `DOKU QRIS`/`DOKU VA`, transaction_id), `griya_sale_items`, `griya_stock_movements`. RPCs: `griya_create_sale(p jsonb)` (atomic stock decrement; optional `status`), `toko_move_sale_stock(sale, ±1, reason, user)` (atomic restock / re-deduct). Pages: `/toko` (fisioterapi, nav key `toko`) and `/griya-anak/toko` (Griya flag-gated) share `components/toko/` (`TokoWorkspace`, Kasir/Produk/Riwayat) and `app/actions/toko.ts`. Every completed sale = one income `transactions` row, category **TOKO** → all finance views. Online sale: sale `pending_payment` (stock reserved) + `payment_links.toko_sale_id`; settle (`lib/doku/settle.ts`) inserts the TOKO transaction and completes the sale on paid; expiry/cancel → `releaseTokoSale` voids + restocks.
@@ -132,7 +139,7 @@ get_my_branch()        → uuid   -- branch_id of auth.uid(); NULL for director
 
 **Package categories** (`patient_packages.category`, migration 105): `PAKET KLINIK` | `PAKET VISIT` | `PAKET SPORT MASSAGE` — use `PACKAGE_CATEGORIES` / `packageCategoryForKategori()` in `lib/serviceType.ts`, never hardcode. Paying a visit with a package tariff in `PaymentDialog` creates the package (`createPackageForVisit`).
 
-**Targets**: TA target = `TERAPI AWAL`/`TA KLINIK` only; Visit target = `TA VISIT` + `PAKET VISIT`.
+**Targets**: TA target = `TERAPI AWAL`/`TA KLINIK` only; Paket Visit target (`target_visit`) = `PAKET VISIT` only.
 
 **Expense categories**: `BEBAN PELAYANAN` | `GAJI` | `SEWA` | `LISTRIK` | `MARKETING` | `TUKAR TUNAI` | `LAINNYA`
 

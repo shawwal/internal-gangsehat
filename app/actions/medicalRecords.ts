@@ -87,6 +87,8 @@ export interface MedicalRecordsParams {
   completeness: RecordCompleteness
   period: RecordPeriod
   date?: string      // exact YYYY-MM-DD — when set, overrides `period`
+  dateFrom?: string  // YYYY-MM-DD range — when either end is set, overrides `period` / `date`
+  dateTo?: string
   sortOrder: RecordSortOrder
   groupBy?: RecordGroupBy  // 'date' (default, DB-level pagination) or 'patient' (in-memory)
   staffId?: string   // 'all' or uuid — only honored for team-scope viewers
@@ -196,7 +198,10 @@ function applyScopedFilters(query: any, viewer: ViewerContext, params: MedicalRe
 
   if (params.serviceType && params.serviceType !== 'all') query = applyServiceTypeFilter(query, params.serviceType)
 
-  if (params.date) {
+  if (params.dateFrom || params.dateTo) {
+    if (params.dateFrom) query = query.gte('visit_date', params.dateFrom)
+    if (params.dateTo) query = query.lte('visit_date', params.dateTo)
+  } else if (params.date) {
     query = query.eq('visit_date', params.date)
   } else {
     const startDate = periodStartDate(params.period)

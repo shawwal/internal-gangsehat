@@ -15,11 +15,11 @@ export function TransactionsPagination({ page, totalPages, total, baseParams }: 
   const hrefFor = (p: number) => buildFinanceUrl(baseParams, { page: String(p) })
 
   return (
-    <div className="flex items-center justify-between px-5 py-4 border-t border-white/10">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-white/10">
       <p className="text-xs text-muted-foreground">
         Halaman {page} dari {totalPages} · {total} transaksi
       </p>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2 sm:gap-1">
         {/* Prev */}
         {page > 1 ? (
           <Link
@@ -34,8 +34,8 @@ export function TransactionsPagination({ page, totalPages, total, baseParams }: 
           </span>
         )}
 
-        {/* Page numbers */}
-        <div className="flex items-center gap-0.5 mx-1">
+        {/* Page numbers — hidden on phones; the label above already says "Halaman x dari y" */}
+        <div className="hidden sm:flex items-center gap-0.5 mx-1">
           {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
             let pageNum: number
             if (totalPages <= 7) {

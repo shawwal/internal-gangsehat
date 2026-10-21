@@ -9,6 +9,7 @@ import {
 } from '@/app/actions/medicalRecords'
 import type { MedicalRecordRow, RecordFilterOptions } from '@/app/actions/medicalRecords'
 import { sendMedicalRecordReminder, sendBulkMedicalRecordReminders } from '@/app/actions/jadwal'
+import { getPayrollWindow } from '@/app/actions/pfotm'
 import { MedicalRecordsStats } from '@/components/medicalRecords/MedicalRecordsStats'
 import { MedicalRecordsFilters } from '@/components/medicalRecords/MedicalRecordsFilters'
 import { MedicalRecordsList } from '@/components/medicalRecords/MedicalRecordsList'
@@ -31,6 +32,8 @@ export default function MedicalRecordsPage() {
     const completeness = searchParams.get('completeness')
     const period = searchParams.get('period')
     const date = searchParams.get('date')
+    const dateFrom = searchParams.get('from')
+    const dateTo = searchParams.get('to')
     const sortOrder = searchParams.get('sortOrder')
     const groupBy = searchParams.get('groupBy')
     const serviceType = searchParams.get('serviceType')
@@ -44,6 +47,8 @@ export default function MedicalRecordsPage() {
         : {}),
       ...(period === '7' || period === '30' || period === '90' || period === 'all' ? { period } : {}),
       ...(date ? { date } : {}),
+      ...(dateFrom ? { dateFrom } : {}),
+      ...(dateTo ? { dateTo } : {}),
       ...(sortOrder === 'asc' || sortOrder === 'desc' ? { sortOrder } : {}),
       ...(groupBy === 'date' || groupBy === 'patient' ? { groupBy } : {}),
       ...(serviceType ? { serviceType } : {}),
@@ -72,8 +77,31 @@ export default function MedicalRecordsPage() {
 
   const isTeamView = options.scope === 'team'
 
+  // Default date range = the active payroll period (27 → 26), unless the URL
+  // already carries one. Rows wait for it, so the first list is already ranged.
+  const [rangeReady, setRangeReady] = useState(() =>
+    !!(searchParams.get('from') || searchParams.get('to') || searchParams.get('date') || searchParams.get('period')))
+
   useEffect(() => {
-    fetchRecordFilterOptions().then(setOptions)
+    fetchRecordFilterOptions().then(async (opts) => {
+      setOptions(opts)
+      if (rangeReady) return
+      const branchId = filters.branchId !== 'all' ? filters.branchId : opts.branches[0]?.id
+      const now = new Date()
+      const win = branchId ? await getPayrollWindow(branchId, now.getFullYear(), now.getMonth() + 1) : null
+      if (win?.ok) {
+        // The window that contains today (27 Okt+ belongs to November's period).
+        const today = now.toLocaleDateString('en-CA')
+        let range = win.data
+        if (today > range.end) {
+          const next = await getPayrollWindow(branchId!, now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear(), now.getMonth() === 11 ? 1 : now.getMonth() + 2)
+          if (next.ok) range = next.data
+        }
+        setFilters((f) => ({ ...f, dateFrom: range.start, dateTo: range.end }))
+      }
+      setRangeReady(true)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadRows = useCallback(async (currentPage: number, currentFilters: RecordFiltersState) => {
@@ -84,6 +112,8 @@ export default function MedicalRecordsPage() {
       completeness: currentFilters.completeness,
       period: currentFilters.period,
       date: currentFilters.date,
+      dateFrom: currentFilters.dateFrom,
+      dateTo: currentFilters.dateTo,
       sortOrder: currentFilters.sortOrder,
       groupBy: currentFilters.groupBy,
       staffId: currentFilters.staffId,
@@ -101,6 +131,8 @@ export default function MedicalRecordsPage() {
       search: currentFilters.search,
       period: currentFilters.period,
       date: currentFilters.date,
+      dateFrom: currentFilters.dateFrom,
+      dateTo: currentFilters.dateTo,
       staffId: currentFilters.staffId,
       branchId: currentFilters.branchId,
       serviceType: currentFilters.serviceType,
@@ -111,6 +143,7 @@ export default function MedicalRecordsPage() {
   }, [])
 
   useEffect(() => {
+    if (!rangeReady) return
     if (isFirstLoad.current) {
       isFirstLoad.current = false
       loadRows(page, filters)
@@ -121,7 +154,7 @@ export default function MedicalRecordsPage() {
     loadRows(1, filters)
     loadStats(filters)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, loadRows, loadStats])
+  }, [filters, loadRows, loadStats, rangeReady])
 
   // Keep the URL in sync with the current filters/page so returning here
   // (e.g. after saving a record) restores the exact same view.
@@ -131,6 +164,8 @@ export default function MedicalRecordsPage() {
     if (filters.completeness !== 'incomplete') params.set('completeness', filters.completeness)
     if (filters.period !== '30')               params.set('period', filters.period)
     if (filters.date)                          params.set('date', filters.date)
+    if (filters.dateFrom)                      params.set('from', filters.dateFrom)
+    if (filters.dateTo)                        params.set('to', filters.dateTo)
     if (filters.sortOrder !== 'desc')          params.set('sortOrder', filters.sortOrder)
     if (filters.groupBy !== 'date')            params.set('groupBy', filters.groupBy)
     if (filters.staffId !== 'all')             params.set('staffId', filters.staffId)
@@ -172,6 +207,7 @@ export default function MedicalRecordsPage() {
       const { rows: incompleteRows } = await fetchMedicalRecords({
         page: 1, pageSize: 500,
         search: filters.search, period: filters.period, date: filters.date,
+        dateFrom: filters.dateFrom, dateTo: filters.dateTo,
         sortOrder: filters.sortOrder, staffId: filters.staffId, branchId: filters.branchId,
         serviceType: filters.serviceType,
         completeness: 'incomplete',
@@ -196,8 +232,8 @@ export default function MedicalRecordsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">Rekam Medis</h1>
           <p className="text-sm text-muted-foreground">
             {isTeamView

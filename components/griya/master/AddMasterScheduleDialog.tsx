@@ -289,7 +289,7 @@ export function AddMasterScheduleDialog({
           )}
 
           <div className="space-y-3 pt-3 border-t border-border/30">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {mode === 'once' ? (
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">

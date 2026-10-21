@@ -40,21 +40,21 @@ export function KpiCards({ kpi, kpiLoading, year }: KpiCardsProps) {
 
   if (kpiLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {Array.from({ length: 4 }).map((_, i) => <KPISkeleton key={i} />)}
       </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       {kpiCards.map((card) => {
         const p = card.pct
         const effectivePct = card.invertTrend && p !== null ? -p : p
         return (
-          <div key={card.label} className="glass-card p-5">
+          <div key={card.label} className="glass-card p-3.5 sm:p-5 min-w-0">
             <p className="text-xs font-medium text-muted-foreground mb-1">{card.label}</p>
-            <p className="text-lg font-bold text-foreground leading-tight mb-2" style={{ color: card.color }}>{card.value}</p>
+            <p className="text-base sm:text-lg font-bold text-foreground leading-tight break-words mb-2" style={{ color: card.color }}>{card.value}</p>
             <div className="flex items-center gap-1">
               {trendIcon(effectivePct)}
               <span className={`text-xs font-medium ${trendColor(effectivePct)}`}>

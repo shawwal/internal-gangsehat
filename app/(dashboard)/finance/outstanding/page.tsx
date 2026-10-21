@@ -337,11 +337,11 @@ export default async function OutstandingPaymentsPage({
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-5 py-4 border-t border-white/10">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-white/10">
                 <p className="text-xs text-muted-foreground">
                   Halaman {page} dari {totalPages} · {txnTotal} transaksi
                 </p>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2 sm:gap-1">
                   {page > 1 ? (
                     <Link href={buildUrl(baseParams, { page: String(page - 1) })} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 hover:bg-white/8 transition-colors">
                       <ChevronLeft size={13} /> Sebelumnya
@@ -351,7 +351,7 @@ export default async function OutstandingPaymentsPage({
                       <ChevronLeft size={13} /> Sebelumnya
                     </span>
                   )}
-                  <div className="flex items-center gap-0.5 mx-1">
+                  <div className="hidden sm:flex items-center gap-0.5 mx-1">
                     {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
                       let pageNum: number
                       if (totalPages <= 7) {

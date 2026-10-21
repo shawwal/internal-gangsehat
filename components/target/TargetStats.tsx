@@ -25,7 +25,7 @@ function GlassStatCard({ label, value, icon, color }: {
 
 export function TargetStats({ stats }: Props) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 flex-1 min-w-0">
       <GlassStatCard label="Total Pengajuan" value={stats.total}
         icon={<Users size={18} className="text-foreground" />} color="bg-muted" />
       <GlassStatCard label="Menunggu" value={stats.pending}

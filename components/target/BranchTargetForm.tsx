@@ -33,7 +33,7 @@ const METRICS: { field: keyof BranchTargetFormState; label: string; category: Ca
   { field: 'target_ta', label: 'Target TA (Terapi Awal)', category: 'ta' },
   { field: 'target_paket_klinik', label: 'Target Paket Klinik', category: 'paket_klinik' },
   { field: 'target_kunjungan', label: 'Target Kunjungan', category: 'kunjungan' },
-  { field: 'target_visit', label: 'Target Visit', category: 'paket_visit' },
+  { field: 'target_visit', label: 'Target Paket Visit', category: 'paket_visit' },
   { field: 'target_sesi', label: 'Target Sesi', category: 'sesi' },
 ]
 

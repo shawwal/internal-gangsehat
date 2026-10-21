@@ -42,7 +42,7 @@ export function BranchTargetsPanel({ branches, disabledCategories, state }: Prop
       { header: 'Target TA',     value: (r) => r.target_ta },
       { header: 'Target Paket',  value: (r) => r.target_paket_klinik },
       { header: 'Target Kunjungan', value: (r) => r.target_kunjungan },
-      { header: 'Target Visit',  value: (r) => r.target_visit },
+      { header: 'Target Paket Visit',  value: (r) => r.target_visit },
       { header: 'Target Sesi',  value: (r) => r.target_sesi },
       { header: 'Status',        value: (r) => r.status },
       { header: 'Catatan',       value: (r) => r.notes ?? '' },

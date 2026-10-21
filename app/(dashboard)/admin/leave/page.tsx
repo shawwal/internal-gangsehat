@@ -133,8 +133,8 @@ export default function AdminLeavePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">Perizinan Staff</h1>
           <p className="text-sm text-muted-foreground">Lihat pengajuan izin tim cabang Anda</p>
         </div>

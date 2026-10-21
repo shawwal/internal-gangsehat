@@ -169,7 +169,7 @@ function LayananModal({ branchId, row, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="glass-card p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+      <div className="glass-card p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-semibold text-foreground mb-4">{row ? 'Ubah Layanan' : 'Tambah Layanan'}</h2>
         <form onSubmit={submit} className="space-y-3">
           <input value={form.nama} onChange={set('nama')} placeholder="Nama layanan" className={inputCls} />

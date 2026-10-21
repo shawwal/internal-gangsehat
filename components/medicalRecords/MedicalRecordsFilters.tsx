@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { ArrowDownAZ, ArrowUpAZ, Search, Calendar, User, Stethoscope, ChevronDown } from 'lucide-react'
 import type { BranchOption, StaffOption } from '@/app/actions/medicalRecords'
-import { COMPLETENESS_TABS, PERIOD_OPTIONS, SERVICE_TYPE_OPTIONS, type RecordFiltersState } from './types'
+import { COMPLETENESS_TABS, SERVICE_TYPE_OPTIONS, type RecordFiltersState } from './types'
 
 interface Props {
   filters: RecordFiltersState
@@ -116,42 +116,31 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
           </div>
         )}
 
-        <div className="relative shrink-0">
-          <select
-            value={filters.period}
-            disabled={!!filters.date}
-            onChange={(e) => onChange({ ...filters, period: e.target.value as RecordFiltersState['period'] })}
-            className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            {PERIOD_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
-          <ChevronDown size={13} className={`${chevronCls} ${filters.date ? 'opacity-50' : ''}`} />
-        </div>
-
-        {/* Native <input type="date"> renders with no visible text when empty
-            (most visibly on iOS Safari — no "dd/mm/yyyy" ghost text like desktop
-            Chrome), which reads as a broken, blank box. Overlay our own label
-            in that state; it's pointer-events-none so taps still reach the
-            input underneath and open the native picker. */}
-        <div className="relative shrink-0 flex items-center">
+        <div className="shrink-0 flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground">Tanggal</span>
           <input
             type="date"
-            value={filters.date}
-            onChange={(e) => onChange({ ...filters, date: e.target.value })}
-            title="Pilih tanggal kunjungan spesifik"
-            className={`${selectCls} w-[132px] pr-7 ${filters.date ? activeSelectCls : 'text-transparent'}`}
+            value={filters.dateFrom}
+            max={filters.dateTo || undefined}
+            onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
+            aria-label="Dari tanggal"
+            className={`${selectCls} w-[140px] ${filters.dateFrom ? activeSelectCls : ''}`}
           />
-          {!filters.date && (
-            <span className="absolute left-3 flex items-center gap-1.5 text-sm text-muted-foreground pointer-events-none">
-              <Calendar size={13} /> Tanggal
-            </span>
-          )}
-          {filters.date && (
+          <span className="text-muted-foreground">–</span>
+          <input
+            type="date"
+            value={filters.dateTo}
+            min={filters.dateFrom || undefined}
+            onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
+            aria-label="Sampai tanggal"
+            className={`${selectCls} w-[140px] ${filters.dateTo ? activeSelectCls : ''}`}
+          />
+          {(filters.dateFrom || filters.dateTo) && (
             <button
               type="button"
-              onClick={() => onChange({ ...filters, date: '' })}
-              title="Hapus filter tanggal"
-              className="absolute right-1.5 w-5 h-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted text-xs leading-none cursor-pointer"
+              onClick={() => onChange({ ...filters, dateFrom: '', dateTo: '', period: 'all' })}
+              title="Hapus filter tanggal (semua waktu)"
+              className="w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted text-xs cursor-pointer"
             >
               ✕
             </button>

@@ -5,6 +5,7 @@ import {
   Cell, PieChart, Pie, AreaChart, Area,
 } from 'recharts'
 import { BarChart2 } from 'lucide-react'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -312,6 +313,7 @@ function ServiceTypeChart({ data, chartType }: { data: ChartDataItem[]; chartTyp
 // ─── Religion Chart ────────────────────────────────────────────────────────────
 
 function ReligionChart({ data, chartType }: { data: ChartDataItem[]; chartType: 'pie' | 'bar' }) {
+  const isMobile = useIsMobile()
   if (!data.length) return <EmptyChart label="Belum ada data agama" />
 
   if (chartType === 'pie') {
@@ -348,7 +350,7 @@ function ReligionChart({ data, chartType }: { data: ChartDataItem[]; chartType: 
           tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
           axisLine={false}
           tickLine={false}
-          width={110}
+          width={isMobile ? 80 : 110}
         />
         <Tooltip content={<GlassTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.4 }} />
         <Bar dataKey="value" radius={[0, 6, 6, 0]}>
@@ -364,6 +366,7 @@ function ReligionChart({ data, chartType }: { data: ChartDataItem[]; chartType: 
 // ─── Province Chart ────────────────────────────────────────────────────────────
 
 function ProvinceChart({ data }: { data: ChartDataItem[] }) {
+  const isMobile = useIsMobile()
   if (!data.length) return <EmptyChart label="Belum ada data provinsi" />
 
   return (
@@ -377,7 +380,7 @@ function ProvinceChart({ data }: { data: ChartDataItem[] }) {
           tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
           axisLine={false}
           tickLine={false}
-          width={130}
+          width={isMobile ? 90 : 130}
         />
         <Tooltip content={<GlassTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.4 }} />
         <Bar dataKey="value" fill="var(--chart-5)" radius={[0, 6, 6, 0]} />

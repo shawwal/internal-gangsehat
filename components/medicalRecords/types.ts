@@ -8,6 +8,8 @@ export interface RecordFiltersState {
   completeness: RecordCompleteness
   period: RecordPeriod
   date: string      // exact YYYY-MM-DD — when set, overrides `period`
+  dateFrom: string  // YYYY-MM-DD range (from → to); defaults to the active payroll period
+  dateTo: string
   sortOrder: RecordSortOrder
   groupBy: RecordGroupBy
   staffId: string   // 'all' or uuid — team scope only
@@ -20,6 +22,8 @@ export const DEFAULT_RECORD_FILTERS: RecordFiltersState = {
   completeness: 'incomplete',
   period: '30',
   date: '',
+  dateFrom: '',
+  dateTo: '',
   sortOrder: 'desc',
   groupBy: 'date',
   staffId: 'all',

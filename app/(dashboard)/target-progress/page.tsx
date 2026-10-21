@@ -5,8 +5,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Table2, TrendingUp, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { datesBetween, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES } from '@/lib/metrics/achievement'
-import { fetchTargetProgressTransactions } from '@/app/actions/targetProgress'
+import { datesBetween } from '@/lib/metrics/achievement'
+import { fetchTargetProgressTransactions, fetchTargetProgressVisits } from '@/app/actions/targetProgress'
 import { getPayrollWindow } from '@/app/actions/pfotm'
 import { MonthPicker } from '@/components/targetProgress/MonthPicker'
 import { BranchPicker } from '@/components/targetProgress/BranchPicker'
@@ -18,7 +18,6 @@ import {
   type CategorySummary,
   type BranchOption,
   type BranchTargetForProgress,
-  type VisitForProgress,
 } from '@/components/targetProgress/types'
 import { buildDailyCounts, buildTransactionDailyCounts, mergeDailyCounts, sum, getMonthRange, MONTHS, CURRENT_MONTH, CURRENT_YEAR } from '@/components/targetProgress/utils'
 import { SkeletonRegion, StatCardsSkeleton, TableSkeleton } from '@/components/ui/Skeleton'
@@ -125,7 +124,7 @@ export default function TargetProgressPage() {
       if (win.ok) range = win.data
     }
 
-    const [{ data: targetRow }, { data: visits }, transactionRows, { data: categorySettings }] = await Promise.all([
+    const [{ data: targetRow }, visitRows, transactionRows, { data: categorySettings }] = await Promise.all([
       supabase
         .from('branch_targets')
         .select('target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi')
@@ -134,16 +133,8 @@ export default function TargetProgressPage() {
         .eq('tahun', year)
         .eq('status', 'approved')
         .maybeSingle(),
-      supabase
-        .from('patient_visits')
-        .select('id, visit_date, kehadiran, status, service_type')
-        .eq('branch_id', selectedBranchId)
-        .gte('visit_date', range.start)
-        .lte('visit_date', range.end)
-        .in('status', [...KUNJUNGAN_VISIT_STATUSES])
-        // Sport massage is tracked separately — not a "kunjungan"
-        .or(KUNJUNGAN_SERVICE_FILTER),
-      // Server action — therapist/staff can't read `transactions` under RLS
+      // Server actions — therapist/staff can't read `transactions` or the record forms under RLS
+      fetchTargetProgressVisits(selectedBranchId, range.start, range.end),
       fetchTargetProgressTransactions(selectedBranchId, range.start, range.end),
       supabase
         .from('branch_target_category_settings')
@@ -152,8 +143,6 @@ export default function TargetProgressPage() {
     ])
 
     const disabled = new Set((categorySettings ?? []).map(r => r.category as CategoryKey))
-
-    const visitRows = (visits ?? []) as VisitForProgress[]
 
     const windowDates = datesBetween(range.start, range.end)
     setDates(windowDates)

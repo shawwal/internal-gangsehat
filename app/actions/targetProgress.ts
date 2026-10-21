@@ -4,8 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import { countsAsKunjungan, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES, SALE_PAYMENT_STATUSES } from '@/lib/metrics/achievement'
+import { evaluateSales, fetchFormStatuses, SALE_TX_COLUMNS, withRecordStatus, type SaleTxRow } from '@/lib/metrics/achievementData'
 import { CATEGORY_TO_TRANSACTION_TYPES, EDITABLE_ROLES, TRANSACTION_CATEGORY_MAP } from '@/components/targetProgress/types'
-import type { CategoryKey, TransactionForProgress } from '@/components/targetProgress/types'
+import type { CategoryKey, TransactionForProgress, VisitForProgress } from '@/components/targetProgress/types'
 import type { TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
 import { deriveAdminStatus, fetchPackagePositions } from '@/lib/internal/visitInsights'
 import { getVisitFormRoute } from '@/lib/visitRouting'
@@ -75,41 +76,80 @@ interface TransactionRow {
   receipt_url: string | null
 }
 
-// Transactions that count toward the branch's TA/Sesi/Paket progress for a date
-// range. RLS only lets finance-capable roles read `transactions`, but every
-// role with the Progress Target page (therapist, staff, hr, marketing) must see
-// the same branch totals — so this reads with the service role after checking
-// the caller belongs to that branch, and returns only category + date (no
-// amounts or patient data).
-export async function fetchTargetProgressTransactions(
-  branchId: string,
-  start: string,
-  end: string,
-): Promise<TransactionForProgress[]> {
+/** Role of the caller when they may see this branch's progress, else null. */
+async function progressViewerRole(branchId: string): Promise<string | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
+  if (!user) return null
   const { data: profile } = await supabase
     .from('internal_profiles')
     .select('role, branch_id')
     .eq('id', user.id)
     .single()
-  if (!profile || profile.role === 'non-staff') return []
-  if (profile.role !== 'director' && profile.branch_id !== branchId) return []
+  if (!profile || profile.role === 'non-staff') return null
+  if (profile.role !== 'director' && profile.branch_id !== branchId) return null
+  return profile.role as string
+}
 
-  const { data, error } = await createAdminClient()
+/** Valid sales (lib/metrics/achievement saleIssues) of the given categories in a branch + window. */
+async function loadValidSales(
+  db: Parameters<typeof evaluateSales>[0], branchId: string, categories: string[], start: string, end: string,
+) {
+  const { data, error } = await db
     .from('transactions')
-    .select('category, transaction_date')
+    .select(SALE_TX_COLUMNS)
     .eq('branch_id', branchId)
     .eq('type', 'income')
     .neq('status', 'rejected')
     .in('payment_status', [...SALE_PAYMENT_STATUSES])
-    .in('category', Object.keys(TRANSACTION_CATEGORY_MAP))
+    .in('category', categories)
     .gte('transaction_date', start)
     .lte('transaction_date', end)
-
+    .limit(20000)
   if (error || !data) return []
-  return data as TransactionForProgress[]
+  const { sales } = await evaluateSales(db, data as unknown as SaleTxRow[])
+  return sales.filter((s) => s.issues.length === 0)
+}
+
+// Transactions that count toward the branch's TA/Sesi/Paket progress for a date
+// range. RLS only lets finance-capable roles read `transactions`, but every
+// role with the Progress Target page (therapist, staff, hr, marketing) must see
+// the same branch totals — so this reads with the service role after checking
+// the caller belongs to that branch, and returns only category + date (no
+// amounts or patient data). Only valid sales count (saleIssues).
+export async function fetchTargetProgressTransactions(
+  branchId: string,
+  start: string,
+  end: string,
+): Promise<TransactionForProgress[]> {
+  if (!(await progressViewerRole(branchId))) return []
+  const sales = await loadValidSales(createAdminClient(), branchId, Object.keys(TRANSACTION_CATEGORY_MAP), start, end)
+  return sales.map((s) => ({ category: s.tx.category, transaction_date: s.tx.transaction_date }))
+}
+
+// Visits behind the Kunjungan row, with their record status (Sudah Ditangani /
+// Diperiksa) — the form tables aren't readable by every role, so this reads with
+// the service role after the same branch check as the transactions above.
+export async function fetchTargetProgressVisits(
+  branchId: string,
+  start: string,
+  end: string,
+): Promise<VisitForProgress[]> {
+  if (!(await progressViewerRole(branchId))) return []
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('patient_visits')
+    .select('id, visit_date, kehadiran, status, service_type, diagnosis, treatment, regio')
+    .eq('branch_id', branchId)
+    .gte('visit_date', start)
+    .lte('visit_date', end)
+    .in('status', [...KUNJUNGAN_VISIT_STATUSES])
+    // Sport massage is tracked separately — not a "kunjungan"
+    .or(KUNJUNGAN_SERVICE_FILTER)
+    .limit(20000)
+  if (error || !data) return []
+  const visits = await withRecordStatus(admin, data as { id: string; visit_date: string; kehadiran: 'HADIR' | 'TIDAK HADIR' | null; status: string | null; service_type: string | null; diagnosis: string | null; treatment: string | null; regio: string | null }[])
+  return visits.map(({ id, visit_date, kehadiran, status, service_type, record_complete }) => ({ id, visit_date, kehadiran, status, service_type, record_complete }))
 }
 
 // `endDate` defaults to `startDate` (a single day cell); the Capaian column
@@ -127,26 +167,19 @@ export async function fetchTargetProgressDetail(
     // (Kategori match + Pembayaran LUNAS/DP) — the same source the summary
     // table now uses, so this list always matches the day cell exactly, and
     // the rows returned are real transactions that can be edited/deleted.
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return []
-    const { data: profile } = await supabase
-      .from('internal_profiles')
-      .select('role, branch_id')
-      .eq('id', user.id)
-      .single()
-    if (!profile || profile.role === 'non-staff') return []
-    if (profile.role !== 'director' && profile.branch_id !== branchId) return []
+    const role = await progressViewerRole(branchId)
+    if (!role) return []
     // Roles without `transactions` RLS access (therapist, hr, …) still get the
     // list, read with the service role — but without the editable tx payload
     // (amounts / payment detail), same as fetchTargetProgressTransactions.
-    const canReadTx = (EDITABLE_ROLES as readonly string[]).includes(profile.role)
+    const canReadTx = (EDITABLE_ROLES as readonly string[]).includes(role)
     const db = canReadTx ? supabase : createAdminClient()
 
     const txCategories = CATEGORY_TO_TRANSACTION_TYPES[category] ?? []
     const { data, error } = await db
       .from('transactions')
       .select(
-        'id, patient_id, visit_id, fisio_id, category, harga, discount, amount, payment_method, ' +
+        'id, patient_id, visit_id, fisio_id, order_id, category, harga, discount, amount, payment_method, ' +
         'payment_status, status, description, penjamin, transaction_date, receipt_url',
       )
       .eq('branch_id', branchId)
@@ -158,7 +191,12 @@ export async function fetchTargetProgressDetail(
       .in('category', txCategories)
 
     if (error || !data) return []
+    // Same validity rule as the summary (saleIssues), judged with the service
+    // role so the other payments of each order are visible.
+    const { sales } = await evaluateSales(createAdminClient(), data as unknown as SaleTxRow[])
+    const valid = new Set(sales.filter((s) => s.issues.length === 0).map((s) => s.tx.id))
     const rows = (data as unknown as TransactionRow[])
+      .filter((row) => valid.has(row.id))
       .sort((a, b) => a.transaction_date.localeCompare(b.transaction_date))
 
     const patientIds = [...new Set(rows.map((row) => row.patient_id).filter((id): id is string => !!id))]
@@ -205,8 +243,8 @@ export async function fetchTargetProgressDetail(
     })
   }
 
-  // Kunjungan comes from attendance alone (isAttended), unconditionally — no
-  // payment gating, matching exactly how the summary table computes it.
+  // Kunjungan: attended + record completed (countsAsKunjungan), no payment
+  // gating — matching exactly how the summary table computes it.
   const { data, error } = await supabase
     .from('patient_visits')
     .select(
@@ -224,7 +262,10 @@ export async function fetchTargetProgressDetail(
 
   const allVisits = data as unknown as VisitRow[]
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date())
-  const rows = allVisits.filter((v) => countsAsKunjungan(v, today))
+  // Record-form status per visit (service role: not every viewer can read the forms).
+  const formStatusMap = await fetchFormStatuses(createAdminClient(), allVisits.map((v) => v.id))
+  const rows = allVisits.filter((v) =>
+    countsAsKunjungan({ ...v, record_complete: deriveAdminStatus(v, formStatusMap.get(v.id)) === 'LENGKAP' }, today))
   rows.sort((a, b) =>
     a.visit_date.localeCompare(b.visit_date) || (a.visit_time ?? '').localeCompare(b.visit_time ?? ''))
 
@@ -240,30 +281,15 @@ export async function fetchTargetProgressDetail(
 
   // Layanan / pertemuan ke / status kunjungan — derived the same way as the
   // Jadwal List page (app/actions/jadwalList.ts) so both views agree.
-  const visitIds = rows.map((row) => row.id)
   const packageIds = [...new Set(rows.map((row) => row.package_id).filter((id): id is string => !!id))]
-  const [packagePositions, packages, assessments, sessionNotes, griyaIntakes, griyaNotes] = await Promise.all([
+  const [packagePositions, packages] = await Promise.all([
     fetchPackagePositions(supabase, packageIds),
     packageIds.length > 0
       ? supabase.from('patient_packages_with_stats').select('id, jenis_paket').in('id', packageIds)
       : Promise.resolve({ data: [] as { id: string; jenis_paket: string | null }[] }),
-    supabase.from('terapi_awal_assessments').select('visit_id, status').in('visit_id', visitIds),
-    supabase.from('session_notes').select('visit_id, status').in('visit_id', visitIds),
-    supabase.from('griya_terapi_awal').select('visit_id, status').in('visit_id', visitIds),
-    supabase.from('griya_session_notes').select('visit_id, status').in('visit_id', visitIds),
   ])
 
   const jenisPaketById = new Map((packages.data ?? []).map((p) => [p.id as string, p.jenis_paket as string | null]))
-
-  // Record-form status per visit; 'completed' wins if a visit has more than one row.
-  const formStatusMap = new Map<string, string>()
-  for (const r of [
-    ...(assessments.data ?? []), ...(sessionNotes.data ?? []),
-    ...(griyaIntakes.data ?? []), ...(griyaNotes.data ?? []),
-  ]) {
-    const vid = r.visit_id as string
-    if (formStatusMap.get(vid) !== 'completed') formStatusMap.set(vid, r.status as string)
-  }
 
   return rows.map((row) => {
     // P1/P2 → "PAKET 1"/"PAKET 2"; a package with no jenis is just "PAKET".

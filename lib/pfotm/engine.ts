@@ -29,6 +29,8 @@ export interface Kpis {
   kunjungan_per_hadir: number
   paket_per_hadir: number
   jumlah_paket: number
+  /** TA KLINIK patients who bought SESI / PAKET KLINIK within 4 days; null = no TA (or a period frozen before it existed) */
+  closing_rate: number | null
 }
 
 export interface BoardRow extends BoardInput {
@@ -54,6 +56,7 @@ export function computeKpis(metrics: Metrics, workingDays: number): Kpis {
     kunjungan_per_hadir: hadir > 0 ? m(metrics, 'kunjungan') / hadir : 0,
     paket_per_hadir: hadir > 0 ? paket / hadir : 0,
     jumlah_paket: paket,
+    closing_rate: m(metrics, 'ta_klinik') > 0 ? m(metrics, 'ta_closing') / m(metrics, 'ta_klinik') : null,
   }
 }
 

@@ -36,7 +36,7 @@ export function ConfirmDialog({
       onClick={onCancel}
     >
       <div
-        className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-sm"
+        className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-sm max-h-[90dvh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

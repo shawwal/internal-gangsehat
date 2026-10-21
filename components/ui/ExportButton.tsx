@@ -25,18 +25,20 @@ export function ExportButton({ onExport, label = 'Export Excel', disabled = fals
   return (
     <button
       onClick={handleClick}
+      aria-label={label}
+      title={label}
       disabled={loading || disabled}
-      className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-background text-sm font-medium text-foreground hover:bg-muted active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 shadow-sm cursor-pointer"
+      className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl border border-border bg-background text-sm font-medium text-foreground hover:bg-muted active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 shadow-sm cursor-pointer"
     >
       {loading ? (
         <>
           <Loader2 size={15} className="animate-spin" />
-          Mengekspor...
+          <span className="hidden sm:inline">Mengekspor...</span>
         </>
       ) : (
         <>
           <FileDown size={15} />
-          {label}
+          <span className="hidden sm:inline">{label}</span>
         </>
       )}
     </button>

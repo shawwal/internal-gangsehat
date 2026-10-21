@@ -38,7 +38,7 @@ function formatDate(d: string) {
 function SkeletonCard() {
   return (
     <div className="glass-card p-5 animate-pulse">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between gap-2 mb-3">
         <div className="h-2.5 w-20 bg-muted rounded-full" />
         <div className="w-9 h-9 rounded-2xl bg-muted" />
       </div>
@@ -55,14 +55,14 @@ function KpiCard({
   icon: React.ReactNode; iconBg: string; alert?: boolean
 }) {
   return (
-    <div className={`glass-card p-5 hover:scale-[1.02] transition-transform duration-200 ${alert ? 'ring-2 ring-secondary/40' : ''}`}>
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
-        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${iconBg}`}>
+    <div className={`glass-card p-3.5 sm:p-5 min-w-0 hover:scale-[1.02] transition-transform duration-200 ${alert ? 'ring-2 ring-secondary/40' : ''}`}>
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide min-w-0">{title}</p>
+        <div className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-2xl flex items-center justify-center ${iconBg}`}>
           {icon}
         </div>
       </div>
-      <p className="text-2xl font-bold text-foreground">{value}</p>
+      <p className="text-lg sm:text-2xl font-bold text-foreground leading-tight break-words">{value}</p>
       {sub && <p className={`text-xs mt-1 ${alert ? 'text-secondary-foreground font-medium' : 'text-muted-foreground'}`}>{sub}</p>}
     </div>
   )
@@ -136,7 +136,7 @@ export default function HRPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (

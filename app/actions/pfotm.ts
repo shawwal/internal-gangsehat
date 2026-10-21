@@ -18,7 +18,7 @@ import {
   datesBetween, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES, type MetricDetail,
 } from '@/lib/metrics/achievement'
 import { resolvePatientNames } from '@/lib/metrics/patientNames'
-import { resolveTherapistIds } from '@/lib/finance/therapists'
+import { evaluateSales, SALE_TX_COLUMNS, withRecordStatus, type SaleTxRow } from '@/lib/metrics/achievementData'
 import { suggestLastTherapists } from '@/lib/finance/suggestTherapist'
 import { mergeMetrics, rankBoard, sanitizeMetricValue, type Metrics, type PointRule } from '@/lib/pfotm/engine'
 
@@ -80,6 +80,7 @@ export interface PfotmPeriod {
 }
 
 export interface PfotmBoardData {
+  userId: string
   role: string
   branches: { id: string; name: string }[]
   branchId: string
@@ -174,20 +175,37 @@ async function collectPfotmInput(
       .limit(20000),
     supabase.from('patients').select('id, referred_by_staff_id, created_at').in('referred_by_staff_id', staffIds),
     admin.from('transactions')
-      .select('id, fisio_id, visit_id, order_id, category, transaction_date, patient_id, payment_status, payment_method')
+      .select(SALE_TX_COLUMNS)
       .eq('branch_id', branchId)
       .eq('type', 'income')
       .neq('status', 'rejected')
       .in('payment_status', [...SALES_PAYMENT_STATUSES])
-      .in('category', SALES_CATEGORIES)
+      .in('category', [...SALES_CATEGORIES, 'TA KLINIK'])
       .gte('transaction_date', start).lte('transaction_date', end)
       .limit(20000),
   ])
-  const periodVisits = (visitRes.data ?? []) as unknown as VisitForPayroll[]
-  const txRows = (txRes.data ?? []) as {
-    id: string; fisio_id: string | null; visit_id: string | null; order_id: string | null; category: string
-    transaction_date: string; patient_id: string | null; payment_status: string | null; payment_method: string | null
-  }[]
+  // Kunjungan needs the record status (Sudah Ditangani / Diperiksa); the form
+  // tables are read with the service role (HR has no access of its own).
+  const periodVisits: VisitForPayroll[] = await withRecordStatus(admin, (visitRes.data ?? []) as unknown as Omit<VisitForPayroll, 'record_complete'>[])
+  // Only valid sales count (saleIssues — same rule as Target Progress). Fisio =
+  // fisio_id → linked visit's therapist, as on the finance pages.
+  const evaluated = (await evaluateSales(admin, (txRes.data ?? []) as unknown as SaleTxRow[])).sales.filter((e) => e.issues.length === 0)
+  const txRows = evaluated.filter((e) => e.tx.category !== 'TA KLINIK').map((e) => e.tx)
+  const taSales = evaluated.filter((e) => e.tx.category === 'TA KLINIK').map((e) => e.tx)
+
+  // Closing rate: SESI / PAKET KLINIK bought by the TA patients up to 4 days after the period.
+  const taPatients = [...new Set(taSales.map((t) => t.patient_id).filter((x): x is string => !!x))]
+  const returnSales: { patient_id: string | null; transaction_date: string }[] = []
+  for (let i = 0; i < taPatients.length; i += 300) {
+    const { data } = await admin.from('transactions').select(SALE_TX_COLUMNS)
+      .in('patient_id', taPatients.slice(i, i + 300))
+      .eq('type', 'income').neq('status', 'rejected')
+      .in('payment_status', [...SALES_PAYMENT_STATUSES])
+      .in('category', ['SESI KLINIK', 'PAKET KLINIK'])
+      .gte('transaction_date', start).lte('transaction_date', addDays(end, 4))
+    const ret = await evaluateSales(admin, (data ?? []) as unknown as SaleTxRow[])
+    returnSales.push(...ret.sales.filter((e) => e.issues.length === 0).map((e) => e.tx))
+  }
 
   // PAKET KLINIK needs its package (by order_id or via the linked visit) to
   // tell P1 / P2 / P3 apart.
@@ -215,14 +233,10 @@ async function collectPfotmInput(
       ?? (visit?.package_id ? packageById.get(visit.package_id) : undefined)
       ?? null
   }
-  // Same rule as the finance pages (fisio_id → linked visit's therapist), so a
-  // therapist's sales here are exactly their rows there. No guessing: a sale
-  // without either lands in the "Di luar Jumlah" gap until finance sets a Fisio.
-  const therapistByTx = await resolveTherapistIds(admin, txRows)
-
+  // A sale without a Fisio lands in the "Di luar Jumlah" gap until finance sets one.
   const sales: SaleForPfotm[] = txRows.map((t) => ({
     id: t.id,
-    staff_id: therapistByTx.get(t.id) ?? null,
+    staff_id: t.staff_id,
     category: t.category,
     transaction_date: t.transaction_date, patient_id: t.patient_id, package: pkgOf(t),
     payment_status: t.payment_status, payment_method: t.payment_method,
@@ -247,7 +261,7 @@ async function collectPfotmInput(
   return {
     staffIds, start, end, todayISO: today,
     attendance: (attRes.data ?? []) as AttendanceForPfotm[],
-    periodVisits, sales, referrals,
+    periodVisits, sales, referrals, taSales, returnSales,
   }
 }
 
@@ -293,6 +307,7 @@ export async function getPfotmBoard(branchIdParam: string | null, year: number, 
 
   const p = period as PfotmPeriod | null
   return ok({
+    userId: actor.userId,
     role: actor.role,
     branches: branches ?? [],
     branchId,
@@ -673,7 +688,6 @@ export async function getPfotmHistory(branchId: string, year: number): Promise<R
 export async function getPfotmMetricDetail(entryId: string, metricKey: string): Promise<Result<MetricDetail>> {
   const actor = await getActor()
   if (isErr(actor)) return actor
-  if (!INPUT_ROLES.includes(actor.role)) return fail('Anda tidak memiliki akses.')
   if (!(DRILLDOWN_METRICS as readonly string[]).includes(metricKey)) return fail('Metrik ini tidak punya rincian.')
   const { supabase } = actor
   const { data: entry } = await supabase
@@ -685,8 +699,12 @@ export async function getPfotmMetricDetail(entryId: string, metricKey: string): 
   if (!per) return fail('Periode tidak ditemukan.')
   const override = ((entry.override_metrics ?? {}) as Metrics)[metricKey]
   if (!entry.staff_id) return ok({ rows: [], auto: 0, override: override ?? null })
+  // Director / manager / HR / admin see every row; anyone else only their own.
+  if (!INPUT_ROLES.includes(actor.role) && entry.staff_id !== actor.userId) return fail('Anda hanya dapat melihat rincian milik Anda sendiri.')
+  if (actor.role !== 'director' && per.branch_id !== actor.branchId && actor.role !== 'hr') return fail('Anda tidak memiliki akses.')
 
-  const input = await collectPfotmInput(supabase, per.branch_id, [entry.staff_id], per.start_date, per.end_date)
+  // Service role: a therapist can't read the branch's attendance / forms / sales under RLS.
+  const input = await collectPfotmInput(createAdminClient() as unknown as ServerClient, per.branch_id, [entry.staff_id], per.start_date, per.end_date)
   const hits = pfotmHits(input).filter((h) => h.key === metricKey).sort((a, b) => a.date.localeCompare(b.date))
   const names = await resolvePatientNames(hits.map((h) => h.patient_id))
   return ok({

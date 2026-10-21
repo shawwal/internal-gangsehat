@@ -21,7 +21,7 @@ export function DeleteConfirm({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onCancel}>
       <div
-        className="bg-card rounded-2xl border border-border w-full max-w-sm shadow-2xl p-6 space-y-4"
+        className="bg-card rounded-2xl border border-border w-full max-w-sm shadow-2xl p-6 space-y-4 max-h-[90dvh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3">

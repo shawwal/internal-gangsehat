@@ -284,7 +284,9 @@ export default function PfotmPage() {
 
           {tab === 'board' && period && (
             <>
-              <PfotmBoard board={board} rules={data.rules} wins={data.wins} live={!locked} />
+              <PfotmBoard board={board} rules={data.rules} wins={data.wins} live={!locked}
+                entryIdByKey={Object.fromEntries(data.entries.map((e) => [e.staff_id ?? e.display_name, e.id]))}
+                canDrill={(row) => ['director', 'manager', 'hr', 'admin'].includes(data.role) || row.key === data.userId} />
               <PfotmBumpChart periodId={period.id} entries={data.entries.filter((e) => !e.excluded)} rules={data.rules} workingDays={period.working_days} />
             </>
           )}

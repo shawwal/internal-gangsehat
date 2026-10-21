@@ -81,8 +81,8 @@ export default function DirectorTargetsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">
             {isManager ? `Target — ${myBranchName || '...'}` : 'Target'}
           </h1>
@@ -99,7 +99,7 @@ export default function DirectorTargetsPage() {
 
       {/* Top-level tabs — only after role is known */}
       {role !== null && (
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
           {([
             { value: 'branch' as TopTab, label: 'Target Cabang' },
             { value: 'staff' as TopTab, label: 'Target Staff' },
@@ -108,7 +108,7 @@ export default function DirectorTargetsPage() {
             <button
               key={tab.value}
               onClick={() => setActiveTab(tab.value)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 activeTab === tab.value
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-foreground/60 hover:text-foreground hover:bg-muted'

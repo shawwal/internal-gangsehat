@@ -241,8 +241,8 @@ export default function HRLeavePage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">Perizinan Staff</h1>
           <p className="text-sm text-muted-foreground">Tinjau dan kelola permintaan izin staff</p>
         </div>
@@ -263,12 +263,12 @@ export default function HRLeavePage() {
 
       {/* Filter tabs */}
       {!loading && requests.length > 0 && (
-        <div className="flex gap-1 bg-muted rounded-xl p-1 w-fit">
+        <div className="flex gap-1 bg-muted rounded-xl p-1 w-fit max-w-full overflow-x-auto scrollbar-hide">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-sm transition-all ${
                 activeTab === tab.key
                   ? 'bg-card shadow-sm text-foreground font-medium'
                   : 'text-muted-foreground hover:text-foreground'
@@ -307,7 +307,7 @@ export default function HRLeavePage() {
                 key={r.id}
                 className={`bg-card rounded-2xl border border-border border-l-[3px] p-4 ${STATUS_BORDER[r.status]}`}
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <Avatar name={name} />
                     <div className="flex-1 min-w-0">
@@ -344,7 +344,7 @@ export default function HRLeavePage() {
                   </div>
 
                   {/* Status + actions */}
-                  <div className="flex flex-col items-end gap-2 shrink-0">
+                  <div className="flex flex-row-reverse sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
                     <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLOR[r.status]}`}>
                       {STATUS_LABEL[r.status]}
                     </span>
@@ -372,12 +372,12 @@ export default function HRLeavePage() {
                 {rejecting === r.id && (
                   <div className="mt-3 pt-3 border-t border-border space-y-2">
                     <label className="block text-xs font-medium text-foreground">Alasan penolakan</label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <input
                         value={rejectNote}
                         onChange={(e) => setRejectNote(e.target.value)}
                         placeholder="Tuliskan alasan penolakan..."
-                        className="flex-1 px-3 py-1.5 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="flex-1 min-w-[12rem] px-3 py-1.5 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       <button
                         onClick={() => reject(r.id)}

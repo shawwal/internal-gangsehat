@@ -74,8 +74,8 @@ export default function GriyaMySiswaPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">Siswa Saya</h1>
           <p className="text-sm text-muted-foreground">Anak-anak yang pernah Anda tangani</p>
         </div>

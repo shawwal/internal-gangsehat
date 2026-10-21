@@ -24,7 +24,7 @@ export function PendingLeaveModal({ state, canApprove, saving, onClose, onAction
     <>
       <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="glass-card w-full max-w-sm pointer-events-auto shadow-2xl">
+        <div className="glass-card w-full max-w-sm pointer-events-auto shadow-2xl max-h-[90dvh] overflow-y-auto">
 
           {/* Header */}
           <div className="flex items-start justify-between gap-3 p-5 border-b border-border/30">

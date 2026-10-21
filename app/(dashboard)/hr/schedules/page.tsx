@@ -360,14 +360,14 @@ export default function SchedulesPage() {
 
           {/* ── Bulk action bar ── */}
           {selectedIds.length > 0 && (
-            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-primary/30 bg-primary/5 backdrop-blur-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-primary/30 bg-primary/5 backdrop-blur-sm">
               <div className="flex items-center gap-2">
                 <CheckSquare size={16} className="text-primary" />
                 <span className="text-sm font-medium text-foreground">
                   <span className="text-primary font-semibold">{selectedIds.length}</span> jadwal terpilih
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setSelectedIds([])}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted border border-border transition-colors cursor-pointer"

@@ -412,7 +412,7 @@ export default function DirectorReportsPage() {
 
       {detail && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setDetailId(null)}>
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-base font-semibold text-foreground">{detail.branches?.name ?? '—'}</h2>
@@ -503,7 +503,7 @@ export default function DirectorReportsPage() {
 
       {reviewId && action && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm">
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto">
             <h2 className="text-base font-semibold text-foreground mb-1">
               {action === 'approved' ? 'Setujui Laporan' : 'Tolak Laporan'}
             </h2>
@@ -542,7 +542,7 @@ export default function DirectorReportsPage() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm">
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto">
             <h2 className="text-base font-semibold text-foreground mb-1">Buat Laporan Bulanan</h2>
             <p className="text-sm text-muted-foreground mb-4">Dihitung dari transaksi terkonfirmasi dan kunjungan cabang pada periode tersebut.</p>
             <form onSubmit={handleGenerate} className="space-y-3">

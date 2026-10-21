@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
 
-const INPUT = 'h-9 px-3 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors cursor-pointer dark:[color-scheme:dark]'
+const INPUT = 'h-9 min-w-0 flex-1 sm:flex-none px-3 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors cursor-pointer dark:[color-scheme:dark]'
 
 // A native date input reports intermediate values while the year is being
 // typed digit by digit (0002 → 0020 → 0202 → 2026). Only a plausible full
@@ -54,7 +54,7 @@ export function DateRangeFilter({ from, to, onChange }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5 w-full sm:w-auto min-w-0">
       <input
         type="date"
         aria-label="Dari tanggal"
@@ -78,7 +78,7 @@ export function DateRangeFilter({ from, to, onChange }: Props) {
           type="button"
           onClick={() => { setDraftFrom(''); setDraftTo(''); if (from || to) onChange('', '') }}
           title="Hapus filter tanggal"
-          className="h-9 w-9 flex items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <X size={14} />
         </button>

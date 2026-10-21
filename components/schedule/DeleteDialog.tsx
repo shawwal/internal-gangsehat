@@ -18,7 +18,7 @@ export function DeleteDialog({ open, deleting, onConfirm, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-sm p-6 text-center"
+        className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-sm p-6 text-center max-h-[90dvh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="w-12 h-12 rounded-2xl bg-[#FF3B30]/10 flex items-center justify-center mx-auto mb-4">

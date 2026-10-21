@@ -177,12 +177,12 @@ export default function CampaignsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">Kampanye</h1>
           <p className="text-sm text-muted-foreground">Kelola kampanye marketing cabang</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ExportButton onExport={handleExportCampaigns} disabled={campaigns.length === 0} />
           <button onClick={openNew}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
@@ -191,7 +191,7 @@ export default function CampaignsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {[
           { label: 'Total Kampanye', value: totals.count },
           { label: 'Total Anggaran', value: formatRp(totals.budget) },

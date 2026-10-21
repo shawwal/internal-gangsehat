@@ -21,7 +21,7 @@ export function BrandPanel() {
             alt="Gang Sehat"
             width={200}
             height={58}
-            style={{ height: 'auto' }}
+            style={{ width: 200, height: 'auto' }}
             className="object-contain drop-shadow-lg"
             priority
           />

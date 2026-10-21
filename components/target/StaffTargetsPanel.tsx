@@ -42,7 +42,7 @@ export function StaffTargetsPanel({ branches, state }: Props) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
         <TargetStats stats={stats} />
         {!loading && rows.length > 0 && (
           <ExportButton onExport={handleExport} label="Export" />

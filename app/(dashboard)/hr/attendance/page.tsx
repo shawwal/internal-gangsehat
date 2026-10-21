@@ -174,12 +174,12 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">Absensi</h1>
           <p className="text-sm text-muted-foreground">Kelola kehadiran staff bulanan</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {branches.length > 1 && branchId && (
             <select
               className="px-3 py-1.5 rounded-xl border border-border bg-background text-sm"
@@ -193,11 +193,11 @@ export default function AttendancePage() {
           {!loading && staff.length > 0 && (
             <ExportButton onExport={handleExportAttendance} />
           )}
-          <button onClick={prevMonth} className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors">
+          <button onClick={prevMonth} className="p-2 rounded-lg border border-border hover:bg-muted transition-colors" aria-label="Bulan sebelumnya">
             <ChevronLeft size={16} />
           </button>
           <span className="text-sm font-medium text-foreground w-28 text-center">{MONTHS[month]} {year}</span>
-          <button onClick={nextMonth} className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors">
+          <button onClick={nextMonth} className="p-2 rounded-lg border border-border hover:bg-muted transition-colors" aria-label="Bulan berikutnya">
             <ChevronRight size={16} />
           </button>
         </div>
@@ -218,7 +218,7 @@ export default function AttendancePage() {
           <table className="w-full text-xs border border-border rounded-2xl overflow-hidden bg-card">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground sticky left-0 bg-muted/50 min-w-[140px]">Staff</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground sticky left-0 bg-muted/50 min-w-[110px] sm:min-w-[140px]">Staff</th>
                 {dayNumbers.map((d) => (
                   <th key={d} className="px-1 py-2 font-medium text-muted-foreground text-center min-w-[28px]">{d}</th>
                 ))}

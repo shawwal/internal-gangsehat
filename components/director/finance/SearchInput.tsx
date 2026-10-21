@@ -30,13 +30,13 @@ export function SearchInput({ defaultValue }: { defaultValue?: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="relative flex items-center">
+    <form onSubmit={handleSubmit} className="relative flex items-center w-full sm:w-auto">
       <Search size={14} className="absolute left-3 text-muted-foreground pointer-events-none" />
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Cari pasien, kategori, keterangan…"
-        className="pl-8 pr-8 py-2 text-sm rounded-xl border border-border bg-input focus:outline-none focus:ring-2 focus:ring-primary w-64 transition-all"
+        className="pl-8 pr-8 py-2 text-sm rounded-xl border border-border bg-input focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-64 transition-all"
       />
       {value && (
         <button

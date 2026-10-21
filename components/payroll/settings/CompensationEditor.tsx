@@ -146,7 +146,7 @@ export function CompensationEditor({ value: c, onChange, activityTypes }: Props)
             </button>
           </div>
           {c.bonus_tiers.map((t, i) => (
-            <div key={i} className="grid grid-cols-[1fr_90px_1fr_auto] gap-2 items-start">
+            <div key={i} className="grid grid-cols-2 sm:grid-cols-[1fr_90px_1fr_auto] gap-2 items-start">
               <input className={inputCls} value={t.label ?? ''} placeholder="Label"
                 onChange={(e) => set({ bonus_tiers: c.bonus_tiers.map((x, j) => j === i ? { ...x, label: e.target.value } : x) })} />
               <input type="number" min={1} className={inputCls} value={t.min_qty} aria-label="Minimal jumlah"

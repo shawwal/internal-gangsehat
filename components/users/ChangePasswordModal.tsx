@@ -34,7 +34,7 @@ export function ChangePasswordModal({ user, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm shadow-xl">
+      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm shadow-xl max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
             <KeyRound size={15} className="text-primary" /> Ubah Kata Sandi

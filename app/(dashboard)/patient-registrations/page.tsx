@@ -139,8 +139,8 @@ export default function PatientRegistrationsPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="flex items-start justify-between gap-4">
-      <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <UserCheck size={20} className="text-primary" />
           Pendaftaran Pasien
