@@ -101,6 +101,8 @@ export default function TransactionsPage() {
   const [therapistFilter, setTherapistFilter] = useState('')
   const [categoryFilter, setCategoryFilter]   = useState('')
   const [therapistOptions, setTherapistOptions] = useState<TherapistOption[] | null>(null)
+  // transaction id → service name (visit's booked layanan, else its service type)
+  const [services, setServices] = useState<Record<string, string> | null>(null)
 
   const [userId, setUserId]     = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
@@ -144,6 +146,35 @@ export default function TransactionsPage() {
     getTransactionTherapists(list.map((r) => r.id))
       .then((t) => { if (seq === loadSeq.current) setTherapists(t) })
       .catch(() => { if (seq === loadSeq.current) setTherapists({}) })
+    loadServices(supabase, list)
+      .then((m) => { if (seq === loadSeq.current) setServices(m) })
+      .catch(() => { if (seq === loadSeq.current) setServices({}) })
+  }
+
+  async function loadServices(supabase: ReturnType<typeof createClient>, list: Transaction[]) {
+    const visitIds = [...new Set(list.map((r) => r.visit_id).filter((id): id is string => !!id))]
+    if (!visitIds.length) return {}
+    const { data: visits } = await supabase
+      .from('patient_visits')
+      .select('id, service_type, layanan_id')
+      .in('id', visitIds)
+    const layananIds = [...new Set((visits ?? []).map((v) => v.layanan_id).filter((id): id is string => !!id))]
+    const layananName = new Map<string, string>()
+    if (layananIds.length) {
+      const { data: layanan } = await supabase.from('internal_layanan').select('id, nama').in('id', layananIds)
+      for (const l of layanan ?? []) layananName.set(l.id, l.nama)
+    }
+    const visitService = new Map<string, string>()
+    for (const v of visits ?? []) {
+      const name = (v.layanan_id && layananName.get(v.layanan_id)) || v.service_type
+      if (name) visitService.set(v.id, name)
+    }
+    const out: Record<string, string> = {}
+    for (const r of list) {
+      const name = r.visit_id ? visitService.get(r.visit_id) : undefined
+      if (name) out[r.id] = name
+    }
+    return out
   }
 
   useEffect(() => { load() }, [dateFrom, dateTo, therapistFilter, categoryFilter]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -156,6 +187,7 @@ export default function TransactionsPage() {
   function changeRange(from: string, to: string) {
     setLoading(true)
     setTherapists(null)
+    setServices(null)
     setDateFrom(from)
     setDateTo(to)
   }
@@ -163,6 +195,7 @@ export default function TransactionsPage() {
   function changeTherapistService(next: { therapist: string; category: string }) {
     setLoading(true)
     setTherapists(null)
+    setServices(null)
     setTherapistFilter(next.therapist)
     setCategoryFilter(next.category)
   }
@@ -341,7 +374,7 @@ export default function TransactionsPage() {
       </div>
 
       {loading ? (
-        <TableSkeleton rows={10} cols={9} />
+        <TableSkeleton rows={10} cols={10} />
       ) : (
         <div className="bg-card rounded-2xl border border-border overflow-x-auto">
           <table className="w-full text-sm">
@@ -349,6 +382,7 @@ export default function TransactionsPage() {
               <tr className="border-b border-border">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tanggal</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Kategori</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Layanan</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Terapis</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tipe</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Bayar</th>
@@ -364,6 +398,11 @@ export default function TransactionsPage() {
                 <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
                   <td className="px-4 py-3 text-muted-foreground">{r.transaction_date}</td>
                   <td className="px-4 py-3 font-medium text-foreground">{r.category}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {services === null
+                      ? <span className="inline-block h-3 w-20 bg-muted rounded-full animate-pulse align-middle" />
+                      : services[r.id] ?? '—'}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell whitespace-nowrap">
                     {therapists === null
                       ? <span className="inline-block h-3 w-20 bg-muted rounded-full animate-pulse align-middle" />

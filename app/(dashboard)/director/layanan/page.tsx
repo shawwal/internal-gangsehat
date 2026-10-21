@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
   fetchLayananByBranch,
@@ -25,6 +25,8 @@ function fmt(n: number) {
 
 interface Branch { id: string; name: string }
 
+type SortKey = 'nama' | 'kategori' | 'harga'
+
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
 export default function LayananPage() {
@@ -38,12 +40,17 @@ export default function LayananPage() {
   const [editHarga, setEditHarga] = useState('')
   const [saving, setSaving]       = useState(false)
 
+  // sort
+  const [sortKey, setSortKey] = useState<SortKey | null>(null)
+  const [sortAsc, setSortAsc] = useState(true)
+
   // delete confirm
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  // add new row modal
+  // add / edit row modal (editRow = null → add)
   const [showAdd, setShowAdd]   = useState(false)
+  const [editRow, setEditRow]   = useState<LayananRow | null>(null)
   const [addForm, setAddForm]   = useState({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '' })
   const [addSaving, setAddSaving] = useState(false)
   const [addError, setAddError]   = useState<string | null>(null)
@@ -109,7 +116,26 @@ export default function LayananPage() {
     reload()
   }
 
-  // ── Add new ──────────────────────────────────────────────────────────────────
+  // ── Add new / edit ───────────────────────────────────────────────────────────
+  function openAdd() {
+    setEditRow(null)
+    setAddForm({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '' })
+    setAddError(null)
+    setShowAdd(true)
+  }
+
+  function openEdit(row: LayananRow) {
+    setEditRow(row)
+    setAddForm({
+      nama:        row.nama,
+      kategori:    row.kategori,
+      jumlah_sesi: row.jumlah_sesi != null ? String(row.jumlah_sesi) : '',
+      harga:       String(row.harga),
+    })
+    setAddError(null)
+    setShowAdd(true)
+  }
+
   async function handleAdd() {
     if (!selectedBranch || !addForm.nama.trim()) {
       setAddError('Nama wajib diisi.')
@@ -118,22 +144,51 @@ export default function LayananPage() {
     setAddSaving(true)
     setAddError(null)
     const { error } = await upsertLayanan({
-      id:          crypto.randomUUID(),
-      branch_id:   selectedBranch,
+      id:          editRow?.id ?? crypto.randomUUID(),
+      branch_id:   editRow?.branch_id ?? selectedBranch,
       nama:        addForm.nama.trim(),
       kategori:    addForm.kategori,
       jumlah_sesi: addForm.jumlah_sesi ? Number(addForm.jumlah_sesi) : null,
       harga:       Number(addForm.harga) || 0,
-      is_active:   true,
+      is_active:   editRow?.is_active ?? true,
     })
     setAddSaving(false)
     if (error) { setAddError(error); return }
     setShowAdd(false)
-    setAddForm({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '' })
+    setEditRow(null)
     reload()
   }
 
   const activeBranch = branches.find((b) => b.id === selectedBranch)
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortAsc((a) => !a)
+    else { setSortKey(key); setSortAsc(true) }
+  }
+
+  const sortedRows = sortKey
+    ? [...rows].sort((a, b) => {
+        const cmp = sortKey === 'harga'
+          ? a.harga - b.harga
+          : a[sortKey].localeCompare(b[sortKey], 'id') || a.nama.localeCompare(b.nama, 'id')
+        return sortAsc ? cmp : -cmp
+      })
+    : rows
+
+  function sortHeader(k: SortKey, label: string, align: 'left' | 'right') {
+    const Icon = sortKey !== k ? ArrowUpDown : sortAsc ? ArrowUp : ArrowDown
+    return (
+      <th className={`text-${align} px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide`}>
+        <button
+          onClick={() => toggleSort(k)}
+          className={`inline-flex items-center gap-1 uppercase tracking-wide hover:text-foreground transition-colors cursor-pointer ${sortKey === k ? 'text-foreground' : ''}`}
+        >
+          {label}
+          <Icon size={12} className={sortKey === k ? '' : 'opacity-50'} />
+        </button>
+      </th>
+    )
+  }
 
   return (
     <div className="space-y-5">
@@ -158,7 +213,7 @@ export default function LayananPage() {
             </select>
           )}
           <button
-            onClick={() => setShowAdd(true)}
+            onClick={openAdd}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0 cursor-pointer"
           >
             <Plus size={15} /> Tambah Layanan
@@ -174,7 +229,7 @@ export default function LayananPage() {
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
             <p className="text-sm">Belum ada layanan untuk {activeBranch?.name ?? 'cabang ini'}.</p>
             <button
-              onClick={() => setShowAdd(true)}
+              onClick={openAdd}
               className="text-xs text-primary hover:underline cursor-pointer"
             >
               + Tambah sekarang
@@ -185,17 +240,17 @@ export default function LayananPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/40 bg-muted/20">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nama</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kategori</th>
+                  {sortHeader('nama', 'Nama', 'left')}
+                  {sortHeader('kategori', 'Kategori', 'left')}
                   <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sesi</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Harga (Rp)</th>
+                  {sortHeader('harga', 'Harga (Rp)', 'right')}
                   <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide" title="Bisa dipesan & dibayar pasien di gangsehat.com">Booking Online</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Aktif</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
-                {rows.map((row) => (
+                {sortedRows.map((row) => (
                   <tr key={row.id} className={`transition-colors ${row.is_active ? 'hover:bg-muted/10' : 'opacity-50 hover:bg-muted/10'}`}>
                     {/* Nama */}
                     <td className="px-4 py-3 font-medium text-foreground">{row.nama}</td>
@@ -292,7 +347,7 @@ export default function LayananPage() {
                       </div>
                     </td>
 
-                    {/* Delete */}
+                    {/* Edit / Delete */}
                     <td className="px-4 py-3">
                       {deleteId === row.id ? (
                         <div className="flex items-center gap-1.5">
@@ -311,6 +366,14 @@ export default function LayananPage() {
                           </button>
                         </div>
                       ) : (
+                        <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openEdit(row)}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                          title="Edit layanan"
+                        >
+                          <Pencil size={14} />
+                        </button>
                         <button
                           onClick={() => setDeleteId(row.id)}
                           className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
@@ -318,6 +381,7 @@ export default function LayananPage() {
                         >
                           <Trash2 size={14} />
                         </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -338,7 +402,7 @@ export default function LayananPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between p-5 border-b border-border/30">
-                <h2 className="text-base font-semibold">Tambah Layanan</h2>
+                <h2 className="text-base font-semibold">{editRow ? 'Edit Layanan' : 'Tambah Layanan'}</h2>
                 <button onClick={() => setShowAdd(false)} className="p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer text-muted-foreground">
                   <X size={16} />
                 </button>

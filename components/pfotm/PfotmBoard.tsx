@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Crown, Medal, Trophy } from 'lucide-react'
 import type { BoardRow, PointRule } from '@/lib/pfotm/engine'
+import { DRILLDOWN_METRICS } from '@/lib/pfotm/autoMetrics'
 import { Modal } from '@/components/payroll/Modal'
 
 interface Props {
@@ -10,6 +11,8 @@ interface Props {
   rules: PointRule[]
   wins: Record<string, number>
   live: boolean
+  /** Board row key → pfotm_entries.id; set only when the viewer may open the patient lists. */
+  entryIds?: Record<string, string>
 }
 
 const PODIUM = [
@@ -42,11 +45,12 @@ function WinBadge({ count }: { count: number }) {
   )
 }
 
-export function PfotmBoard({ board, rules, wins, live }: Props) {
+export function PfotmBoard({ board, rules, wins, live, entryIds }: Props) {
   const [detail, setDetail] = useState<BoardRow | null>(null)
   const top = board.slice(0, 3)
   const rest = board.slice(3)
   const max = Math.max(1, ...board.map((r) => r.total))
+  const entryId = detail ? entryIds?.[detail.key] : undefined
   const winsOf = (r: BoardRow) => wins[r.key] ?? wins[r.name] ?? 0
   // Visual order on wide screens: 2 – 1 – 3
   const podiumOrder = [top[1], top[0], top[2]].filter(Boolean) as BoardRow[]
@@ -135,7 +139,15 @@ export function PfotmBoard({ board, rules, wins, live }: Props) {
                 return (
                   <tr key={r.metric_key} className="border-b border-border last:border-0">
                     <td className="py-1.5 text-foreground">{r.metric_label}</td>
-                    <td className="py-1.5 text-right">{detail.metrics[r.metric_key] ?? 0}</td>
+                    <td className="py-1.5 text-right">
+                      {entryId && (DRILLDOWN_METRICS as readonly string[]).includes(r.metric_key) ? (
+                        <a href={`/pfotm/rincian?${new URLSearchParams({ entry: entryId, metric: r.metric_key, name: detail.name, label: r.metric_label })}`}
+                          target="_blank" rel="noopener noreferrer" title="Lihat daftar pasien"
+                          className="text-primary underline decoration-dotted underline-offset-4 hover:decoration-solid">
+                          {detail.metrics[r.metric_key] ?? 0}
+                        </a>
+                      ) : detail.metrics[r.metric_key] ?? 0}
+                    </td>
                     <td className="py-1.5 text-right text-muted-foreground">×{Number(r.weight)}</td>
                     <td className={`py-1.5 text-right font-semibold ${pts < 0 ? 'text-destructive' : 'text-foreground'}`}>{pts}</td>
                   </tr>

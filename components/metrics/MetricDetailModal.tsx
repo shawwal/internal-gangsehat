@@ -94,39 +94,48 @@ export function MetricDetailModal({ title, subtitle, load, onClose, footerLink }
       ) : state.data.rows.length === 0 ? (
         <p className="text-sm text-muted-foreground py-6 text-center">Tidak ada data otomatis untuk angka ini.</p>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs text-muted-foreground border-b border-border">
-              <th className="py-2 pr-2 text-left font-medium w-8">#</th>
-              <th className="py-2 pr-3 text-left font-medium">Tanggal</th>
-              <th className="py-2 pr-3 text-left font-medium">Pasien</th>
-              <th className="py-2 pr-3 text-left font-medium">Layanan</th>
-              {hasPayment && <th className="py-2 pr-3 text-left font-medium">Pembayaran</th>}
-              {hasPayment && <th className="py-2 text-left font-medium">Metode</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {state.data.rows.map((r, i) => (
-              <tr key={i} className="border-b border-border last:border-0">
-                <td className="py-1.5 pr-2 text-muted-foreground">{i + 1}</td>
-                <td className="py-1.5 pr-3 whitespace-nowrap">{fmtDate(r.date)}</td>
-                <td className="py-1.5 pr-3 font-medium text-foreground">{r.patientName}</td>
-                <td className="py-1.5 pr-3 text-xs text-muted-foreground">{r.label ?? '—'}</td>
-                {hasPayment && (
-                  <td className="py-1.5 pr-3">
-                    {r.paymentStatus ? (
-                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_CLS[r.paymentStatus] ?? 'bg-muted text-muted-foreground'}`}>
-                        {r.paymentStatus}
-                      </span>
-                    ) : <span className="text-xs text-muted-foreground">—</span>}
-                  </td>
-                )}
-                {hasPayment && <td className="py-1.5 text-xs text-muted-foreground whitespace-nowrap">{r.paymentMethod ?? '—'}</td>}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <MetricDetailTable rows={state.data.rows} />
       )}
     </Modal>
+  )
+}
+
+/** The patient/date list itself — shared by the modal and the /pfotm/rincian page. */
+export function MetricDetailTable({ rows }: { rows: MetricDetailRow[] }) {
+  // Payment columns only for sales lists (kunjungan / payroll rows carry none).
+  const hasPayment = rows.some((r) => r.paymentStatus !== undefined || r.paymentMethod !== undefined)
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="text-xs text-muted-foreground border-b border-border">
+          <th className="py-2 pr-2 text-left font-medium w-8">#</th>
+          <th className="py-2 pr-3 text-left font-medium">Tanggal</th>
+          <th className="py-2 pr-3 text-left font-medium">Pasien</th>
+          <th className="py-2 pr-3 text-left font-medium">Layanan</th>
+          {hasPayment && <th className="py-2 pr-3 text-left font-medium">Pembayaran</th>}
+          {hasPayment && <th className="py-2 text-left font-medium">Metode</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i} className="border-b border-border last:border-0">
+            <td className="py-1.5 pr-2 text-muted-foreground">{i + 1}</td>
+            <td className="py-1.5 pr-3 whitespace-nowrap">{fmtDate(r.date)}</td>
+            <td className="py-1.5 pr-3 font-medium text-foreground">{r.patientName}</td>
+            <td className="py-1.5 pr-3 text-xs text-muted-foreground">{r.label ?? '—'}</td>
+            {hasPayment && (
+              <td className="py-1.5 pr-3">
+                {r.paymentStatus ? (
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_CLS[r.paymentStatus] ?? 'bg-muted text-muted-foreground'}`}>
+                    {r.paymentStatus}
+                  </span>
+                ) : <span className="text-xs text-muted-foreground">—</span>}
+              </td>
+            )}
+            {hasPayment && <td className="py-1.5 text-xs text-muted-foreground whitespace-nowrap">{r.paymentMethod ?? '—'}</td>}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }

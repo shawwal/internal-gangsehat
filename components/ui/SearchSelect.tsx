@@ -5,6 +5,7 @@
 // Keyboard: ↑ ↓ to move, Enter to pick, Esc to close.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, ChevronDown, Search } from 'lucide-react'
 
 export interface SearchSelectOption {
@@ -65,7 +66,8 @@ export function SearchSelect({
 
   useEffect(() => {
     if (!open) return
-    inputRef.current?.focus()
+    // preventScroll: focusing must not scroll a modal, which would close the panel.
+    inputRef.current?.focus({ preventScroll: true })
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node
       if (!panelRef.current?.contains(t) && !triggerRef.current?.contains(t)) setOpen(false)
@@ -115,7 +117,7 @@ export function SearchSelect({
         <ChevronDown size={14} className="text-muted-foreground shrink-0" />
       </button>
 
-      {open && pos && (
+      {open && pos && createPortal(
         <div
           ref={panelRef}
           style={{ position: 'fixed', left: pos.left, width: pos.width, ...(pos.up ? { bottom: window.innerHeight - pos.top } : { top: pos.top }) }}
@@ -153,7 +155,8 @@ export function SearchSelect({
               </li>
             ))}
           </ul>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )
