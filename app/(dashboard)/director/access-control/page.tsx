@@ -116,7 +116,7 @@ export default function AccessControlPage() {
           <table className="w-full text-sm border-collapse min-w-[900px]">
             <thead>
               <tr>
-                <th className="text-left font-semibold text-xs uppercase tracking-wide text-muted-foreground pb-3 pr-4 sticky left-0 bg-transparent">
+                <th className="text-left font-semibold text-xs uppercase tracking-wide text-muted-foreground pb-3 pr-4 sticky left-0 z-10 bg-card">
                   Halaman
                 </th>
                 {ROLE_COLUMNS.map((col) => (
@@ -139,7 +139,7 @@ export default function AccessControlPage() {
                   </tr>
                   {groupPages.map((page) => (
                     <tr key={page.key} className="border-t border-border/50">
-                      <td className="py-2.5 pr-4 whitespace-nowrap sticky left-0 bg-transparent">
+                      <td className="py-2.5 pr-4 whitespace-nowrap sticky left-0 z-10 bg-card">
                         <span className="inline-flex items-center gap-1.5">
                           {page.label}
                           {page.tables.length > 0 && (
@@ -170,7 +170,7 @@ export default function AccessControlPage() {
                                   onClick={() => handleReset(page, col.role)}
                                   disabled={isPending}
                                   title="Kembalikan ke default"
-                                  className="text-muted-foreground hover:text-primary disabled:opacity-50"
+                                  className="p-1.5 -m-1 rounded-md text-muted-foreground hover:text-primary disabled:opacity-50"
                                 >
                                   <RotateCcw size={12} />
                                 </button>

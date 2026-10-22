@@ -7,8 +7,8 @@ interface Props {
 
 export function MyLeaveHeader({ showForm, onToggle }: Props) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
         <h1 className="text-xl font-semibold text-foreground">Perizinan</h1>
         <p className="text-sm text-muted-foreground">Ajukan dan pantau status perizinan Anda</p>
       </div>

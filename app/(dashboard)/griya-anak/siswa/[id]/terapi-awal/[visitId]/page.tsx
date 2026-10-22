@@ -230,7 +230,7 @@ export default function GriyaTerapiAwalPage() {
           </p>
         )}
 
-        <div className="sticky bottom-4 z-10 glass-card flex items-center justify-end gap-2 p-3">
+        <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-4 z-10 glass-card flex flex-wrap items-center justify-end gap-2 p-3">
           <button type="button" onClick={persistDraft} disabled={saving || completing}
             className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted disabled:opacity-60 cursor-pointer">
             {saving ? 'Menyimpan...' : 'Simpan Draf'}

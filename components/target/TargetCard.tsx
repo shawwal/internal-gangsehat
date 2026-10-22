@@ -100,7 +100,7 @@ export function TargetCard({ target: t, onApprove, onReject, onDelete }: Props) 
         </div>
 
         {/* Metrics grid */}
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           <MetricBox label="Target TA" value={t.target_ta} />
           <MetricBox label="Paket Klinik" value={t.target_paket_klinik} />
           <MetricBox label="Kunjungan" value={t.target_kunjungan} />

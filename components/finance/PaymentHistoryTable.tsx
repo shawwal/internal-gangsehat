@@ -22,7 +22,7 @@ export function PaymentHistoryTable({ history, onEdit }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-border overflow-hidden">
+    <div className="rounded-xl border border-border overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
           <tr className="bg-muted/40">

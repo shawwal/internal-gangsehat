@@ -127,7 +127,7 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
             <FisioSelect patientId={patientId} branchId={branchId} value={fisioId} onChange={setFisioId} />
           </div>
           <div className="space-y-2">
-            <div className="grid grid-cols-[2rem_1fr_6rem_7rem_1.5rem] gap-2 pb-1 border-b border-border">
+            <div className="grid grid-cols-[1.25rem_minmax(0,1fr)_4.5rem_5.5rem_1.5rem] sm:grid-cols-[2rem_1fr_6rem_7rem_1.5rem] gap-1.5 sm:gap-2 pb-1 border-b border-border">
               <span className="text-xs font-medium text-muted-foreground">#</span>
               <span className="text-xs font-medium text-muted-foreground">Tanggal</span>
               <span className="text-xs font-medium text-muted-foreground">Shift</span>
@@ -135,7 +135,7 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
               <span />
             </div>
             {sessions.map((s, i) => (
-              <div key={i} className="grid grid-cols-[2rem_1fr_6rem_7rem_1.5rem] gap-2 items-center">
+              <div key={i} className="grid grid-cols-[1.25rem_minmax(0,1fr)_4.5rem_5.5rem_1.5rem] sm:grid-cols-[2rem_1fr_6rem_7rem_1.5rem] gap-1.5 sm:gap-2 items-center">
                 <span className="text-xs text-muted-foreground text-center">{i + 1}</span>
                 <input
                   required

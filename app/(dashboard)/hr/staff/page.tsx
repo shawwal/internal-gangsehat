@@ -114,15 +114,15 @@ export default function HRStaffPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">Staff</h1>
           <p className="text-sm text-muted-foreground">
             {branchName ? `Kelola staff cabang ${branchName}` : 'Kelola staff di cabang Anda'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative w-56">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="relative w-full sm:w-56">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari..."
               className="w-full pl-8 pr-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
@@ -160,7 +160,7 @@ export default function HRStaffPage() {
       {loading ? (
         <TableSkeleton rows={10} cols={5} />
       ) : !noBranchWarning && (
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
+        <div className="bg-card rounded-2xl border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
@@ -219,7 +219,7 @@ export default function HRStaffPage() {
 
       {showInvite && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm">
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto">
             <h2 className="text-base font-semibold text-foreground mb-4">Undang Staff</h2>
             <form onSubmit={handleInvite} className="space-y-3">
               <div>

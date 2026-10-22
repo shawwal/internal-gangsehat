@@ -189,13 +189,13 @@ export default function BranchSettingsPage() {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                    <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 pt-2 border-t border-white/5">
                       <input
                         type="text"
                         value={newNama[b.id] ?? ''}
                         onChange={e => setNewNama(prev => ({ ...prev, [b.id]: e.target.value }))}
                         placeholder="Jenis baru, mis. Sport Massage 90 menit"
-                        className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        className="basis-full sm:basis-auto flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                       />
                       <input
                         type="text"
@@ -203,7 +203,7 @@ export default function BranchSettingsPage() {
                         value={newHarga[b.id] ?? ''}
                         onChange={e => setNewHarga(prev => ({ ...prev, [b.id]: e.target.value }))}
                         placeholder="Tarif"
-                        className="w-28 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-right focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        className="flex-1 sm:flex-none min-w-0 sm:w-28 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-right focus:outline-none focus:ring-2 focus:ring-primary/50"
                       />
                       <button
                         onClick={() => addType(b.id)}

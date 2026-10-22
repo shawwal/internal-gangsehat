@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react'
 import {
   BarChart, Bar,
@@ -9,6 +11,7 @@ import { ChartCard } from './ChartCard'
 import { CustomTooltip } from './CustomTooltip'
 import { formatRpCompact } from './utils'
 import type { MonthlyFinance } from './types'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface FinanceChartProps {
   data: MonthlyFinance[]
@@ -17,6 +20,7 @@ interface FinanceChartProps {
 }
 
 export function FinanceChart({ data, year, chartType }: FinanceChartProps) {
+  const isMobile = useIsMobile()
   const title = 'Keuangan Bulanan'
   const sub = `Pemasukan, pengeluaran, dan laba bersih tahun ${year}`
 
@@ -33,7 +37,7 @@ export function FinanceChart({ data, year, chartType }: FinanceChartProps) {
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
             <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-            <YAxis tickFormatter={formatRpCompact} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={82} />
+            <YAxis tickFormatter={formatRpCompact} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={isMobile ? 56 : 82} />
             <Tooltip content={<CustomTooltip currency />} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Line type="monotone" dataKey="Pemasukan" stroke="var(--chart-4)" strokeWidth={2} dot={false} />
@@ -65,7 +69,7 @@ export function FinanceChart({ data, year, chartType }: FinanceChartProps) {
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
           <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={formatRpCompact} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={82} />
+          <YAxis tickFormatter={formatRpCompact} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={isMobile ? 56 : 82} />
           <Tooltip content={<CustomTooltip currency />} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           <Bar dataKey="Pemasukan" fill="url(#barInc)" radius={[5, 5, 0, 0]} />

@@ -18,7 +18,7 @@ export function PurgeModal({ target, isPending, onCancel, onConfirm }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm shadow-xl">
+      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm shadow-xl max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
             <TriangleAlert size={18} className="text-destructive" />

@@ -221,7 +221,7 @@ export default function GriyaSiswaDetailPage() {
         {activeSlots.length === 0 && pastSlots.length === 0 ? (
           <p className="px-4 py-5 text-sm text-muted-foreground text-center">Belum ada jadwal rutin.</p>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <tbody>
               {[...activeSlots, ...pastSlots].map((s) => (
                 <tr key={s.id} className={`border-b border-border last:border-0 ${s.status !== 'active' ? 'opacity-50' : ''}`}>
@@ -238,7 +238,7 @@ export default function GriyaSiswaDetailPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 

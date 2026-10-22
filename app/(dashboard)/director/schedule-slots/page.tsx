@@ -286,7 +286,7 @@ export default function ScheduleSlotsPage() {
         <>
           <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setShowForm(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="glass-card w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="glass-card w-full max-w-sm shadow-2xl max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between p-5 border-b border-border/30">
                 <h2 className="text-base font-semibold text-foreground">
                   {editing ? 'Edit Slot' : 'Tambah Slot'}

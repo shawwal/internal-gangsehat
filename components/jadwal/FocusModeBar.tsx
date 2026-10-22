@@ -55,7 +55,7 @@ export function FocusModeBar({
   const dayLabel  = HARI_LABEL[JS_DAY_TO_HARI[selectedDate.getDay()]]?.slice(0, 3).toUpperCase() ?? ''
 
   return (
-    <div className="j-bar-slide flex items-center gap-2 px-3 py-2 border-b border-white/8 bg-background/98 backdrop-blur-md shrink-0">
+    <div className="j-bar-slide flex flex-wrap items-center gap-2 px-3 py-2 border-b border-white/8 bg-background/98 backdrop-blur-md shrink-0">
 
       {/* Branch select */}
       {branches.length > 0 && (
@@ -148,7 +148,7 @@ export function FocusModeBar({
         </a>
       )}
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
         {/* Gender filter */}
         <div className="flex items-center bg-white/5 border border-white/8 rounded-2xl p-0.5 gap-0.5">
           {([

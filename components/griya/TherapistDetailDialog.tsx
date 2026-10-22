@@ -50,7 +50,7 @@ export function TherapistDetailDialog({ therapist, onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-card rounded-3xl border border-border w-full max-w-lg shadow-2xl overflow-hidden"
+        className="bg-card rounded-3xl border border-border w-full max-w-lg shadow-2xl max-h-[90dvh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header strip in discipline color */}

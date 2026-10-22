@@ -338,12 +338,12 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">Transaksi</h1>
           <p className="text-sm text-muted-foreground">Catat dan kelola transaksi keuangan cabang</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ExportButton onExport={handleExportTransactions} disabled={rows.length === 0} />
           <PayOnlineButton label="Bayar Online" onChange={(l) => { if (l.status === 'paid') load() }} />
           <button
@@ -585,7 +585,7 @@ export default function TransactionsPage() {
 
       {rejectId && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm">
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto">
             <h2 className="text-base font-semibold text-foreground mb-4">Alasan Penolakan</h2>
             <form onSubmit={reject} className="space-y-3">
               <textarea required value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} rows={3}

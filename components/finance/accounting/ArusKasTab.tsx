@@ -149,7 +149,7 @@ export function ArusKasTab({ branchId, branchName }: Props) {
           <table className="w-full text-xs whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground sticky left-0 bg-card">Item</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">Item</th>
                 {MONTH_NAMES.map((m) => <th key={m} className="text-right px-3 py-2 font-medium text-muted-foreground">{m}</th>)}
               </tr>
             </thead>
@@ -157,33 +157,33 @@ export function ArusKasTab({ branchId, branchName }: Props) {
               <tr className="border-b border-border bg-muted/30"><td colSpan={13} className="px-3 py-1.5 font-semibold text-foreground">Pemasukan</td></tr>
               {incomeRows.map((r) => (
                 <tr key={r.key} className="border-b border-border/50 last:border-0">
-                  <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card">{r.label}</td>
+                  <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">{r.label}</td>
                   {r.monthly.map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-muted-foreground">{v ? formatRp(v) : '—'}</td>)}
                 </tr>
               ))}
               <tr className="border-b-2 border-border font-semibold">
-                <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card">Total Pemasukan</td>
+                <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">Total Pemasukan</td>
                 {incomeTotals.map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-chart-4">{formatRp(v)}</td>)}
               </tr>
 
               <tr className="border-b border-border bg-muted/30"><td colSpan={13} className="px-3 py-1.5 font-semibold text-foreground">Pengeluaran</td></tr>
               {expenseRows.map((r) => (
                 <tr key={r.key} className="border-b border-border/50 last:border-0">
-                  <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card">{r.label}</td>
+                  <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">{r.label}</td>
                   {r.monthly.map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-muted-foreground">{v ? formatRp(v) : '—'}</td>)}
                 </tr>
               ))}
               <tr className="border-b-2 border-border font-semibold">
-                <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card">Total Pengeluaran</td>
+                <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">Total Pengeluaran</td>
                 {expenseTotals.map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-destructive">{formatRp(v)}</td>)}
               </tr>
 
               <tr className="border-b border-border font-semibold">
-                <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card">Laba Bersih</td>
+                <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">Laba Bersih</td>
                 {netMonthly.map((v, i) => <td key={i} className={`px-3 py-1.5 text-right ${v >= 0 ? 'text-chart-4' : 'text-destructive'}`}>{formatRp(v)}</td>)}
               </tr>
               <tr className="font-bold">
-                <td className="px-3 py-2 text-foreground sticky left-0 bg-card">Saldo Akhir</td>
+                <td className="px-3 py-2 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">Saldo Akhir</td>
                 {runningBalance.map((v, i) => <td key={i} className="px-3 py-2 text-right text-primary">{formatRp(v)}</td>)}
               </tr>
             </tbody>

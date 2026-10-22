@@ -92,7 +92,7 @@ function Pagination({ page, total, pageSize, onPage }: PaginationProps) {
       <p className="text-sm text-muted-foreground">
         {fromIdx} – {toIdx} dari {total} data
       </p>
-      <div className="flex items-center gap-0.5">
+      <div className="flex flex-wrap justify-center items-center gap-0.5">
         <button onClick={() => onPage(0)} disabled={page === 0} className={btnCls}>«</button>
         <button onClick={() => onPage(page - 1)} disabled={page === 0} className={btnCls}>‹</button>
         {pageNums().map((p, i) =>

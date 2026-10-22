@@ -13,11 +13,7 @@ import {
   type LayananRow,
 } from '@/app/actions/layanan'
 import { RowsSkeleton } from '@/components/ui/Skeleton'
-
-const KATEGORI_OPTIONS = [
-  'TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK',
-  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'PAKET SPORT MASSAGE', 'LAINNYA',
-]
+import { LAYANAN_KATEGORI as KATEGORI_OPTIONS } from '@/lib/serviceType'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('id-ID').format(n)
@@ -398,7 +394,7 @@ export default function LayananPage() {
           <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setShowAdd(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
-              className="glass-card w-full max-w-md shadow-2xl"
+              className="glass-card w-full max-w-md shadow-2xl max-h-[90dvh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between p-5 border-b border-border/30">

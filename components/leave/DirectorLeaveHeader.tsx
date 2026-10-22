@@ -10,12 +10,12 @@ interface Props {
 
 export function DirectorLeaveHeader({ loading, hasRows, selectMode, todayLabel, onToggleSelect }: Props) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
         <h1 className="text-xl font-semibold text-foreground">Perizinan Staff</h1>
         <p className="text-sm text-muted-foreground">Tinjau dan kelola pengajuan izin seluruh cabang</p>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex flex-wrap items-center gap-2">
         {!loading && hasRows && (
           <button
             onClick={onToggleSelect}

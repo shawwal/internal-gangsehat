@@ -10,6 +10,7 @@ import {
 import type { VisitStatus } from '@/types'
 import { hourInFilter, VIEW_SORE_START, type ShiftFilter } from '@/lib/shifts'
 import { VisitCard } from './VisitCard'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function parseHour(hhmm: string): number {
@@ -132,6 +133,10 @@ interface Props {
 export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onPayOnline, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const canDrop = !!onMoveVisit
+  // Narrower columns on phones so ~2 therapists fit on screen instead of ~1.7.
+  const isMobile  = useIsMobile()
+  const timeColW  = isMobile ? 52 : TIME_COL_W
+  const staffColW = isMobile ? 148 : STAFF_COL_W
 
   function handleDragEnd(e: DragEndEvent) {
     const visitId = e.active.data.current?.visitId as string | undefined
@@ -235,7 +240,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
     )
   }
 
-  const minWidth = TIME_COL_W + staff.length * STAFF_COL_W
+  const minWidth = timeColW + staff.length * staffColW
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -252,7 +257,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
           {/* Time gutter header */}
           <div
             className="shrink-0 flex items-end justify-center pb-3 sticky left-0 z-30"
-            style={{ width: TIME_COL_W, background: 'inherit' }}
+            style={{ width: timeColW, background: 'inherit' }}
           >
             <span className="text-[10px] text-white/40 uppercase tracking-widest font-mono">Jam</span>
           </div>
@@ -262,7 +267,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
             <div
               key={s.staff_id}
               className="shrink-0 flex flex-col items-center gap-2 px-2 py-4 border-l border-white/10"
-              style={{ width: STAFF_COL_W }}
+              style={{ width: staffColW }}
             >
               {/* Avatar + Name — clickable, hover shows full name */}
               <button
@@ -326,7 +331,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
           <div className="flex border-b border-border/20 bg-secondary/5">
             <div
               className="shrink-0 sticky left-0 z-10 bg-background/90 backdrop-blur-sm border-r border-border/20 flex items-center justify-end pr-2"
-              style={{ width: TIME_COL_W }}
+              style={{ width: timeColW }}
             >
               <span className="text-[9px] text-muted-foreground/50 font-mono text-right leading-tight">
                 Belum<br/>ditentukan
@@ -342,7 +347,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
                   hour={null}
                   enabled={canDrop}
                   className="shrink-0 border-l border-border/30 p-1.5 flex flex-col gap-1"
-                  style={{ width: STAFF_COL_W, minHeight: 48 }}
+                  style={{ width: staffColW, minHeight: 48 }}
                 >
                   {cellVisits.map((v) => (
                     <VisitCard
@@ -378,7 +383,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
           {/* Time labels — sticky left */}
           <div
             className="shrink-0 sticky left-0 z-10 bg-background/90 backdrop-blur-sm border-r border-border/40"
-            style={{ width: TIME_COL_W, height: totalH }}
+            style={{ width: timeColW, height: totalH }}
           >
             {HOURS_VISIBLE.map((h, i) => (
               <div
@@ -396,7 +401,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
           {/* Horizontal grid lines */}
           <div
             className="absolute pointer-events-none"
-            style={{ left: TIME_COL_W, right: 0, top: 0, bottom: 0 }}
+            style={{ left: timeColW, right: 0, top: 0, bottom: 0 }}
           >
             {/* Afternoon tint — subtle warm overlay from the Sore shift boundary onwards */}
             {shiftFilter === 'all' && soreRowIdx >= 0 && (
@@ -457,7 +462,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
               {/* Time label inside the time gutter */}
               <div
                 className="shrink-0 flex items-center justify-end pr-2"
-                style={{ width: TIME_COL_W }}
+                style={{ width: timeColW }}
               >
                 <span className="text-[11px] font-bold font-mono text-primary bg-primary/15 px-1.5 py-0.5 rounded-md leading-none">
                   {String(Math.floor(curH)).padStart(2, '0')}:{String(Math.round((curH % 1) * 60)).padStart(2, '0')}
@@ -481,7 +486,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
               <div
                 key={s.staff_id}
                 className="shrink-0 relative border-l border-border/30"
-                style={{ width: STAFF_COL_W, height: totalH }}
+                style={{ width: staffColW, height: totalH }}
               >
                 {/* Shift window shading */}
                 {shiftTop !== null && shiftBottom !== null && !s.isOnLeave && (

@@ -8,6 +8,7 @@ import { GRIYA_HOURS, DISCIPLINE_LABEL, DISCIPLINE_COLOR, HARI_LABEL, JS_DAY_TO_
 import { resolveDay, type ResolvedCell } from './resolve'
 import { addDays, toIso, isSameDay } from '@/components/jadwal/utils'
 import type { CellAction } from './SlotCell'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 export interface WeekEntry {
   key: string
@@ -95,7 +96,8 @@ export function WeekGrid({ week, weekMonday, today, disciplineFilter, canEdit, o
     [days, grid],
   )
 
-  const dayColWidth = 190
+  const isMobile = useIsMobile()
+  const dayColWidth = isMobile ? 150 : 190
 
   function openMenu(e: React.MouseEvent, entry: WeekEntry) {
     e.preventDefault()

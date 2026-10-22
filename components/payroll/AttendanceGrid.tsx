@@ -109,7 +109,7 @@ export function AttendanceGrid({ ws, rows, onChange }: Props) {
         <table ref={gridRef} className="text-xs border-collapse">
           <thead>
             <tr className="bg-muted/50 border-b border-border">
-              <th className="sticky left-0 z-10 bg-muted px-3 py-2 text-left font-medium text-muted-foreground min-w-[150px]">Karyawan</th>
+              <th className="sticky left-0 z-10 bg-muted px-3 py-2 text-left font-medium text-muted-foreground min-w-[110px] sm:min-w-[150px]">Karyawan</th>
               {period.days.map((d) => (
                 <th key={d.date} className={`px-0.5 py-1 text-center font-medium min-w-[34px] ${d.workday ? 'text-muted-foreground' : 'text-muted-foreground/50 bg-muted/60'}`}>
                   <div className="text-[9px]">{shortDayLabel(d.date)}</div>

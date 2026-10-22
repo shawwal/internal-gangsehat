@@ -87,8 +87,8 @@ function LayananSection({ branchId }: { branchId: string }) {
 
   return (
     <div className="glass-card overflow-hidden">
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <div>
+      <div className="px-4 py-3 border-b border-border flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
           <h3 className="text-sm font-semibold text-foreground">Jenis Pemeriksaan &amp; Harga Paket</h3>
           <p className="text-xs text-muted-foreground">Daftar layanan dan harga cabang Anda</p>
         </div>
@@ -100,7 +100,7 @@ function LayananSection({ branchId }: { branchId: string }) {
       {loading ? (
         <RowsSkeleton rows={5} cols={4} />
       ) : (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
               <th className="text-left px-4 py-2 font-medium text-muted-foreground">Nama Layanan</th>
@@ -140,12 +140,12 @@ function LayananSection({ branchId }: { branchId: string }) {
             ))}
             {!rows.length && <tr><td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">Belum ada layanan.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       )}
 
       {showAdd && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="glass-card p-6 w-full max-w-sm">
+          <div className="glass-card p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto">
             <h2 className="text-base font-semibold text-foreground mb-4">Tambah Layanan</h2>
             <form onSubmit={handleAdd} className="space-y-3">
               <div>

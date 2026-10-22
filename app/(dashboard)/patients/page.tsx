@@ -140,12 +140,12 @@ export default function PatientsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">Pasien</h1>
           <p className="text-sm text-muted-foreground">Kelola data pasien klinik</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isTherapistOrStaff && (
             <button
               onClick={() => { setFilters((f) => ({ ...f, myPatientsOnly: !f.myPatientsOnly })); setPage(1) }}
@@ -230,7 +230,7 @@ export default function PatientsPage() {
           onClick={() => { if (!deleting) setDeleteTarget(null) }}
         >
           <div
-            className="glass-card p-6 max-w-sm w-full space-y-4"
+            className="glass-card p-6 max-w-sm w-full space-y-4 max-h-[90dvh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">

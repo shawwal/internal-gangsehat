@@ -35,7 +35,7 @@ export function PaymentProofDialog({ method, initialPath = null, subtitle, onCan
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4" onClick={saving ? undefined : onCancel}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-sm shadow-2xl max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2 min-w-0">
             <FileImage size={15} className="text-primary shrink-0" />

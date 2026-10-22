@@ -182,11 +182,13 @@ html {
 }
 
 /* Hide scrollbar */
-.scrollbar-hide {
+.scrollbar-hide,
+.no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.scrollbar-hide::-webkit-scrollbar {
+.scrollbar-hide::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
@@ -324,8 +326,12 @@ html {
         color-mix(in oklab, var(--muted) 45%, transparent)
       );
     }
-    :where(.overflow-x-auto, .overflow-auto):has(> table) {
-      max-height: calc(100dvh - 9rem);
+    /* md+ only: on phones a viewport-tall inner scroll box traps the page
+       scroll, so small screens just scroll the table sideways. */
+    @media (min-width: 768px) {
+      :where(.overflow-x-auto, .overflow-auto):has(> table) {
+        max-height: calc(100dvh - 9rem);
+      }
     }
   }
 }

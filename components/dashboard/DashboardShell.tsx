@@ -29,7 +29,7 @@ export function DashboardShell({ profile, allowedNavKeys, children }: Props) {
   return (
     <LocaleProvider>
     <ToastProvider>
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-dvh overflow-hidden bg-background">
       {/* Desktop sidebar — hidden on mobile */}
       <div className="hidden md:flex">
         <Sidebar role={profile.role} branchId={profile.branch_id} allowedNavKeys={allowedNavKeys} collapsed={collapsed} />
@@ -47,7 +47,7 @@ export function DashboardShell({ profile, allowedNavKeys, children }: Props) {
             (up to ~34px on Face ID devices), so pb-28 (112px) ran a few px short on
             Safari and let the last card peek out from behind it. pb-36 (144px) clears
             that with margin. */}
-        <main className="flex-1 overflow-y-auto p-6 pb-36 md:pb-6 bg-background">
+        <main className="flex-1 overflow-y-auto p-4 pb-36 md:p-6 bg-background">
           {children}
         </main>
       </div>

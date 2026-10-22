@@ -81,9 +81,9 @@ export function LeaveCard({ leave, isSelected, onToggle, onApprove, onReject, on
           {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 flex-wrap">
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground leading-tight">{name}</p>
-                <p className="text-xs text-muted-foreground">{email}</p>
+                <p className="text-xs text-muted-foreground truncate">{email}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${STATUS_COLOR[leave.status]}`}>

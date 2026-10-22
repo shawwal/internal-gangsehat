@@ -42,7 +42,7 @@ export default function PayrollSettingsPage() {
   }, [branchId, showToast])
 
   return (
-    <div className="space-y-5 p-4 md:p-6">
+    <div className="space-y-5 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <Link href="/payroll" className="w-10 h-10 rounded-2xl bg-muted flex items-center justify-center shrink-0 hover:bg-muted/70" aria-label="Kembali">

@@ -435,7 +435,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
 
       {rejectId && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="glass-card p-6 w-full max-w-sm">
+          <div className="glass-card p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto">
             <h2 className="text-base font-semibold text-foreground mb-4">Alasan Penolakan</h2>
             <form onSubmit={reject} className="space-y-3">
               <textarea required value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} rows={3} className={`${inputCls} resize-none`} />

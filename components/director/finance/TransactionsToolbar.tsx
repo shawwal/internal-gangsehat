@@ -34,7 +34,7 @@ export function TransactionsToolbar({ baseParams, q, txnTotal, txType, noPatient
         </div>
 
         {/* Income / Expense type filter */}
-        <div className="flex items-center gap-1 p-0.5 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex flex-wrap items-center gap-1 p-0.5 rounded-xl bg-white/5 border border-white/10">
           <Link
             href={buildFinanceUrl(baseParams, { tx_type: txType === 'income' ? undefined : 'income', page: undefined })}
             className={`px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all ${
@@ -54,7 +54,7 @@ export function TransactionsToolbar({ baseParams, q, txnTotal, txType, noPatient
         </div>
 
         {/* Status filter */}
-        <div className="flex items-center gap-1 p-0.5 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex flex-wrap items-center gap-1 p-0.5 rounded-xl bg-white/5 border border-white/10">
           <Link
             href={buildFinanceUrl(baseParams, { status: undefined, page: undefined })}
             className={`px-2.5 py-1.5 rounded-[10px] text-xs font-semibold transition-all ${status === '' ? PILL_ACTIVE : PILL_INACTIVE}`}

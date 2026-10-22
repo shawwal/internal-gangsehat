@@ -2,6 +2,7 @@
 
 import { Plus, Trash2 } from 'lucide-react'
 import type { ActivityType, Compensation } from '@/lib/payroll/types'
+import { activityDisplay, sortActivityTypes } from '@/lib/payroll/activityDisplay'
 import { CurrencyInput } from '../CurrencyInput'
 import { inputCls, labelCls } from '../Modal'
 
@@ -57,7 +58,8 @@ function Money({ label, value, onChange, hint }: { label: string; value: number;
 
 export function CompensationEditor({ value: c, onChange, activityTypes }: Props) {
   const set = (patch: Partial<Compensation>) => onChange({ ...c, ...patch })
-  const groups = [...new Set(activityTypes.map((t) => t.group_label))]
+  const types = sortActivityTypes(activityTypes).map((t) => ({ ...t, ...activityDisplay(t) }))
+  const groups = [...new Set(types.map((t) => t.group))]
 
   return (
     <div className="space-y-5">
@@ -124,7 +126,7 @@ export function CompensationEditor({ value: c, onChange, activityTypes }: Props)
         <div>
           <label className={labelCls}>Aktivitas yang dihitung ke target</label>
           <div className="flex flex-wrap gap-1.5">
-            {activityTypes.map((t) => {
+            {types.map((t) => {
               const on = c.incentive_activity_codes.includes(t.code)
               return (
                 <button key={t.code} type="button"
@@ -146,7 +148,7 @@ export function CompensationEditor({ value: c, onChange, activityTypes }: Props)
             </button>
           </div>
           {c.bonus_tiers.map((t, i) => (
-            <div key={i} className="grid grid-cols-[1fr_90px_1fr_auto] gap-2 items-start">
+            <div key={i} className="grid grid-cols-2 sm:grid-cols-[1fr_90px_1fr_auto] gap-2 items-start">
               <input className={inputCls} value={t.label ?? ''} placeholder="Label"
                 onChange={(e) => set({ bonus_tiers: c.bonus_tiers.map((x, j) => j === i ? { ...x, label: e.target.value } : x) })} />
               <input type="number" min={1} className={inputCls} value={t.min_qty} aria-label="Minimal jumlah"
@@ -166,7 +168,7 @@ export function CompensationEditor({ value: c, onChange, activityTypes }: Props)
           <div key={g}>
             <p className="text-[11px] font-medium text-muted-foreground mb-1">{g}</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {activityTypes.filter((t) => t.group_label === g).map((t) => (
+              {types.filter((t) => t.group === g).map((t) => (
                 <div key={t.code}>
                   <label className="block text-[10px] text-muted-foreground mb-0.5">{t.label}</label>
                   <CurrencyInput value={c.activity_rates[t.code] ?? 0} inputClassName="py-1.5 rounded-lg"

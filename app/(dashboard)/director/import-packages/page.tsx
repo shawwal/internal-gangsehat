@@ -269,10 +269,10 @@ export default function ImportPackagesPage() {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border hover:bg-muted transition-colors text-sm text-muted-foreground disabled:opacity-60"
+            className="flex items-center gap-2 max-w-full min-w-0 px-4 py-2.5 rounded-xl border border-dashed border-border hover:bg-muted transition-colors text-sm text-muted-foreground disabled:opacity-60"
           >
-            <FileUp size={14} />
-            {file ? file.name : 'Pilih file Excel (CATATAN KEUANGAN)...'}
+            <FileUp size={14} className="shrink-0" />
+            <span className="truncate">{file ? file.name : 'Pilih file Excel (CATATAN KEUANGAN)...'}</span>
           </button>
           {file && (
             <p className="text-xs text-muted-foreground mt-1">

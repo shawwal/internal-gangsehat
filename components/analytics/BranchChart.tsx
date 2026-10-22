@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react'
 import {
   BarChart, Bar,
@@ -10,6 +12,7 @@ import { CustomTooltip } from './CustomTooltip'
 import { formatRpCompact } from './utils'
 import { PIE_COLORS } from './constants'
 import type { BranchData, ChartType } from './types'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface BranchChartProps {
   data: BranchData[]
@@ -18,6 +21,7 @@ interface BranchChartProps {
 }
 
 export function BranchChart({ data, year, chartType }: BranchChartProps) {
+  const isMobile = useIsMobile()
   const title = 'Perbandingan Per Cabang'
   const sub = `Keuangan tiap cabang tahun ${year}`
 
@@ -59,7 +63,7 @@ export function BranchChart({ data, year, chartType }: BranchChartProps) {
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
             <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-            <YAxis tickFormatter={formatRpCompact} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={82} />
+            <YAxis tickFormatter={formatRpCompact} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={isMobile ? 56 : 82} />
             <Tooltip content={<CustomTooltip currency />} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Bar dataKey="Pemasukan" fill="url(#brInc)" radius={[5, 5, 0, 0]} />
@@ -90,7 +94,7 @@ export function BranchChart({ data, year, chartType }: BranchChartProps) {
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
           <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={formatRpCompact} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={82} />
+          <YAxis tickFormatter={formatRpCompact} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={isMobile ? 56 : 82} />
           <Tooltip content={<CustomTooltip currency />} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           <Bar dataKey="Pemasukan" fill="url(#brInc2)" radius={[5, 5, 0, 0]} />

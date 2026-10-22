@@ -106,7 +106,7 @@ export function OutstandingRow({ tx, showBranchColumn, editTx, therapistRange }:
                 Lanjutkan Bayar
               </button>
             )}
-            <div onClick={(e) => e.stopPropagation()} className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <div onClick={(e) => e.stopPropagation()} className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               <EditTransactionSheet transaction={editTx} />
             </div>
           </div>

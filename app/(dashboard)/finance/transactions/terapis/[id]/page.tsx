@@ -199,14 +199,14 @@ export default async function TherapistTransactionsPage({
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {kpis.map((k) => (
-          <div key={k.label} className="glass-card p-5">
-            <div className="flex items-center justify-between mb-3">
+          <div key={k.label} className="glass-card p-3.5 sm:p-5 min-w-0">
+            <div className="flex items-center justify-between gap-2 mb-3">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{k.label}</p>
-              <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${k.bg}`}>{k.icon}</div>
+              <div className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-2xl flex items-center justify-center ${k.bg}`}>{k.icon}</div>
             </div>
-            <p className="text-2xl font-bold text-foreground truncate">{k.value}</p>
+            <p className="text-lg sm:text-2xl font-bold text-foreground leading-tight break-words">{k.value}</p>
             <p className="text-xs text-muted-foreground mt-1 truncate">{k.sub}</p>
           </div>
         ))}
@@ -329,7 +329,7 @@ export default async function TherapistTransactionsPage({
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-5 py-4 border-t border-white/10">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-white/10">
                 <p className="text-xs text-muted-foreground">Halaman {page} dari {totalPages} · {rows.length} transaksi</p>
                 <div className="flex items-center gap-1">
                   {page > 1 ? (

@@ -11,23 +11,23 @@ interface Props {
 
 export function FinanceKpiCards({ totalIncome, totalCollected, totalOutstanding, totalExpense, totalNet }: Props) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <div className="glass-card p-5">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="glass-card p-3.5 sm:p-5 min-w-0">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Total Tagihan</p>
-        <p className="text-2xl font-bold text-foreground">{formatRp(totalIncome)}</p>
+        <p className="text-lg sm:text-2xl leading-tight break-words font-bold text-foreground">{formatRp(totalIncome)}</p>
         <p className="text-xs text-muted-foreground mt-1">Harga billed ke pasien</p>
       </div>
-      <div className="glass-card p-5">
+      <div className="glass-card p-3.5 sm:p-5 min-w-0">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Terkumpul</p>
-        <p className="text-2xl font-bold text-[#34C759]">{formatRp(totalCollected)}</p>
+        <p className="text-lg sm:text-2xl leading-tight break-words font-bold text-[#34C759]">{formatRp(totalCollected)}</p>
         <p className="text-xs text-muted-foreground mt-1">Jumlah bayar diterima</p>
       </div>
-      <div className="glass-card p-5">
+      <div className="glass-card p-3.5 sm:p-5 min-w-0">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Outstanding</p>
-        <p className="text-2xl font-bold text-[#FFB35C]">{formatRp(totalOutstanding)}</p>
+        <p className="text-lg sm:text-2xl leading-tight break-words font-bold text-[#FFB35C]">{formatRp(totalOutstanding)}</p>
         <p className="text-xs text-muted-foreground mt-1">Belum dilunasi</p>
       </div>
-      <div className="glass-card p-5">
+      <div className="glass-card p-3.5 sm:p-5 min-w-0">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             {totalNet >= 0 ? 'Laba Bersih' : 'Rugi Bersih'}
@@ -37,7 +37,7 @@ export function FinanceKpiCards({ totalIncome, totalCollected, totalOutstanding,
             : <TrendingDown size={16} className="text-destructive" />
           }
         </div>
-        <p className={`text-2xl font-bold ${totalNet >= 0 ? 'text-[#34C759]' : 'text-destructive'}`}>
+        <p className={`text-lg sm:text-2xl leading-tight break-words font-bold ${totalNet >= 0 ? 'text-[#34C759]' : 'text-destructive'}`}>
           {formatRp(Math.abs(totalNet))}
         </p>
         <p className="text-xs text-muted-foreground mt-1">Keluar {formatRp(totalExpense)}</p>

@@ -27,13 +27,13 @@ function KpiCard({ icon: Icon, label, value, tone, onClick }: { icon: typeof Tre
   const toneCls = tone === 'up' ? 'text-chart-4 bg-chart-4/10' : tone === 'down' ? 'text-destructive bg-destructive/10' : 'text-primary bg-primary/10'
   return (
     <button type="button" onClick={onClick}
-      className="glass-card p-4 flex items-center gap-3 text-left w-full cursor-pointer hover:ring-2 hover:ring-primary/40 transition-shadow">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${toneCls}`}>
+      className="glass-card p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-left w-full min-w-0 cursor-pointer hover:ring-2 hover:ring-primary/40 transition-shadow">
+      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${toneCls}`}>
         <Icon size={18} />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 w-full">
         <p className="text-xs text-muted-foreground truncate">{label}</p>
-        <p className="text-base font-semibold text-foreground truncate">{value}</p>
+        <p className="text-sm sm:text-base font-semibold text-foreground break-words leading-tight">{value}</p>
       </div>
     </button>
   )

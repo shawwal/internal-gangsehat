@@ -432,7 +432,7 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
                   return (
                     <div
                       key={hari}
-                      className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                      className={`flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors ${
                         active ? 'bg-card hover:bg-muted/20' : 'bg-muted/20 opacity-60 hover:opacity-80'
                       }`}
                     >
@@ -489,8 +489,8 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
                         ))}
                       </div>
 
-                      {/* Time inputs */}
-                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                      {/* Time inputs — own line on phones */}
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0 order-last sm:order-none basis-full sm:basis-auto">
                         <input
                           type="time"
                           value={day.jam_mulai}
@@ -510,7 +510,7 @@ export function MonthlyScheduleDialog({ open, staffList, branches, onClose, onSa
 
                       {/* Status pill */}
                       <span
-                        className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ${
+                        className={`shrink-0 ml-auto sm:ml-0 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ${
                           active ? 'bg-[#34C759]/15 text-[#34C759]' : 'bg-muted text-muted-foreground'
                         }`}
                       >

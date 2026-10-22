@@ -25,16 +25,16 @@ function StatCard({
     <div
       onClick={onClick}
       className={[
-        'bg-card rounded-2xl border border-border p-3 flex items-center gap-3 transition-all',
+        'bg-card rounded-2xl border border-border p-3 flex flex-col items-center text-center gap-1.5 sm:flex-row sm:text-left sm:gap-3 transition-all',
         interactive ? 'cursor-pointer hover:border-primary/30 hover:shadow-sm hover:bg-muted/30' : '',
       ].join(' ')}
     >
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
         {icon}
       </div>
-      <div>
+      <div className="min-w-0">
         <p className="text-lg font-bold text-foreground leading-none">{value}</p>
-        <p className={`text-xs mt-0.5 ${interactive ? 'text-primary' : 'text-muted-foreground'}`}>
+        <p className={`text-[11px] sm:text-xs mt-0.5 leading-tight ${interactive ? 'text-primary' : 'text-muted-foreground'}`}>
           {label}
           {interactive && <span className="ml-1 opacity-60">↗</span>}
         </p>

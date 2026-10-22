@@ -37,7 +37,7 @@ export function ChangeTherapistDialog({ visit, staff, onClose, onSave }: Props) 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-card rounded-2xl border border-border w-full max-w-sm shadow-2xl"
+        className="bg-card rounded-2xl border border-border w-full max-w-sm shadow-2xl max-h-[90dvh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 px-5 py-4 border-b border-border">

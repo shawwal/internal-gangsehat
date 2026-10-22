@@ -396,7 +396,7 @@ export function PeriodSettingsTab({ data, onChanged }: TabProps) {
         Sedang dipakai: pengaturan <b>{data.settings.scope === 'branch' ? 'khusus cabang ini' : data.settings.scope === 'global' ? 'semua cabang' : 'bawaan'}</b>.
       </p>
       {isDirector && (
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(['branch', 'global'] as const).map((s) => (
             <button key={s} onClick={() => setScope(s)}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium border ${scope === s ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted'}`}>

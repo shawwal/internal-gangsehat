@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { List, RefreshCw, RotateCcw } from 'lucide-react'
 import { getPayrollActivityDetail } from '@/app/actions/payroll'
 import { MetricDetailModal } from '@/components/metrics/MetricDetailModal'
+import { activityDisplay, sortActivityTypes } from '@/lib/payroll/activityDisplay'
 import { staffDisplayName, type PayrollWorkspace, type WorkspaceRow } from '@/lib/payroll/workspace'
 import { formatIDR } from './format'
 import { btn } from './Modal'
@@ -33,15 +34,16 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
       Object.entries(s.compensation?.activity_rates ?? {}).forEach(([c, v]) => { if (v) used.add(c) })
       Object.entries(ws.activity[s.id] ?? {}).forEach(([c, cell]) => { if ((cell.override ?? cell.auto) > 0) used.add(c) })
     }
-    return ws.activityTypes.filter((t) => showAll || used.has(t.code))
+    return sortActivityTypes(ws.activityTypes.filter((t) => showAll || used.has(t.code)))
+      .map((t) => ({ ...t, ...activityDisplay(t) }))
   }, [ws, showAll])
 
   const groups = useMemo(() => {
     const out: { label: string; span: number }[] = []
     for (const c of columns) {
       const last = out[out.length - 1]
-      if (last && last.label === c.group_label) last.span++
-      else out.push({ label: c.group_label, span: 1 })
+      if (last && last.label === c.group) last.span++
+      else out.push({ label: c.group, span: 1 })
     }
     return out
   }, [columns])
@@ -73,7 +75,7 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
           Angka otomatis diambil dari kunjungan pasien yang <b>hadir</b> (Jadwal Harian) dalam periode ini.
           Ketik angka untuk mengoreksi; kosongkan untuk kembali ke nilai otomatis.
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button className={btn.ghost} onClick={() => setShowAll((v) => !v)}>
             {showAll ? 'Sembunyikan kolom kosong' : 'Tampilkan semua aktivitas'}
           </button>
@@ -96,9 +98,9 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
               <th colSpan={3} className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary border-l border-border">Hasil</th>
             </tr>
             <tr className="bg-muted/50 border-b border-border">
-              <th className="sticky left-0 z-10 bg-muted px-3 py-2 text-left font-medium text-muted-foreground min-w-[150px]">Karyawan</th>
+              <th className="sticky left-0 z-10 bg-muted px-3 py-2 text-left font-medium text-muted-foreground min-w-[110px] sm:min-w-[150px]">Karyawan</th>
               {columns.map((t) => (
-                <th key={t.code} className="px-2 py-2 text-center font-medium text-muted-foreground border-l border-border min-w-[78px]" title={t.code}>
+                <th key={t.code} className="px-2 py-2 text-center font-medium text-muted-foreground border-l border-border min-w-[78px] whitespace-nowrap" title={t.code}>
                   {t.label}
                   <div className="text-[9px] font-normal opacity-70">{t.count_mode === 'manual' ? 'manual' : 'otomatis'}</div>
                 </th>

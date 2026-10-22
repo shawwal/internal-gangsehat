@@ -151,7 +151,7 @@ export function DataCheckWorkspace() {
   const showFisioCol = !!data?.rows.some((r) => r.issues.includes('tanpa_fisio'))
 
   return (
-    <div className="space-y-5 p-4 md:p-6">
+    <div className="space-y-5 md:p-6">
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-2xl bg-primary/15 flex items-center justify-center shrink-0">
           <ClipboardCheck size={18} className="text-primary" />
@@ -166,7 +166,7 @@ export function DataCheckWorkspace() {
 
       <div className="rounded-2xl border border-border bg-card p-3 sm:p-4 flex flex-wrap items-center gap-3">
         {data && data.branches.length > 1 && (
-          <div className="w-60">
+          <div className="w-full sm:w-60">
             <SearchSelect
               options={data.branches.map((b) => ({ value: b.id, label: b.name }))}
               value={data.branchId}
@@ -177,7 +177,7 @@ export function DataCheckWorkspace() {
             />
           </div>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
           <span className="text-xs text-muted-foreground">Tanggal</span>
           <DateRangeFilter
             from={from}

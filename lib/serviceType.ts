@@ -16,6 +16,12 @@ export const SERVICE_TO_CATEGORY: Record<ServiceType, string> = {
   'LAINNYA':      'LAINNYA',
 }
 
+// Branch price-list kategori (internal_layanan.kategori), in display order.
+export const LAYANAN_KATEGORI = [
+  'TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK',
+  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'PAKET SPORT MASSAGE', 'LAINNYA',
+]
+
 // SERVICE_TO_CATEGORY's values are all distinct, so this reverse lookup is well-defined —
 // lets a Kategori control drive the paired Layanan value (and vice versa).
 export const CATEGORY_TO_SERVICE_TYPE: Record<string, ServiceType> = Object.fromEntries(

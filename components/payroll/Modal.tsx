@@ -22,12 +22,12 @@ export function Modal({ title, subtitle, onClose, children, footer, size = 'md' 
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`bg-card rounded-2xl border border-border shadow-2xl w-full ${WIDTH[size]} max-h-[90vh] flex flex-col`}
+        className={`bg-card rounded-t-3xl sm:rounded-2xl border border-border shadow-2xl w-full ${WIDTH[size]} max-h-[90dvh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border">
@@ -38,13 +38,13 @@ export function Modal({ title, subtitle, onClose, children, footer, size = 'md' 
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+            className="p-2 -m-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
           >
             <X size={15} />
           </button>
         </div>
-        <div className="px-5 py-4 overflow-y-auto">{children}</div>
-        {footer && <div className="px-5 py-3 border-t border-border flex justify-end gap-2">{footer}</div>}
+        <div className="px-5 py-4 overflow-y-auto min-h-0 flex-1">{children}</div>
+        {footer && <div className="px-5 py-3 border-t border-border flex flex-wrap justify-end gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-3">{footer}</div>}
       </div>
     </div>
   )

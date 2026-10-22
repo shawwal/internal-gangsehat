@@ -30,7 +30,7 @@ export function EditUserModal({ user, onClose, onSave }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm shadow-xl">
+      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm shadow-xl max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-semibold text-foreground">Edit Detail Pengguna</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground">

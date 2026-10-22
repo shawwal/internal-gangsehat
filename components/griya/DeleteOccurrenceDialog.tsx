@@ -51,7 +51,7 @@ export function DeleteOccurrenceDialog({ slot, visitId, dateIso, onClose, onSave
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="glass-card w-full max-w-md p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div className="glass-card w-full max-w-md p-5 space-y-4 max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-base font-semibold text-foreground">Hapus Jadwal</h2>
@@ -59,7 +59,7 @@ export function DeleteOccurrenceDialog({ slot, visitId, dateIso, onClose, onSave
               {slot.patient_name} · {HARI_LABEL[slot.hari]} {slot.slot_time} (jadwal rutin)
             </p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 cursor-pointer"><X size={16} /></button>
+          <button onClick={onClose} className="p-2 -m-1 rounded-lg hover:bg-white/10 cursor-pointer"><X size={16} /></button>
         </div>
 
         <div className="space-y-2">

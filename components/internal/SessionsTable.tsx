@@ -179,7 +179,7 @@ export function SessionsTable({ sessions, bookingId, scheduledDate, therapists, 
       {/* Generate sessions modal */}
       {showGenModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6">
+          <div className="bg-white dark:bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6 max-h-[90dvh] overflow-y-auto">
             <h3 className="font-semibold text-gray-900 dark:text-foreground mb-1">Generate Sesi</h3>
             <p className="text-xs text-gray-400 mb-4">Sesi dijadwalkan setiap minggu dari tanggal booking.</p>
             <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Jumlah Sesi</label>
