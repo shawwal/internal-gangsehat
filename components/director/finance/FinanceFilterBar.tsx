@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { buildFinanceUrl } from './types'
+import { buildFinanceUrl, FINANCE_PERIOD_COOKIE, PERIOD_ALL_YEAR, PERIOD_SEMESTERS } from './types'
 import { DateRangeFilter } from '@/components/finance/DateRangeFilter'
 
 interface Branch { id: string; name: string }
@@ -34,6 +34,10 @@ export function FinanceFilterBar({ branches, baseParams, branchId, showBranchSel
 
   // Month/year and date range are alternative periods — picking one clears the other.
   function pickPeriod(overrides: { month?: string; year?: string }) {
+    // Remember the month/semester choice in this browser (year isn't remembered).
+    if (overrides.month) {
+      document.cookie = `${FINANCE_PERIOD_COOKIE}=${overrides.month}; path=/; max-age=31536000; samesite=lax`
+    }
     navigate({ month, year, ...overrides, from: undefined, to: undefined })
   }
 
@@ -63,7 +67,10 @@ export function FinanceFilterBar({ branches, baseParams, branchId, showBranchSel
 
       <select className={cls} value={hasRange ? 'range' : month} onChange={e => pickPeriod({ month: e.target.value })}>
         {hasRange && <option value="range" disabled>Rentang tanggal</option>}
-        <option value="">Semua Bulan</option>
+        <option value={PERIOD_ALL_YEAR}>Semua Bulan</option>
+        {Object.entries(PERIOD_SEMESTERS).map(([value, label]) => (
+          <option key={value} value={value}>{label}</option>
+        ))}
         {MONTHS.map((name, i) => (
           <option key={i + 1} value={String(i + 1)}>{name}</option>
         ))}

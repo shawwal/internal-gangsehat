@@ -11,6 +11,8 @@ import { loadFinanceData, parseFinanceParams } from './data'
 import { listTherapistOptions } from '@/lib/finance/therapists'
 import { UrlTherapistServiceFilters } from '@/components/finance/TherapistServiceFilters'
 import { Suspense } from 'react'
+import { cookies } from 'next/headers'
+import { FINANCE_PERIOD_COOKIE } from '@/components/director/finance/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +22,8 @@ export default async function DirectorFinancePage({
   searchParams: Promise<{ branch?: string; month?: string; year?: string; from?: string; to?: string; therapist?: string; category?: string; page?: string; q?: string; no_patient?: string; tx_type?: string; status?: string; pay_status?: string }>
 }) {
   const rawParams = await searchParams
-  const params = parseFinanceParams(rawParams)
+  const savedPeriod = (await cookies()).get(FINANCE_PERIOD_COOKIE)?.value
+  const params = parseFinanceParams(rawParams, savedPeriod)
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

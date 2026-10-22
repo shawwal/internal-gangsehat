@@ -34,6 +34,25 @@ export const PAGE_SIZE = 20
 
 export const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des']
 
+// Period picked in the month select: a month '1'..'12', a semester, or the
+// whole year. Remembered per browser in a cookie (read server-side so the first
+// render already loads the narrower period — no full-year fetch then redirect).
+export const FINANCE_PERIOD_COOKIE = 'finance_period'
+export const PERIOD_ALL_YEAR = 'all'
+export const PERIOD_SEMESTERS = { s1: 'Semester 1 (Jan–Jun)', s2: 'Semester 2 (Jul–Des)' } as const
+
+export function isFinancePeriod(v: string | undefined): v is string {
+  if (!v) return false
+  if (v === PERIOD_ALL_YEAR || v in PERIOD_SEMESTERS) return true
+  const n = Number(v)
+  return Number.isInteger(n) && n >= 1 && n <= 12
+}
+
+/** Semester containing today — the default when nothing is remembered. */
+export function currentSemester(): keyof typeof PERIOD_SEMESTERS {
+  return new Date().getMonth() < 6 ? 's1' : 's2'
+}
+
 export const TX_STATUS_VALUES = ['pending', 'confirmed', 'rejected'] as const
 export const TX_STATUS_BADGE: Record<string, string> = {
   pending:   'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
@@ -53,6 +72,7 @@ export const PAY_STATUS_BADGE: Record<string, string> = {
 
 export interface FinanceParams {
   branchId: string
+  /** '1'..'12', 's1' / 's2' (semester) or 'all' (whole year) — see isFinancePeriod */
   month: string
   year: string
   /** YYYY-MM-DD, inclusive. Either set → overrides month/year as the period. */

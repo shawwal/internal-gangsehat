@@ -3,7 +3,8 @@ import { decryptPatientPII } from '@/lib/encryption'
 import { resolveTherapistNames } from '@/lib/finance/therapists'
 import { UUID_RE, byDateDesc, isServiceCategory, selectAttributedTransactions, type QueryBuilder } from '@/lib/finance/attribution'
 import {
-  MONTH_LABELS, PAGE_SIZE, type BranchSummary, type TransactionRow, type FinanceParams,
+  MONTH_LABELS, PAGE_SIZE, PERIOD_SEMESTERS, currentSemester, isFinancePeriod,
+  type BranchSummary, type TransactionRow, type FinanceParams,
 } from '@/components/director/finance/types'
 
 interface RawSearchParams {
@@ -40,10 +41,14 @@ function formatDay(date: string) {
   return new Date(`${date}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export function parseFinanceParams(params: RawSearchParams): FinanceParams {
+/** `savedPeriod` = the browser's remembered period (cookie), used when the URL has none. */
+export function parseFinanceParams(params: RawSearchParams, savedPeriod?: string): FinanceParams {
+  const month = isFinancePeriod(params.month) ? params.month
+    : isFinancePeriod(savedPeriod) ? savedPeriod
+    : currentSemester()
   return {
     branchId:  params.branch ?? '',
-    month:     params.month  ?? '',
+    month,
     year:      params.year   ?? String(new Date().getFullYear()),
     from:      params.from && ISO_DATE.test(params.from) ? params.from : '',
     to:        params.to   && ISO_DATE.test(params.to)   ? params.to   : '',
@@ -65,7 +70,8 @@ export async function loadFinanceData(params: FinanceParams) {
   const to   = from + PAGE_SIZE - 1
 
   const numYear  = Number(year)
-  const numMonth = month ? Number(month) : null
+  const semester = month === 's1' || month === 's2' ? month : null
+  const numMonth = Number(month) || null
 
   // Period as [dateFrom, dateTo) — empty string = unbounded on that side.
   // A date range (?from/?to, inclusive) takes precedence over month/year.
@@ -78,6 +84,10 @@ export async function loadFinanceData(params: FinanceParams) {
     periodLabel = rangeFrom && rangeTo
       ? `${formatDay(rangeFrom)} – ${formatDay(rangeTo)}`
       : rangeFrom ? `Sejak ${formatDay(rangeFrom)}` : `Sampai ${formatDay(rangeTo)}`
+  } else if (semester) {
+    dateFrom = semester === 's1' ? `${numYear}-01-01` : `${numYear}-07-01`
+    dateTo   = semester === 's1' ? `${numYear}-07-01` : `${numYear + 1}-01-01`
+    periodLabel = `${PERIOD_SEMESTERS[semester]} ${year}`
   } else {
     dateFrom = numMonth
       ? `${numYear}-${String(numMonth).padStart(2, '0')}-01`

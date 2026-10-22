@@ -24,8 +24,35 @@ function monthIndexOf(dateStr: string): number {
   return Number(dateStr.slice(5, 7)) - 1
 }
 
+type ArusKasPeriod = 'year' | 's1' | 's2'
+const PERIOD_OPTIONS: { key: ArusKasPeriod; label: string; months: number[] }[] = [
+  { key: 'year', label: 'Tahun penuh', months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
+  { key: 's1', label: 'Semester 1 (Jan–Jun)', months: [0, 1, 2, 3, 4, 5] },
+  { key: 's2', label: 'Semester 2 (Jul–Des)', months: [6, 7, 8, 9, 10, 11] },
+]
+// Per-browser preference; without one, open on the semester containing today.
+const PERIOD_KEY = 'akuntansi.arusKasPeriod'
+
+function readPeriod(): ArusKasPeriod {
+  try {
+    const v = typeof window !== 'undefined' ? localStorage.getItem(PERIOD_KEY) : null
+    if (v === 'year' || v === 's1' || v === 's2') return v
+  } catch { /* storage unavailable */ }
+  return new Date().getMonth() < 6 ? 's1' : 's2'
+}
+
 export function ArusKasTab({ branchId, branchName }: Props) {
   const [year, setYear] = useState(new Date().getFullYear())
+  const [period, setPeriod] = useState<ArusKasPeriod>(readPeriod)
+  const periodOption = PERIOD_OPTIONS.find((p) => p.key === period)!
+  const shownMonths = periodOption.months
+  const lastShown = shownMonths[shownMonths.length - 1]
+  const firstHalfOnly = period === 's1'
+
+  function changePeriod(next: ArusKasPeriod) {
+    setPeriod(next)
+    try { localStorage.setItem(PERIOD_KEY, next) } catch { /* just not remembered */ }
+  }
   const [txns, setTxns] = useState<AccountingTxnRow[]>([])
   const [expenseCats, setExpenseCats] = useState<ExpenseCategoryRow[]>([])
   const [opening, setOpening] = useState(0)
@@ -35,7 +62,11 @@ export function ArusKasTab({ branchId, branchName }: Props) {
 
   useEffect(() => {
     setLoading(true)
-    const { from, toExclusive } = yearRange(year)
+    // Semester 1 only needs Jan–Jun. Semester 2 still loads from January: its
+    // Saldo Akhir carries the yearly opening balance through Jan–Jun.
+    const { from, toExclusive } = firstHalfOnly
+      ? { from: `${year}-01-01`, toExclusive: `${year}-07-01` }
+      : yearRange(year)
     Promise.all([
       fetchTransactionsForRange(branchId, from, toExclusive),
       fetchExpenseCategories(branchId),
@@ -47,7 +78,7 @@ export function ArusKasTab({ branchId, branchName }: Props) {
       setOpeningInput(String(ob))
       setLoading(false)
     })
-  }, [branchId, year])
+  }, [branchId, year, firstHalfOnly])
 
   // Income rows key off the same coarse category bucket `transactions.category`
   // stores app-wide (TA KLINIK, PAKET KLINIK, ...) — not the specific item name,
@@ -94,19 +125,19 @@ export function ArusKasTab({ branchId, branchName }: Props) {
   function handleExportExcel() {
     const cols: ExportColumn<MatrixRow>[] = [
       { header: 'Nama', value: (r) => r.label },
-      ...MONTH_NAMES.map((m, i): ExportColumn<MatrixRow> => ({ header: m, value: (r) => r.monthly[i] })),
+      ...shownMonths.map((i): ExportColumn<MatrixRow> => ({ header: MONTH_NAMES[i], value: (r) => r.monthly[i] })),
     ]
-    exportToExcel([...incomeRows, ...expenseRows], cols, `arus_kas_${year}`)
+    exportToExcel([...incomeRows, ...expenseRows], cols, period === 'year' ? `arus_kas_${year}` : `arus_kas_${year}_${period}`)
   }
 
   function handleExportPdf() {
     openPrintableReport({
       title: 'Arus Kas',
-      subtitle: `Tahun ${year}`,
+      subtitle: period === 'year' ? `Tahun ${year}` : `${periodOption.label} ${year}`,
       meta: [
         { label: 'Cabang', value: branchName },
         { label: 'Saldo Awal', value: formatRp(opening) },
-        { label: 'Saldo Akhir', value: formatRp(runningBalance[11] ?? opening) },
+        { label: 'Saldo Akhir', value: formatRp(runningBalance[lastShown] ?? opening) },
       ],
       columns: [
         { header: 'Bulan', value: (r: { label: string; income: number; expense: number; net: number; balance: number }) => r.label },
@@ -115,8 +146,8 @@ export function ArusKasTab({ branchId, branchName }: Props) {
         { header: 'Laba Bersih', align: 'right', value: (r) => formatRp(r.net) },
         { header: 'Saldo Akhir', align: 'right', value: (r) => formatRp(r.balance) },
       ],
-      rows: MONTH_NAMES.map((label, i) => ({
-        label, income: incomeTotals[i], expense: expenseTotals[i], net: netMonthly[i], balance: runningBalance[i],
+      rows: shownMonths.map((i) => ({
+        label: MONTH_NAMES[i], income: incomeTotals[i], expense: expenseTotals[i], net: netMonthly[i], balance: runningBalance[i],
       })),
     })
   }
@@ -127,6 +158,12 @@ export function ArusKasTab({ branchId, branchName }: Props) {
         <div>
           <label className="block text-xs font-medium text-foreground mb-1">Tahun</label>
           <input type="number" value={year} onChange={(e) => setYear(Number(e.target.value) || year)} className={`${inputCls} w-28`} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-foreground mb-1">Periode</label>
+          <select value={period} onChange={(e) => changePeriod(e.target.value as ArusKasPeriod)} className={`${inputCls} w-52 cursor-pointer`}>
+            {PERIOD_OPTIONS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+          </select>
         </div>
         <div>
           <label className="block text-xs font-medium text-foreground mb-1">Saldo Awal (Rp)</label>
@@ -150,41 +187,41 @@ export function ArusKasTab({ branchId, branchName }: Props) {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">Item</th>
-                {MONTH_NAMES.map((m) => <th key={m} className="text-right px-3 py-2 font-medium text-muted-foreground">{m}</th>)}
+                {shownMonths.map((i) => <th key={i} className="text-right px-3 py-2 font-medium text-muted-foreground">{MONTH_NAMES[i]}</th>)}
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-border bg-muted/30"><td colSpan={13} className="px-3 py-1.5 font-semibold text-foreground">Pemasukan</td></tr>
+              <tr className="border-b border-border bg-muted/30"><td colSpan={shownMonths.length + 1} className="px-3 py-1.5 font-semibold text-foreground">Pemasukan</td></tr>
               {incomeRows.map((r) => (
                 <tr key={r.key} className="border-b border-border/50 last:border-0">
                   <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">{r.label}</td>
-                  {r.monthly.map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-muted-foreground">{v ? formatRp(v) : '—'}</td>)}
+                  {shownMonths.map((i) => r.monthly[i]).map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-muted-foreground">{v ? formatRp(v) : '—'}</td>)}
                 </tr>
               ))}
               <tr className="border-b-2 border-border font-semibold">
                 <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">Total Pemasukan</td>
-                {incomeTotals.map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-chart-4">{formatRp(v)}</td>)}
+                {shownMonths.map((i) => incomeTotals[i]).map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-chart-4">{formatRp(v)}</td>)}
               </tr>
 
-              <tr className="border-b border-border bg-muted/30"><td colSpan={13} className="px-3 py-1.5 font-semibold text-foreground">Pengeluaran</td></tr>
+              <tr className="border-b border-border bg-muted/30"><td colSpan={shownMonths.length + 1} className="px-3 py-1.5 font-semibold text-foreground">Pengeluaran</td></tr>
               {expenseRows.map((r) => (
                 <tr key={r.key} className="border-b border-border/50 last:border-0">
                   <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">{r.label}</td>
-                  {r.monthly.map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-muted-foreground">{v ? formatRp(v) : '—'}</td>)}
+                  {shownMonths.map((i) => r.monthly[i]).map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-muted-foreground">{v ? formatRp(v) : '—'}</td>)}
                 </tr>
               ))}
               <tr className="border-b-2 border-border font-semibold">
                 <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">Total Pengeluaran</td>
-                {expenseTotals.map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-destructive">{formatRp(v)}</td>)}
+                {shownMonths.map((i) => expenseTotals[i]).map((v, i) => <td key={i} className="px-3 py-1.5 text-right text-destructive">{formatRp(v)}</td>)}
               </tr>
 
               <tr className="border-b border-border font-semibold">
                 <td className="px-3 py-1.5 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">Laba Bersih</td>
-                {netMonthly.map((v, i) => <td key={i} className={`px-3 py-1.5 text-right ${v >= 0 ? 'text-chart-4' : 'text-destructive'}`}>{formatRp(v)}</td>)}
+                {shownMonths.map((i) => netMonthly[i]).map((v, i) => <td key={i} className={`px-3 py-1.5 text-right ${v >= 0 ? 'text-chart-4' : 'text-destructive'}`}>{formatRp(v)}</td>)}
               </tr>
               <tr className="font-bold">
                 <td className="px-3 py-2 text-foreground sticky left-0 bg-card min-w-[7rem] whitespace-normal sm:whitespace-nowrap">Saldo Akhir</td>
-                {runningBalance.map((v, i) => <td key={i} className="px-3 py-2 text-right text-primary">{formatRp(v)}</td>)}
+                {shownMonths.map((i) => runningBalance[i]).map((v, i) => <td key={i} className="px-3 py-2 text-right text-primary">{formatRp(v)}</td>)}
               </tr>
             </tbody>
           </table>

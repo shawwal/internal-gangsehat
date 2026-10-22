@@ -125,7 +125,7 @@ export function renderPatientResumeBody(data: PublicResumeData, includePrintButt
     <div><strong>Tanggal Konsultasi:</strong> ${visitDate}</div>
   </div>
 
-  <div class="resume-section">
+  <div class="resume-section" data-pdf-keep-together>
     <h3>1. Apa yang Terjadi Pada Tubuh Anda?</h3>
     <p class="resume-content" style="margin-bottom: 10px;">Berdasarkan pemeriksaan hari ini, permasalahan yang ditemukan adalah:</p>
     ${box(data.chiefComplaint)}
@@ -133,20 +133,20 @@ export function renderPatientResumeBody(data: PublicResumeData, includePrintButt
     ${box(data.diagnosis)}
   </div>
 
-  <div class="resume-section">
+  <div class="resume-section" data-pdf-keep-together>
     <h3>2. Rencana Tindakan Lanjutan</h3>
     <p class="resume-content" style="margin-bottom: 10px;">Berikut target dan tindakan yang kami rancang khusus untuk Anda:</p>
     ${box(data.plan, 'plan')}
   </div>
 
   ${data.recommendation?.trim() ? `
-  <div class="resume-section">
+  <div class="resume-section" data-pdf-keep-together>
     <h3>3. Rekomendasi Fisioterapis</h3>
     <p class="resume-content" style="margin-bottom: 10px;">Berikut rekomendasi fisioterapis untuk Anda:</p>
     ${box(data.recommendation, 'plan')}
   </div>` : ''}
 
-  <div class="education-box" data-pdf-break-before>
+  <div class="education-box" data-pdf-break-before data-pdf-keep-together>
     <h4>Kenapa Anda Membutuhkan Program Terapi Lanjutan?</h4>
     <p>
       Seringkali saat rasa nyeri mereda setelah 1-2 sesi terapi perdana, pasien merasa sudah sembuh total.
@@ -170,7 +170,7 @@ export function renderPatientResumeBody(data: PublicResumeData, includePrintButt
     </div>
   </div>
 
-  <div class="signature-block">
+  <div class="signature-block" data-pdf-keep-together>
     <p>Salam Sehat,</p>
     <div class="signature-line"></div>
     <p style="margin-top: 0; font-weight: bold; color: #1a4a76;">${therapistName}</p>
