@@ -174,12 +174,12 @@ export default function JadwalSportMassagePage() {
                 loading={loading}
                 onRefresh={() => loadAll(selectedDate)}
               />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
                 {branches.length > 0 && (
                   <select
                     value={selectedBranchId ?? ''}
                     onChange={(e) => setSelectedBranchId(e.target.value || null)}
-                    className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                    className="w-full sm:w-auto sm:max-w-xs min-w-0 px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                   >
                     {branches.map((b) => (
                       <option key={b.id} value={b.id}>{b.name}</option>

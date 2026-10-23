@@ -179,7 +179,7 @@ export default function GriyaJadwalMingguanPage() {
             {weekEnd.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={discipline}
             onChange={(e) => setDiscipline(e.target.value as Discipline | 'ALL')}

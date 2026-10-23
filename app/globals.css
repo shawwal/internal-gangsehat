@@ -132,6 +132,17 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Long unbroken strings (emails, URLs, IDs) wrap instead of widening the page. */
+    overflow-wrap: break-word;
+  }
+  /* Form controls never outgrow their container: a <select> sizes itself to its
+     longest option (long branch / therapist names) and inputs have an intrinsic
+     width that stops them shrinking inside flex rows. Utilities still override. */
+  select,
+  textarea,
+  input:not([type="checkbox"]):not([type="radio"]) {
+    max-width: 100%;
+    min-width: 0;
   }
 }
 
@@ -179,6 +190,21 @@
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
+}
+
+/* iOS Safari gives date/time inputs an intrinsic min-width and ignores
+   `width`, so they spill out of narrow cells / hidden picker wrappers and
+   make the whole page scroll sideways. Scoped to iOS via -webkit-touch-callout. */
+@supports (-webkit-touch-callout: none) {
+  input:is([type="date"], [type="month"], [type="time"], [type="datetime-local"]) {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+  }
+  input:is([type="date"], [type="month"], [type="time"], [type="datetime-local"])::-webkit-date-and-time-value {
+    text-align: left;
+  }
 }
 
 /* Hide scrollbar */

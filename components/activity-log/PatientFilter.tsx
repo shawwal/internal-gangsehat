@@ -71,7 +71,7 @@ export function PatientFilter({
       />
 
       {open && hasQuery && (
-        <div className="absolute left-0 top-full mt-1.5 z-20 w-72 max-h-64 overflow-y-auto rounded-xl border border-border bg-card shadow-2xl p-1">
+        <div className="absolute left-0 top-full mt-1.5 z-20 w-72 max-w-[calc(100vw-2rem)] max-h-64 overflow-y-auto rounded-xl border border-border bg-card shadow-2xl p-1">
           {searching ? (
             <p className="text-xs text-muted-foreground text-center py-4">Mencari…</p>
           ) : results.length === 0 ? (

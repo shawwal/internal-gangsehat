@@ -149,7 +149,7 @@ export default function OrderDetailPage() {
           <StatusBadge value={paymentStatus} />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={load}
             className="p-2 rounded-xl border border-gray-200 dark:border-border hover:bg-gray-50 dark:hover:bg-muted text-gray-500 transition-colors"

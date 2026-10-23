@@ -196,12 +196,12 @@ export default function LayananPage() {
             Atur harga per jenis layanan untuk setiap cabang
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           {branches.length > 1 && (
             <select
               value={selectedBranch ?? ''}
               onChange={(e) => setSelectedBranch(e.target.value)}
-              className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+              className="flex-1 min-w-0 sm:flex-none sm:max-w-xs px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
             >
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
@@ -233,7 +233,7 @@ export default function LayananPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-border/40 bg-muted/20">
                   {sortHeader('nama', 'Nama', 'left')}

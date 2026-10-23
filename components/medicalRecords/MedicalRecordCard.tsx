@@ -111,7 +111,7 @@ export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemin
         </p>
       )}
 
-      <div className="flex gap-2 pt-1 border-t border-border/40">
+      <div className="flex flex-wrap gap-2 pt-1 border-t border-border/40">
         {fillHref ? (
           <Link
             href={fillHref}

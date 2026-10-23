@@ -65,7 +65,7 @@ export function DateNav({ selectedDate, today, onSelect }: DateNavProps) {
       </button>
 
       {/* Any-date picker */}
-      <div className="relative shrink-0">
+      <div className="relative shrink-0 overflow-hidden rounded-xl">
         <button
           onClick={() => dateInputRef.current?.showPicker()}
           title="Pilih tanggal"
@@ -81,7 +81,7 @@ export function DateNav({ selectedDate, today, onSelect }: DateNavProps) {
           onChange={(e) => {
             if (e.target.value) onSelect(new Date(e.target.value + 'T00:00:00'))
           }}
-          className="absolute inset-0 opacity-0 w-full h-full pointer-events-none"
+          className="absolute inset-0 opacity-0 w-full h-full min-w-0 pointer-events-none"
           tabIndex={-1}
           aria-hidden="true"
         />

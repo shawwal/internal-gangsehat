@@ -46,8 +46,9 @@ export function DashboardShell({ profile, allowedNavKeys, children }: Props) {
             tab bar — the pill is ~66px tall plus mb-4 plus iOS's safe-area-inset-bottom
             (up to ~34px on Face ID devices), so pb-28 (112px) ran a few px short on
             Safari and let the last card peek out from behind it. pb-36 (144px) clears
-            that with margin. */}
-        <main className="flex-1 overflow-y-auto p-4 pb-36 md:p-6 bg-background">
+            that with margin. overflow-x-hidden: wide content must scroll inside its
+            own wrapper (tables, grids) — never pan the whole page sideways. */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-36 md:p-6 bg-background">
           {children}
         </main>
       </div>

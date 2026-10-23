@@ -98,7 +98,7 @@ export function FocusModeBar({
           <ChevronRight size={13} />
         </button>
         <div className="w-px h-5 bg-white/10 self-center" />
-        <div className="relative">
+        <div className="relative overflow-hidden">
           <button
             onClick={() => focusDateInputRef.current?.showPicker()}
             title="Pilih tanggal"
@@ -112,7 +112,7 @@ export function FocusModeBar({
             type="date"
             value={toIso(selectedDate)}
             onChange={(e) => { if (e.target.value) setSelectedDate(new Date(e.target.value + 'T00:00:00')) }}
-            className="absolute inset-0 opacity-0 w-full h-full pointer-events-none"
+            className="absolute inset-0 opacity-0 w-full h-full min-w-0 pointer-events-none"
             tabIndex={-1}
             aria-hidden="true"
           />

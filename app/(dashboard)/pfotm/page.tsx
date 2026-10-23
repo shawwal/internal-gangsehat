@@ -211,7 +211,7 @@ export default function PfotmPage() {
 
       <div className="rounded-2xl border border-border bg-card p-3 sm:p-4 flex flex-wrap items-center gap-3">
         {data && data.branches.length > 1 && (
-          <select className="px-3 py-2 rounded-xl border border-border bg-background text-sm" value={data.branchId}
+          <select className="max-w-full px-3 py-2 rounded-xl border border-border bg-background text-sm" value={data.branchId}
             onChange={(e) => setBranchId(e.target.value)} aria-label="Cabang">
             {data.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
