@@ -1,6 +1,9 @@
 'use client'
 
+import { useOptimistic } from 'react'
 import { useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
+import { useFinancePending } from './FinancePending'
 import { buildFinanceUrl, FINANCE_PERIOD_COOKIE, PERIOD_ALL_YEAR, PERIOD_SEMESTERS } from './types'
 import { DateRangeFilter } from '@/components/finance/DateRangeFilter'
 
@@ -22,14 +25,31 @@ interface Props {
   to: string
 }
 
-export function FinanceFilterBar({ branches, baseParams, branchId, showBranchSelect, month, year, from, to }: Props) {
+export function FinanceFilterBar({ branches, baseParams, branchId: urlBranchId, showBranchSelect, month: urlMonth, year: urlYear, from: urlFrom, to: urlTo }: Props) {
   const router = useRouter()
+  const { isPending, startTransition } = useFinancePending()
   const currentYear = new Date().getFullYear()
+
+  // Selects show the new choice immediately while the page re-renders.
+  type Filters = { branchId: string; month: string; year: string; from: string; to: string }
+  const [{ branchId, month, year, from, to }, setOptimistic] = useOptimistic<Filters, Partial<Filters>>(
+    { branchId: urlBranchId, month: urlMonth, year: urlYear, from: urlFrom, to: urlTo },
+    (cur, next) => ({ ...cur, ...next }),
+  )
 
   const hasRange = !!(from || to)
 
   function navigate(overrides: Partial<{ branch: string; month: string; year: string; from: string; to: string }>) {
-    router.push(buildFinanceUrl(baseParams, { ...overrides, page: undefined }))
+    startTransition(() => {
+      setOptimistic({
+        ...('branch' in overrides ? { branchId: overrides.branch ?? '' } : {}),
+        ...('month' in overrides ? { month: overrides.month ?? '' } : {}),
+        ...('year' in overrides ? { year: overrides.year ?? '' } : {}),
+        ...('from' in overrides ? { from: overrides.from ?? '' } : {}),
+        ...('to' in overrides ? { to: overrides.to ?? '' } : {}),
+      })
+      router.push(buildFinanceUrl(baseParams, { ...overrides, page: undefined }))
+    })
   }
 
   // Month/year and date range are alternative periods — picking one clears the other.
@@ -54,7 +74,8 @@ export function FinanceFilterBar({ branches, baseParams, branchId, showBranchSel
   ].join(' ')
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap" aria-busy={isPending}>
+      {isPending && <Loader2 size={16} className="animate-spin text-primary" aria-label="Memuat" />}
       {/* Director-only: other roles are scoped to their own branch by RLS. */}
       {showBranchSelect && (
         <select className={cls} value={branchId} onChange={e => navigate({ branch: e.target.value })}>

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
+import { fetchAllRows } from '@/lib/supabase/fetchAll'
 import { resolveTherapistNames } from '@/lib/finance/therapists'
 import { UUID_RE, byDateDesc, isServiceCategory, selectAttributedTransactions, type QueryBuilder } from '@/lib/finance/attribution'
 import {
@@ -21,6 +22,7 @@ interface RawSearchParams {
   tx_type?: string
   status?: string
   pay_status?: string
+  sort?: string
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -59,12 +61,13 @@ export function parseFinanceParams(params: RawSearchParams, savedPeriod?: string
     txType:    params.tx_type === 'income' ? 'income' : params.tx_type === 'expense' ? 'expense' : '',
     status:    params.status === 'pending' || params.status === 'confirmed' || params.status === 'rejected' ? params.status : '',
     payStatus: params.pay_status === 'LUNAS' || params.pay_status === 'DP' || params.pay_status === 'PELUNASAN' ? params.pay_status : '',
+    sort:      params.sort === 'patient_asc' || params.sort === 'patient_desc' ? params.sort : '',
     page:      Math.max(1, Number(params.page) || 1),
   }
 }
 
 export async function loadFinanceData(params: FinanceParams) {
-  const { branchId, month, year, from: rangeFrom, to: rangeTo, therapist, category, q, noPatient, txType, status, payStatus, page } = params
+  const { branchId, month, year, from: rangeFrom, to: rangeTo, therapist, category, q, noPatient, txType, status, payStatus, sort, page } = params
   const hasRange = !!(rangeFrom || rangeTo)
   const from = (page - 1) * PAGE_SIZE
   const to   = from + PAGE_SIZE - 1
@@ -123,6 +126,7 @@ export async function loadFinanceData(params: FinanceParams) {
   if (txType)    baseParams.tx_type    = txType
   if (status)    baseParams.status     = status
   if (payStatus) baseParams.pay_status = payStatus
+  if (sort)      baseParams.sort       = sort
 
   const supabase = await createClient()
 
@@ -139,8 +143,32 @@ export async function loadFinanceData(params: FinanceParams) {
 
   const AGG_COLS  = 'branch_id, type, harga, discount, amount, outstanding, branches!branch_id(name)'
   const LIST_COLS = 'id, branch_id, patient_id, visit_id, fisio_id, type, category, harga, discount, amount, outstanding, payment_method, payment_status, status, transaction_date, description, penjamin, receipt_url, branches!branch_id(name)'
+  const sortByPatient = sort === 'patient_asc' || sort === 'patient_desc'
+  const patientAsc = sort === 'patient_asc'
   type AggRow  = { branch_id: string; type: string; harga: number | null; discount: number | null; amount: number | null; outstanding: number | null; branches: unknown }
   type ListRow = Omit<TransactionRow, 'patient_name' | 'branch_name' | 'therapist' | 'service_name'> & { visit_id: string | null; fisio_id: string | null; branches: unknown }
+
+  // Sort by patient name. Names are encrypted and transactions.patient_id has
+  // no FK to patients (so PostgREST can't embed/order by it) — look up the
+  // plaintext patients.name_normalized for the rows' patients in chunks (keeps
+  // URLs short) and sort in memory. Rows without a name go last; ties newest first.
+  type SortRow = { id: string; patient_id: string | null; transaction_date: string }
+  async function sortRowsByPatient<T extends SortRow>(rows: T[]): Promise<T[]> {
+    const ids = [...new Set(rows.map(r => r.patient_id).filter((id): id is string => !!id))]
+    const chunks: string[][] = []
+    for (let i = 0; i < ids.length; i += 150) chunks.push(ids.slice(i, i + 150))
+    const results = await Promise.all(chunks.map(c => supabase.from('patients').select('id, name_normalized').in('id', c)))
+    const names = new Map<string, string>()
+    for (const { data } of results) for (const p of data ?? []) if (p.name_normalized) names.set(p.id, p.name_normalized)
+    const nameOf = (r: SortRow) => (r.patient_id ? names.get(r.patient_id) : undefined) ?? null
+    return rows.sort((a, b) => {
+      const na = nameOf(a), nb = nameOf(b)
+      if (na === nb) return byDateDesc(a, b)
+      if (na === null) return 1
+      if (nb === null) return -1
+      return patientAsc ? na.localeCompare(nb, 'id') : nb.localeCompare(na, 'id')
+    })
+  }
 
   // Scope shared by KPI aggregate and list: period, branch, service. The
   // therapist filter is applied by selectAttributedTransactions (two queries).
@@ -181,21 +209,44 @@ export async function loadFinanceData(params: FinanceParams) {
 
     // All txns for aggregate — always excludes rejected regardless of the list-level status
     // filter, since KPI cards / branch summary represent valid (non-voided) revenue.
-    // .limit(99999) overrides PostgREST's default 1000-row cap
+    // Read in 1000-row pages: the server caps every response at 1000 rows
+    // (.limit() can't raise it), which silently under-counted long periods.
     therapist
-      ? selectAttributedTransactions<AggRow>(supabase, AGG_COLS, therapist, (q2) => applyScope(q2.neq('status', 'rejected').limit(99999)))
-      : applyScope(supabase.from('transactions').select(AGG_COLS).neq('status', 'rejected').limit(99999))
-          .then((r: { data: AggRow[] | null }) => r.data ?? []) as Promise<AggRow[]>,
+      ? selectAttributedTransactions<AggRow>(supabase, AGG_COLS, therapist, (q2) => applyScope(q2.neq('status', 'rejected')))
+      : fetchAllRows<AggRow>((f, t) => applyScope(supabase.from('transactions').select(AGG_COLS).neq('status', 'rejected')).order('id').range(f, t)),
 
     // Paginated + searchable + filterable transactions. With a therapist the
     // two attributed queries are merged, so paginate in memory (one
     // therapist's rows — small).
     therapist
-      ? selectAttributedTransactions<ListRow>(supabase, LIST_COLS, therapist, (q2) => applyListFilters(applyScope(q2)).limit(99999))
-          .then((rows) => {
-            rows.sort(byDateDesc)
+      ? selectAttributedTransactions<ListRow>(supabase, LIST_COLS, therapist, (q2) => applyListFilters(applyScope(q2)))
+          .then(async (rows) => {
+            if (sortByPatient) await sortRowsByPatient(rows)
+            else rows.sort(byDateDesc)
             return { rows: rows.slice(from, to + 1), total: rows.length }
           })
+      : sortByPatient
+      // Sort keys for the whole filtered list (3 light columns), then full
+      // rows for the current page only.
+      // The server caps a response at 1000 rows regardless of .limit(), so
+      // read the keys in 1000-row pages (first page gives the count).
+      ? (async () => {
+          const keyPage = (i: number, withCount = false) => applyListFilters(applyScope(
+            supabase.from('transactions').select('id, patient_id, transaction_date', withCount ? { count: 'exact' } : undefined),
+          )).order('id').range(i, i + 999) as Promise<{ data: SortRow[] | null; count: number | null; error: { message: string } | null }>
+          const first = await keyPage(0, true)
+          if (first.error) throw new Error(first.error.message)
+          const rest = []
+          for (let i = 1000; i < (first.count ?? 0); i += 1000) rest.push(keyPage(i))
+          const pages = await Promise.all(rest)
+          for (const pg of pages) if (pg.error) throw new Error(pg.error.message)
+          const keys = await sortRowsByPatient([first, ...pages].flatMap(pg => pg.data ?? []))
+          const pageIds = keys.slice(from, to + 1).map(k => k.id)
+          if (pageIds.length === 0) return { rows: [], total: keys.length }
+          const { data } = await supabase.from('transactions').select(LIST_COLS).in('id', pageIds)
+          const byId = new Map(((data ?? []) as unknown as ListRow[]).map(row => [row.id, row]))
+          return { rows: pageIds.map(id => byId.get(id)).filter((row): row is ListRow => !!row), total: keys.length }
+        })()
       : applyListFilters(applyScope(
           supabase
             .from('transactions')

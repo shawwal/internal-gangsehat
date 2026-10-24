@@ -34,10 +34,10 @@ export function FinanceKpiCards({ totalIncome, totalCollected, totalOutstanding,
           </p>
           {totalNet >= 0
             ? <TrendingUp size={16} className="text-[#34C759]" />
-            : <TrendingDown size={16} className="text-destructive" />
+            : <TrendingDown size={16} className="text-[#FF3B30]" />
           }
         </div>
-        <p className={`text-lg sm:text-2xl leading-tight break-words font-bold ${totalNet >= 0 ? 'text-[#34C759]' : 'text-destructive'}`}>
+        <p className={`text-lg sm:text-2xl leading-tight break-words font-bold ${totalNet >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
           {formatRp(Math.abs(totalNet))}
         </p>
         <p className="text-xs text-muted-foreground mt-1">Keluar {formatRp(totalExpense)}</p>

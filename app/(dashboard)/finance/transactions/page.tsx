@@ -134,7 +134,7 @@ export default function TransactionsPage() {
     let list: Transaction[]
     if (therapistFilter) {
       // Two attributed queries (fisio_id / visit's therapist), each capped at 100 → merge, keep newest 100
-      const merged = await selectAttributedTransactions<Transaction>(supabase, '*', therapistFilter, applyFilters).catch(() => [])
+      const merged = await selectAttributedTransactions<Transaction>(supabase, '*', therapistFilter, applyFilters, { all: false }).catch(() => [])
       list = merged.sort(byDateDesc).slice(0, 100)
     } else {
       const { data } = await applyFilters(supabase.from('transactions').select('*'))

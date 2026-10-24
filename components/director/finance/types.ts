@@ -87,6 +87,8 @@ export interface FinanceParams {
   txType: 'income' | 'expense' | ''
   status: typeof TX_STATUS_VALUES[number] | ''
   payStatus: typeof PAY_STATUS_VALUES[number] | ''
+  /** List order: '' = newest first; patient_asc/desc = by patient name (A–Z / Z–A) */
+  sort: 'patient_asc' | 'patient_desc' | ''
   page: number
 }
 

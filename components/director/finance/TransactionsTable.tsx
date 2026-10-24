@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { ReclassifyButton } from './ReclassifyButton'
 import { EditTransactionSheet, type TransactionForEdit } from './EditTransactionSheet'
 import { PaymentProofLink } from '@/components/payments/PaymentProofField'
 import { TherapistLink } from '@/components/finance/TherapistLink'
 import {
-  buildFinanceUrl, formatRp, TX_STATUS_BADGE, TX_STATUS_LABEL, PAY_STATUS_BADGE, type TransactionRow,
+  buildFinanceUrl, formatRp, TX_STATUS_BADGE, TX_STATUS_LABEL, PAY_STATUS_BADGE, type FinanceParams, type TransactionRow,
 } from './types'
 
 const CLINICAL_INCOME_CATEGORIES = new Set([
@@ -16,11 +16,12 @@ interface Props {
   txns: TransactionRow[]
   showBranchColumn: boolean
   q: string
+  sort: FinanceParams['sort']
   baseParams: Record<string, string>
   periodRange?: { from: string; to: string }
 }
 
-export function TransactionsTable({ txns, showBranchColumn, q, baseParams, periodRange }: Props) {
+export function TransactionsTable({ txns, showBranchColumn, q, sort, baseParams, periodRange }: Props) {
   if (txns.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-14 gap-2">
@@ -48,7 +49,20 @@ export function TransactionsTable({ txns, showBranchColumn, q, baseParams, perio
             {showBranchColumn && (
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cabang</th>
             )}
-            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pasien / Keterangan</th>
+            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              {/* Cycles: A–Z → Z–A → default (newest first); back to page 1 */}
+              <Link
+                href={buildFinanceUrl(baseParams, {
+                  sort: sort === '' ? 'patient_asc' : sort === 'patient_asc' ? 'patient_desc' : undefined,
+                  page: undefined,
+                })}
+                title={sort === 'patient_asc' ? 'Urut nama Z–A' : sort === 'patient_desc' ? 'Kembali urut tanggal' : 'Urut nama pasien A–Z'}
+                className={`inline-flex items-center gap-1 uppercase hover:text-foreground transition-colors ${sort ? 'text-primary' : ''}`}
+              >
+                Pasien / Keterangan
+                {sort === 'patient_asc' ? <ArrowUp size={12} /> : sort === 'patient_desc' ? <ArrowDown size={12} /> : <ArrowUpDown size={12} className="opacity-50" />}
+              </Link>
+            </th>
             <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Terapis</th>
             <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Harga</th>
             <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Bayar</th>

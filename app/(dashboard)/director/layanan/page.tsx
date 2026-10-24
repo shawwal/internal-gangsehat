@@ -47,7 +47,7 @@ export default function LayananPage() {
   // add / edit row modal (editRow = null → add)
   const [showAdd, setShowAdd]   = useState(false)
   const [editRow, setEditRow]   = useState<LayananRow | null>(null)
-  const [addForm, setAddForm]   = useState({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '' })
+  const [addForm, setAddForm]   = useState({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '', deskripsi: '' })
   const [addSaving, setAddSaving] = useState(false)
   const [addError, setAddError]   = useState<string | null>(null)
 
@@ -115,7 +115,7 @@ export default function LayananPage() {
   // ── Add new / edit ───────────────────────────────────────────────────────────
   function openAdd() {
     setEditRow(null)
-    setAddForm({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '' })
+    setAddForm({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '', deskripsi: '' })
     setAddError(null)
     setShowAdd(true)
   }
@@ -127,6 +127,7 @@ export default function LayananPage() {
       kategori:    row.kategori,
       jumlah_sesi: row.jumlah_sesi != null ? String(row.jumlah_sesi) : '',
       harga:       String(row.harga),
+      deskripsi:   row.deskripsi ?? '',
     })
     setAddError(null)
     setShowAdd(true)
@@ -146,6 +147,7 @@ export default function LayananPage() {
       kategori:    addForm.kategori,
       jumlah_sesi: addForm.jumlah_sesi ? Number(addForm.jumlah_sesi) : null,
       harga:       Number(addForm.harga) || 0,
+      deskripsi:   addForm.deskripsi.trim() || null,
       is_active:   editRow?.is_active ?? true,
     })
     setAddSaving(false)
@@ -220,7 +222,7 @@ export default function LayananPage() {
       {/* Table */}
       <div className="glass-card overflow-hidden">
         {loading ? (
-          <RowsSkeleton rows={8} cols={5} />
+          <RowsSkeleton rows={8} cols={6} />
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
             <p className="text-sm">Belum ada layanan untuk {activeBranch?.name ?? 'cabang ini'}.</p>
@@ -237,6 +239,7 @@ export default function LayananPage() {
               <thead>
                 <tr className="border-b border-border/40 bg-muted/20">
                   {sortHeader('nama', 'Nama', 'left')}
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Deskripsi</th>
                   {sortHeader('kategori', 'Kategori', 'left')}
                   <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sesi</th>
                   {sortHeader('harga', 'Harga (Rp)', 'right')}
@@ -250,6 +253,13 @@ export default function LayananPage() {
                   <tr key={row.id} className={`transition-colors ${row.is_active ? 'hover:bg-muted/10' : 'opacity-50 hover:bg-muted/10'}`}>
                     {/* Nama */}
                     <td className="px-4 py-3 font-medium text-foreground">{row.nama}</td>
+
+                    {/* Deskripsi — table is nowrap, so long text truncates (full text on hover / in Edit) */}
+                    <td className="px-4 py-3 text-muted-foreground">
+                      <div className="max-w-[16rem] truncate" title={row.deskripsi ?? undefined}>
+                        {row.deskripsi || '—'}
+                      </div>
+                    </td>
 
                     {/* Kategori */}
                     <td className="px-4 py-3">
@@ -448,6 +458,17 @@ export default function LayananPage() {
                     onChange={(e) => setAddForm((f) => ({ ...f, harga: e.target.value }))}
                     placeholder="0"
                     className={inputCls}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium mb-1.5">Deskripsi <span className="text-muted-foreground font-normal">(opsional)</span></label>
+                  <textarea
+                    rows={3}
+                    value={addForm.deskripsi}
+                    onChange={(e) => setAddForm((f) => ({ ...f, deskripsi: e.target.value }))}
+                    placeholder="mis. 10 sesi terapi, berlaku 3 bulan"
+                    className={inputCls + ' resize-y'}
                   />
                 </div>
 

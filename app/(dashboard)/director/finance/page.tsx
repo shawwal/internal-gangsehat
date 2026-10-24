@@ -13,13 +13,15 @@ import { UrlTherapistServiceFilters } from '@/components/finance/TherapistServic
 import { Suspense } from 'react'
 import { cookies } from 'next/headers'
 import { FINANCE_PERIOD_COOKIE } from '@/components/director/finance/types'
+import { FinancePendingProvider, FinancePendingContent } from '@/components/director/finance/FinancePending'
+import { SkeletonRegion, StatCardsSkeleton, TableSkeleton } from '@/components/ui/Skeleton'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DirectorFinancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ branch?: string; month?: string; year?: string; from?: string; to?: string; therapist?: string; category?: string; page?: string; q?: string; no_patient?: string; tx_type?: string; status?: string; pay_status?: string }>
+  searchParams: Promise<{ branch?: string; month?: string; year?: string; from?: string; to?: string; therapist?: string; category?: string; page?: string; q?: string; no_patient?: string; tx_type?: string; status?: string; pay_status?: string; sort?: string }>
 }) {
   const rawParams = await searchParams
   const savedPeriod = (await cookies()).get(FINANCE_PERIOD_COOKIE)?.value
@@ -50,6 +52,7 @@ export default async function DirectorFinancePage({
   ])
 
   return (
+    <FinancePendingProvider>
     <div className="space-y-6 relative">
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none -z-10" />
 
@@ -79,6 +82,15 @@ export default async function DirectorFinancePage({
         </div>
       </div>
 
+      <FinancePendingContent
+        fallback={
+          <SkeletonRegion>
+            <StatCardsSkeleton count={4} />
+            <TableSkeleton rows={5} cols={5} />
+            <TableSkeleton rows={8} cols={6} />
+          </SkeletonRegion>
+        }
+      >
       {/* Therapist + service: scope KPIs, branch summary and the list */}
       <Suspense>
         <UrlTherapistServiceFilters
@@ -128,6 +140,7 @@ export default async function DirectorFinancePage({
           txns={txns}
           showBranchColumn={isDirector && !params.branchId}
           q={params.q}
+          sort={params.sort}
           baseParams={baseParams}
           periodRange={periodRange}
         />
@@ -139,6 +152,8 @@ export default async function DirectorFinancePage({
           baseParams={baseParams}
         />
       </div>
+      </FinancePendingContent>
     </div>
+    </FinancePendingProvider>
   )
 }

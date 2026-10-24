@@ -47,11 +47,11 @@ export function BranchSummaryTable({
                   <td className="px-4 py-3.5 text-right font-mono text-sm text-[#FFB35C]">
                     {b.outstanding > 0 ? formatRp(b.outstanding) : <span className="text-muted-foreground/50">—</span>}
                   </td>
-                  <td className="px-4 py-3.5 text-right font-mono text-sm text-destructive">
+                  <td className="px-4 py-3.5 text-right font-mono text-sm text-[#FF3B30]">
                     {b.expense > 0 ? formatRp(b.expense) : <span className="text-muted-foreground/50">—</span>}
                   </td>
                   <td className="px-5 py-3.5 text-right">
-                    <span className={`font-mono text-sm font-semibold ${b.net >= 0 ? 'text-[#34C759]' : 'text-destructive'}`}>
+                    <span className={`font-mono text-sm font-semibold ${b.net >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
                       {b.net >= 0 ? '+' : '-'}{formatRp(Math.abs(b.net))}
                     </span>
                   </td>
@@ -64,9 +64,9 @@ export function BranchSummaryTable({
                 <td className="px-4 py-3 text-right font-mono text-sm font-bold text-foreground">{formatRp(totalIncome)}</td>
                 <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#34C759]">{formatRp(totalCollected)}</td>
                 <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#FFB35C]">{formatRp(totalOutstanding)}</td>
-                <td className="px-4 py-3 text-right font-mono text-sm font-bold text-destructive">{formatRp(totalExpense)}</td>
+                <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#FF3B30]">{formatRp(totalExpense)}</td>
                 <td className="px-5 py-3 text-right">
-                  <span className={`font-mono text-sm font-bold ${totalNet >= 0 ? 'text-[#34C759]' : 'text-destructive'}`}>
+                  <span className={`font-mono text-sm font-bold ${totalNet >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
                     {totalNet >= 0 ? '+' : '-'}{formatRp(Math.abs(totalNet))}
                   </span>
                 </td>
