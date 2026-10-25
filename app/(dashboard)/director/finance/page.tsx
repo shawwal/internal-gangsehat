@@ -2,6 +2,7 @@ import { AddTransactionSheet } from '@/components/director/finance/AddTransactio
 import { FinanceFilterBar } from '@/components/director/finance/FinanceFilterBar'
 import { FinanceKpiCards } from '@/components/director/finance/FinanceKpiCards'
 import { BranchSummaryTable } from '@/components/director/finance/BranchSummaryTable'
+import { FinanceExportButton } from '@/components/director/finance/FinanceExportButton'
 import { TransactionsToolbar } from '@/components/director/finance/TransactionsToolbar'
 import { TransactionsTable } from '@/components/director/finance/TransactionsTable'
 import { TransactionsPagination } from '@/components/director/finance/TransactionsPagination'
@@ -68,6 +69,10 @@ export default async function DirectorFinancePage({
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
+          <FinanceExportButton
+            baseParams={baseParams}
+            therapistName={therapistOptions.find(t => t.id === params.therapist)?.name}
+          />
           <AddTransactionSheet branches={branchList} />
           <FinanceFilterBar
             branches={branchList}

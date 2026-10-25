@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
-import { fetchAllRows } from '@/lib/supabase/fetchAll'
+import { fetchAllRows, fetchInChunks } from '@/lib/supabase/fetchAll'
 import { resolveTherapistNames } from '@/lib/finance/therapists'
 import { UUID_RE, byDateDesc, isServiceCategory, selectAttributedTransactions, type QueryBuilder } from '@/lib/finance/attribution'
 import {
@@ -66,7 +66,8 @@ export function parseFinanceParams(params: RawSearchParams, savedPeriod?: string
   }
 }
 
-export async function loadFinanceData(params: FinanceParams) {
+/** `all` = every row matching the filters instead of the current page (Excel export). */
+export async function loadFinanceData(params: FinanceParams, { all = false }: { all?: boolean } = {}) {
   const { branchId, month, year, from: rangeFrom, to: rangeTo, therapist, category, q, noPatient, txType, status, payStatus, sort, page } = params
   const hasRange = !!(rangeFrom || rangeTo)
   const from = (page - 1) * PAGE_SIZE
@@ -223,7 +224,7 @@ export async function loadFinanceData(params: FinanceParams) {
           .then(async (rows) => {
             if (sortByPatient) await sortRowsByPatient(rows)
             else rows.sort(byDateDesc)
-            return { rows: rows.slice(from, to + 1), total: rows.length }
+            return { rows: all ? rows : rows.slice(from, to + 1), total: rows.length }
           })
       : sortByPatient
       // Sort keys for the whole filtered list (3 light columns), then full
@@ -241,12 +242,17 @@ export async function loadFinanceData(params: FinanceParams) {
           const pages = await Promise.all(rest)
           for (const pg of pages) if (pg.error) throw new Error(pg.error.message)
           const keys = await sortRowsByPatient([first, ...pages].flatMap(pg => pg.data ?? []))
-          const pageIds = keys.slice(from, to + 1).map(k => k.id)
+          const pageIds = (all ? keys : keys.slice(from, to + 1)).map(k => k.id)
           if (pageIds.length === 0) return { rows: [], total: keys.length }
-          const { data } = await supabase.from('transactions').select(LIST_COLS).in('id', pageIds)
-          const byId = new Map(((data ?? []) as unknown as ListRow[]).map(row => [row.id, row]))
+          const data = await fetchInChunks<ListRow>(pageIds, c => supabase.from('transactions').select(LIST_COLS).in('id', c) as unknown as PromiseLike<{ data: ListRow[] | null; error: unknown }>)
+          const byId = new Map(data.map(row => [row.id, row]))
           return { rows: pageIds.map(id => byId.get(id)).filter((row): row is ListRow => !!row), total: keys.length }
         })()
+      : all
+      ? fetchAllRows<ListRow>((f, t) => applyListFilters(applyScope(
+          supabase.from('transactions').select(LIST_COLS),
+        )).order('transaction_date', { ascending: false }).order('id', { ascending: false }).range(f, t))
+          .then(rows => ({ rows, total: rows.length }))
       : applyListFilters(applyScope(
           supabase
             .from('transactions')
@@ -291,10 +297,9 @@ export async function loadFinanceData(params: FinanceParams) {
   // ── Current page: decrypt patient names + resolve therapists in parallel ──
   const patientIds = [...new Set((txnRows ?? []).map(r => r.patient_id).filter(Boolean))]
   const nameMap = new Map<string, string>()
-  const [{ data: patients }, therapistMap] = await Promise.all([
-    patientIds.length > 0
-      ? supabase.from('patients').select('id, encrypted_name, encrypted_phone').in('id', patientIds)
-      : Promise.resolve({ data: [] as { id: string; encrypted_name: string | null; encrypted_phone: string | null }[] }),
+  type PatientRow = { id: string; encrypted_name: string | null; encrypted_phone: string | null }
+  const [patients, therapistMap] = await Promise.all([
+    fetchInChunks<PatientRow>(patientIds as string[], c => supabase.from('patients').select('id, encrypted_name, encrypted_phone').in('id', c)),
     resolveTherapistNames(supabase, txnRows ?? []),
   ])
 
@@ -304,15 +309,13 @@ export async function loadFinanceData(params: FinanceParams) {
   const rows = txnRows ?? []
   const visitIds = [...new Set(rows.map(r => r.visit_id).filter((id): id is string => !!id))]
   const txBranchIds = [...new Set(rows.map(r => r.branch_id).filter(Boolean))]
-  const [{ data: visits }, { data: layananRows }] = await Promise.all([
-    visitIds.length > 0
-      ? supabase.from('patient_visits').select('id, layanan_id').in('id', visitIds)
-      : Promise.resolve({ data: [] as { id: string; layanan_id: string | null }[] }),
+  const [visits, { data: layananRows }] = await Promise.all([
+    fetchInChunks<{ id: string; layanan_id: string | null }>(visitIds, c => supabase.from('patient_visits').select('id, layanan_id').in('id', c)),
     txBranchIds.length > 0
       ? supabase.from('internal_layanan').select('id, branch_id, nama, kategori, harga').in('branch_id', txBranchIds)
       : Promise.resolve({ data: [] as { id: string; branch_id: string; nama: string; kategori: string; harga: number }[] }),
   ])
-  const visitLayanan = new Map((visits ?? []).map(v => [v.id, v.layanan_id]))
+  const visitLayanan = new Map(visits.map(v => [v.id, v.layanan_id]))
   const layananById = new Map((layananRows ?? []).map(l => [l.id, l]))
   function serviceName(r: { branch_id: string; category: string; harga: number | null; visit_id: string | null }): string | null {
     const booked = r.visit_id ? visitLayanan.get(r.visit_id) : null
@@ -324,7 +327,7 @@ export async function loadFinanceData(params: FinanceParams) {
     return null
   }
 
-  for (const p of patients ?? []) {
+  for (const p of patients) {
     try {
       const dec = decryptPatientPII({ encrypted_name: p.encrypted_name ?? '', encrypted_phone: p.encrypted_phone ?? '' })
       nameMap.set(p.id, dec.name || 'Pasien')

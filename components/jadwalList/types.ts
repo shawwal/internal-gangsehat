@@ -1,11 +1,17 @@
-import type { JadwalListRow } from '@/app/actions/jadwalList'
+import type { JadwalListRow, JadwalTarifOption } from '@/app/actions/jadwalList'
 import type { AdminStatus } from '@/lib/internal/visitInsights'
 
-export type { JadwalListRow, AdminStatus }
+export type { JadwalListRow, JadwalTarifOption, AdminStatus }
 
 export const PAGE_SIZE_OPTIONS = [10, 25, 50] as const
 export const DEFAULT_PAGE_SIZE = 50
 export const PAGE_SIZE_STORAGE_KEY = 'jadwal_list_page_size'
+
+/** Longest date range the list loads at once — every day pulls its own visits, payments and records. */
+export const MAX_RANGE_DAYS = 31
+
+/** Layanan filter value for visits that don't resolve to a Tarif Layanan entry. */
+export const NO_TARIF = '__none__'
 
 export const STATUS_LABEL: Record<AdminStatus, string> = {
   BELUM_DIPERIKSA: 'Belum Diperiksa',

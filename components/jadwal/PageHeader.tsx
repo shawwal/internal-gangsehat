@@ -6,9 +6,11 @@ interface PageHeaderProps {
   date: Date
   loading: boolean
   onRefresh: () => void
+  /** Replaces the formatted date line (e.g. a date range) */
+  subtitle?: string
 }
 
-export function PageHeader({ date, loading, onRefresh }: PageHeaderProps) {
+export function PageHeader({ date, loading, onRefresh, subtitle }: PageHeaderProps) {
   const weekGroup = getWeekGroupForDate(date)
   return (
     <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -23,7 +25,7 @@ export function PageHeader({ date, loading, onRefresh }: PageHeaderProps) {
               {weekGroup === 'MINGGU_1' ? 'Minggu 1' : 'Minggu 2'}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">{fmtHeaderDate(date)}</p>
+          <p className="text-sm text-muted-foreground">{subtitle ?? fmtHeaderDate(date)}</p>
         </div>
       </div>
 

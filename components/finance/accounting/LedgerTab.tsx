@@ -18,6 +18,7 @@ import { PaymentProofField, PaymentProofLink } from '@/components/payments/Payme
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 import { FisioSelect, isTherapistCategory } from '@/components/finance/FisioSelect'
 import { LayananIncomePicker, needsLayananPick, type LayananPick } from '@/components/finance/LayananIncomePicker'
+import { isPackageCategory } from '@/lib/serviceType'
 
 // Rupiah fields are text inputs holding digits only, shown with id-ID thousand
 // dots — a type="number" input reads "2.400.000" as 2.4 and drops the rest.
@@ -288,6 +289,12 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
                   </td>
                   <td className={`px-4 py-3 text-right font-medium ${isIncome ? 'text-chart-4' : 'text-destructive'}`}>
                     {isIncome ? '+' : '-'}{formatRp(r.amount)}
+                    {/* A package is often paid in installments (DP … LUNAS) — show its full price */}
+                    {isIncome && isPackageCategory(r.category) && Number(r.harga) > 0 && (
+                      <p className="text-xs font-normal text-muted-foreground whitespace-nowrap">
+                        Harga paket {formatRp(Number(r.harga))}{r.payment_status ? ` · ${r.payment_status}` : ''}
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
                     <div className="flex items-center gap-1.5">{r.payment_method ?? '—'} <PaymentProofLink path={r.receipt_url} /></div>

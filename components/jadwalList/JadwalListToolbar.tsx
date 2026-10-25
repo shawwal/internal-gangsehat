@@ -1,16 +1,20 @@
 'use client'
 
-import { PAGE_SIZE_OPTIONS } from './types'
+import { NO_TARIF, PAGE_SIZE_OPTIONS, type JadwalTarifOption } from './types'
 
 interface Props {
   pageSize: number
   onPageSizeChange: (n: number) => void
+  dateFrom: string
+  dateTo: string
+  onDateFromChange: (iso: string) => void
+  onDateToChange: (iso: string) => void
   fisioOptions: string[]
   fisio: string
   onFisioChange: (v: string) => void
-  layananOptions: string[]
-  layanan: string
-  onLayananChange: (v: string) => void
+  tarifOptions: JadwalTarifOption[]
+  tarif: string
+  onTarifChange: (v: string) => void
   kehadiran: string
   onKehadiranChange: (v: string) => void
 }
@@ -19,10 +23,15 @@ const selectCls = 'px-2.5 py-1.5 border border-border rounded-xl bg-input text-f
 
 export function JadwalListToolbar({
   pageSize, onPageSizeChange,
+  dateFrom, dateTo, onDateFromChange, onDateToChange,
   fisioOptions, fisio, onFisioChange,
-  layananOptions, layanan, onLayananChange,
+  tarifOptions, tarif, onTarifChange,
   kehadiran, onKehadiranChange,
 }: Props) {
+  // Tarif Layanan grouped by kategori, like the price-list page
+  const groups = new Map<string, JadwalTarifOption[]>()
+  for (const t of tarifOptions) groups.set(t.kategori, [...(groups.get(t.kategori) ?? []), t])
+
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
       <select
@@ -36,14 +45,39 @@ export function JadwalListToolbar({
       </select>
       <span>data</span>
 
-      <select value={fisio} onChange={(e) => onFisioChange(e.target.value)} className={`${selectCls} ml-2`}>
+      <div className="flex items-center gap-1.5 ml-2">
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => e.target.value && onDateFromChange(e.target.value)}
+          aria-label="Dari tanggal"
+          className={selectCls}
+        />
+        <span>–</span>
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => e.target.value && onDateToChange(e.target.value)}
+          aria-label="Sampai tanggal"
+          className={selectCls}
+        />
+      </div>
+
+      <select value={fisio} onChange={(e) => onFisioChange(e.target.value)} className={selectCls}>
         <option value="">Semua Fisio</option>
         {fisioOptions.map((f) => <option key={f} value={f}>{f}</option>)}
       </select>
 
-      <select value={layanan} onChange={(e) => onLayananChange(e.target.value)} className={selectCls}>
+      <select value={tarif} onChange={(e) => onTarifChange(e.target.value)} className={selectCls}>
         <option value="">Semua Layanan</option>
-        {layananOptions.map((l) => <option key={l} value={l}>{l}</option>)}
+        {[...groups].map(([kategori, items]) => (
+          <optgroup key={kategori} label={kategori}>
+            {items.map((t) => (
+              <option key={t.id} value={t.id}>{t.nama}{t.is_active ? '' : ' (nonaktif)'}</option>
+            ))}
+          </optgroup>
+        ))}
+        <option value={NO_TARIF}>Tanpa tarif layanan</option>
       </select>
 
       <select value={kehadiran} onChange={(e) => onKehadiranChange(e.target.value)} className={selectCls}>

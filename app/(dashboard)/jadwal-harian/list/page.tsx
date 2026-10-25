@@ -8,16 +8,22 @@ import { DateNav } from '@/components/jadwal/DateNav'
 import { JadwalListToolbar } from '@/components/jadwalList/JadwalListToolbar'
 import type { EditField } from '@/components/jadwalList/JadwalListRow'
 import { JadwalListTable } from '@/components/jadwalList/JadwalListTable'
+import { JadwalListExportButton } from '@/components/jadwalList/JadwalListExportButton'
 import { Pagination } from '@/components/leave/Pagination'
-import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, PAGE_SIZE_STORAGE_KEY, type JadwalListRow } from '@/components/jadwalList/types'
+import {
+  DEFAULT_PAGE_SIZE, MAX_RANGE_DAYS, NO_TARIF, PAGE_SIZE_OPTIONS, PAGE_SIZE_STORAGE_KEY,
+  type JadwalListRow, type JadwalTarifOption,
+} from '@/components/jadwalList/types'
 import { fetchBranchStaff, type BranchStaffMember } from '@/app/actions/jadwal'
+import { fetchJadwalTarifOptions } from '@/app/actions/jadwalList'
+import { addDays, fmtHeaderDate, isSameDay, toIso } from '@/components/jadwal/utils'
 import { fetchWaConfigAll, type WaConfigAll } from '@/app/actions/reminder-template'
 import { resolveWaConfig } from '@/lib/waConfig'
 import { fillTemplate, formatDate, formatHari, formatWaNumber } from '@/lib/utils'
 
 export default function JadwalHarianListPage() {
   const {
-    today, selectedDate, setSelectedDate,
+    today, dateFrom, dateTo, setSelectedDate, setDateRange,
     rows, loading, error,
     branches, selectedBranchId, setSelectedBranchId,
     reload, handleCancel, handleEdit,
@@ -41,7 +47,7 @@ export default function JadwalHarianListPage() {
   }
   const [waConfig, setWaConfig] = useState<WaConfigAll | null>(null)
   const [fisioFilter, setFisioFilter]     = useState('')
-  const [layananFilter, setLayananFilter] = useState('')
+  const [tarifFilter, setTarifFilter]     = useState('')
   const [kehadiranFilter, setKehadiranFilter] = useState('')
 
   const [staff, setStaff] = useState<BranchStaffMember[]>([])
@@ -50,6 +56,26 @@ export default function JadwalHarianListPage() {
     fetchBranchStaff(selectedBranchId).then(setStaff).catch(() => setStaff([]))
   }, [selectedBranchId])
   const staffOptions = staff.map((s) => ({ value: s.id, label: s.nickname || s.full_name }))
+
+  // Layanan filter options come from the branch's Tarif Layanan price list.
+  const [tarifList, setTarifList] = useState<JadwalTarifOption[]>([])
+  useEffect(() => {
+    if (!selectedBranchId) { setTarifList([]); return }
+    fetchJadwalTarifOptions(selectedBranchId).then(setTarifList).catch(() => setTarifList([]))
+  }, [selectedBranchId])
+
+  // Keep the range within MAX_RANGE_DAYS by pulling the other end along.
+  const fromDate = (iso: string) => new Date(iso + 'T00:00:00')
+  function changeDateFrom(iso: string) {
+    const from = fromDate(iso)
+    const maxTo = addDays(from, MAX_RANGE_DAYS - 1)
+    setDateRange(from, dateTo < from ? from : dateTo > maxTo ? maxTo : dateTo)
+  }
+  function changeDateTo(iso: string) {
+    const to = fromDate(iso)
+    const minFrom = addDays(to, -(MAX_RANGE_DAYS - 1))
+    setDateRange(dateFrom > to ? to : dateFrom < minFrom ? minFrom : dateFrom, to)
+  }
 
   async function handleEditRow(row: JadwalListRow, field: EditField, value: string) {
     const v = value === '' ? null : value
@@ -67,20 +93,31 @@ export default function JadwalHarianListPage() {
     fetchWaConfigAll().then(setWaConfig)
   }, [])
 
-  useEffect(() => { setPage(1) }, [selectedDate, selectedBranchId, pageSize, fisioFilter, layananFilter, kehadiranFilter])
+  useEffect(() => { setPage(1) }, [dateFrom, dateTo, selectedBranchId, pageSize, fisioFilter, tarifFilter, kehadiranFilter])
 
   const uniqueSorted = (vals: (string | null)[]) =>
     [...new Set(vals.filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b, 'id'))
   const fisioOptions   = uniqueSorted(rows.map((r) => r.attending_staff_name))
-  const layananOptions = uniqueSorted(rows.map((r) => r.layanan_label))
+  // Active tariffs, plus inactive ones that still appear in the loaded visits
+  const usedTarif   = new Set(rows.map((r) => r.tarif_id))
+  const tarifOptions = tarifList.filter((t) => t.is_active || usedTarif.has(t.id))
 
   const filteredRows = rows.filter((r) =>
     (!fisioFilter || r.attending_staff_name === fisioFilter) &&
-    (!layananFilter || r.layanan_label === layananFilter) &&
+    (!tarifFilter || (tarifFilter === NO_TARIF ? !r.tarif_id : r.tarif_id === tarifFilter)) &&
     (!kehadiranFilter || (kehadiranFilter === 'BELUM' ? !r.kehadiran : r.kehadiran === kehadiranFilter)))
   const total = filteredRows.length
   const from = (page - 1) * pageSize
   const pagedRows = filteredRows.slice(from, from + pageSize)
+
+  const isRange = !isSameDay(dateFrom, dateTo)
+  const rangeLabel = isRange ? `${fmtHeaderDate(dateFrom)} – ${fmtHeaderDate(dateTo)}` : fmtHeaderDate(dateFrom)
+  const branchName = branches.find((b) => b.id === selectedBranchId)?.name ?? ''
+  const activeFilters = [
+    fisioFilter && `Fisio: ${fisioFilter}`,
+    tarifFilter && `Layanan: ${tarifFilter === NO_TARIF ? 'Tanpa tarif layanan' : tarifList.find((t) => t.id === tarifFilter)?.nama ?? '—'}`,
+    kehadiranFilter && `Kehadiran: ${kehadiranFilter === 'BELUM' ? 'Belum Diisi' : kehadiranFilter}`,
+  ].filter((f): f is string => !!f)
 
   function handleRemind(row: JadwalListRow) {
     if (!row.patient_phone) return
@@ -129,31 +166,44 @@ export default function JadwalHarianListPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <PageHeader date={selectedDate} loading={loading} onRefresh={reload} />
-        {branches.length > 0 && (
-          <select
-            value={selectedBranchId ?? ''}
-            onChange={(e) => setSelectedBranchId(e.target.value || null)}
-            className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-          >
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-        )}
+        <PageHeader date={dateFrom} loading={loading} onRefresh={reload} subtitle={rangeLabel} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <JadwalListExportButton
+            rows={filteredRows}
+            branchName={branchName}
+            dateFrom={toIso(dateFrom)}
+            dateTo={toIso(dateTo)}
+            filters={activeFilters}
+          />
+          {branches.length > 0 && (
+            <select
+              value={selectedBranchId ?? ''}
+              onChange={(e) => { setTarifFilter(''); setSelectedBranchId(e.target.value || null) }}
+              className="px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+            >
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
-      <DateNav selectedDate={selectedDate} today={today} onSelect={setSelectedDate} />
+      <DateNav selectedDate={dateFrom} today={today} onSelect={setSelectedDate} />
 
       <JadwalListToolbar
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        dateFrom={toIso(dateFrom)}
+        dateTo={toIso(dateTo)}
+        onDateFromChange={changeDateFrom}
+        onDateToChange={changeDateTo}
         fisioOptions={fisioOptions}
         fisio={fisioFilter}
         onFisioChange={setFisioFilter}
-        layananOptions={layananOptions}
-        layanan={layananFilter}
-        onLayananChange={setLayananFilter}
+        tarifOptions={tarifOptions}
+        tarif={tarifFilter}
+        onTarifChange={setTarifFilter}
         kehadiran={kehadiranFilter}
         onKehadiranChange={setKehadiranFilter}
       />
