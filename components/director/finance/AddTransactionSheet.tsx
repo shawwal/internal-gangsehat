@@ -6,6 +6,7 @@ import { Plus, X, Check, AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createTransactionManual } from '@/app/actions/transactions'
 import { FisioSelect, isTherapistCategory } from '@/components/finance/FisioSelect'
+import { LayananIncomePicker, needsLayananPick, type LayananPick } from '@/components/finance/LayananIncomePicker'
 import { todayJakartaISO } from '@/lib/utils'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
@@ -14,7 +15,6 @@ import { OnlineMethodPicker } from '@/components/payment-links/OnlineMethodPicke
 import { PayOnlineFlow } from '@/components/payment-links/PayOnlineFlow'
 import type { PaymentLinkTarget } from '@/components/payment-links/types'
 
-const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'TOKO', 'LAINNYA']
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
 const PAYMENT_STATUSES = ['LUNAS', 'DP', 'PELUNASAN']
@@ -41,6 +41,9 @@ function getDefault() {
     branch_id:        '',
     receipt_url:      null as string | null,
     fisio_id:         '',
+    // Income: the Tarif Layanan item picked (sets category + harga)
+    layanan_id:       null as string | null,
+    layanan_nama:     '',
   }
 }
 
@@ -75,7 +78,10 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
   useEffect(() => {
     setForm(f => ({
       ...f,
-      category: f.type === 'income' ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0],
+      // Income kategori comes from the branch price list (LayananIncomePicker)
+      category: f.type === 'income' ? '' : EXPENSE_CATEGORIES[0],
+      layanan_id: null,
+      layanan_nama: '',
       payment_method: f.type !== 'income' && f.payment_method === ONLINE_PAYMENT ? 'TUNAI' : f.payment_method,
     }))
   }, [form.type])
@@ -91,7 +97,6 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
     else if (amount > 0 && sisa > 0) setForm(f => ({ ...f, payment_status: 'DP' }))
   }, [form.harga, form.amount, form.discount, form.type])
 
-  const categories = form.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
   const isIncome   = form.type === 'income'
   const harga      = parseRp(form.harga)
   const amount     = parseRp(form.amount)
@@ -99,6 +104,17 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
   const sisa       = isIncome ? Math.max(harga - amount - discount, 0) : 0
   const isOnline   = isIncome && form.payment_method === ONLINE_PAYMENT
   const methods    = isIncome ? [...PAYMENT_METHODS, ONLINE_PAYMENT] : PAYMENT_METHODS
+  const description = form.description || (isIncome ? form.layanan_nama : '') || null
+
+  function handleLayananPick({ kategori, layanan }: LayananPick) {
+    setForm(f => ({
+      ...f,
+      category:     kategori,
+      layanan_id:   layanan?.id ?? null,
+      layanan_nama: layanan?.nama ?? '',
+      ...(layanan ? { harga: formatRp(Number(layanan.harga)), amount: formatRp(Number(layanan.harga)) } : {}),
+    }))
+  }
 
   function close() {
     if (status === 'saving') return
@@ -109,6 +125,12 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (status === 'saving' || proofUploading) return
+    if (isIncome && (!form.category || needsLayananPick(form.category, form.layanan_id))) {
+      setStatus('error')
+      setErrMsg(form.branch_id ? 'Pilih layanan dari Tarif Layanan cabang.' : 'Pilih cabang terlebih dahulu.')
+      setTimeout(() => setStatus('idle'), 600)
+      return
+    }
     if (isOnline) {
       setOnlineTarget({
         method:      onlineMethod,
@@ -116,7 +138,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
         harga:       harga || null,
         discount:    discount || null,
         category:    form.category,
-        description: form.description || null,
+        description,
         branchId:    form.branch_id || null,
       })
       close()
@@ -153,11 +175,12 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
       payment_method:   form.payment_method,
       payment_status:   isIncome ? form.payment_status : null,
       penjamin:         null,
-      description:      form.description || null,
+      description,
       transaction_date: form.transaction_date,
       branch_id:        form.branch_id,
       receipt_url:      needsProof ? form.receipt_url : null,
       fisio_id:         isIncome ? (form.fisio_id || null) : null,
+      enforcePriceList: true,
     })
 
     if (error) {
@@ -239,7 +262,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Cabang</label>
               <select
                 value={form.branch_id}
-                onChange={e => setForm(f => ({ ...f, branch_id: e.target.value, fisio_id: '' }))}
+                onChange={e => setForm(f => ({ ...f, branch_id: e.target.value, fisio_id: '', category: f.type === 'income' ? '' : f.category, layanan_id: null, layanan_nama: '' }))}
                 required
                 className="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
@@ -261,17 +284,29 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
             />
           </div>
 
-          {/* Category */}
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Kategori</label>
-            <select
-              value={form.category}
-              onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
+          {/* Category — income: kategori + layanan from the branch's Tarif Layanan */}
+          {isIncome ? (
+            <LayananIncomePicker
+              key={form.branch_id}
+              branchId={form.branch_id || null}
+              kategori={form.category}
+              layananId={form.layanan_id}
+              onChange={handleLayananPick}
+              selectClassName="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              labelClassName="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5"
+            />
+          ) : (
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Kategori</label>
+              <select
+                value={form.category}
+                onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          )}
 
           {/* Harga (income) / Nominal (expense) */}
           <div>
@@ -420,7 +455,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               rows={2}
-              placeholder={isIncome ? 'Catatan tambahan…' : 'Detail pengeluaran, e.g. beli sabun, bayar listrik…'}
+              placeholder={isIncome ? (form.layanan_nama || 'Catatan tambahan…') : 'Detail pengeluaran, e.g. beli sabun, bayar listrik…'}
               className="w-full px-3 py-2.5 rounded-xl border border-border bg-input text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>

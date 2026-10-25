@@ -5,14 +5,14 @@ import {
   AlertTriangle, Calendar, CheckCircle2, ChevronDown, ChevronUp,
   CreditCard, Landmark, Loader2, QrCode, Stethoscope, User, X,
 } from 'lucide-react'
-import { createTransactionForVisit, updateTransaction, getPatientOutstanding, fetchLayananHarga } from '@/app/actions/transactions'
+import { createTransactionForVisit, updateTransaction, getPatientOutstanding } from '@/app/actions/transactions'
 import type { OutstandingTransaction } from '@/app/actions/transactions'
 import { updateVisit, type VisitTransaction } from '@/app/actions/jadwal'
 import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
 import { createPackageForVisit, fetchPackageBrief } from '@/app/actions/packages'
 import {
   SERVICE_TYPES, SERVICE_TO_CATEGORY, CATEGORY_TO_SERVICE_TYPE, getEffectivePackageServiceType,
-  isPackageCategory, packageCategoryForKategori,
+  isPackageCategory, packageCategoryForKategori, branchIncomeKategori,
 } from '@/lib/serviceType'
 import type { ServiceType } from '@/types'
 import { SettlePaymentDialog } from '@/components/finance/SettlePaymentDialog'
@@ -74,6 +74,24 @@ const ONLINE = ONLINE_PAYMENT
 
 const inputCls = 'w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
+/** Branch price-list items that can bill a visit of this service type. */
+function layananOptionsFor(rows: LayananRow[], serviceType: ServiceType): LayananRow[] {
+  const category = SERVICE_TO_CATEGORY[serviceType]
+  return rows.filter((l) => {
+    if (!l.is_active) return false
+    if (serviceType === 'SPORT MASSAGE') return l.kategori === 'SPORT MASSAGE' || packageCategoryForKategori(l.kategori) === 'PAKET SPORT MASSAGE'
+    if (isPackageCategory(category)) return packageCategoryForKategori(l.kategori) === category
+    return l.kategori === category
+  })
+}
+
+type PackageBrief = Awaited<ReturnType<typeof fetchPackageBrief>>
+
+/** A service type is billable in a branch when its Tarif Layanan has the category. */
+function isBillableIn(priced: string[], s: ServiceType): boolean {
+  return priced.includes(SERVICE_TO_CATEGORY[s]) || (s === 'SPORT MASSAGE' && priced.includes('PAKET SPORT MASSAGE'))
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }: Props) {
   const isEditing = !!existingTransaction
@@ -101,25 +119,23 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   const [proofPath, setProofPath]         = useState<string | null>(existingTransaction?.receipt_url ?? null)
   const [proofUploading, setProofUploading] = useState(false)
 
-  // Branch price list (internal_layanan) for this kind of service — Sport Massage
-  // types, or the branch's package tariffs (e.g. Griya Anak "Paket Terapi 1/2").
-  // Picking one sets Harga; picking a package for a visit with no package yet
-  // creates the package on save, so it shows up under "Paket Aktif".
-  const [branchLayanan, setBranchLayanan] = useState<LayananRow[]>([])
+  // Branch price list (internal_layanan, /director/layanan): every kategori bills
+  // from it. Picking an item sets Harga; picking a package for a visit with no
+  // package yet creates the package on save, so it shows up under "Paket Aktif".
+  // null = still loading.
+  const [branchLayanan, setBranchLayanan] = useState<LayananRow[] | null>(visit.branch_id ? null : [])
   const [layananId, setLayananId]         = useState<string | null>(visit.layanan_id ?? null)
-  // The price-list item the visit was booked with (Griya books every visit from
-  // one). undefined = still loading; null = none.
-  const [bookedLayanan, setBookedLayanan] = useState<LayananRow | null | undefined>(
-    visit.layanan_id && visit.branch_id ? undefined : null,
-  )
+  // The visit's package (to preselect its tariff)
+  const [pkgBrief, setPkgBrief] = useState<PackageBrief | null>(null)
+  // The price-list item the visit was booked with (Griya books every visit from one).
+  const bookedLayanan = visit.layanan_id ? (branchLayanan?.find((l) => l.id === visit.layanan_id) ?? null) : null
   const isSportMassage = serviceType === 'SPORT MASSAGE'
   const baseCategory = SERVICE_TO_CATEGORY[serviceType]
-  const layananOptions = branchLayanan.filter((l) => {
-    if (!l.is_active) return false
-    if (isSportMassage) return l.kategori === 'SPORT MASSAGE' || packageCategoryForKategori(l.kategori) === 'PAKET SPORT MASSAGE'
-    return isPackageCategory(baseCategory) && packageCategoryForKategori(l.kategori) === baseCategory
-  })
+  const layananOptions = branchLayanan ? layananOptionsFor(branchLayanan, serviceType) : []
   const selectedLayanan = layananOptions.find((l) => l.id === layananId) ?? null
+  // Layanan / Kategori choices: only what this branch's price list sells (+ the current value)
+  const pricedKategori = branchLayanan ? branchIncomeKategori(branchLayanan) : null
+  const serviceTypeOptions = SERVICE_TYPES.filter((s) => s === serviceType || !pricedKategori || isBillableIn(pricedKategori, s))
   // Billing category: a Sport Massage package (chosen now, or the visit already
   // belongs to one) is income under PAKET SPORT MASSAGE.
   const billingCategory =
@@ -160,57 +176,22 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
 
   useEffect(refreshOutstanding, [visit.patient_id])
 
-  // A visit saved as LAINNYA (or with no type) but booked with a TA/Sesi/…
-  // layanan is billed under that layanan's kategori — otherwise the payment
-  // lands in LAINNYA and never reaches Target Progress.
-  useEffect(() => {
-    if (!visit.layanan_id || !visit.branch_id) return
-    let cancelled = false
-    fetchLayananByBranch(visit.branch_id).then((rows) => {
-      if (cancelled) return
-      const row = rows.find((l) => l.id === visit.layanan_id) ?? null
-      setBookedLayanan(row)
-      if (!row) return
-      const mapped = CATEGORY_TO_SERVICE_TYPE[row.kategori]
-      const useLayanan = !!mapped && (!visit.service_type || visit.service_type === 'LAINNYA')
-      if (useLayanan) setServiceType(mapped)
-      // Its price is the bill when it is what's being billed (packages and
-      // Sport Massage pick their tariff in the effect further down).
-      const billed = useLayanan ? mapped : getEffectivePackageServiceType(visit.service_type, visit.package_id)
-      if (!isEditing && billed && billed !== 'SPORT MASSAGE' && !isPackageCategory(row.kategori)
-          && SERVICE_TO_CATEGORY[billed] === row.kategori) {
-        setHarga(String(row.harga))
-        setAmountManual(false)
-      }
-    })
-    return () => { cancelled = true }
-  }, [visit.layanan_id, visit.branch_id, visit.service_type, visit.package_id, isEditing])
+  // Preselect the tariff: booked layanan → the visit's package (by name, then
+  // size) → the only option. Otherwise staff choose. Editing never re-prices.
+  function preselectLayanan(rows: LayananRow[], pkg: PackageBrief | null, st: ServiceType) {
+    const opts = layananOptionsFor(rows, st)
+    const initial =
+      opts.find((r) => r.id === visit.layanan_id) ??
+      (pkg ? (opts.find((r) => r.nama === pkg.package_name) ?? opts.find((r) => r.jumlah_sesi === pkg.total_sessions)) : undefined) ??
+      (opts.length === 1 ? opts[0] : null)
+    setLayananId(initial?.id ?? null)
+    if (!isEditing && initial) { setHarga(String(initial.harga)); setAmountManual(false) }
+    // Several tariffs and none chosen yet: don't carry the previous type's price
+    else if (!isEditing && opts.length > 0) { setHarga(''); setAmountManual(false) }
+  }
 
   useEffect(() => {
-    // Editing an existing transaction already has its real harga — never
-    // silently overwrite it with a price-list guess.
-    if (isEditing) return
-    // Wait for the booked layanan; when it matches the category, its price wins.
-    if (bookedLayanan === undefined) return
-    // Package categories (PAKET KLINIK / PAKET VISIT) can have several price
-    // tiers per branch (different package variants/session counts); this
-    // lookup has no way to know which one is intended, so auto-filling here
-    // would silently substitute the wrong package's price. Leave it for staff
-    // to enter manually instead.
-    const category = SERVICE_TO_CATEGORY[serviceType]
-    if (isPackageCategory(category)) return
-    // Sport Massage price comes from the selected service type (effect below)
-    if (serviceType === 'SPORT MASSAGE') return
-    // Priced from the booked layanan (effect above)
-    if (bookedLayanan && bookedLayanan.kategori === category) return
-    fetchLayananHarga(serviceType, visit.branch_id).then((price) => {
-      if (price != null) setHarga(String(price))
-    })
-  }, [serviceType, visit.branch_id, isEditing, bookedLayanan])
-
-  const needsLayanan = isSportMassage || isPackageCategory(baseCategory)
-  useEffect(() => {
-    if (!needsLayanan || !visit.branch_id) { setBranchLayanan([]); return }
+    if (!visit.branch_id) return
     let cancelled = false
     Promise.all([
       fetchLayananByBranch(visit.branch_id),
@@ -218,20 +199,25 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
     ]).then(([rows, pkg]) => {
       if (cancelled) return
       setBranchLayanan(rows)
-      const opts = rows.filter((l) => l.is_active && (isSportMassage
-        ? l.kategori === 'SPORT MASSAGE' || packageCategoryForKategori(l.kategori) === 'PAKET SPORT MASSAGE'
-        : packageCategoryForKategori(l.kategori) === baseCategory))
-      // Booked type (Sport Massage) → the visit's package (by name, then size) →
-      // the only option. Otherwise staff choose.
-      const initial =
-        opts.find((r) => r.id === visit.layanan_id) ??
-        (pkg ? (opts.find((r) => r.nama === pkg.package_name) ?? opts.find((r) => r.jumlah_sesi === pkg.total_sessions)) : undefined) ??
-        (opts.length === 1 ? opts[0] : null)
-      setLayananId(initial?.id ?? null)
-      if (!isEditing && initial) { setHarga(String(initial.harga)); setAmountManual(false) }
+      setPkgBrief(pkg)
+      // A visit saved as LAINNYA (or with no type) but booked with a TA/Sesi/…
+      // layanan is billed under that layanan's kategori — otherwise the payment
+      // lands in LAINNYA and never reaches Target Progress.
+      const booked = visit.layanan_id ? rows.find((l) => l.id === visit.layanan_id) : undefined
+      const mapped = booked ? CATEGORY_TO_SERVICE_TYPE[booked.kategori] : undefined
+      const st = mapped && (!visit.service_type || visit.service_type === 'LAINNYA') ? mapped : serviceType
+      if (st !== serviceType) setServiceType(st)
+      preselectLayanan(rows, pkg, st)
     })
     return () => { cancelled = true }
-  }, [needsLayanan, isSportMassage, baseCategory, visit.branch_id, visit.layanan_id, visit.package_id, isEditing])
+    // Loads once per visit; later type changes re-preselect via changeServiceType.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visit.branch_id, visit.package_id, visit.layanan_id])
+
+  function changeServiceType(next: ServiceType) {
+    setServiceType(next)
+    if (branchLayanan) preselectLayanan(branchLayanan, pkgBrief, next)
+  }
 
   function handleSelectLayanan(id: string) {
     setLayananId(id)
@@ -258,12 +244,11 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (submitting || proofUploading) return
-    if (isSportMassage && layananOptions.length > 0 && !selectedLayanan) {
-      setError('Pilih jenis layanan Sport Massage.')
-      return
-    }
-    if (sellsNewPackage && layananOptions.length > 0 && !selectedLayanan) {
-      setError('Pilih paket dari daftar tarif cabang.')
+    // New payments bill a price-list item (edits keep their recorded price)
+    if (!isEditing && layananOptions.length > 0 && !selectedLayanan) {
+      setError(isSportMassage ? 'Pilih jenis layanan Sport Massage.'
+        : sellsNewPackage ? 'Pilih paket dari daftar tarif cabang.'
+        : 'Pilih layanan dari Tarif Layanan cabang.')
       return
     }
     if (proofRequired && !proofPath) {
@@ -314,8 +299,10 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
     const layananStillFits = !bookedLayanan
       || CATEGORY_TO_SERVICE_TYPE[bookedLayanan.kategori] === serviceType
       || packageCategoryForKategori(bookedLayanan.kategori) === billingCategory
-    const nextLayananId = isSportMassage
-      ? (selectedLayanan?.id ?? visit.layanan_id ?? null)
+    // The billed price-list item becomes the visit's layanan (packages excepted:
+    // their tariff is the package, not this session).
+    const nextLayananId = isSportMassage || !isPackageCategory(billingCategory)
+      ? (selectedLayanan?.id ?? (layananStillFits ? (visit.layanan_id ?? null) : null))
       : (layananStillFits ? (visit.layanan_id ?? null) : null)
     const visitPatch: { service_type?: string; layanan_id?: string | null } = {}
     if (serviceType !== visit.service_type) visitPatch.service_type = serviceType
@@ -417,10 +404,10 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                   <label className="block text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Layanan</label>
                   <select
                     value={serviceType}
-                    onChange={(e) => setServiceType(e.target.value as ServiceType)}
+                    onChange={(e) => changeServiceType(e.target.value as ServiceType)}
                     className="w-full bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer -ml-0.5"
                   >
-                    {SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    {serviceTypeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div className="rounded-xl bg-muted/30 border border-border/40 px-3 py-2.5">
@@ -429,11 +416,11 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                     value={category}
                     onChange={(e) => {
                       const matched = CATEGORY_TO_SERVICE_TYPE[e.target.value]
-                      if (matched) setServiceType(matched)
+                      if (matched) changeServiceType(matched)
                     }}
                     className="w-full bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer -ml-0.5"
                   >
-                    {SERVICE_TYPES.map((s) => (
+                    {serviceTypeOptions.map((s) => (
                       <option key={s} value={SERVICE_TO_CATEGORY[s]}>{SERVICE_TO_CATEGORY[s]}</option>
                     ))}
                   </select>
@@ -443,7 +430,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
               {layananOptions.length > 0 && (
                 <div className="rounded-xl bg-muted/30 border border-border/40 px-3 py-2.5">
                   <label className="block text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">
-                    {isSportMassage ? 'Jenis Sport Massage' : 'Paket (tarif cabang)'}
+                    {isSportMassage ? 'Jenis Sport Massage' : isPackageCategory(baseCategory) ? 'Paket (tarif cabang)' : 'Layanan (tarif cabang)'}
                   </label>
                   <select
                     value={layananId ?? ''}

@@ -10,6 +10,7 @@ import { TherapistLink } from '@/components/finance/TherapistLink'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { createTransactionManual, getTherapistOptions, getTransactionTherapists } from '@/app/actions/transactions'
 import { FisioSelect, isTherapistCategory } from '@/components/finance/FisioSelect'
+import { LayananIncomePicker, needsLayananPick, type LayananPick } from '@/components/finance/LayananIncomePicker'
 import { TherapistServiceFilters, type TherapistOption } from '@/components/finance/TherapistServiceFilters'
 import { byDateDesc, selectAttributedTransactions, type QueryBuilder } from '@/lib/finance/attribution'
 import { todayJakartaISO } from '@/lib/utils'
@@ -42,19 +43,7 @@ function formatRp(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 }
 
-// Income categories aligned with Excel KATEGORI PEMBELIAN
-const INCOME_CATEGORIES = [
-  'TA KLINIK',
-  'PAKET KLINIK',
-  'SESI KLINIK',
-  'TA VISIT',
-  'SESI VISIT',
-  'PAKET VISIT',
-  'SPORT MASSAGE',
-  'PAKET SPORT MASSAGE',
-  'TOKO',
-  'LAINNYA',
-]
+// Income categories come from the branch's Tarif Layanan (LayananIncomePicker)
 // Expense categories aligned with Excel PENGELUARAN
 const EXPENSE_CATEGORIES = [
   'BEBAN PELAYANAN',
@@ -71,7 +60,10 @@ const PAYMENT_STATUSES: PaymentDetailStatus[]  = ['LUNAS', 'DP', 'PELUNASAN']
 function getDefaultForm() {
   return {
     type:             'income' as TransactionType,
-    category:         INCOME_CATEGORIES[0],
+    category:         '',
+    // Income: the Tarif Layanan item picked (sets category + harga)
+    layanan_id:       null as string | null,
+    layanan_nama:     '',
     harga:            '',
     amount:           '',
     discount:         '',
@@ -106,6 +98,7 @@ export default function TransactionsPage() {
 
   const [userId, setUserId]     = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [userBranchId, setUserBranchId] = useState<string | null>(null)
 
   // Latest load wins — a slower, older request (e.g. previous date range) must not overwrite newer rows
   const loadSeq = useRef(0)
@@ -122,6 +115,7 @@ export default function TransactionsPage() {
       .single()
     setUserId(user.id)
     setUserRole(prof?.role ?? null)
+    setUserBranchId(prof?.branch_id ?? null)
 
     const applyFilters = (q: QueryBuilder): QueryBuilder => {
       q = q.order('transaction_date', { ascending: false }).order('id', { ascending: false }).limit(100)
@@ -206,7 +200,9 @@ export default function TransactionsPage() {
   useEffect(() => {
     setForm((f) => ({
       ...f,
-      category: f.type === 'income' ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0],
+      category: f.type === 'income' ? '' : EXPENSE_CATEGORIES[0],
+      layanan_id: null,
+      layanan_nama: '',
       // Online links are for income only
       payment_method: f.type !== 'income' && (f.payment_method as string) === ONLINE_PAYMENT ? 'TUNAI' : f.payment_method,
     }))
@@ -218,12 +214,25 @@ export default function TransactionsPage() {
   const [onlineTarget, setOnlineTarget] = useState<PaymentLinkTarget | null>(null)
   const isOnline = (form.payment_method as string) === ONLINE_PAYMENT
 
-  const categories = form.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
   const isIncome   = form.type === 'income'
+  const description = form.description || (isIncome ? form.layanan_nama : '') || null
+
+  function handleLayananPick({ kategori, layanan }: LayananPick) {
+    setForm((f) => ({
+      ...f,
+      category:     kategori,
+      layanan_id:   layanan?.id ?? null,
+      layanan_nama: layanan?.nama ?? '',
+      ...(layanan ? { harga: String(layanan.harga), amount: String(layanan.harga) } : {}),
+    }))
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (proofUploading) return
+    if (isIncome && (!form.category || needsLayananPick(form.category, form.layanan_id))) {
+      alert('Pilih layanan dari Tarif Layanan cabang.'); return
+    }
     if (isOnline) {
       setOnlineTarget({
         method:      onlineMethod,
@@ -231,7 +240,7 @@ export default function TransactionsPage() {
         harga:       Number(form.harga) || null,
         discount:    Number(form.discount) || null,
         category:    form.category,
-        description: form.description || null,
+        description,
       })
       setShowForm(false)
       setForm(getDefaultForm())
@@ -252,10 +261,11 @@ export default function TransactionsPage() {
       payment_method:   form.payment_method   || null,
       payment_status:   isIncome ? form.payment_status : null,
       penjamin:         isIncome ? (form.penjamin || null) : null,
-      description:      form.description || null,
+      description,
       transaction_date: form.transaction_date,
       receipt_url:      needsProof ? form.receipt_url : null,
       fisio_id:         isIncome ? (form.fisio_id || null) : null,
+      enforcePriceList: true,
     })
     setSaving(false)
     if (error) { alert(error); return }
@@ -480,13 +490,23 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">Kategori</label>
-                <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
-                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
+              {isIncome ? (
+                <LayananIncomePicker
+                  branchId={userBranchId}
+                  kategori={form.category}
+                  layananId={form.layanan_id}
+                  onChange={handleLayananPick}
+                  labelClassName="block text-xs font-medium text-foreground mb-1"
+                />
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Kategori</label>
+                  <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                    className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary">
+                    {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              )}
 
               {isIncome && (
                 <>
@@ -561,6 +581,7 @@ export default function TransactionsPage() {
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Keterangan</label>
                 <input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder={isIncome ? form.layanan_nama : undefined}
                   className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
 

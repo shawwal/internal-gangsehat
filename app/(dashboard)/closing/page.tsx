@@ -14,6 +14,8 @@ import {
   type ClosingVisitRecap,
 } from '@/app/actions/closing'
 import { createTransactionManual, deleteTransaction, updateTransaction } from '@/app/actions/transactions'
+import { fetchLayananByBranch } from '@/app/actions/layanan'
+import { branchIncomeKategori } from '@/lib/serviceType'
 import { Skeleton, SkeletonRegion, FormSkeleton, StatCardsSkeleton } from '@/components/ui/Skeleton'
 import { PaymentProofField, PaymentProofLink } from '@/components/payments/PaymentProofField'
 import { PaymentProofDialog } from '@/components/payments/PaymentProofDialog'
@@ -21,7 +23,6 @@ import { PAYMENT_PROOF_REQUIRED_MSG, isGatewayPayment, requiresPaymentProof } fr
 
 type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 'therapist' | 'admin' | null
 
-const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'TOKO', 'LAINNYA']
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
 const PAYMENT_STATUSES = ['LUNAS', 'DP', 'PELUNASAN']
@@ -127,6 +128,17 @@ export default function ClosingAdminPage() {
   }, [selectedBranchId, dateFrom, dateTo])
 
   useEffect(() => { load() }, [load])
+
+  // Income re-categorisation offers only what this branch's Tarif Layanan sells
+  // (plus the row's own current category, so an old row still renders).
+  const [incomeCats, setIncomeCats] = useState<string[]>([])
+  useEffect(() => {
+    if (!selectedBranchId) return
+    let cancelled = false
+    fetchLayananByBranch(selectedBranchId).then((rows) => { if (!cancelled) setIncomeCats(branchIncomeKategori(rows)) })
+    return () => { cancelled = true }
+  }, [selectedBranchId])
+  const incomeOptions = (current: string) => incomeCats.includes(current) ? incomeCats : [current, ...incomeCats]
 
   async function handleTxFieldChange(
     txId: string,
@@ -449,7 +461,7 @@ export default function ClosingAdminPage() {
                               onChange={(e) => handleTxFieldChange(t.id, 'category', e.target.value)}
                               className="font-medium text-foreground bg-transparent border border-border rounded-lg px-1.5 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                             >
-                              {(t.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((c) => (
+                              {(t.type === 'income' ? incomeOptions(t.category) : EXPENSE_CATEGORIES).map((c) => (
                                 <option key={c} value={c}>{c}</option>
                               ))}
                             </select>
@@ -619,7 +631,7 @@ export default function ClosingAdminPage() {
                                     <Field label="Kategori">
                                       {canEditCategory ? (
                                         <select value={p.category} disabled={busy} onChange={(e) => handleTxFieldChange(p.id, 'category', e.target.value)} className={cellInputCls}>
-                                          {INCOME_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                                          {incomeOptions(p.category).map((c) => <option key={c} value={c}>{c}</option>)}
                                         </select>
                                       ) : <span className="text-foreground">{p.category}</span>}
                                     </Field>

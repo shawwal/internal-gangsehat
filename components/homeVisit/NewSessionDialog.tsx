@@ -5,7 +5,7 @@ import { X, ChevronLeft, Package, Stethoscope, CalendarPlus } from 'lucide-react
 import { createPortal } from 'react-dom'
 import type { PatientPlain } from '@/app/actions/patients'
 import { fetchPatientPackages } from '@/app/actions/packages'
-import { fetchLayananDetail } from '@/app/actions/transactions'
+import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
 import { fetchBranchStaff, type BranchStaffMember } from '@/app/actions/jadwal'
 import { createHomeVisitSession } from '@/app/actions/homeVisit'
 import { PatientPickerStep } from '@/components/jadwal/buy-package/PatientPickerStep'
@@ -44,14 +44,28 @@ function fmtRp(n: number) {
   return `Rp ${n.toLocaleString('id-ID')}`
 }
 
+/** The branch's tariffs for one visit kategori, e.g. "Rp 200.000 · + Jarak Rp 250.000". */
+function TariffList({ rows }: { rows: LayananRow[] }) {
+  return (
+    <div className="space-y-0.5">
+      {rows.map((l) => (
+        <p key={l.id} className="text-xs text-foreground">
+          <span className="font-bold text-primary">{fmtRp(Number(l.harga))}</span>
+          <span className="text-muted-foreground"> · {l.nama}{l.jumlah_sesi && l.jumlah_sesi > 1 ? ` (${l.jumlah_sesi} sesi)` : ''}</span>
+        </p>
+      ))}
+    </div>
+  )
+}
+
 export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
   const [step, setStep] = useState<Step>('patient')
   const [patient, setPatient] = useState<PatientPlain | null>(null)
 
-  const [taPrice, setTaPrice] = useState<number | null>(null)
-  const [sesiPrice, setSesiPrice] = useState<number | null>(null)
-  const [p1Price, setP1Price] = useState<number | null>(null)
-  const [p2Price, setP2Price] = useState<number | null>(null)
+  // Branch Tarif Layanan rows per visit kategori — a card only shows when the branch sells it
+  const [taRows, setTaRows] = useState<LayananRow[]>([])
+  const [sesiRows, setSesiRows] = useState<LayananRow[]>([])
+  const [paketRows, setPaketRows] = useState<LayananRow[]>([])
   const [activePackage, setActivePackage] = useState<PatientPackage | null>(null)
   const [servicesLoading, setServicesLoading] = useState(false)
 
@@ -76,17 +90,14 @@ export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
     async function load() {
       if (!patient) return
       setServicesLoading(true)
-      const [ta, sesi, p1, p2, packages] = await Promise.all([
-        fetchLayananDetail('TA VISIT', branchId),
-        fetchLayananDetail('SESI VISIT', branchId),
-        fetchLayananDetail('PAKET VISIT', branchId, 5),
-        fetchLayananDetail('PAKET VISIT', branchId, 10),
+      const [layanan, packages] = await Promise.all([
+        branchId ? fetchLayananByBranch(branchId) : Promise.resolve([] as LayananRow[]),
         fetchPatientPackages(patient.id),
       ])
-      setTaPrice(ta?.harga ?? null)
-      setSesiPrice(sesi?.harga ?? null)
-      setP1Price(p1?.harga ?? null)
-      setP2Price(p2?.harga ?? null)
+      const byHarga = (k: string) => layanan.filter((l) => l.is_active && l.kategori === k).sort((a, b) => a.harga - b.harga)
+      setTaRows(byHarga('TA VISIT'))
+      setSesiRows(byHarga('SESI VISIT'))
+      setPaketRows(byHarga('PAKET VISIT'))
       const active = packages.find((p) => p.category === 'PAKET VISIT' && p.status === 'active' && p.remaining_sessions > 0) ?? null
       setActivePackage(active)
       setServicesLoading(false)
@@ -199,11 +210,18 @@ export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
               </div>
             ) : (
               <div className="grid sm:grid-cols-3 gap-3">
+                {taRows.length === 0 && sesiRows.length === 0 && paketRows.length === 0 && !activePackage && (
+                  <p className="sm:col-span-3 text-sm text-muted-foreground text-center py-6">
+                    Cabang ini belum punya tarif Home Visit — tambahkan di menu Tarif Layanan.
+                  </p>
+                )}
+
                 {/* Terapi Awal */}
+                {taRows.length > 0 && (
                 <div className="border border-border rounded-2xl p-4 flex flex-col gap-2">
                   <p className="text-sm font-semibold text-foreground">Terapi Awal</p>
                   <span className="w-fit text-xs px-2 py-0.5 rounded-md bg-muted text-foreground font-medium">1 Sesi</span>
-                  <p className="text-lg font-bold text-primary">{taPrice != null ? fmtRp(taPrice) : '—'}</p>
+                  <TariffList rows={taRows} />
                   <p className="text-xs text-muted-foreground flex-1">Asesmen awal dan sesi pertama.</p>
                   <button
                     onClick={() => selectService('TA VISIT', null)}
@@ -212,12 +230,14 @@ export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
                     Pesan Sesi
                   </button>
                 </div>
+                )}
 
                 {/* Sesi Terapi */}
+                {sesiRows.length > 0 && (
                 <div className="border border-border rounded-2xl p-4 flex flex-col gap-2">
                   <p className="text-sm font-semibold text-foreground">Sesi Terapi</p>
                   <span className="w-fit text-xs px-2 py-0.5 rounded-md bg-muted text-foreground font-medium">1 Sesi</span>
-                  <p className="text-lg font-bold text-primary">{sesiPrice != null ? fmtRp(sesiPrice) : '—'}</p>
+                  <TariffList rows={sesiRows} />
                   <p className="text-xs text-muted-foreground flex-1">Sesi lanjutan, dibayar per kunjungan.</p>
                   <button
                     onClick={() => selectService('SESI VISIT', null)}
@@ -226,8 +246,10 @@ export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
                     Pesan Sesi
                   </button>
                 </div>
+                )}
 
                 {/* Paket Terapi */}
+                {(activePackage || paketRows.length > 0) && (
                 <div className="border-2 border-primary rounded-2xl p-4 flex flex-col gap-2">
                   <p className="text-sm font-semibold text-foreground">Paket Terapi</p>
                   {activePackage ? (
@@ -250,10 +272,7 @@ export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
                     </>
                   ) : (
                     <>
-                      <span className="w-fit text-xs px-2 py-0.5 rounded-md bg-muted text-foreground font-medium">5 / 10 Sesi</span>
-                      <p className="text-sm text-foreground">
-                        P1: {p1Price != null ? fmtRp(p1Price) : '—'} · P2: {p2Price != null ? fmtRp(p2Price) : '—'}
-                      </p>
+                      <TariffList rows={paketRows} />
                       <p className="text-xs text-muted-foreground flex-1">Belum ada paket aktif untuk pasien ini.</p>
                       <button
                         onClick={() => setStep('buy-package')}
@@ -264,6 +283,7 @@ export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
                     </>
                   )}
                 </div>
+                )}
               </div>
             )
           )}

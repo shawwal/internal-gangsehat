@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionType, PaymentMethod, PaymentDetailStatus } from '@/types'
 import { createTransactionManual } from '@/app/actions/transactions'
 import { searchPatients, fetchPatientNames, type PatientPlain } from '@/app/actions/patients'
-import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
 import { fetchExpenseCategories, fetchBranchAdmins, type ExpenseCategoryRow, type AdminOption } from '@/app/actions/accounting'
 import { todayJakartaISO } from '@/lib/utils'
 import { logActivity } from '@/lib/activityLog'
@@ -18,6 +17,12 @@ import { TableSkeleton } from '@/components/ui/Skeleton'
 import { PaymentProofField, PaymentProofLink } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 import { FisioSelect, isTherapistCategory } from '@/components/finance/FisioSelect'
+import { LayananIncomePicker, needsLayananPick, type LayananPick } from '@/components/finance/LayananIncomePicker'
+
+// Rupiah fields are text inputs holding digits only, shown with id-ID thousand
+// dots — a type="number" input reads "2.400.000" as 2.4 and drops the rest.
+const toDigits = (s: string) => s.replace(/\D/g, '').replace(/^0+(?=\d)/, '')
+const showRp = (digits: string) => (digits ? Number(digits).toLocaleString('id-ID') : '')
 
 interface Props {
   type: TransactionType
@@ -29,12 +34,15 @@ interface Props {
   periodLabel: string
 }
 
-function getDefaultForm(dateFrom: string) {
+function getDefaultForm(dateFrom: string, isIncome: boolean) {
   return {
     itemId: '',
+    itemNama: '',
     category: '',
     harga: '',
     amount: '',
+    // Income: Jumlah Bayar follows Harga − Diskon until typed over (e.g. a DP)
+    amountManual: !isIncome,
     discount: '',
     payment_method: 'TUNAI' as PaymentMethod,
     payment_status: 'LUNAS' as PaymentDetailStatus,
@@ -52,18 +60,20 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
   const [rows, setRows] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState(() => getDefaultForm(todayJakartaISO()))
+  const [form, setForm] = useState(() => getDefaultForm(todayJakartaISO(), isIncome))
   const [saving, setSaving] = useState(false)
   const [rejectId, setRejectId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [proofUploading, setProofUploading] = useState(false)
 
-  const [layanan, setLayanan] = useState<LayananRow[]>([])
   const [expenseCats, setExpenseCats] = useState<ExpenseCategoryRow[]>([])
   const [admins, setAdmins] = useState<AdminOption[]>([])
 
   // An income saved without an item is stored as LAINNYA — still needs a Fisio.
   const fisioRequired = isIncome && isTherapistCategory(form.category || 'LAINNYA')
+  const hargaNum = Number(form.harga) || 0
+  const discountNum = Number(form.discount) || 0
+  const amountDigits = form.amountManual ? form.amount : (hargaNum > 0 ? String(Math.max(hargaNum - discountNum, 0)) : '')
 
   const [patientQuery, setPatientQuery] = useState('')
   const [patientResults, setPatientResults] = useState<PatientPlain[]>([])
@@ -94,8 +104,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
   useEffect(() => {
     if (!branchId) return
     fetchBranchAdmins(branchId).then(setAdmins)
-    if (isIncome) fetchLayananByBranch(branchId).then((rs) => setLayanan(rs.filter((r) => r.is_active)))
-    else fetchExpenseCategories(branchId).then((rs) => setExpenseCats(rs.filter((r) => r.is_active)))
+    if (!isIncome) fetchExpenseCategories(branchId).then((rs) => setExpenseCats(rs.filter((r) => r.is_active)))
   }, [branchId, isIncome])
 
   useEffect(() => {
@@ -107,33 +116,38 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
   }, [patientQuery])
 
   function openForm() {
-    setForm(getDefaultForm(todayJakartaISO()))
+    setForm(getDefaultForm(todayJakartaISO(), isIncome))
     setPatientQuery('')
     setPatientResults([])
     setShowForm(true)
   }
 
-  function handleItemSelect(itemId: string) {
-    const item = layanan.find((l) => l.id === itemId)
+  // Kategori → Layanan, both from the branch's Tarif Layanan (LayananIncomePicker)
+  function handleLayananPick({ kategori, layanan: item }: LayananPick) {
     setForm((f) => ({
       ...f,
-      itemId,
+      itemId: item?.id ?? '',
+      itemNama: item?.nama ?? '',
       // `category` stores the coarse bucket (TA KLINIK, PAKET KLINIK, ...) —
       // the same convention used everywhere else transactions are written
       // (finance/transactions, PaymentDialog, director/finance), so income
       // recorded here still aggregates correctly in Laporan/Arus Kas and in
       // the rest of the app's reports. The specific item name goes into
       // `description` instead, so it's still visible on the transaction.
-      category: item?.kategori ?? '',
-      description: item && !f.description ? item.nama : f.description,
+      category: kategori,
+      // Follows the picked item until staff type their own note
+      description: !f.description || f.description === f.itemNama ? (item?.nama ?? '') : f.description,
       harga: item ? String(item.harga) : f.harga,
-      amount: item ? String(item.harga) : f.amount,
+      amountManual: item ? false : f.amountManual,
     }))
   }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (proofUploading) return
+    if (isIncome && (!form.category || needsLayananPick(form.category, form.itemId || null))) {
+      alert('Pilih kategori dan layanan dari Tarif Layanan cabang.'); return
+    }
     const needsProof = requiresPaymentProof(form.payment_method)
     if (needsProof && !form.receipt_url) { alert(PAYMENT_PROOF_REQUIRED_MSG); return }
     if (fisioRequired && !form.fisio_id) { alert('Pilih Fisio untuk transaksi layanan ini — tanpa Fisio, penjualan tidak terhitung ke terapis mana pun.'); return }
@@ -142,7 +156,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
       type,
       category: form.category || (isIncome ? 'LAINNYA' : form.category),
       harga: Number(form.harga) || 0,
-      amount: Number(form.amount) || 0,
+      amount: Number(amountDigits) || 0,
       discount: Number(form.discount) || 0,
       payment_method: form.payment_method || null,
       payment_status: isIncome ? form.payment_status : null,
@@ -153,6 +167,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
       branch_id: branchId,
       fisio_id: form.fisio_id || null,
       receipt_url: needsProof ? form.receipt_url : null,
+      enforcePriceList: isIncome,
     })
     setSaving(false)
     if (error) { alert(error); return }
@@ -311,13 +326,14 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
               </div>
 
               {isIncome ? (
-                <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Jenis Pemeriksaan / Layanan</label>
-                  <select required value={form.itemId} onChange={(e) => handleItemSelect(e.target.value)} className={inputCls}>
-                    <option value="">Pilih layanan...</option>
-                    {layanan.map((l) => <option key={l.id} value={l.id}>{l.nama} — {formatRp(l.harga)}</option>)}
-                  </select>
-                </div>
+                <LayananIncomePicker
+                  branchId={branchId}
+                  kategori={form.category}
+                  layananId={form.itemId || null}
+                  onChange={handleLayananPick}
+                  selectClassName={inputCls}
+                  labelClassName="block text-xs font-medium text-foreground mb-1"
+                />
               ) : (
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">Kategori</label>
@@ -333,11 +349,11 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1">Harga (Rp)</label>
-                      <input type="number" min="0" value={form.harga} onChange={(e) => setForm((f) => ({ ...f, harga: e.target.value }))} className={inputCls} />
+                      <input inputMode="numeric" placeholder="0" value={showRp(form.harga)} onChange={(e) => setForm((f) => ({ ...f, harga: toDigits(e.target.value) }))} className={inputCls} />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1">Diskon (Rp)</label>
-                      <input type="number" min="0" value={form.discount} onChange={(e) => setForm((f) => ({ ...f, discount: e.target.value }))} className={inputCls} />
+                      <input inputMode="numeric" placeholder="0" value={showRp(form.discount)} onChange={(e) => setForm((f) => ({ ...f, discount: toDigits(e.target.value) }))} className={inputCls} />
                     </div>
                   </div>
                   <div>
@@ -371,7 +387,12 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">Jumlah Bayar (Rp)</label>
-                  <input required type="number" min="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className={inputCls} />
+                  <input
+                    required inputMode="numeric" placeholder="0"
+                    value={showRp(amountDigits)}
+                    onChange={(e) => setForm((f) => ({ ...f, amount: toDigits(e.target.value), amountManual: true }))}
+                    className={inputCls}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">Metode Bayar</label>

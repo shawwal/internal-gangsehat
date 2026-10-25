@@ -10,8 +10,9 @@ import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, isGatewayPayment, isPaymentProofRequiredOnEdit, requiresPaymentProof } from '@/lib/paymentProof'
 import { PaymentProofLink } from '@/components/payments/PaymentProofField'
+import { LayananIncomePicker, type LayananPick } from '@/components/finance/LayananIncomePicker'
 
-const INCOME_CATEGORIES = ['TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'TOKO', 'LAINNYA']
+// Income categories come from the branch's Tarif Layanan (LayananIncomePicker)
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
 const PAYMENT_STATUSES = ['LUNAS', 'DP', 'PELUNASAN']
@@ -28,6 +29,7 @@ function parseRp(s: string): number {
 
 export interface TransactionForEdit {
   id: string
+  branch_id: string
   type: string
   category: string
   harga: number | null
@@ -73,6 +75,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
   // Form state
   const [type, setType]                     = useState(transaction.type)
   const [category, setCategory]             = useState(transaction.category)
+  const [layananId, setLayananId]           = useState<string | null>(null)
   const [harga, setHarga]                   = useState(formatRp(transaction.harga ?? 0))
   const [amount, setAmount]                 = useState(formatRp(transaction.amount ?? 0))
   const [discount, setDiscount]             = useState(formatRp(transaction.discount ?? 0))
@@ -100,6 +103,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
     if (!open) return
     setType(transaction.type)
     setCategory(transaction.category)
+    setLayananId(null)
     setHarga(formatRp(transaction.harga ?? 0))
     setAmount(formatRp(transaction.amount ?? 0))
     setDiscount(formatRp(transaction.discount ?? 0))
@@ -117,13 +121,19 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // Update category when type changes (if current category belongs to wrong list)
+  // Update category when type changes (if current category belongs to wrong list).
+  // Income: '' lets LayananIncomePicker move to the branch's first kategori.
   useEffect(() => {
-    const validCats = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
-    if (!validCats.includes(category)) {
-      setCategory(validCats[0])
-    }
+    if (type === 'expense' && !EXPENSE_CATEGORIES.includes(category)) setCategory(EXPENSE_CATEGORIES[0])
+    if (type === 'income' && category !== 'LAINNYA' && EXPENSE_CATEGORIES.includes(category)) setCategory('')
   }, [type, category])
+
+  // Picking a layanan re-prices the bill; the recorded payment (amount) is left alone.
+  function handleLayananPick({ kategori, layanan }: LayananPick) {
+    setCategory(kategori)
+    setLayananId(layanan?.id ?? null)
+    if (layanan) setHarga(formatRp(Number(layanan.harga)))
+  }
 
   // Close patient results on outside click
   useEffect(() => {
@@ -174,8 +184,6 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
   const amountNum = parseRp(amount)
   const discountNum = parseRp(discount)
   const sisa = isIncome ? Math.max(hargaNum - amountNum - discountNum, 0) : 0
-
-  const categories = isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
 
   const proofRequired = isPaymentProofRequiredOnEdit(
     { method: transaction.payment_method, proofPath: transaction.receipt_url }, payMethod,
@@ -302,17 +310,30 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
             />
           </div>
 
-          {/* Category */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Kategori</label>
-            <select
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {categories.map(c => <option key={c} value={c} className="bg-gray-900 text-white">{c}</option>)}
-            </select>
-          </div>
+          {/* Category — income: kategori + layanan from the branch's Tarif Layanan */}
+          {isIncome ? (
+            <LayananIncomePicker
+              branchId={transaction.branch_id}
+              kategori={category}
+              layananId={layananId}
+              onChange={handleLayananPick}
+              keepCategory={transaction.type === 'income' ? transaction.category : null}
+              autoPick={false}
+              selectClassName="w-full px-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-primary"
+              labelClassName="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5"
+            />
+          ) : (
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Kategori</label>
+              <select
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {EXPENSE_CATEGORIES.map(c => <option key={c} value={c} className="bg-gray-900 text-white">{c}</option>)}
+              </select>
+            </div>
+          )}
 
           {/* Patient assignment */}
           <div>

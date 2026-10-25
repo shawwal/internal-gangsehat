@@ -10,6 +10,7 @@ import { insertPaymentLinkWithCheckout } from '@/lib/doku/createLink'
 import { newInvoiceNumber } from '@/lib/doku/invoice'
 import { findLink, releaseTokoSale, syncPaymentLink } from '@/lib/doku/settle'
 import { PAYMENT_RECEIPT_BUCKET } from '@/lib/paymentProof'
+import { priceListCategoryError } from '@/lib/finance/priceList'
 import { orderBills, visitBill, type BillOption } from '@/lib/doku/bills'
 import { CATEGORY_TO_SERVICE_TYPE, SERVICE_TO_CATEGORY, isPackageCategory } from '@/lib/serviceType'
 import { fetchLayananHarga, getPatientOutstanding } from '@/app/actions/transactions'
@@ -136,6 +137,11 @@ export async function createPaymentLink(
   }
   branchId = branchId ?? profile.branch_id ?? (profile.role === 'director' ? input.branchId ?? null : null)
   if (!branchId) return { data: null, error: 'Pilih cabang untuk link pembayaran ini' }
+  // New sales only — toko sales and installments on an existing order keep their category
+  if (!input.tokoSaleId && !input.orderId) {
+    const priceErr = await priceListCategoryError(supabase, branchId, input.category)
+    if (priceErr) return { data: null, error: priceErr }
+  }
 
   let customerName = input.customerName?.trim() || ''
   let customerPhone = input.customerPhone?.trim() || null

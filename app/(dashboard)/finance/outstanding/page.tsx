@@ -308,6 +308,7 @@ export default async function OutstandingPaymentsPage({
                   {txns.map((tx) => {
                     const editTx: TransactionForEdit = {
                       id:               tx.id,
+                      branch_id:        tx.branch_id,
                       type:             'income',
                       category:         tx.category,
                       harga:            tx.harga as number | null,

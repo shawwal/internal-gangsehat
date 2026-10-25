@@ -22,6 +22,26 @@ export const LAYANAN_KATEGORI = [
   'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'PAKET SPORT MASSAGE', 'LAINNYA',
 ]
 
+// Income categories that never come from a branch price list: TOKO is written
+// by /toko sales, LAINNYA is free-form. Every other income category must have an
+// active internal_layanan row in the branch to be billable.
+export const SYSTEM_INCOME_CATEGORIES = ['TOKO'] as const
+export const FREE_INCOME_CATEGORIES = ['LAINNYA'] as const
+
+export function isPriceListExempt(category: string | null | undefined): boolean {
+  const c = category ?? ''
+  return (SYSTEM_INCOME_CATEGORIES as readonly string[]).includes(c)
+    || (FREE_INCOME_CATEGORIES as readonly string[]).includes(c)
+}
+
+/** Income kategori a branch can bill — those with an active price-list row, in
+ *  LAYANAN_KATEGORI order — plus the free-form categories. */
+export function branchIncomeKategori(layanan: { kategori: string; is_active: boolean }[]): string[] {
+  const active = new Set(layanan.filter((l) => l.is_active).map((l) => l.kategori))
+  const priced = LAYANAN_KATEGORI.filter((k) => active.has(k) && !isPriceListExempt(k))
+  return [...priced, ...FREE_INCOME_CATEGORIES]
+}
+
 // SERVICE_TO_CATEGORY's values are all distinct, so this reverse lookup is well-defined —
 // lets a Kategori control drive the paired Layanan value (and vice versa).
 export const CATEGORY_TO_SERVICE_TYPE: Record<string, ServiceType> = Object.fromEntries(

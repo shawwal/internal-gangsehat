@@ -172,6 +172,7 @@ export async function fetchTargetProgressDetail(
         visitDate: row.transaction_date,
         tx: canReadTx ? {
           id: row.id,
+          branch_id: branchId,
           type: 'income',
           category: row.category,
           harga: row.harga,

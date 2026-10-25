@@ -11,11 +11,7 @@ import type { BillOption } from '@/lib/doku/bills'
 import { formatCurrency } from '@/lib/utils'
 import type { PaymentLinkTarget, PaymentLinkView } from './types'
 import { ModalPortal } from './ModalPortal'
-
-// Income categories aligned with Excel KATEGORI PEMBELIAN (finance/transactions)
-const INCOME_CATEGORIES = [
-  'TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'TOKO', 'LAINNYA',
-]
+import { LayananIncomePicker, needsLayananPick, type LayananPick } from '@/components/finance/LayananIncomePicker'
 
 const DUE_OPTIONS: Record<PaymentLinkMethod, { label: string; minutes: number }[]> = {
   QRIS: [
@@ -48,7 +44,11 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
   const [method, setMethod] = useState<PaymentLinkMethod>(target.method ?? 'QRIS')
   const [dueMinutes, setDueMinutes] = useState(DEFAULT_DUE_MINUTES[target.method ?? 'QRIS'])
   const [amount, setAmount] = useState(target.amount ? String(target.amount) : '')
-  const [category, setCategory] = useState(target.category ?? 'SESI KLINIK')
+  // '' until LayananIncomePicker moves it to the branch's first priced kategori
+  const [category, setCategory] = useState(target.category ?? '')
+  // Tarif Layanan item picked for a new sale (sets Kategori, Nominal and Harga)
+  const [layananId, setLayananId] = useState<string | null>(null)
+  const [layananHarga, setLayananHarga] = useState<number | null>(null)
   const [description, setDescription] = useState(target.description ?? '')
   const [patient, setPatient] = useState<{ id: string; name: string } | null>(
     target.patientId ? { id: target.patientId, name: target.patientName ?? 'Pasien' } : null,
@@ -73,6 +73,8 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
 
   function applyBill(b: BillOption) {
     setSelectedKey(b.key)
+    setLayananId(null)
+    setLayananHarga(null)
     setAmount(String(b.amount))
     setCategory(b.category)
     setDescription(b.description ?? '')
@@ -120,12 +122,31 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
   }
 
   const amountNum = Math.round(Number(amount) || 0)
+  // Installment on an existing order: its category is fixed
+  const orderLocked = !!(selectedBill?.orderId ?? target.orderId)
+  // A bill / host form already decided the price; otherwise a new sale picks a layanan
+  const pricedElsewhere = !!selectedBill || target.harga != null
+  const linkBranchId = defaults?.branchId ?? (branchId || null)
+
+  function handleLayananPick({ kategori, layanan }: LayananPick) {
+    setCategory(kategori)
+    setLayananId(layanan?.id ?? null)
+    setLayananHarga(layanan ? Number(layanan.harga) : null)
+    if (layanan) {
+      setSelectedKey(null)
+      setAmount(String(layanan.harga))
+      setDescription((d) => d || layanan.nama)
+    }
+  }
 
   async function submit() {
     if (submitting) return
     if (amountNum < 1000) { setError('Nominal minimal Rp1.000'); return }
     if (!patient && !customerName.trim()) { setError('Pilih pasien atau isi nama pembayar'); return }
     if (!locked && branches.length > 1 && !branchId) { setError('Pilih cabang'); return }
+    if (!orderLocked && !pricedElsewhere && (!category || needsLayananPick(category, layananId))) {
+      setError('Pilih layanan dari Tarif Layanan cabang'); return
+    }
     setSubmitting(true)
     setError(null)
     const res = await createPaymentLink({
@@ -137,7 +158,7 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
       // A chosen bill decides what the payment attaches to (visit vs order installment).
       visitId: selectedBill ? (selectedBill.visitId ?? null) : (target.visitId ?? null),
       orderId: selectedBill ? (selectedBill.orderId ?? null) : (target.orderId ?? null),
-      harga: selectedBill ? selectedBill.harga : (target.harga ?? null),
+      harga: selectedBill ? selectedBill.harga : (layananHarga ?? target.harga ?? null),
       discount: selectedBill ? selectedBill.discount : (target.discount ?? null),
       customerName: patient ? null : customerName,
       customerPhone: patient ? null : customerPhone,
@@ -288,7 +309,25 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          {orderLocked ? (
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">Kategori</label>
+              <div className={inputCls + ' opacity-60'}>{category}</div>
+            </div>
+          ) : (
+            <LayananIncomePicker
+              key={linkBranchId ?? ''}
+              branchId={linkBranchId}
+              kategori={category}
+              layananId={layananId}
+              onChange={handleLayananPick}
+              keepCategory={selectedBill?.category ?? target.category ?? null}
+              autoPick={!pricedElsewhere}
+              selectClassName={inputCls + ' cursor-pointer'}
+            />
+          )}
+
+          <div>
             <div>
               <label className="block text-xs font-medium text-foreground mb-1.5">Nominal (Rp)</label>
               <input
@@ -300,13 +339,6 @@ export function CreatePaymentLinkDialog({ target = {}, onClose, onCreated }: Pro
                 placeholder="0"
                 className={inputCls}
               />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">Kategori</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} disabled={!!(selectedBill?.orderId ?? target.orderId)} className={inputCls + ' cursor-pointer disabled:opacity-60'}>
-                {INCOME_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                {!INCOME_CATEGORIES.includes(category) && <option value={category}>{category}</option>}
-              </select>
             </div>
           </div>
 

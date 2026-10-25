@@ -81,6 +81,7 @@ export function TransactionsTable({ txns, showBranchColumn, q, sort, baseParams,
 
             const editTx: TransactionForEdit = {
               id:               tx.id,
+              branch_id:        tx.branch_id,
               type:             tx.type,
               category:         tx.category,
               harga:            tx.harga,

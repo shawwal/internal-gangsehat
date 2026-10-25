@@ -6,6 +6,7 @@ import { listTherapistOptions, resolveTherapistNames, type TherapistOption, type
 import { computeOrderPaymentSummary, type OrderPaymentSummary, type OrderPaymentRow } from '@/lib/internal/orderPayments'
 import { logActivity } from '@/lib/activityLog'
 import { PACKAGE_CATEGORIES as PACKAGE_CATEGORY_LIST } from '@/lib/serviceType'
+import { priceListCategoryError } from '@/lib/finance/priceList'
 import { PAYMENT_PROOF_BUCKET, PAYMENT_PROOF_REQUIRED_MSG, isGatewayPayment, isPaymentProofRequiredOnEdit, isValidPaymentProofPath, paymentProofError, requiresPaymentProof } from '@/lib/paymentProof'
 
 const SERVICE_TO_CATEGORY: Record<string, string> = {
@@ -215,6 +216,8 @@ export async function createTransactionForVisit(
   if (visitErr || !visit) return { error: 'Kunjungan tidak ditemukan' }
 
   const category = input.category
+  const priceErr = await priceListCategoryError(supabase, visit.branch_id, category)
+  if (priceErr) return { error: priceErr }
 
   let orderId: string | null = visit.order_id ?? null
   if (input.package_id) {
@@ -410,6 +413,11 @@ export async function updateTransaction(
   if (input.receipt_url != null && !isValidPaymentProofPath(input.receipt_url)) {
     return { error: 'Bukti transfer tidak valid. Unggah ulang.' }
   }
+  // Re-categorised income must land on a category this branch's price list has
+  if (input.category !== undefined && input.category !== oldRow?.category && (input.type ?? oldRow?.type) === 'income') {
+    const priceErr = await priceListCategoryError(supabase, oldRow?.branch_id, input.category)
+    if (priceErr) return { error: priceErr }
+  }
   const nextMethod = input.payment_method !== undefined ? input.payment_method : oldRow?.payment_method
   const nextProof  = input.receipt_url !== undefined ? input.receipt_url : oldRow?.receipt_url
   const proofRequired = isPaymentProofRequiredOnEdit(
@@ -521,6 +529,8 @@ export interface CreateTransactionManualInput {
   fisio_id?: string | null
   /** Bukti transfer path in `payment-proofs`; required for transfer methods. */
   receipt_url?: string | null
+  /** Manual entry forms: reject income categories missing from the branch's Tarif Layanan. */
+  enforcePriceList?: boolean
 }
 
 export async function createTransactionManual(
@@ -547,6 +557,11 @@ export async function createTransactionManual(
   const branchId = input.branch_id ?? profile.branch_id
   if (!branchId) {
     return { error: 'Akun Anda belum terhubung ke cabang. Hubungi direktur.' }
+  }
+
+  if (input.enforcePriceList && input.type === 'income') {
+    const priceErr = await priceListCategoryError(supabase, branchId, input.category)
+    if (priceErr) return { error: priceErr }
   }
 
   // The order_id for a package purchase belongs to the package (so DP/Pelunasan
