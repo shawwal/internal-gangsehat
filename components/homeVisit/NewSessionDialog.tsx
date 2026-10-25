@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { X, ChevronLeft, Package, Stethoscope, CalendarPlus } from 'lucide-react'
 import { createPortal } from 'react-dom'
+import { createClient } from '@/lib/supabase/client'
 import type { PatientPlain } from '@/app/actions/patients'
 import { fetchPatientPackages } from '@/app/actions/packages'
 import { fetchLayananByBranch, type LayananRow } from '@/app/actions/layanan'
@@ -58,9 +59,14 @@ function TariffList({ rows }: { rows: LayananRow[] }) {
   )
 }
 
-export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
+export function NewSessionDialog({ branchId: ownBranchId, onClose, onSuccess }: Props) {
   const [step, setStep] = useState<Step>('patient')
   const [patient, setPatient] = useState<PatientPlain | null>(null)
+
+  // Director has no branch (branch_id NULL) — they pick which branch the session belongs to
+  const canPickBranch = ownBranchId === null
+  const [branchId, setBranchId] = useState<string | null>(ownBranchId)
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
 
   // Branch Tarif Layanan rows per visit kategori — a card only shows when the branch sells it
   const [taRows, setTaRows] = useState<LayananRow[]>([])
@@ -80,6 +86,20 @@ export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!canPickBranch) return
+    createClient()
+      .from('branches')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name')
+      .then(({ data }) => {
+        const list = data ?? []
+        setBranches(list)
+        setBranchId((cur) => cur ?? list[0]?.id ?? null)
+      })
+  }, [canPickBranch])
 
   useEffect(() => {
     if (branchId) fetchBranchStaff(branchId).then(setBranchStaff)
@@ -201,6 +221,15 @@ export function NewSessionDialog({ branchId, onClose, onSuccess }: Props) {
               patient={patient}
               onSelect={(p) => { setPatient(p); if (p) setStep('service') }}
             />
+          )}
+
+          {step === 'service' && patient && canPickBranch && (
+            <div className="mb-4">
+              <label className={LABEL_CLS}>Cabang</label>
+              <select value={branchId ?? ''} onChange={(e) => { setBranchId(e.target.value || null); setStaffId('') }} className={INPUT_CLS}>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
           )}
 
           {step === 'service' && patient && (
