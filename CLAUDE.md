@@ -132,7 +132,7 @@ get_my_branch()        → uuid   -- branch_id of auth.uid(); NULL for director
 
 **Package categories** (`patient_packages.category`, migration 105): `PAKET KLINIK` | `PAKET VISIT` | `PAKET SPORT MASSAGE` — use `PACKAGE_CATEGORIES` / `packageCategoryForKategori()` in `lib/serviceType.ts`, never hardcode. Paying a visit with a package tariff in `PaymentDialog` creates the package (`createPackageForVisit`).
 
-**Targets**: TA target = `TERAPI AWAL`/`TA KLINIK` only; Visit target = `TA VISIT` + `PAKET VISIT`.
+**Targets**: TA target = `TERAPI AWAL`/`TA KLINIK` only; Visit target = `PAKET VISIT` only (`TA VISIT` counts toward no target).
 
 **Expense categories**: `BEBAN PELAYANAN` | `GAJI` | `SEWA` | `LISTRIK` | `MARKETING` | `TUKAR TUNAI` | `LAINNYA`
 

@@ -11,8 +11,8 @@ export const CATEGORY_DEFS: CategoryDef[] = [
   { key: 'ta',           label: 'TA',           color: 'var(--primary)' },
   { key: 'paket_klinik', label: 'Paket Klinik', color: 'var(--chart-4)' },
   { key: 'kunjungan',    label: 'Kunjungan',    color: 'var(--secondary)' },
-  // Visit target = TA VISIT + PAKET VISIT (home visit), compared against target_visit
-  { key: 'paket_visit',  label: 'Visit',        color: 'var(--destructive)' },
+  // Visit target = PAKET VISIT only (home visit), compared against target_visit
+  { key: 'paket_visit',  label: 'Paket Visit',  color: 'var(--destructive)' },
   { key: 'sesi',         label: 'Sesi',         color: 'var(--chart-5)' },
 ]
 
@@ -34,11 +34,10 @@ export interface TransactionForProgress {
   transaction_date: string
 }
 
-// TA = clinic only (TA KLINIK → target_ta). Home-visit TA counts toward the
-// Visit target together with PAKET VISIT. Sesi stays merged Klinik+Visit.
+// TA = clinic only (TA KLINIK → target_ta). Home-visit TA (TA VISIT) counts
+// toward no target; Visit = PAKET VISIT only. Sesi stays merged Klinik+Visit.
 export const TRANSACTION_CATEGORY_MAP: Record<string, CategoryKey> = {
   'TA KLINIK': 'ta',
-  'TA VISIT': 'paket_visit',
   'SESI KLINIK': 'sesi',
   'SESI VISIT': 'sesi',
   'PAKET KLINIK': 'paket_klinik',
