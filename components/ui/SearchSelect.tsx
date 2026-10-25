@@ -1,7 +1,8 @@
 'use client'
 
 // A <select> replacement with a search box. The list is position: fixed under
-// the trigger, so it isn't clipped inside scrolling tables / modals.
+// the trigger, so it isn't clipped inside scrolling tables / modals. Its
+// z-index sits above every sheet / modal layer (highest is z-[300]).
 // Keyboard: ↑ ↓ to move, Enter to pick, Esc to close.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -121,7 +122,7 @@ export function SearchSelect({
         <div
           ref={panelRef}
           style={{ position: 'fixed', left: pos.left, width: pos.width, ...(pos.up ? { bottom: window.innerHeight - pos.top } : { top: pos.top }) }}
-          className="z-[100] max-w-[calc(100vw-1rem)] rounded-2xl border border-border bg-popover text-popover-foreground shadow-xl overflow-hidden"
+          className="z-[400] max-w-[calc(100vw-1rem)] rounded-2xl border border-border bg-popover text-popover-foreground shadow-xl overflow-hidden"
         >
           <div className="relative border-b border-border">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />

@@ -11,13 +11,14 @@ import { addDays, buildPeriodDays, MONTH_NAMES, weekdayOf } from '@/lib/payroll/
 import { VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
 import type { Weekday } from '@/lib/payroll/types'
 import {
-  computePfotmAutoMetrics, DRILLDOWN_METRICS, pfotmHits, pfotmHitsWithGap, SALES_CATEGORIES, SALES_PAYMENT_STATUSES,
+  computePfotmAutoMetrics, DRILLDOWN_METRICS, pfotmHits, pfotmHitsWithGap, SALES_CATEGORIES,
   type AttendanceForPfotm, type PackageInfo, type PfotmAutoInput, type SaleForPfotm,
 } from '@/lib/pfotm/autoMetrics'
 import {
   datesBetween, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES, type MetricDetail,
 } from '@/lib/metrics/achievement'
 import { resolvePatientNames } from '@/lib/metrics/patientNames'
+import { fetchCountedSales } from '@/lib/metrics/sales'
 import { resolveTherapistIds } from '@/lib/finance/therapists'
 import { suggestLastTherapists } from '@/lib/finance/suggestTherapist'
 import { mergeMetrics, rankBoard, sanitizeMetricValue, type Metrics, type PointRule } from '@/lib/pfotm/engine'
@@ -163,7 +164,7 @@ async function collectPfotmInput(
   // PFOTM too — callers have already checked INPUT_ROLES, so the sales read
   // uses the service role, scoped to this branch and period.
   const admin = createAdminClient()
-  const [attRes, visitRes, refRes, txRes] = await Promise.all([
+  const [attRes, visitRes, refRes, txRows] = await Promise.all([
     supabase.from('attendance').select('staff_id, date, status').in('staff_id', staffIds).gte('date', start).lte('date', end),
     (allBranchVisits
       ? supabase.from('patient_visits').select(VISIT_FOR_PAYROLL_COLUMNS).eq('branch_id', branchId)
@@ -173,21 +174,16 @@ async function collectPfotmInput(
       .gte('visit_date', start).lte('visit_date', end)
       .limit(20000),
     supabase.from('patients').select('id, referred_by_staff_id, created_at').in('referred_by_staff_id', staffIds),
-    admin.from('transactions')
-      .select('id, fisio_id, visit_id, order_id, category, transaction_date, patient_id, payment_status, payment_method')
-      .eq('branch_id', branchId)
-      .eq('type', 'income')
-      .neq('status', 'rejected')
-      .in('payment_status', [...SALES_PAYMENT_STATUSES])
-      .in('category', SALES_CATEGORIES)
-      .gte('transaction_date', start).lte('transaction_date', end)
-      .limit(20000),
+    // First LUNAS/DP payment of each purchase — same rows Target Progress counts.
+    fetchCountedSales<{
+      id: string; fisio_id: string | null; visit_id: string | null; order_id: string | null; category: string
+      transaction_date: string; patient_id: string | null; payment_status: string | null; payment_method: string | null
+    }>(admin, {
+      branchId, start, end, categories: SALES_CATEGORIES,
+      columns: 'id, fisio_id, visit_id, order_id, category, transaction_date, patient_id, payment_status, payment_method',
+    }),
   ])
   const periodVisits = (visitRes.data ?? []) as unknown as VisitForPayroll[]
-  const txRows = (txRes.data ?? []) as {
-    id: string; fisio_id: string | null; visit_id: string | null; order_id: string | null; category: string
-    transaction_date: string; patient_id: string | null; payment_status: string | null; payment_method: string | null
-  }[]
 
   // PAKET KLINIK needs its package (by order_id or via the linked visit) to
   // tell P1 / P2 / P3 apart.

@@ -3,7 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
-import { countsAsKunjungan, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES, SALE_PAYMENT_STATUSES } from '@/lib/metrics/achievement'
+import { countsAsKunjungan, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES } from '@/lib/metrics/achievement'
+import { fetchCountedSales } from '@/lib/metrics/sales'
 import { CATEGORY_TO_TRANSACTION_TYPES, EDITABLE_ROLES, TRANSACTION_CATEGORY_MAP } from '@/components/targetProgress/types'
 import type { CategoryKey, TransactionForProgress } from '@/components/targetProgress/types'
 import type { TransactionForEdit } from '@/components/director/finance/EditTransactionSheet'
@@ -97,19 +98,11 @@ export async function fetchTargetProgressTransactions(
   if (!profile || profile.role === 'non-staff') return []
   if (profile.role !== 'director' && profile.branch_id !== branchId) return []
 
-  const { data, error } = await createAdminClient()
-    .from('transactions')
-    .select('category, transaction_date')
-    .eq('branch_id', branchId)
-    .eq('type', 'income')
-    .neq('status', 'rejected')
-    .in('payment_status', [...SALE_PAYMENT_STATUSES])
-    .in('category', Object.keys(TRANSACTION_CATEGORY_MAP))
-    .gte('transaction_date', start)
-    .lte('transaction_date', end)
-
-  if (error || !data) return []
-  return data as TransactionForProgress[]
+  // One row per purchase — installments after the first payment don't count.
+  const rows = await fetchCountedSales<TransactionForProgress & { id: string }>(createAdminClient(), {
+    branchId, start, end, categories: Object.keys(TRANSACTION_CATEGORY_MAP), columns: 'id, category, transaction_date',
+  })
+  return rows.map((r) => ({ category: r.category, transaction_date: r.transaction_date }))
 }
 
 // `endDate` defaults to `startDate` (a single day cell); the Capaian column
@@ -124,7 +117,7 @@ export async function fetchTargetProgressDetail(
 
   if (category !== 'kunjungan') {
     // TA/Sesi/Paket Klinik/Paket Visit are counted straight from `transactions`
-    // (Kategori match + Pembayaran LUNAS/DP) — the same source the summary
+    // (Kategori match + first LUNAS/DP payment of each purchase) — the same source the summary
     // table now uses, so this list always matches the day cell exactly, and
     // the rows returned are real transactions that can be edited/deleted.
     const { data: { user } } = await supabase.auth.getUser()
@@ -142,24 +135,16 @@ export async function fetchTargetProgressDetail(
     const canReadTx = (EDITABLE_ROLES as readonly string[]).includes(profile.role)
     const db = canReadTx ? supabase : createAdminClient()
 
-    const txCategories = CATEGORY_TO_TRANSACTION_TYPES[category] ?? []
-    const { data, error } = await db
-      .from('transactions')
-      .select(
+    // Same rows the summary counts: the first payment of each purchase only.
+    const rows = await fetchCountedSales<TransactionRow>(db, {
+      branchId,
+      start: startDate,
+      end: endDate,
+      categories: CATEGORY_TO_TRANSACTION_TYPES[category] ?? [],
+      columns:
         'id, patient_id, visit_id, fisio_id, category, harga, discount, amount, payment_method, ' +
         'payment_status, status, description, penjamin, transaction_date, receipt_url',
-      )
-      .eq('branch_id', branchId)
-      .gte('transaction_date', startDate)
-      .lte('transaction_date', endDate)
-      .eq('type', 'income')
-      .neq('status', 'rejected')
-      .in('payment_status', [...SALE_PAYMENT_STATUSES])
-      .in('category', txCategories)
-
-    if (error || !data) return []
-    const rows = (data as unknown as TransactionRow[])
-      .sort((a, b) => a.transaction_date.localeCompare(b.transaction_date))
+    })
 
     const patientIds = [...new Set(rows.map((row) => row.patient_id).filter((id): id is string => !!id))]
     const [{ data: patients }, therapists] = await Promise.all([

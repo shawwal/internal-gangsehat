@@ -85,6 +85,7 @@ export const DETAIL_SORT_OPTIONS = [
   { value: 'date_asc',      label: 'Tanggal terlama' },
   { value: 'date_desc',     label: 'Tanggal terbaru' },
   { value: 'patient_asc',   label: 'Nama pasien A–Z' },
+  { value: 'patient_desc',  label: 'Nama pasien Z–A' },
   { value: 'therapist_asc', label: 'Nama terapis A–Z' },
   { value: 'service_asc',   label: 'Layanan A–Z' },
   { value: 'amount_desc',   label: 'Nominal tertinggi' },

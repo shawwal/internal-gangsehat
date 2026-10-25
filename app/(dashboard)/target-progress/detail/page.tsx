@@ -10,7 +10,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /**
  * Full-page list behind a Progress Target number (day cell or Capaian).
- * `?branch=&category=&start=&end=` identify the number; `q/therapist/service/sort`
+ * `?branch=&category=&start=&end=` identify the number; `q/therapist/service/payment/sort`
  * are the view's own filters, kept in the URL so Back / reload restore them.
  */
 export default async function TargetProgressDetailPage({
@@ -47,6 +47,7 @@ export default async function TargetProgressDetailPage({
         q: sp.q ?? '',
         therapist: sp.therapist ?? '',
         service: sp.service ?? '',
+        payment: sp.payment ?? '',
         sort: isDetailSort(sp.sort) ? sp.sort : 'date_asc',
       }}
     />

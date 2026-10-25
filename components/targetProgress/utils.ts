@@ -39,9 +39,9 @@ export function buildDailyCounts(visits: VisitForProgress[], dates: string[]): D
 }
 
 // TA/Sesi/Paket Klinik/Paket Visit all come straight from `transactions`: one
-// income row with payment_status LUNAS or DP = one countable event (the caller
-// already filtered for that). Excluding PELUNASAN rows is what keeps a single
-// package/session from being counted twice when it's settled in installments.
+// row = one purchase. The caller (fetchCountedSales) already dropped every
+// installment after a purchase's first LUNAS/DP payment, so a package paid in
+// several DPs — or DP then LUNAS/PELUNASAN — is counted once.
 export function buildTransactionDailyCounts(transactions: TransactionForProgress[], dates: string[]): DailyCounts {
   const daily = emptyDaily(dates.length)
   const index = new Map(dates.map((d, i) => [d, i]))

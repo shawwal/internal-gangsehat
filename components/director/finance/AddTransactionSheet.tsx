@@ -395,6 +395,14 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
               labelClassName="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5"
             />
           )}
+          {isIncome && !isOnline && !form.branch_id && (
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Fisio</label>
+              <div className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input text-muted-foreground opacity-60">
+                Pilih cabang dulu — daftar Fisio mengikuti cabang.
+              </div>
+            </div>
+          )}
 
           {isOnline && <OnlineMethodPicker value={onlineMethod} onChange={setOnlineMethod} note="Lanjut pilih pasien / pembayar, lalu link DOKU dibuat. Transaksi tercatat otomatis setelah dibayar." />}
 

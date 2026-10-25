@@ -63,6 +63,7 @@ const SORTERS: Record<DetailSort, (a: TargetProgressDetailRow, b: TargetProgress
   date_asc:      byDate,
   date_desc:     (a, b) => byDate(b, a),
   patient_asc:   (a, b) => byText(a.patientName, b.patientName) || byDate(a, b),
+  patient_desc:  (a, b) => byText(b.patientName, a.patientName) || byDate(a, b),
   // Unattributed rows ('—') last.
   therapist_asc: (a, b) => Number(!a.therapistId) - Number(!b.therapistId) || byText(a.fisioName, b.fisioName) || byDate(a, b),
   service_asc:   (a, b) => byText(a.serviceType, b.serviceType) || byDate(a, b),
@@ -73,6 +74,8 @@ export interface DetailFilters {
   q: string
   therapist: string
   service: string
+  /** payment_status (LUNAS / DP / …); transaction rows only */
+  payment: string
   sort: DetailSort
 }
 
@@ -94,7 +97,7 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
   const [rows, setRows] = useState<TargetProgressDetailRow[] | null>(null)
   const [filters, setFilters] = useState<DetailFilters>(initial)
   const [editingRow, setEditingRow] = useState<TargetProgressDetailRow | null>(null)
-  const { q, therapist, service, sort } = filters
+  const { q, therapist, service, payment, sort } = filters
   const set = (patch: Partial<DetailFilters>) => setFilters((f) => ({ ...f, ...patch }))
 
   const isKunjungan = category === 'kunjungan'
@@ -109,12 +112,12 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
   // Mirror filters into the URL (no navigation) so reload / Back keep them.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    for (const [k, v] of Object.entries({ q: q.trim(), therapist, service, sort: sort === 'date_asc' ? '' : sort })) {
+    for (const [k, v] of Object.entries({ q: q.trim(), therapist, service, payment, sort: sort === 'date_asc' ? '' : sort })) {
       if (v) params.set(k, v)
       else params.delete(k)
     }
     window.history.replaceState(null, '', `?${params}`)
-  }, [q, therapist, service, sort])
+  }, [q, therapist, service, payment, sort])
 
   const therapistOptions = useMemo<TherapistOption[] | null>(() => {
     if (!rows) return null
@@ -131,17 +134,23 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
     [rows],
   )
 
+  const paymentOptions = useMemo(
+    () => [...new Set((rows ?? []).map((r) => r.tx?.payment_status).filter((s): s is string => !!s))].sort(byText),
+    [rows],
+  )
+
   const visible = useMemo(() => {
     const term = q.trim().toLowerCase()
     return (rows ?? [])
       .filter((r) => !therapist || (therapist === NO_THERAPIST ? !r.therapistId : r.therapistId === therapist))
       .filter((r) => !service || r.serviceType === service)
+      .filter((r) => !payment || r.tx?.payment_status === payment)
       .filter((r) => !term || [r.patientName, r.noRm, r.fisioName, r.fisioNickname, r.serviceType, r.tx?.penjamin]
         .some((v) => v?.toLowerCase().includes(term)))
       .sort(SORTERS[sort])
-  }, [rows, q, therapist, service, sort])
+  }, [rows, q, therapist, service, payment, sort])
 
-  const filtered = !!(q.trim() || therapist || service)
+  const filtered = !!(q.trim() || therapist || service || payment)
   const patientCount = new Set(visible.map((r) => r.patientId ?? r.id)).size
   const totalHarga = visible.reduce((s, r) => s + (r.tx?.harga ?? 0), 0)
   const sortOptions = DETAIL_SORT_OPTIONS.filter((o) => o.value !== 'amount_desc' || hasTx)
@@ -227,6 +236,19 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
             {service && !serviceOptions.includes(service) && <option value={service}>{service}</option>}
             {serviceOptions.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
+          {/* Payment detail only reaches roles that can read transactions. */}
+          {hasTx && (
+            <select
+              aria-label="Pembayaran"
+              value={payment}
+              onChange={(e) => set({ payment: e.target.value })}
+              className={`${CONTROL} cursor-pointer`}
+            >
+              <option value="">Semua Pembayaran</option>
+              {payment && !paymentOptions.includes(payment) && <option value={payment}>{payment}</option>}
+              {paymentOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
           <div className="relative flex items-center">
             <ArrowUpDown size={14} className="absolute left-3 text-muted-foreground pointer-events-none" />
             <select
@@ -241,7 +263,7 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
           {filtered && (
             <button
               type="button"
-              onClick={() => set({ q: '', therapist: '', service: '' })}
+              onClick={() => set({ q: '', therapist: '', service: '', payment: '' })}
               className="h-9 px-3 text-xs font-medium rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
             >
               Reset
