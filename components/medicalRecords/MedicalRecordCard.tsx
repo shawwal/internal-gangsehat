@@ -18,7 +18,7 @@ interface Props {
   reminded?: boolean
 }
 
-function missingFieldsLabel(record: MedicalRecordRow): string {
+export function missingFieldsLabel(record: MedicalRecordRow): string {
   // Griya Anak forms have no tindakan/regio — report the Griya record's state.
   if (record.is_griya) return record.griya_status === 'draft' ? 'rekam medis masih draf' : 'rekam medis belum diisi'
   const missing: string[] = []
@@ -28,10 +28,13 @@ function missingFieldsLabel(record: MedicalRecordRow): string {
   return missing.join(', ')
 }
 
-export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemind, reminding, reminded }: Props) {
+/**
+ * Where "Lengkapi / Lihat" goes for a record — null means the quick-form modal.
+ * Shared by the card and table views.
+ */
+export function useRecordFillHref(record: MedicalRecordRow): string | null {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [shareOpen, setShareOpen] = useState(false)
   const formRoute = getVisitFormRoute(record.service_type)
   // Carry the full current path + query string back through `from` (not just
   // the bare pathname) so returning here after saving restores this exact
@@ -39,11 +42,16 @@ export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemin
   const returnTo = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname
   // Griya Anak visits open the Griya forms: Terapi Awal intake directly, and
   // session notes via the child's rekam medis page (where the SOAP modal lives).
-  const fillHref = record.is_griya
+  return record.is_griya
     ? record.griya_route === 'terapi-awal'
       ? `/griya-anak/siswa/${record.patient_id}/terapi-awal/${record.id}`
       : `/griya-anak/siswa/${record.patient_id}/rekam-medis`
     : formRoute ? `/visits/${record.id}/${formRoute}?from=${encodeURIComponent(returnTo)}` : null
+}
+
+export function MedicalRecordCard({ record, isTeamView, onOpenQuickForm, onRemind, reminding, reminded }: Props) {
+  const [shareOpen, setShareOpen] = useState(false)
+  const fillHref = useRecordFillHref(record)
 
   return (
     <div className={`glass-card border-l-4 p-4 space-y-3 transition-all ${

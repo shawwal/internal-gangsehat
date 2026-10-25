@@ -24,6 +24,7 @@ describe('PFOTM auto metrics', () => {
       visit({ kehadiran: 'TIDAK HADIR' }),                          // absent
       visit({ kehadiran: null, visit_date: '2026-10-20' }),         // unmarked, still in the future
       visit({ service_type: 'SPORT MASSAGE' }),                     // tracked separately
+      visit({ service_type: 'TA VISIT' }),                          // counts toward no target
       visit({ status: 'cancelled' }),
     ])
     expect(out.a.kunjungan).toBe(3)

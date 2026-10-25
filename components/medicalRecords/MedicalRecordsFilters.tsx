@@ -1,9 +1,12 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { ArrowDownAZ, ArrowUpAZ, Search, Calendar, User, Stethoscope, ChevronDown } from 'lucide-react'
-import type { BranchOption, StaffOption } from '@/app/actions/medicalRecords'
-import { COMPLETENESS_TABS, PERIOD_OPTIONS, SERVICE_TYPE_OPTIONS, type RecordFiltersState } from './types'
+import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Search, Calendar, Stethoscope, ChevronDown, LayoutGrid, Table2 } from 'lucide-react'
+import type { BranchOption, RecordGroupBy, StaffOption } from '@/app/actions/medicalRecords'
+import {
+  COMPLETENESS_TABS, PERIOD_OPTIONS, SERVICE_TYPE_OPTIONS, SORT_OPTIONS, formatRecordDate,
+  type RecordFiltersState, type RecordView,
+} from './types'
 
 interface Props {
   filters: RecordFiltersState
@@ -13,7 +16,14 @@ interface Props {
   staff: StaffOption[]
   incompleteCount: number
   onChange: (filters: RecordFiltersState) => void
+  view: RecordView
+  onViewChange: (view: RecordView) => void
 }
+
+const VIEW_OPTIONS = [
+  { value: 'cards' as const, label: 'Kartu', Icon: LayoutGrid },
+  { value: 'table' as const, label: 'Tabel', Icon: Table2 },
+]
 
 // `appearance-none` strips each <select>'s native chrome — without it, iOS
 // Safari keeps its own glossy background + affordance icon layered underneath
@@ -27,7 +37,9 @@ const chevronCls = 'absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreg
 // From `sm:` up there's room, so it reverts to a normal wrapping row.
 const scrollRowCls = 'flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap'
 
-export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branches, staff, incompleteCount, onChange }: Props) {
+export function MedicalRecordsFilters({
+  filters, isTeamView, isDirector, branches, staff, incompleteCount, onChange, view, onViewChange,
+}: Props) {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function handleSearch(value: string) {
@@ -36,6 +48,35 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
   }
 
   useEffect(() => () => { if (searchTimer.current) clearTimeout(searchTimer.current) }, [])
+
+  const inBranch = (s: StaffOption, branchId: string) => branchId === 'all' || s.branch_ids.includes(branchId)
+  // Therapists of the chosen branch only. A current pick from elsewhere (e.g.
+  // restored from the URL) stays listed so the select never shows blank.
+  const branchStaff = staff.filter((s) => inBranch(s, filters.branchId) || s.id === filters.staffId)
+
+  function handleBranch(branchId: string) {
+    const picked = staff.find((s) => s.id === filters.staffId)
+    const keepStaff = filters.staffId === 'all' || (picked && inBranch(picked, branchId))
+    onChange({ ...filters, branchId, ...(keepStaff ? {} : { staffId: 'all' }) })
+  }
+
+  // Keeps the range ordered — moving one end past the other drags it along.
+  function handleDate(edge: 'dateFrom' | 'dateTo', value: string) {
+    const next = { ...filters, [edge]: value }
+    if (next.dateFrom && next.dateTo && next.dateFrom > next.dateTo) {
+      if (edge === 'dateFrom') next.dateTo = value
+      else next.dateFrom = value
+    }
+    onChange(next)
+  }
+
+  const hasRange = !!(filters.dateFrom || filters.dateTo)
+  const byName = filters.groupBy !== 'date'
+
+  // Each sort starts in its natural direction: names A–Z, dates newest first.
+  function handleSort(groupBy: RecordGroupBy) {
+    onChange({ ...filters, groupBy, sortOrder: groupBy === 'date' ? 'desc' : 'asc' })
+  }
 
   return (
     <div className="space-y-3">
@@ -92,7 +133,7 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
           <div className="relative shrink-0">
             <select
               value={filters.branchId}
-              onChange={(e) => onChange({ ...filters, branchId: e.target.value })}
+              onChange={(e) => handleBranch(e.target.value)}
               className={`${selectCls} ${filters.branchId !== 'all' ? activeSelectCls : ''}`}
             >
               <option value="all">Semua Cabang</option>
@@ -110,7 +151,7 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
               className={`${selectCls} ${filters.staffId !== 'all' ? activeSelectCls : ''}`}
             >
               <option value="all">Semua Terapis</option>
-              {staff.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              {branchStaff.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
             <ChevronDown size={13} className={chevronCls} />
           </div>
@@ -119,81 +160,144 @@ export function MedicalRecordsFilters({ filters, isTeamView, isDirector, branche
         <div className="relative shrink-0">
           <select
             value={filters.period}
-            disabled={!!filters.date}
+            disabled={hasRange}
             onChange={(e) => onChange({ ...filters, period: e.target.value as RecordFiltersState['period'] })}
             className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {PERIOD_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
-          <ChevronDown size={13} className={`${chevronCls} ${filters.date ? 'opacity-50' : ''}`} />
+          <ChevronDown size={13} className={`${chevronCls} ${hasRange ? 'opacity-50' : ''}`} />
         </div>
 
-        {/* Native <input type="date"> renders with no visible text when empty
-            (most visibly on iOS Safari — no "dd/mm/yyyy" ghost text like desktop
-            Chrome), which reads as a broken, blank box. Overlay our own label
-            in that state; it's pointer-events-none so taps still reach the
-            input underneath and open the native picker. */}
-        <div className="relative shrink-0 flex items-center">
-          <input
-            type="date"
-            value={filters.date}
-            onChange={(e) => onChange({ ...filters, date: e.target.value })}
-            title="Pilih tanggal kunjungan spesifik"
-            className={`${selectCls} w-[132px] pr-7 ${filters.date ? activeSelectCls : 'text-transparent'}`}
+        {/* Date range — either end alone works (open-ended), and any bound
+            overrides the period preset. */}
+        <div className="shrink-0 flex items-center gap-1.5">
+          <DateChip
+            label="Dari"
+            title="Tanggal kunjungan mulai"
+            value={filters.dateFrom}
+            max={filters.dateTo || undefined}
+            onChange={(v) => handleDate('dateFrom', v)}
           />
-          {!filters.date && (
-            <span className="absolute left-3 flex items-center gap-1.5 text-sm text-muted-foreground pointer-events-none">
-              <Calendar size={13} /> Tanggal
-            </span>
-          )}
-          {filters.date && (
+          <span className="text-xs text-muted-foreground">–</span>
+          <DateChip
+            label="Sampai"
+            title="Tanggal kunjungan sampai"
+            value={filters.dateTo}
+            min={filters.dateFrom || undefined}
+            onChange={(v) => handleDate('dateTo', v)}
+          />
+          {hasRange && (
             <button
               type="button"
-              onClick={() => onChange({ ...filters, date: '' })}
+              onClick={() => onChange({ ...filters, dateFrom: '', dateTo: '' })}
               title="Hapus filter tanggal"
-              className="absolute right-1.5 w-5 h-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted text-xs leading-none cursor-pointer"
+              className="w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted text-xs leading-none cursor-pointer"
             >
               ✕
             </button>
           )}
         </div>
 
+        {/* Sort — date, or a name sort that clusters each patient's /
+            therapist's entries together so nothing gets missed. */}
+        <div className="relative shrink-0">
+          <ArrowUpDown size={13} className={`absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none ${filters.groupBy !== 'date' ? 'text-primary' : 'text-muted-foreground'}`} />
+          <select
+            value={filters.groupBy}
+            onChange={(e) => handleSort(e.target.value as RecordGroupBy)}
+            title="Urutkan daftar"
+            className={`${selectCls} pl-7 ${filters.groupBy !== 'date' ? activeSelectCls : ''}`}
+          >
+            {SORT_OPTIONS.filter((o) => isTeamView || o.value !== 'therapist' || o.value === filters.groupBy).map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <ChevronDown size={13} className={chevronCls} />
+        </div>
+
         <button
           type="button"
           onClick={() => onChange({ ...filters, sortOrder: filters.sortOrder === 'asc' ? 'desc' : 'asc' })}
-          title={filters.sortOrder === 'asc' ? 'Terlama lebih dulu' : 'Terbaru lebih dulu'}
+          title={byName
+            ? (filters.sortOrder === 'asc' ? 'Nama A ke Z' : 'Nama Z ke A')
+            : (filters.sortOrder === 'asc' ? 'Terlama lebih dulu' : 'Terbaru lebih dulu')}
           className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-background text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
         >
           {filters.sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownAZ size={14} />}
-          {filters.sortOrder === 'asc' ? 'Terlama' : 'Terbaru'}
+          {byName
+            ? (filters.sortOrder === 'asc' ? 'A–Z' : 'Z–A')
+            : (filters.sortOrder === 'asc' ? 'Terlama' : 'Terbaru')}
         </button>
 
-        {/* Group/sort by patient — clusters a patient's incomplete entries
-            together instead of interleaving them by date, so nothing gets
-            missed and their last program is easy to find. */}
         <div className="shrink-0 flex items-center gap-1 p-0.5 rounded-xl bg-muted border border-border">
-          <button
-            type="button"
-            onClick={() => onChange({ ...filters, groupBy: 'date' })}
-            title="Urutkan berdasarkan tanggal kunjungan"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
-              filters.groupBy === 'date' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Calendar size={12} /> Tanggal
-          </button>
-          <button
-            type="button"
-            onClick={() => onChange({ ...filters, groupBy: 'patient' })}
-            title="Kelompokkan berdasarkan pasien"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
-              filters.groupBy === 'patient' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <User size={12} /> Pasien
-          </button>
+          {VIEW_OPTIONS.map(({ value, label, Icon }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onViewChange(value)}
+              title={value === 'cards' ? 'Tampilan kartu' : 'Tampilan tabel'}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
+                view === value ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon size={12} /> {label}
+            </button>
+          ))}
         </div>
       </div>
+    </div>
+  )
+}
+
+// One end of the date range. The native <input type="date"> is unusable as a
+// chip: clicks land on its hidden dd/mm/yyyy segments and only the tiny icon
+// opens the calendar (and iOS shows it blank). So the whole chip is a button
+// that opens the native picker, and the input stays invisible underneath.
+function DateChip({ label, title, value, min, max, onChange }: {
+  label: string
+  title: string
+  value: string
+  min?: string
+  max?: string
+  onChange: (value: string) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function open() {
+    const input = inputRef.current
+    if (!input) return
+    try {
+      input.showPicker()
+    } catch {
+      // No showPicker (older Safari) — focusing still brings up the picker there.
+      input.focus()
+      input.click()
+    }
+  }
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={open}
+        title={title}
+        className={`${selectCls} pr-3 flex items-center gap-1.5 whitespace-nowrap ${value ? activeSelectCls : 'text-muted-foreground'}`}
+      >
+        <Calendar size={13} className="shrink-0" />
+        {value ? formatRecordDate(value) : label}
+      </button>
+      <input
+        ref={inputRef}
+        type="date"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange(e.target.value)}
+        tabIndex={-1}
+        aria-hidden
+        className="absolute inset-0 w-full h-full opacity-0 pointer-events-none dark:[color-scheme:dark]"
+      />
     </div>
   )
 }

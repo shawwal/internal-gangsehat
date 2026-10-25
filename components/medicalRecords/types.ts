@@ -7,7 +7,8 @@ export interface RecordFiltersState {
   search: string
   completeness: RecordCompleteness
   period: RecordPeriod
-  date: string      // exact YYYY-MM-DD — when set, overrides `period`
+  dateFrom: string  // YYYY-MM-DD inclusive — either bound set overrides `period`
+  dateTo: string    // YYYY-MM-DD inclusive
   sortOrder: RecordSortOrder
   groupBy: RecordGroupBy
   staffId: string   // 'all' or uuid — team scope only
@@ -19,7 +20,8 @@ export const DEFAULT_RECORD_FILTERS: RecordFiltersState = {
   search: '',
   completeness: 'incomplete',
   period: '30',
-  date: '',
+  dateFrom: '',
+  dateTo: '',
   sortOrder: 'desc',
   groupBy: 'date',
   staffId: 'all',
@@ -28,6 +30,14 @@ export const DEFAULT_RECORD_FILTERS: RecordFiltersState = {
 }
 
 export const PAGE_SIZE = 10
+
+export type RecordView = 'cards' | 'table'
+
+export const SORT_OPTIONS: { value: RecordGroupBy; label: string }[] = [
+  { value: 'date',      label: 'Tanggal' },
+  { value: 'patient',   label: 'Nama Pasien' },
+  { value: 'therapist', label: 'Nama Terapis' },
+]
 
 export const PERIOD_OPTIONS: { value: RecordPeriod; label: string }[] = [
   { value: '7',   label: '7 Hari Terakhir' },

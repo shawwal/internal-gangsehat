@@ -1,14 +1,17 @@
 import Link from 'next/link'
 import { ClipboardCheck } from 'lucide-react'
 import { MedicalRecordCard } from './MedicalRecordCard'
-import type { MedicalRecordRow } from '@/app/actions/medicalRecords'
+import { MedicalRecordsTable } from './MedicalRecordsTable'
+import type { MedicalRecordRow, RecordGroupBy } from '@/app/actions/medicalRecords'
+import type { RecordView } from './types'
 
 interface Props {
   loading: boolean
   rows: MedicalRecordRow[]
   isTeamView: boolean
   hasAnyRecords: boolean
-  groupByPatient?: boolean
+  groupBy: RecordGroupBy
+  view: RecordView
   onOpenQuickForm: (visitId: string) => void
   onRemind?: (visitId: string) => void
   remindingIds: Set<string>
@@ -16,7 +19,7 @@ interface Props {
 }
 
 export function MedicalRecordsList({
-  loading, rows, isTeamView, hasAnyRecords, groupByPatient,
+  loading, rows, isTeamView, hasAnyRecords, groupBy, view,
   onOpenQuickForm, onRemind, remindingIds, remindedIds,
 }: Props) {
   if (loading) {
@@ -47,20 +50,42 @@ export function MedicalRecordsList({
     )
   }
 
+  if (view === 'table') {
+    return (
+      <MedicalRecordsTable
+        rows={rows}
+        isTeamView={isTeamView}
+        groupBy={groupBy}
+        onOpenQuickForm={onOpenQuickForm}
+        onRemind={onRemind}
+        remindingIds={remindingIds}
+        remindedIds={remindedIds}
+      />
+    )
+  }
+
+  // Name sorts get a heading per patient / therapist.
+  const groupOf = (r: MedicalRecordRow) =>
+    groupBy === 'patient' ? r.patient_id : groupBy === 'therapist' ? r.attending_staff_id : null
+  const headingCls = 'block text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-2 pb-1.5 first:pt-0 w-fit'
+
   return (
     <div className="space-y-3">
       {rows.map((record, i) => {
-        const showDivider = groupByPatient && (i === 0 || rows[i - 1].patient_id !== record.patient_id)
+        const group = groupOf(record)
+        const showDivider = group !== null && (i === 0 || groupOf(rows[i - 1]) !== group)
         return (
           <div key={record.id}>
-            {showDivider && (
+            {showDivider && (groupBy === 'patient' ? (
               <Link
                 href={`/patients/${record.patient_id}/visits`}
-                className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-2 pb-1.5 first:pt-0 hover:text-primary transition-colors w-fit"
+                className={`${headingCls} hover:text-primary transition-colors`}
               >
                 {record.patient_name}
               </Link>
-            )}
+            ) : (
+              <p className={headingCls}>{record.attending_staff_name}</p>
+            ))}
             <MedicalRecordCard
               record={record}
               isTeamView={isTeamView}

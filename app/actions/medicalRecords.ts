@@ -48,7 +48,7 @@ function applyServiceTypeFilter(query: any, serviceType: string) {
 export type RecordCompleteness = 'all' | 'incomplete' | 'complete'
 export type RecordPeriod = '7' | '30' | '90' | 'all'
 export type RecordSortOrder = 'asc' | 'desc'
-export type RecordGroupBy = 'date' | 'patient'
+export type RecordGroupBy = 'date' | 'patient' | 'therapist'
 export type RecordScope = 'own' | 'team'
 
 export interface MedicalRecordRow {
@@ -86,9 +86,13 @@ export interface MedicalRecordsParams {
   search: string
   completeness: RecordCompleteness
   period: RecordPeriod
-  date?: string      // exact YYYY-MM-DD — when set, overrides `period`
+  dateFrom?: string  // YYYY-MM-DD inclusive — either bound set overrides `period`
+  dateTo?: string    // YYYY-MM-DD inclusive
   sortOrder: RecordSortOrder
-  groupBy?: RecordGroupBy  // 'date' (default, DB-level pagination) or 'patient' (in-memory)
+  // 'date' (default, DB-level pagination) or a name sort — 'patient' /
+  // 'therapist' (in-memory). For name sorts `sortOrder` is the name direction
+  // (asc = A–Z); each person's visits stay newest first.
+  groupBy?: RecordGroupBy
   staffId?: string   // 'all' or uuid — only honored for team-scope viewers
   branchId?: string  // 'all' or uuid — only honored for director
   serviceType?: string  // 'all' or a ServiceType value (e.g. 'TERAPI AWAL')
@@ -114,6 +118,10 @@ export interface StaffOption {
   id: string
   label: string
   branch_id: string | null
+  // Home branch plus every branch they've recently attended a completed visit
+  // in — the branch filter narrows the therapist dropdown by this, so a
+  // therapist covering another branch still shows up there.
+  branch_ids: string[]
 }
 
 export interface RecordFilterOptions {
@@ -196,8 +204,9 @@ function applyScopedFilters(query: any, viewer: ViewerContext, params: MedicalRe
 
   if (params.serviceType && params.serviceType !== 'all') query = applyServiceTypeFilter(query, params.serviceType)
 
-  if (params.date) {
-    query = query.eq('visit_date', params.date)
+  if (params.dateFrom || params.dateTo) {
+    if (params.dateFrom) query = query.gte('visit_date', params.dateFrom)
+    if (params.dateTo)   query = query.lte('visit_date', params.dateTo)
   } else {
     const startDate = periodStartDate(params.period)
     if (startDate) query = query.gte('visit_date', startDate)
@@ -245,7 +254,7 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
   }
 
   const ascending = params.sortOrder === 'asc'
-  const groupByPatient = params.groupBy === 'patient'
+  const sortByName = params.groupBy === 'patient' || params.groupBy === 'therapist'
 
   // Griya completeness lives in other tables, so a completeness filter that can
   // reach a Griya branch fetches the scoped set and filters/paginates in memory.
@@ -254,7 +263,7 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     !params.branchId || params.branchId === 'all' || griyaIds.includes(params.branchId)
   )
   const griyaFilter = params.completeness !== 'all' && griyaInScope
-  const inMemory = groupByPatient || griyaFilter
+  const inMemory = sortByName || griyaFilter
 
   let query = supabase
     .from('patient_visits')
@@ -274,9 +283,10 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     .order('id', { ascending: true })
 
   // Patient names are encrypted at rest, so they can't be ORDER BY'd in SQL.
-  // "Pasien" mode fetches the full scoped result set (bounded — clinic-scale
-  // incomplete-record counts are dozens, not thousands), decrypts every name
-  // once, sorts by name in application code, then paginates in memory. The
+  // Name sorts ("Pasien" / "Terapis" — the therapist label is nickname-or-name,
+  // which SQL can't order by either) fetch the full scoped result set (bounded
+  // — clinic-scale incomplete-record counts are dozens, not thousands), decrypt
+  // every name once, sort in application code, then paginate in memory. The
   // default "Tanggal" mode keeps the efficient DB-level range() pagination.
   const from = (params.page - 1) * params.pageSize
   const { data: fetched, count, error } = inMemory
@@ -305,7 +315,7 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     total = data.length
   }
   // In-memory date mode: paginate before the per-row lookups below.
-  if (inMemory && !groupByPatient) data = data.slice(from, from + params.pageSize)
+  if (inMemory && !sortByName) data = data.slice(from, from + params.pageSize)
 
   // Batch-decrypt patient names — for the full matched set in "Pasien" mode,
   // for just this page otherwise.
@@ -384,13 +394,17 @@ export async function fetchMedicalRecords(params: MedicalRecordsParams): Promise
     }
   })
 
-  if (groupByPatient) {
+  if (sortByName) {
+    const nameOf = (r: MedicalRecordRow) => params.groupBy === 'therapist' ? r.attending_staff_name : r.patient_name
+    const idOf = (r: MedicalRecordRow) => params.groupBy === 'therapist' ? r.attending_staff_id : r.patient_id
     rows.sort((a, b) => {
-      const byName = a.patient_name.localeCompare(b.patient_name, 'id')
-      if (byName !== 0) return byName
+      const byName = nameOf(a).localeCompare(nameOf(b), 'id', { sensitivity: 'base' })
+      if (byName !== 0) return ascending ? byName : -byName
+      // Same name, different person — keep each one's visits together.
+      if (idOf(a) !== idOf(b)) return idOf(a).localeCompare(idOf(b))
       const da = `${a.visit_date} ${a.visit_time ?? '00:00'}`
       const db = `${b.visit_date} ${b.visit_time ?? '00:00'}`
-      return ascending ? da.localeCompare(db) : db.localeCompare(da)
+      return db.localeCompare(da)
     })
     total = rows.length
     rows = rows.slice(from, from + params.pageSize)
@@ -587,15 +601,36 @@ export async function fetchRecordFilterOptions(): Promise<RecordFilterOptions> {
     supabase
       .from('internal_profiles')
       .select('id, full_name, nickname, branch_id')
-      .in('role', ['therapist', 'staff', 'manager'])
+      .in('role', ['therapist', 'sport_massage_therapist', 'staff', 'manager'])
       .eq('is_active', true)
       .order('full_name'),
   ])
 
+  // Where each therapist actually worked lately — a profile has one home
+  // branch, but therapists cover other branches too.
+  const visitBranches = new Map<string, Set<string>>()
+  const since = periodStartDate('90')
+  const pairs = await fetchAllPages<{ attending_staff_id: string; branch_id: string }>((from, to) =>
+    supabase
+      .from('patient_visits')
+      .select('attending_staff_id, branch_id')
+      .eq('status', 'completed')
+      .not('attending_staff_id', 'is', null)
+      .gte('visit_date', since!)
+      .order('id')
+      .range(from, to),
+  )
+  for (const v of pairs ?? []) {
+    let set = visitBranches.get(v.attending_staff_id)
+    if (!set) visitBranches.set(v.attending_staff_id, set = new Set())
+    set.add(v.branch_id)
+  }
+
   const staff: StaffOption[] = (staffRes.data ?? []).map((s: { id: string; full_name: string; nickname: string | null; branch_id: string | null }) => ({
-    id:        s.id,
-    label:     s.nickname?.trim() || s.full_name,
-    branch_id: s.branch_id,
+    id:         s.id,
+    label:      s.nickname?.trim() || s.full_name,
+    branch_id:  s.branch_id,
+    branch_ids: [...new Set([...(s.branch_id ? [s.branch_id] : []), ...(visitBranches.get(s.id) ?? [])])],
   }))
 
   return {

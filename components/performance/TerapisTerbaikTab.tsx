@@ -11,8 +11,9 @@ import { PodiumSkeleton, TableSkeleton } from './Skeletons'
 import {
   MONTHS, CURRENT_MONTH, CURRENT_YEAR, YEARS,
   VISIT_STATUS_FILTER, TODAY_ISO, TA_TYPES, PAKET_TYPES, SESI_TYPES,
-  getMonthRange, isAttended,
+  getMonthRange,
 } from './utils'
+import { countsAsKunjungan } from '@/lib/metrics/achievement'
 import type { VisitForLeaderboard, StaffTargetRow, FisioStats } from './types'
 
 const selectCls =
@@ -72,7 +73,8 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
         })(),
       ])
 
-      const vData = visitRows.filter(v => isAttended(v, TODAY_ISO))
+      // Kunjungan = the Progress Target / PFOTM rule (no sport massage, no TA VISIT).
+      const vData = visitRows.filter(v => countsAsKunjungan(v, TODAY_ISO))
       const tData = (targetsRes.data ?? []) as unknown as StaffTargetRow[]
 
       // Kehadiran ≠ Pembayaran: `total` (kunjungan) stays attendance-only, but the

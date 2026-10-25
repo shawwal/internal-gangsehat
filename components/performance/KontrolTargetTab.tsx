@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchConfirmedVisitIds } from '@/lib/internal/paymentGating'
 import { fetchAllRows, fetchInChunks } from '@/lib/supabase/fetchAll'
 import { getEffectivePackageServiceType } from '@/lib/serviceType'
+import { countsAsKunjungan } from '@/lib/metrics/achievement'
 import { TargetKpiCard } from './TargetKpiCard'
 import { FisioBarChart } from './FisioBarChart'
 import { RecentVisitsTable } from './RecentVisitsTable'
@@ -126,22 +127,22 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
   // (which roll up into TA/SESI/PAKET progress) only count visits with a
   // confirmed payment behind them.
   const attended = visits.filter(v => isAttended(v, TODAY_ISO))
+  // Same rule as Progress Target / PFOTM: no sport massage, no TA VISIT.
+  const kunjunganVisits = visits.filter(v => countsAsKunjungan(v, TODAY_ISO))
   const paidAttended = attended.filter(v => paidVisitIds.has(v.id))
   // package_id is the source of truth — package sessions may be stored as SESI TERAPI/SESI VISIT.
   const effType = (v: VisitRow) => getEffectivePackageServiceType(v.service_type, v.package_id) ?? ''
   const paketAttended = paidAttended.filter(v => (PAKET_TYPES as readonly string[]).includes(effType(v)))
 
-  // TA target = clinic TA only. TA VISIT belongs to the Visit target (with PAKET VISIT).
+  // TA target = clinic TA only; Visit target = PAKET VISIT only (TA VISIT
+  // counts toward no target) — same as Progress Target.
   const taVisits      = paidAttended.filter(v => v.service_type === 'TERAPI AWAL')
   const paketVisits   = firstPackageVisits(paketAttended.filter(v => effType(v) === 'PAKET TERAPI'))
-  const visitVisits   = [
-    ...paidAttended.filter(v => v.service_type === 'TA VISIT'),
-    ...firstPackageVisits(paketAttended.filter(v => effType(v) === 'PAKET VISIT')),
-  ]
+  const visitVisits   = firstPackageVisits(paketAttended.filter(v => effType(v) === 'PAKET VISIT'))
 
   const actualTA     = taVisits.length
   const actualPaket  = paketVisits.length
-  const actualKunjungan = attended.length
+  const actualKunjungan = kunjunganVisits.length
   const actualVisit  = visitVisits.length
 
   const toKpiRow = (v: VisitRow): KpiDetailRow => ({
@@ -266,7 +267,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
           <TargetKpiCard label="Terapi Awal"       actual={actualTA}        target={targetTA}        color="var(--primary)"    delay={0}   onClick={() => setOpenKpi('ta')} />
           <TargetKpiCard label="Paket Masuk"       actual={actualPaket}     target={targetPaket}     color="var(--chart-4)"   delay={80}  onClick={() => setOpenKpi('paket')} />
           <TargetKpiCard label="Jumlah Kunjungan"  actual={actualKunjungan} target={targetKunjungan} color="var(--secondary)"  delay={160} onClick={() => setOpenKpi('kunjungan')} />
-          <TargetKpiCard label="Visit (TA + Paket)" actual={actualVisit}     target={targetVisit}     color="var(--destructive)" delay={240} onClick={() => setOpenKpi('visit')} />
+          <TargetKpiCard label="Paket Visit" actual={actualVisit}     target={targetVisit}     color="var(--destructive)" delay={240} onClick={() => setOpenKpi('visit')} />
         </div>
       )}
 
@@ -287,14 +288,14 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
         title={
           openKpi === 'ta' ? 'Terapi Awal' :
           openKpi === 'paket' ? 'Paket Masuk' :
-          openKpi === 'visit' ? 'Visit (TA + Paket)' : 'Jumlah Kunjungan'
+          openKpi === 'visit' ? 'Paket Visit' : 'Jumlah Kunjungan'
         }
         periodLabel={periodLabel}
         rows={
           openKpi === 'ta' ? taVisits.map(toKpiRow) :
           openKpi === 'paket' ? paketVisits.map(toKpiRow) :
           openKpi === 'visit' ? visitVisits.map(toKpiRow) :
-          openKpi === 'kunjungan' ? attended.map(toKpiRow) : []
+          openKpi === 'kunjungan' ? kunjunganVisits.map(toKpiRow) : []
         }
       />
     </div>

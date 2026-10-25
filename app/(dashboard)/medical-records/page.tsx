@@ -14,7 +14,7 @@ import { MedicalRecordsFilters } from '@/components/medicalRecords/MedicalRecord
 import { MedicalRecordsList } from '@/components/medicalRecords/MedicalRecordsList'
 import { Pagination } from '@/components/leave/Pagination'
 import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
-import { DEFAULT_RECORD_FILTERS, PAGE_SIZE, type RecordFiltersState } from '@/components/medicalRecords/types'
+import { DEFAULT_RECORD_FILTERS, PAGE_SIZE, type RecordFiltersState, type RecordView } from '@/components/medicalRecords/types'
 
 const EMPTY_OPTIONS: RecordFilterOptions = { scope: 'own', isDirector: false, branches: [], staff: [] }
 
@@ -30,7 +30,10 @@ export default function MedicalRecordsPage() {
     const branchId = searchParams.get('branchId')
     const completeness = searchParams.get('completeness')
     const period = searchParams.get('period')
+    // `date` = legacy single-day link; it becomes a one-day range.
     const date = searchParams.get('date')
+    const dateFrom = searchParams.get('from') ?? date
+    const dateTo = searchParams.get('to') ?? date
     const sortOrder = searchParams.get('sortOrder')
     const groupBy = searchParams.get('groupBy')
     const serviceType = searchParams.get('serviceType')
@@ -43,12 +46,15 @@ export default function MedicalRecordsPage() {
         ? { completeness }
         : {}),
       ...(period === '7' || period === '30' || period === '90' || period === 'all' ? { period } : {}),
-      ...(date ? { date } : {}),
+      ...(dateFrom ? { dateFrom } : {}),
+      ...(dateTo ? { dateTo } : {}),
       ...(sortOrder === 'asc' || sortOrder === 'desc' ? { sortOrder } : {}),
-      ...(groupBy === 'date' || groupBy === 'patient' ? { groupBy } : {}),
+      ...(groupBy === 'date' || groupBy === 'patient' || groupBy === 'therapist' ? { groupBy } : {}),
       ...(serviceType ? { serviceType } : {}),
     }
   })
+  // Display only — not a filter, so switching it doesn't refetch.
+  const [view, setView] = useState<RecordView>(() => (searchParams.get('view') === 'table' ? 'table' : 'cards'))
   const [page, setPage] = useState(() => Math.max(1, Number(searchParams.get('page')) || 1))
   // Skips the filter-driven page reset on the very first load, so a `page`
   // restored from the URL (e.g. returning from a saved record) isn't
@@ -83,7 +89,8 @@ export default function MedicalRecordsPage() {
       search: currentFilters.search,
       completeness: currentFilters.completeness,
       period: currentFilters.period,
-      date: currentFilters.date,
+      dateFrom: currentFilters.dateFrom,
+      dateTo: currentFilters.dateTo,
       sortOrder: currentFilters.sortOrder,
       groupBy: currentFilters.groupBy,
       staffId: currentFilters.staffId,
@@ -100,7 +107,8 @@ export default function MedicalRecordsPage() {
     const result = await fetchMedicalRecordStats({
       search: currentFilters.search,
       period: currentFilters.period,
-      date: currentFilters.date,
+      dateFrom: currentFilters.dateFrom,
+      dateTo: currentFilters.dateTo,
       staffId: currentFilters.staffId,
       branchId: currentFilters.branchId,
       serviceType: currentFilters.serviceType,
@@ -130,16 +138,18 @@ export default function MedicalRecordsPage() {
     if (filters.search)                        params.set('q', filters.search)
     if (filters.completeness !== 'incomplete') params.set('completeness', filters.completeness)
     if (filters.period !== '30')               params.set('period', filters.period)
-    if (filters.date)                          params.set('date', filters.date)
+    if (filters.dateFrom)                      params.set('from', filters.dateFrom)
+    if (filters.dateTo)                        params.set('to', filters.dateTo)
     if (filters.sortOrder !== 'desc')          params.set('sortOrder', filters.sortOrder)
     if (filters.groupBy !== 'date')            params.set('groupBy', filters.groupBy)
     if (filters.staffId !== 'all')             params.set('staffId', filters.staffId)
     if (filters.branchId !== 'all')            params.set('branchId', filters.branchId)
     if (filters.serviceType !== 'all')         params.set('serviceType', filters.serviceType)
+    if (view !== 'cards')                      params.set('view', view)
     if (page !== 1)                            params.set('page', String(page))
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [filters, page, pathname, router])
+  }, [filters, view, page, pathname, router])
 
   function handlePage(p: number) {
     setPage(p)
@@ -171,7 +181,8 @@ export default function MedicalRecordsPage() {
     try {
       const { rows: incompleteRows } = await fetchMedicalRecords({
         page: 1, pageSize: 500,
-        search: filters.search, period: filters.period, date: filters.date,
+        search: filters.search, period: filters.period,
+        dateFrom: filters.dateFrom, dateTo: filters.dateTo,
         sortOrder: filters.sortOrder, staffId: filters.staffId, branchId: filters.branchId,
         serviceType: filters.serviceType,
         completeness: 'incomplete',
@@ -235,6 +246,8 @@ export default function MedicalRecordsPage() {
         staff={options.staff}
         incompleteCount={stats.incomplete}
         onChange={setFilters}
+        view={view}
+        onViewChange={setView}
       />
 
       <MedicalRecordsList
@@ -242,7 +255,8 @@ export default function MedicalRecordsPage() {
         rows={rows}
         isTeamView={isTeamView}
         hasAnyRecords={hasAnyRecords}
-        groupByPatient={filters.groupBy === 'patient'}
+        groupBy={filters.groupBy}
+        view={view}
         onOpenQuickForm={setQuickFormVisitId}
         onRemind={isTeamView ? handleRemind : undefined}
         remindingIds={remindingIds}

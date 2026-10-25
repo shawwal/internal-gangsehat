@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
-import { VISIT_STATUS_FILTER, isAttended } from '@/components/performance/utils'
+import { VISIT_STATUS_FILTER } from '@/components/performance/utils'
+import { countsAsKunjungan } from '@/lib/metrics/achievement'
 
 export interface TerapisPatientVisitRow {
   id: string
@@ -36,7 +37,8 @@ export async function fetchTerapisTerbaikPatients(
   if (error || !data) return []
 
   const visits = data as { id: string; patient_id: string; visit_date: string; kehadiran: 'HADIR' | 'TIDAK HADIR' | null; service_type: string | null }[]
-  const rows = visits.filter((v) => isAttended(v))
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date())
+  const rows = visits.filter((v) => countsAsKunjungan(v, today))
   rows.sort((a, b) => a.visit_date.localeCompare(b.visit_date))
 
   // patient_visits has no FK relationship registered for `patient_id` in the
