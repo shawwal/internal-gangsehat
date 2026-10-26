@@ -243,7 +243,7 @@ async function collectPfotmInput(
     category: t.category,
     transaction_date: t.transaction_date, patient_id: t.patient_id, package: pkgOf(t),
     payment_status: t.payment_status, payment_method: t.payment_method,
-    ...(layananByTx ? { metric: layananByTx.get(t.id)?.pfotm_metric ?? null } : {}),
+    ...(layananByTx ? { metric: layananByTx.get(t.id)?.pfotm_metric ?? null, layanan_name: layananByTx.get(t.id)?.nama ?? null } : {}),
   }))
 
   // Referral date = the referred patient's first visit (fallback: registration date).

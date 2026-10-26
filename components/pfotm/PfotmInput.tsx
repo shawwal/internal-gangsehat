@@ -6,6 +6,7 @@ import { EyeOff, List, RefreshCw, RotateCcw, UserPlus } from 'lucide-react'
 import { getPfotmMetricDetail, type PfotmEntry, type PfotmGap } from '@/app/actions/pfotm'
 import { DRILLDOWN_METRICS } from '@/lib/pfotm/autoMetrics'
 import { PACKAGE_KEYS } from '@/lib/pfotm/engine'
+import { PFOTM_METRIC_LABELS as LABEL } from '@/lib/pfotm/labels'
 import { MetricDetailModal } from '@/components/metrics/MetricDetailModal'
 import type { BoardRow, PointRule } from '@/lib/pfotm/engine'
 import { btn } from '@/components/payroll/Modal'
@@ -36,7 +37,7 @@ interface Props {
 
 /**
  * PFOTM columns that add up to a Progress Target row (Total cabang = Capaian
- * for the same dates). TA/Sesi Visit is a PFOTM-only metric — no counterpart.
+ * for the same dates). Terapi Awal dan Sesi Terapi Visit is PFOTM-only — no counterpart.
  */
 const TARGET_PROGRESS_ROWS: { label: string; keys: readonly string[] }[] = [
   { label: 'Kunjungan', keys: ['kunjungan'] },
@@ -45,7 +46,7 @@ const TARGET_PROGRESS_ROWS: { label: string; keys: readonly string[] }[] = [
 ]
 const IN_TARGET_PROGRESS = new Set(TARGET_PROGRESS_ROWS.flatMap((r) => r.keys))
 
-/** Single consolidated form replacing Kunjungan / Rujukan SM / Keuangan / Data sheets. */
+/** Single consolidated form replacing Kunjungan / Rujukan / Keuangan / Data sheets. */
 export function PfotmInput(p: Props) {
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [wd, setWd] = useState<string | null>(null)
@@ -115,7 +116,7 @@ export function PfotmInput(p: Props) {
             <div className="flex flex-wrap gap-1.5">
               {rows.map((r) => (
                 <span key={r.label} className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2 py-1">
-                  <span className="text-muted-foreground">{r.label}{r.keys.length > 1 && ' (Paket 1+2+3)'}</span>
+                  <span className="text-muted-foreground">{r.label}{r.keys.length > 1 && ` (${LABEL.paket_1} + ${LABEL.paket_2} + ${LABEL.paket_3})`}</span>
                   <span className="font-semibold">{r.inBoard}</span>
                   <span className="text-muted-foreground">+</span>
                   <span className={r.outside > 0 ? 'font-semibold text-destructive' : 'text-muted-foreground'}>{r.outside}</span>
@@ -254,7 +255,7 @@ export function PfotmInput(p: Props) {
               {p.gap && (
                 <tr className="border-t border-border">
                   <td className="sticky left-0 z-10 bg-card px-3 py-1.5 border-r border-border text-[11px] leading-tight"
-                    title="Jumlah + Di luar Jumlah. Kunjungan, Paket 1+2+3 (= Paket Klinik) dan Paket Visit sama dengan Progress Target pada rentang tanggal yang sama.">
+                    title={`Jumlah + Di luar Jumlah. Kunjungan, ${LABEL.paket_1} + ${LABEL.paket_2} + ${LABEL.paket_3} (= Paket Klinik) dan ${LABEL.paket_visit} sama dengan Progress Target pada rentang tanggal yang sama.`}>
                     Total cabang
                   </td>
                   {rules.map((r) => {
@@ -305,18 +306,18 @@ export function PfotmInput(p: Props) {
           <li><b className="text-foreground">Jumlah Kunjungan</b> = kunjungan yang hadir, aturan sama dengan Kunjungan di Progress Target (tanpa Sport Massage dan TA Visit).</li>
           {p.salesByLayanan ? (
             <li>
-              <b className="text-foreground">Paket 1 / 2 / 3, TA/Sesi Visit, Paket Visit</b> dari Layanan transaksi sesuai pengaturan Tarif Layanan cabang ini
-              (Paket 1 = 5 sesi, Paket 2 = 10 sesi, Paket 3 = 20 sesi). Dihitung setiap pembayaran LUNAS dan DP
+              <b className="text-foreground">{LABEL.paket_1} / {LABEL.paket_2} / {LABEL.paket_3}, {LABEL.ta_sesi_visit}, {LABEL.paket_visit}</b> dari
+              nama Layanan transaksi sesuai tag PFOTM di Tarif Layanan cabang ini (nama Layanan tampil di &quot;rincian&quot;). Dihitung setiap pembayaran LUNAS dan DP
               (PELUNASAN tidak dihitung) — karena itu angkanya bisa berbeda dari Progress Target.
             </li>
           ) : (
             <>
-              <li><b className="text-foreground">Paket 1 / 2 / 3</b> dari transaksi PAKET KLINIK, satu per pembelian (pembayaran LUNAS/DP pertama); ketiganya dijumlah = Paket Klinik di Progress Target.</li>
-              <li><b className="text-foreground">Paket Visit</b> dari transaksi PAKET VISIT = Paket Visit di Progress Target.</li>
-              <li><b className="text-foreground">TA/Sesi Visit</b> dari transaksi TA VISIT + SESI VISIT — poin khusus PFOTM, tidak ada di Progress Target (TA VISIT tidak masuk target mana pun; SESI VISIT masuk &quot;Sesi&quot;).</li>
+              <li><b className="text-foreground">{LABEL.paket_1} / {LABEL.paket_2} / {LABEL.paket_3}</b> dari transaksi PAKET KLINIK, satu per pembelian (pembayaran LUNAS/DP pertama); ketiganya dijumlah = Paket Klinik di Progress Target.</li>
+              <li><b className="text-foreground">{LABEL.paket_visit}</b> dari transaksi PAKET VISIT = Paket Visit di Progress Target.</li>
+              <li><b className="text-foreground">{LABEL.ta_sesi_visit}</b> dari transaksi TA VISIT + SESI VISIT — poin khusus PFOTM, tidak ada di Progress Target (TA VISIT tidak masuk target mana pun; SESI VISIT masuk &quot;Sesi&quot;).</li>
             </>
           )}
-          <li><b className="text-foreground">Rujukan SM</b> dari kolom &quot;Dirujuk oleh&quot; pasien.</li>
+          <li><b className="text-foreground">{LABEL.rujukan_sm}</b> dari kolom &quot;Dirujuk oleh&quot; pasien.</li>
           <li>Penjualan dihitung ke Fisio transaksi (atau terapis kunjungan yang ditautkan) — aturan sama dengan halaman Keuangan. Tanpa Fisio, staf bukan peserta, atau peserta yang dikeluarkan = &quot;Di luar Jumlah&quot;.</li>
           <li>Jumlah &amp; Rata-rata hanya dari peserta yang ikut peringkat.</li>
           <li>Klik &quot;rincian&quot; untuk melihat pasien &amp; tanggal. Ketik untuk mengoreksi (kuning). Merah = di bawah rata-rata kolom (Terlambat/Alfa: di atas rata-rata). Total &amp; peringkat langsung dihitung ulang.</li>

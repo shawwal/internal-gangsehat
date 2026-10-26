@@ -7,6 +7,7 @@ import type { PfotmHistoryRow } from '@/app/actions/pfotm'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { MONTH_NAMES } from '@/lib/payroll/period'
 import { ExportButton } from '@/components/ui/ExportButton'
+import { PFOTM_METRIC_LABELS as LABEL } from '@/lib/pfotm/labels'
 
 interface Props {
   year: number
@@ -15,8 +16,9 @@ interface Props {
 
 const pct = (n: number | undefined) => (n === undefined ? '—' : `${(n * 100).toFixed(0)}%`)
 const METRIC_COLS: [string, string][] = [
-  ['hadir', 'Hadir'], ['terlambat', 'Telat'], ['alfa', 'Alfa'], ['kunjungan', 'Kunj.'], ['paket_1', 'P1'], ['paket_2', 'P2'],
-  ['paket_3', 'P3'], ['ta_sesi_visit', 'TA/Sesi V'], ['paket_visit', 'Pkt V'], ['rujukan_sm', 'Rujukan'], ['kegiatan_external', 'Ext'],
+  ['hadir', 'Hadir'], ['terlambat', 'Terlambat'], ['alfa', 'Alfa'], ['kunjungan', 'Jumlah Kunjungan'],
+  ['paket_1', LABEL.paket_1], ['paket_2', LABEL.paket_2], ['paket_3', LABEL.paket_3], ['ta_sesi_visit', LABEL.ta_sesi_visit],
+  ['paket_visit', LABEL.paket_visit], ['rujukan_sm', LABEL.rujukan_sm], ['kegiatan_external', 'Kegiatan External'],
 ]
 
 /** Rekap Data + Rekap Poin + Daftar Pemenang, generated from locked periods. */

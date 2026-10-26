@@ -46,6 +46,8 @@ export interface SaleForPfotm {
    * set (even null) it replaces the category / package mapping.
    */
   metric?: string | null
+  /** The transaction's Layanan name (Tarif Layanan) — shown in the drill-down instead of the category. */
+  layanan_name?: string | null
 }
 
 export interface PfotmReferral {
@@ -137,7 +139,7 @@ export function pfotmHitsWithGap(params: PfotmAutoInput): { hits: PfotmHit[]; ga
       : s.category === 'TA VISIT' || s.category === 'SESI VISIT' ? 'ta_sesi_visit'
       : null
     if (key) hit(s.staff_id, key, s.transaction_date ?? start, {
-      patient_id: s.patient_id ?? null, ref_id: s.id ?? null, label: s.category,
+      patient_id: s.patient_id ?? null, ref_id: s.id ?? null, label: s.layanan_name || s.category,
       payment_status: s.payment_status ?? null, payment_method: s.payment_method ?? null,
     }, true)
   }

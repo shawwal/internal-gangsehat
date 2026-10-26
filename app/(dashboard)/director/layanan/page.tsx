@@ -15,6 +15,7 @@ import {
   type PfotmLayananMetric,
 } from '@/app/actions/layanan'
 import { RowsSkeleton } from '@/components/ui/Skeleton'
+import { PFOTM_METRIC_LABELS } from '@/lib/pfotm/labels'
 import { LAYANAN_KATEGORI as KATEGORI_OPTIONS } from '@/lib/serviceType'
 
 function fmt(n: number) {
@@ -26,7 +27,8 @@ interface Branch { id: string; name: string }
 type SortKey = 'nama' | 'kategori' | 'harga'
 
 const PFOTM_METRIC_LABEL: Record<PfotmLayananMetric, string> = {
-  paket_1: 'Paket 1', paket_2: 'Paket 2', paket_3: 'Paket 3', ta_sesi_visit: 'TA/Sesi Visit', paket_visit: 'Paket Visit',
+  paket_1: PFOTM_METRIC_LABELS.paket_1, paket_2: PFOTM_METRIC_LABELS.paket_2, paket_3: PFOTM_METRIC_LABELS.paket_3,
+  ta_sesi_visit: PFOTM_METRIC_LABELS.ta_sesi_visit, paket_visit: PFOTM_METRIC_LABELS.paket_visit,
 }
 
 interface AddForm {
