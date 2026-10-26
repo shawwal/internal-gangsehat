@@ -20,6 +20,8 @@ import { FocusModeBar } from '@/components/jadwal/FocusModeBar'
 import { PaymentDialog } from '@/components/visits/PaymentDialog'
 import { ChangeTherapistDialog } from '@/components/jadwal/ChangeTherapistDialog'
 import { PayOnlineFlow } from '@/components/payment-links/PayOnlineFlow'
+import { SportMassageExportDialog } from '@/components/sport-massage/SportMassageExportDialog'
+import { FileDown } from 'lucide-react'
 import { sendMedicalRecordReminder, updateVisit } from '@/app/actions/jadwal'
 import { useVisitWhatsApp } from '@/hooks/useVisitWhatsApp'
 import { useToast } from '@/context/ToastContext'
@@ -73,6 +75,7 @@ export default function JadwalSportMassagePage() {
   const [refreshingCell, setRefreshingCell]         = useState<RefreshingCell | null>(null)
   const [payOnlineVisit, setPayOnlineVisit]         = useState<DailyVisit | null>(null)
   const [changeTherapistVisit, setChangeTherapistVisit] = useState<DailyVisit | null>(null)
+  const [exportOpen, setExportOpen]                 = useState(false)
 
   useEffect(() => {
     const dateParam = searchParams.get('date')
@@ -185,6 +188,17 @@ export default function JadwalSportMassagePage() {
                       <option key={b.id} value={b.id}>{b.name}</option>
                     ))}
                   </select>
+                )}
+                {!gateBlocked && (
+                  <button
+                    onClick={() => setExportOpen(true)}
+                    title="Export Excel"
+                    aria-label="Export Excel"
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl border border-border bg-background text-sm font-medium text-foreground hover:bg-muted transition-colors shrink-0 cursor-pointer"
+                  >
+                    <FileDown size={15} />
+                    <span className="hidden sm:inline">Export</span>
+                  </button>
                 )}
               </div>
             </div>
@@ -336,6 +350,15 @@ export default function JadwalSportMassagePage() {
           onChange={(l) => {
             if (l.status === 'paid') silentReload({ type: 'visit', visitId: payOnlineVisit.id })
           }}
+        />
+      )}
+
+      {exportOpen && (
+        <SportMassageExportDialog
+          branchId={selectedBranchId ?? null}
+          branchName={branches.find((b) => b.id === selectedBranchId)?.name ?? ''}
+          initialDate={selectedDate}
+          onClose={() => setExportOpen(false)}
         />
       )}
 

@@ -15,6 +15,8 @@ import { useGriyaSettings } from '@/hooks/useGriyaSettings'
  *
  * Director (`branchId === null`) sees every feature.
  */
+const SPORT_MASSAGE_KEYS = new Set(['jadwal-sport-massage', 'sport-massage-performance', 'sport-massage-payroll'])
+
 export function useNavItems(allowedNavKeys: string[], branchId: string | null) {
   const pathname = usePathname()
 
@@ -30,7 +32,7 @@ export function useNavItems(allowedNavKeys: string[], branchId: string | null) {
     () =>
       navForKeys(allowedNavKeys).filter(
         (i) =>
-          ((i.key !== 'jadwal-sport-massage' && i.key !== 'sport-massage-performance') || sportMassageEnabled) &&
+          (!SPORT_MASSAGE_KEYS.has(i.key) || sportMassageEnabled) &&
           (!i.key.startsWith('griya-') || griyaEnabled),
       ),
     [allowedNavKeys, sportMassageEnabled, griyaEnabled],

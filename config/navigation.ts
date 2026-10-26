@@ -377,6 +377,16 @@ export const navigation: NavItem[] = [
     group: 'schedule',
   },
 
+  // Sport Massage payroll — attended sessions × fee per therapist per Layanan
+  {
+    key: 'sport-massage-payroll',
+    label: 'Payroll Sport Massage',
+    href: '/jadwal-sport-massage/payroll',
+    icon: 'Wallet',
+    roles: ['director', 'manager', 'admin', 'hr'],
+    group: 'schedule',
+  },
+
   // My Schedule — every role can manage their own schedule
   {
     key: 'my-schedule',
