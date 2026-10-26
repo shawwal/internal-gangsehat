@@ -66,6 +66,19 @@ export interface IncentiveResult {
   detail: string
 }
 
+/**
+ * A target or bonus tier with no activity ticked always counts 0 — the
+ * incentive silently never pays. Shared by the editor, the save action and
+ * the workspace warnings.
+ */
+export function incentiveConfigIssue(c: Pick<Compensation, 'incentive_target' | 'incentive_activity_codes' | 'bonus_tiers'>): string | null {
+  const needsQty = c.incentive_target > 0 || c.bonus_tiers.some((t) => t.amount > 0)
+  if (needsQty && c.incentive_activity_codes.length === 0) {
+    return 'Target insentif diisi tetapi belum ada aktivitas yang dihitung ke target — capaian akan selalu 0.'
+  }
+  return null
+}
+
 /** INS!P — floor(min(1, qty/target) × INSENTIF) + bonus tiers (qty ≥ min). */
 export function computeIncentive(c: Compensation, qtyByCode: Record<string, number>, unit: number): IncentiveResult {
   const qty = c.incentive_activity_codes.reduce((sum, code) => sum + (qtyByCode[code] ?? 0), 0)
@@ -241,10 +254,13 @@ export function validateEmployeeInputs(params: {
   activityLimits: Record<string, { label: string; max: number }>
   maxLateDays: number
   missingCompensation: boolean
+  compensation?: Compensation | null
 }): ValidationWarning[] {
   const w: ValidationWarning[] = []
   const { attendance: a } = params
   if (params.missingCompensation) w.push({ field: 'compensation', message: 'Belum ada data kompensasi yang berlaku untuk periode ini' })
+  const incentiveIssue = params.compensation ? incentiveConfigIssue(params.compensation) : null
+  if (incentiveIssue) w.push({ field: 'compensation', message: `${incentiveIssue} Atur di Pengaturan & Karyawan.` })
   if (a.lateDays > params.maxLateDays) w.push({ field: 'late', message: `Terlambat ${a.lateDays} kali (batas ${params.maxLateDays})` })
   const recorded = a.hadir + a.izin + a.sakit + a.cuti + a.alfa
   if (recorded < a.workdays) w.push({ field: 'attendance', message: `Absensi belum lengkap: ${recorded}/${a.workdays} hari terisi` })

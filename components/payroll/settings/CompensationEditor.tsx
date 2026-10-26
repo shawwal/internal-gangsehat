@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react'
 import type { ActivityType, Compensation } from '@/lib/payroll/types'
 import { activityDisplay, sortActivityTypes } from '@/lib/payroll/activityDisplay'
+import { incentiveConfigIssue } from '@/lib/payroll/engine'
 import { CurrencyInput } from '../CurrencyInput'
 import { inputCls, labelCls } from '../Modal'
 
@@ -62,6 +63,7 @@ export function CompensationEditor({ value: c, onChange, activityTypes, visitBon
   const set = (patch: Partial<Compensation>) => onChange({ ...c, ...patch })
   const types = sortActivityTypes(activityTypes).map((t) => ({ ...t, ...activityDisplay(t) }))
   const groups = [...new Set(types.map((t) => t.group))]
+  const incentiveIssue = incentiveConfigIssue(c)
 
   return (
     <div className="space-y-5">
@@ -139,6 +141,7 @@ export function CompensationEditor({ value: c, onChange, activityTypes, visitBon
               )
             })}
           </div>
+          {incentiveIssue && <p className="text-[11px] text-destructive mt-1">{incentiveIssue}</p>}
           <p className="text-[11px] text-muted-foreground mt-1">Insentif = min(1, jumlah ÷ target) × insentif penuh, dibulatkan ke bawah.</p>
         </div>
         <div className="space-y-2">

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import rawFixture from './__fixtures__/penggajian-sep-2026.json'
-import { computePayroll, computeOperasional, floorTo, pickCompensation, visibleSlipLines } from './engine'
+import { computePayroll, computeOperasional, floorTo, incentiveConfigIssue, pickCompensation, visibleSlipLines } from './engine'
 import { summarizeAttendance, parseCodeInput, codeFromRow, rowFromCode } from './attendance'
 import { buildPeriodDays, periodRange, shortDayLabel } from './period'
 import type { Adjustment, AttendanceCode, Compensation, DeductionRule } from './types'
@@ -224,5 +224,17 @@ describe('compensation history', () => {
     expect(pickCompensation(versions, '2026-09-26')?.gaji_pokok).toBe(1000000)
     expect(pickCompensation(versions, '2026-08-26')?.gaji_pokok).toBe(900000)
     expect(pickCompensation(versions, '1999-01-01')).toBeNull()
+  })
+})
+
+describe('incentiveConfigIssue', () => {
+  const base = { incentive_target: 20, incentive_activity_codes: [] as string[], bonus_tiers: [] }
+  it('flags a target with no activity counted toward it', () => {
+    expect(incentiveConfigIssue(base)).not.toBeNull()
+    expect(incentiveConfigIssue({ ...base, incentive_target: 0, bonus_tiers: [{ min_qty: 40, amount: 200000 }] })).not.toBeNull()
+  })
+  it('accepts a target with activities, or a fixed incentive', () => {
+    expect(incentiveConfigIssue({ ...base, incentive_activity_codes: ['KONTEN'] })).toBeNull()
+    expect(incentiveConfigIssue({ ...base, incentive_target: 0 })).toBeNull()
   })
 })

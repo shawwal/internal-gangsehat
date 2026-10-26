@@ -143,6 +143,7 @@ export function computeWorkspaceRows(ws: PayrollWorkspace): WorkspaceRow[] {
       activityLimits: limits,
       maxLateDays: ws.settings.max_late_days_warning,
       missingCompensation: !staff.compensation,
+      compensation: staff.compensation,
     })
     return { staff, attendance, activityQty: qty, result, warnings }
   })

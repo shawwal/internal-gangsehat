@@ -1,10 +1,11 @@
 'use client'
 
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
-import { List, RefreshCw, RotateCcw } from 'lucide-react'
+import { AlertTriangle, List, RefreshCw, RotateCcw } from 'lucide-react'
 import { getPayrollActivityDetail } from '@/app/actions/payroll'
 import { MetricDetailModal } from '@/components/metrics/MetricDetailModal'
 import { activityDisplay, sortActivityTypes } from '@/lib/payroll/activityDisplay'
+import { incentiveConfigIssue } from '@/lib/payroll/engine'
 import { staffDisplayName, type PayrollWorkspace, type WorkspaceRow } from '@/lib/payroll/workspace'
 import { formatIDR } from './format'
 import { btn } from './Modal'
@@ -182,6 +183,7 @@ function ActivityTable({ ws, rows, showAll, editable, drafts, setDrafts, onOverr
             const s = row.staff
             const comp = s.compensation
             const insentif = insentifOf(row)
+            const incentiveIssue = comp ? incentiveConfigIssue(comp) : null
             return (
               <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/20">
                 <td className="sticky left-0 z-10 bg-card px-3 py-1.5 border-r border-border">
@@ -241,6 +243,11 @@ function ActivityTable({ ws, rows, showAll, editable, drafts, setDrafts, onOverr
                 })}
                 <td className="px-2 text-center border-l border-border text-muted-foreground whitespace-nowrap">
                   {comp && comp.incentive_target > 0 ? `${row.result?.incentiveQty ?? 0}/${comp.incentive_target}` : '—'}
+                  {incentiveIssue && (
+                    <div title={incentiveIssue} className="flex items-center justify-center gap-0.5 text-[9px] text-destructive">
+                      <AlertTriangle size={9} /> aktivitas belum dipilih
+                    </div>
+                  )}
                 </td>
                 <td className={`px-2 text-right font-semibold text-foreground whitespace-nowrap ${insentifBelowAvg(insentif) ? BELOW_AVG_CLS : ''}`}>{formatIDR(insentif)}</td>
                 <td className={`px-2 text-right font-semibold text-foreground whitespace-nowrap ${visitBelowAvg(row.result?.visit ?? 0) ? BELOW_AVG_CLS : ''}`}>{formatIDR(row.result?.visit ?? 0)}</td>

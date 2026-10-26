@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/activityLog'
 import type { ActivityType, BonusTier, Compensation, DeductionRule, Weekday } from '@/lib/payroll/types'
 import { BRANCH_TOTAL_SALE_CATEGORIES } from '@/lib/payroll/paymentActivity'
+import { incentiveConfigIssue } from '@/lib/payroll/engine'
 
 type Ok<T> = { ok: true; data: T }
 type Err = { ok: false; error: string }
@@ -395,7 +396,7 @@ function validateCompensation(c: Compensation): string | null {
   for (const v of Object.values(c.activity_rates)) {
     if (!Number.isFinite(v) || v < 0) return 'Tarif aktivitas tidak valid.'
   }
-  return null
+  return incentiveConfigIssue(c)
 }
 
 /** Adds a new compensation version. History rows are never edited (DB-enforced). */
