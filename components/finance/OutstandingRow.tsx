@@ -9,6 +9,7 @@ import { TherapistLink } from './TherapistLink'
 
 const PAY_STATUS_BADGE: Record<string, string> = {
   DP:        'bg-yellow-500/15 text-yellow-400',
+  CICILAN:   'bg-orange-500/15 text-orange-400',
   PELUNASAN: 'bg-primary/15 text-primary',
   LUNAS:     'bg-green-500/15 text-green-400',
 }

@@ -25,7 +25,7 @@ export interface HomeVisitSessionRow {
   status: VisitStatus
   attending_staff_name: string | null
   package: { jenis_paket: 'P1' | 'P2' | null; used_sessions: number; total_sessions: number } | null
-  payment_status: 'LUNAS' | 'DP' | 'PELUNASAN' | null
+  payment_status: 'LUNAS' | 'DP' | 'CICILAN' | 'PELUNASAN' | null
   payment_outstanding: number
   has_payment: boolean
 }

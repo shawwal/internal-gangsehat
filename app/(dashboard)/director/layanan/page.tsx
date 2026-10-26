@@ -10,7 +10,9 @@ import {
   setLayananOnlineServiceType,
   upsertLayanan,
   deleteLayanan,
+  fetchPayrollActivityOptions,
   type LayananRow,
+  type PfotmLayananMetric,
 } from '@/app/actions/layanan'
 import { RowsSkeleton } from '@/components/ui/Skeleton'
 import { LAYANAN_KATEGORI as KATEGORI_OPTIONS } from '@/lib/serviceType'
@@ -22,6 +24,22 @@ function fmt(n: number) {
 interface Branch { id: string; name: string }
 
 type SortKey = 'nama' | 'kategori' | 'harga'
+
+const PFOTM_METRIC_LABEL: Record<PfotmLayananMetric, string> = {
+  paket_1: 'Paket 1', paket_2: 'Paket 2', paket_3: 'Paket 3', ta_sesi_visit: 'TA/Sesi Visit', paket_visit: 'Paket Visit',
+}
+
+interface AddForm {
+  nama: string
+  kategori: string
+  jumlah_sesi: string
+  harga: string
+  deskripsi: string
+  payroll_units: Record<string, number>
+  pfotm_metric: PfotmLayananMetric | ''
+}
+
+const EMPTY_FORM: AddForm = { nama: '', kategori: '', jumlah_sesi: '', harga: '', deskripsi: '', payroll_units: {}, pfotm_metric: '' }
 
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
@@ -47,9 +65,14 @@ export default function LayananPage() {
   // add / edit row modal (editRow = null → add)
   const [showAdd, setShowAdd]   = useState(false)
   const [editRow, setEditRow]   = useState<LayananRow | null>(null)
-  const [addForm, setAddForm]   = useState({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '', deskripsi: '' })
+  const [addForm, setAddForm]   = useState<AddForm>({ ...EMPTY_FORM, kategori: KATEGORI_OPTIONS[0] })
   const [addSaving, setAddSaving] = useState(false)
   const [addError, setAddError]   = useState<string | null>(null)
+
+  // payroll activity columns a Layanan can count toward
+  const [activityOptions, setActivityOptions] = useState<{ code: string; label: string }[]>([])
+  useEffect(() => { fetchPayrollActivityOptions().then(setActivityOptions) }, [])
+  const activityLabel = (code: string) => activityOptions.find((a) => a.code === code)?.label ?? code
 
   // load branches once
   useEffect(() => {
@@ -115,7 +138,7 @@ export default function LayananPage() {
   // ── Add new / edit ───────────────────────────────────────────────────────────
   function openAdd() {
     setEditRow(null)
-    setAddForm({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '', deskripsi: '' })
+    setAddForm({ ...EMPTY_FORM, kategori: KATEGORI_OPTIONS[0] })
     setAddError(null)
     setShowAdd(true)
   }
@@ -128,6 +151,8 @@ export default function LayananPage() {
       jumlah_sesi: row.jumlah_sesi != null ? String(row.jumlah_sesi) : '',
       harga:       String(row.harga),
       deskripsi:   row.deskripsi ?? '',
+      payroll_units: row.payroll_units ?? {},
+      pfotm_metric:  row.pfotm_metric ?? '',
     })
     setAddError(null)
     setShowAdd(true)
@@ -148,6 +173,8 @@ export default function LayananPage() {
       jumlah_sesi: addForm.jumlah_sesi ? Number(addForm.jumlah_sesi) : null,
       harga:       Number(addForm.harga) || 0,
       deskripsi:   addForm.deskripsi.trim() || null,
+      payroll_units: Object.fromEntries(Object.entries(addForm.payroll_units).filter(([, n]) => n > 0)),
+      pfotm_metric:  addForm.pfotm_metric || null,
       is_active:   editRow?.is_active ?? true,
     })
     setAddSaving(false)
@@ -195,7 +222,7 @@ export default function LayananPage() {
         <div>
           <h1 className="text-xl font-semibold text-foreground">Tarif Layanan</h1>
           <p className="text-sm text-muted-foreground">
-            Atur harga per jenis layanan untuk setiap cabang
+            Atur harga per jenis layanan untuk setiap cabang, dan kolom penggajian / PFOTM yang dihitung darinya
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
@@ -252,7 +279,16 @@ export default function LayananPage() {
                 {sortedRows.map((row) => (
                   <tr key={row.id} className={`transition-colors ${row.is_active ? 'hover:bg-muted/10' : 'opacity-50 hover:bg-muted/10'}`}>
                     {/* Nama */}
-                    <td className="px-4 py-3 font-medium text-foreground">{row.nama}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {row.nama}
+                      {(Object.keys(row.payroll_units ?? {}).length > 0 || row.pfotm_metric) && (
+                        <div className="text-[10px] font-normal text-muted-foreground">
+                          {Object.entries(row.payroll_units ?? {}).map(([c, n]) => `${activityLabel(c)}${n > 1 ? ` ×${n}` : ''}`).join(', ')}
+                          {Object.keys(row.payroll_units ?? {}).length > 0 && row.pfotm_metric && ' · '}
+                          {row.pfotm_metric && `PFOTM: ${PFOTM_METRIC_LABEL[row.pfotm_metric]}`}
+                        </div>
+                      )}
+                    </td>
 
                     {/* Deskripsi — table is nowrap, so long text truncates (full text on hover / in Edit) */}
                     <td className="px-4 py-3 text-muted-foreground">
@@ -470,6 +506,47 @@ export default function LayananPage() {
                     placeholder="mis. 10 sesi terapi, berlaku 3 bulan"
                     className={inputCls + ' resize-y'}
                   />
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-border p-3">
+                  <div>
+                    <p className="text-xs font-medium">Dihitung untuk</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Kosongkan jika cabang ini masih memakai hitungan lama. Kolom gaji dihitung dari pembayaran LUNAS / PELUNASAN dengan layanan ini.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5">Penggajian <span className="text-muted-foreground font-normal">(jumlah per pembayaran)</span></label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {activityOptions.map((a) => (
+                        <label key={a.code} className="flex items-center gap-2 text-xs">
+                          <input
+                            type="number"
+                            min="0"
+                            value={addForm.payroll_units[a.code] ?? ''}
+                            onChange={(e) => setAddForm((f) => ({
+                              ...f,
+                              payroll_units: { ...f.payroll_units, [a.code]: Math.max(0, Math.round(Number(e.target.value) || 0)) },
+                            }))}
+                            placeholder="0"
+                            className="w-14 px-2 py-1 border border-border rounded-lg text-xs bg-input text-center focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          <span className="truncate" title={a.label}>{a.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5">Kolom PFOTM</label>
+                    <select
+                      value={addForm.pfotm_metric}
+                      onChange={(e) => setAddForm((f) => ({ ...f, pfotm_metric: e.target.value as AddForm['pfotm_metric'] }))}
+                      className={inputCls + ' cursor-pointer'}
+                    >
+                      <option value="">Tidak dihitung</option>
+                      {Object.entries(PFOTM_METRIC_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                    </select>
+                  </div>
                 </div>
 
                 {addError && (

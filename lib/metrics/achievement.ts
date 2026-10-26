@@ -33,6 +33,7 @@ export interface SalePayment {
   harga: number | null
   discount: number | null
   amount: number | null
+  order_id?: string | null
 }
 
 /**
@@ -47,8 +48,13 @@ export interface SalePayment {
  *
  * Pass every payment status (PELUNASAN included) and enough history before the
  * window that a purchase opened earlier is seen as open.
+ * CICILAN (a later installment) never starts a purchase.
+ *
+ * `fullLunasIsNewSale`: a LUNAS that pays the full price (amount + discount ≥
+ * harga) on a different order is a new purchase even while a DP is open — not
+ * that DP's closing payment (PFOTM on Layanan-tagged branches).
  */
-export function countedSaleIds(rows: SalePayment[]): Set<string> {
+export function countedSaleIds(rows: SalePayment[], opts: { fullLunasIsNewSale?: boolean } = {}): Set<string> {
   const counted = new Set<string>()
   const groups = new Map<string, SalePayment[]>()
   for (const r of rows) {
@@ -65,15 +71,18 @@ export function countedSaleIds(rows: SalePayment[]): Set<string> {
   for (const list of groups.values()) {
     list.sort((a, b) =>
       a.transaction_date.localeCompare(b.transaction_date) || (a.created_at ?? '').localeCompare(b.created_at ?? ''))
-    let open: { harga: number; due: number; paid: number } | null = null
+    let open: { harga: number; due: number; paid: number; order: string | null } | null = null
     for (const r of list) {
       const harga = Number(r.harga ?? 0)
       if (open && harga !== open.harga) open = null
+      if (open && opts.fullLunasIsNewSale && r.payment_status === 'LUNAS'
+        && Number(r.amount ?? 0) + Number(r.discount ?? 0) >= harga
+        && !(r.order_id && r.order_id === open.order)) open = null
       if (!open) {
         if (!(SALE_PAYMENT_STATUSES as readonly string[]).includes(r.payment_status ?? '')) continue
         counted.add(r.id)
         if (r.payment_status !== 'DP') continue
-        open = { harga, due: harga - Number(r.discount ?? 0), paid: 0 }
+        open = { harga, due: harga - Number(r.discount ?? 0), paid: 0, order: r.order_id ?? null }
       }
       open.paid += Number(r.amount ?? 0)
       if (r.payment_status === 'LUNAS' || r.payment_status === 'PELUNASAN' || open.paid >= open.due) open = null

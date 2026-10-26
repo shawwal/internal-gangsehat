@@ -40,6 +40,12 @@ export interface SaleForPfotm {
   payment_method?: string | null
   /** The package bought, when the transaction links to one (PAKET KLINIK tiering). */
   package: PackageInfo | null
+  /**
+   * Set on branches whose Tarif Layanan carry `pfotm_metric` (migration 115):
+   * the column of the transaction's Layanan, null = counts toward none. When
+   * set (even null) it replaces the category / package mapping.
+   */
+  metric?: string | null
 }
 
 export interface PfotmReferral {
@@ -125,7 +131,8 @@ export function pfotmHitsWithGap(params: PfotmAutoInput): { hits: PfotmHit[]; ga
 
   // Paket 1/2/3, TA/Sesi Visit, Paket Visit: from income transactions.
   for (const s of params.sales) {
-    const key = s.category === 'PAKET KLINIK' ? packageTierKey(s.package)
+    const key = s.metric !== undefined ? s.metric
+      : s.category === 'PAKET KLINIK' ? packageTierKey(s.package)
       : s.category === 'PAKET VISIT' ? 'paket_visit'
       : s.category === 'TA VISIT' || s.category === 'SESI VISIT' ? 'ta_sesi_visit'
       : null

@@ -16,6 +16,7 @@ const SERVICE_BADGE: Record<string, string> = {
 const PAYMENT_BADGE: Record<string, string> = {
   LUNAS:     'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/20',
   DP:        'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/20',
+  CICILAN:   'bg-orange-500/15 text-orange-400 border-orange-500/20',
   PELUNASAN: 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/20',
 }
 

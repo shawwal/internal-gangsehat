@@ -85,7 +85,7 @@ export function buildIncomePayload(
       category: t.category,
       harga: t.harga,
       discount: t.discount,
-      payment_status: fullyPaid ? 'LUNAS' : 'PELUNASAN',
+      payment_status: fullyPaid ? 'PELUNASAN' : 'CICILAN',
     }
   }
 

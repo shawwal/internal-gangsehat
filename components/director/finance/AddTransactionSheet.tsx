@@ -17,7 +17,7 @@ import type { PaymentLinkTarget } from '@/components/payment-links/types'
 
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
-const PAYMENT_STATUSES = ['LUNAS', 'DP', 'PELUNASAN']
+const PAYMENT_STATUSES = ['LUNAS', 'DP', 'CICILAN', 'PELUNASAN']
 
 function formatRp(n: number) {
   if (!n) return ''

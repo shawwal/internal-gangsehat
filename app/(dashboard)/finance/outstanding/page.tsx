@@ -20,6 +20,7 @@ const ISO_DATE  = /^\d{4}-\d{2}-\d{2}$/
 const STATUS_TABS = [
   { value: '',          label: 'Belum Lunas' },
   { value: 'DP',         label: 'DP' },
+  { value: 'CICILAN',    label: 'Cicilan' },
   { value: 'PELUNASAN',  label: 'Pelunasan' },
   { value: 'LUNAS',      label: 'Lunas' },
 ] as const
@@ -46,7 +47,7 @@ export default async function OutstandingPaymentsPage({
 }) {
   const params = await searchParams
   const q      = params.q?.trim() ?? ''
-  const status = params.status === 'DP' || params.status === 'PELUNASAN' || params.status === 'LUNAS' ? params.status : ''
+  const status = params.status === 'DP' || params.status === 'CICILAN' || params.status === 'PELUNASAN' || params.status === 'LUNAS' ? params.status : ''
   const page   = Math.max(1, Number(params.page) || 1)
   const dateFrom = params.from && ISO_DATE.test(params.from) ? params.from : ''
   const dateTo   = params.to   && ISO_DATE.test(params.to)   ? params.to   : ''
@@ -105,12 +106,12 @@ export default async function OutstandingPaymentsPage({
     return q2
   }
   const applyListFilters = (q2: QueryBuilder): QueryBuilder => {
-    // "Belum Lunas" (default) covers DP + Pelunasan via outstanding > 0.
+    // "Belum Lunas" (default) covers DP + Cicilan + Pelunasan via outstanding > 0.
     // "Lunas" breaks out of that framing on purpose — a paid-off row has
     // outstanding = 0, so it must drop the outstanding filter entirely.
     if (status === 'LUNAS') {
       q2 = q2.eq('payment_status', 'LUNAS')
-    } else if (status === 'DP' || status === 'PELUNASAN') {
+    } else if (status === 'DP' || status === 'CICILAN' || status === 'PELUNASAN') {
       q2 = q2.eq('payment_status', status).gt('outstanding', 0)
     } else {
       q2 = q2.gt('outstanding', 0)

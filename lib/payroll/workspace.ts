@@ -4,9 +4,10 @@
 
 import { computePayroll, validateEmployeeInputs, type ValidationWarning } from './engine'
 import { summarizeAttendance } from './attendance'
-import type {
-  ActivityType, Adjustment, AttendanceCode, AttendanceSummary, Compensation, DeductionRule,
-  PayrollPeriodStatus, PayrollResult, PeriodDay, Weekday,
+import {
+  VISIT_BONUS_ROLES,
+  type ActivityType, type Adjustment, type AttendanceCode, type AttendanceSummary, type Compensation, type DeductionRule,
+  type PayrollPeriodStatus, type PayrollResult, type PeriodDay, type Weekday,
 } from './types'
 
 export interface WorkspacePeriod {
@@ -45,6 +46,8 @@ export interface WorkspaceStaff {
   jabatan: string | null
   compensation: Compensation | null
   compensation_effective_from: string | null
+  /** Activity codes counted over the whole branch for this employee (migration 115). */
+  branch_total_codes?: string[]
 }
 
 export interface ActivityCell {
@@ -131,6 +134,7 @@ export function computeWorkspaceRows(ws: PayrollWorkspace): WorkspaceRow[] {
           deductionRules: ws.deductionRules,
           adjustments,
           roundingUnit: ws.settings.rounding_unit,
+          visitBonus: VISIT_BONUS_ROLES.includes(staff.role),
         })
       : null
     const warnings = validateEmployeeInputs({

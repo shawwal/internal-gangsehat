@@ -18,6 +18,8 @@ interface Props {
   onOverride: (staffId: string, code: string, value: number | null) => void
 }
 
+const isAuto = (t: { count_mode: string; from_payments?: boolean }) => t.count_mode !== 'manual' || !!t.from_payments
+
 const insentifOf = (row: WorkspaceRow) => row.result?.lines.find((l) => l.code === 'INSENTIF')?.amount ?? 0
 
 // One table per role: columns, totals and below-average marks only compare like with like.
@@ -35,6 +37,7 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [detail, setDetail] = useState<Detail | null>(null)
   const editable = ws.permissions.canEdit
+  const paymentLabels = ws.activityTypes.filter((t) => t.from_payments).map((t) => activityDisplay(t).label)
 
   const sections = useMemo(() => {
     const out = ROLE_GROUPS.map((g) => ({ key: g.key, label: g.label, rows: rows.filter((r) => g.roles.includes(r.staff.role)) }))
@@ -47,7 +50,10 @@ export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Pr
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground max-w-2xl">
           Angka otomatis diambil dari kunjungan pasien yang <b>hadir</b> (Jadwal Harian) dalam periode ini.
-          Ketik angka untuk mengoreksi; kosongkan untuk kembali ke nilai otomatis.
+          {paymentLabels.length > 0 && (
+            <> Kolom {paymentLabels.join(', ')} diambil dari pembayaran <b>LUNAS / PELUNASAN</b> per Layanan, atas nama Fisio di pembayaran.</>
+          )}
+          {' '}Ketik angka untuk mengoreksi; kosongkan untuk kembali ke nilai otomatis.
         </p>
         <div className="flex flex-wrap gap-2">
           <button className={btn.ghost} onClick={() => setShowAll((v) => !v)}>
@@ -163,7 +169,7 @@ function ActivityTable({ ws, rows, showAll, editable, drafts, setDrafts, onOverr
             {columns.map((t) => (
               <th key={t.code} className="px-2 py-2 text-center font-medium text-muted-foreground border-l border-border min-w-[78px] whitespace-nowrap" title={t.code}>
                 {t.label}
-                <div className="text-[9px] font-normal opacity-70">{t.count_mode === 'manual' ? 'manual' : 'otomatis'}</div>
+                <div className="text-[9px] font-normal opacity-70">{isAuto(t) ? 'otomatis' : 'manual'}</div>
               </th>
             ))}
             <th className="px-2 py-2 text-center font-medium text-muted-foreground border-l border-border">Capaian</th>
@@ -207,7 +213,10 @@ function ActivityTable({ ws, rows, showAll, editable, drafts, setDrafts, onOverr
                             : 'border-transparent bg-muted/40 text-foreground'
                         } ${!over && activityBelowAvg.get(t.code)!(value) ? BELOW_AVG_CLS : ''}`}
                       />
-                      {t.count_mode !== 'manual' && auto > 0 && (
+                      {s.branch_total_codes?.includes(t.code) && (
+                        <div className="text-[9px] text-muted-foreground">total cabang</div>
+                      )}
+                      {isAuto(t) && auto > 0 && (
                         <button
                           onClick={() => onDetail({ staffId: s.id, name: staffDisplayName(s), code: t.code, label: t.label })}
                           title="Lihat pasien & tanggal"

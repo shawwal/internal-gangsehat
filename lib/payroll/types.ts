@@ -100,7 +100,12 @@ export interface ActivityType {
   max_per_period: number
   sort_order: number
   is_active: boolean
+  /** Resolved per branch, not stored: counted from payments by Layanan (lib/payroll/paymentActivity.ts). */
+  from_payments?: boolean
 }
+
+/** Roles that earn Bonus Visit (activity_rates); everyone else is paid on Insentif only. */
+export const VISIT_BONUS_ROLES = ['therapist', 'sport_massage_therapist']
 
 export const ADJUSTMENT_CATEGORY_LABEL: Record<Adjustment['category'], string> = {
   DENDA: 'Denda',

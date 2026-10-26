@@ -24,9 +24,10 @@ interface Props {
 const STATUS_CLS: Record<string, string> = {
   LUNAS: 'bg-green-500/15 text-green-400',
   DP: 'bg-yellow-500/15 text-yellow-400',
+  CICILAN: 'bg-orange-500/15 text-orange-400',
   PELUNASAN: 'bg-primary/15 text-primary',
 }
-const STATUS_ORDER = ['LUNAS', 'DP', 'PELUNASAN']
+const STATUS_ORDER = ['LUNAS', 'DP', 'CICILAN', 'PELUNASAN']
 
 const fmtDate = (d: string) =>
   new Date(`${d}T00:00:00`).toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })

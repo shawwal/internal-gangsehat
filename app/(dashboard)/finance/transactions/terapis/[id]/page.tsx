@@ -18,6 +18,7 @@ const UUID      = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 const PAY_STATUS_BADGE: Record<string, string> = {
   LUNAS:     'bg-green-500/15 text-green-400',
   DP:        'bg-yellow-500/15 text-yellow-400',
+  CICILAN:   'bg-orange-500/15 text-orange-400',
   PELUNASAN: 'bg-primary/15 text-primary',
 }
 const TX_STATUS_BADGE: Record<string, string> = {

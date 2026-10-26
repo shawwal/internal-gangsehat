@@ -20,6 +20,7 @@ import {
 import { resolvePatientNames } from '@/lib/metrics/patientNames'
 import { fetchCountedSales } from '@/lib/metrics/sales'
 import { resolveTherapistIds } from '@/lib/finance/therapists'
+import { resolveTransactionLayanan, type LayananForMatch } from '@/lib/finance/priceList'
 import { suggestLastTherapists } from '@/lib/finance/suggestTherapist'
 import { mergeMetrics, rankBoard, sanitizeMetricValue, type Metrics, type PointRule } from '@/lib/pfotm/engine'
 
@@ -90,6 +91,8 @@ export interface PfotmBoardData {
   entries: PfotmEntry[]
   /** champion count per staff id / display name across locked periods of this branch */
   wins: Record<string, number>
+  /** Sales columns mapped by Tarif Layanan (migration 115) — no longer 1:1 with Progress Target. */
+  salesByLayanan: boolean
   permissions: { canInput: boolean; canLock: boolean; canUnlock: boolean; canEditRules: boolean }
 }
 
@@ -101,6 +104,13 @@ async function loadRules(supabase: ServerClient): Promise<PointRule[]> {
     .select('metric_key, metric_label, weight, is_penalty, source, sort_order, is_active')
     .order('sort_order')
   return ((data ?? []) as PointRule[]).map((r) => ({ ...r, weight: Number(r.weight) }))
+}
+
+/** Kategori of the branch's Layanan tagged with a PFOTM column; empty = category mapping. */
+async function loadPfotmLayananKategori(branchId: string): Promise<string[]> {
+  const { data } = await createAdminClient()
+    .from('internal_layanan').select('kategori').eq('branch_id', branchId).not('pfotm_metric', 'is', null)
+  return [...new Set((data ?? []).map((l) => l.kategori as string))]
 }
 
 async function loadWorkingWindow(supabase: ServerClient, branchId: string, year: number, month: number) {
@@ -164,6 +174,10 @@ async function collectPfotmInput(
   // PFOTM too — callers have already checked INPUT_ROLES, so the sales read
   // uses the service role, scoped to this branch and period.
   const admin = createAdminClient()
+  // Branches with Layanan tagged for PFOTM count sales by Layanan (first payment
+  // of each booking) instead of by category + package.
+  const layananKategori = await loadPfotmLayananKategori(branchId)
+  const byLayanan = layananKategori.length > 0
   const [attRes, visitRes, refRes, txRows] = await Promise.all([
     supabase.from('attendance').select('staff_id, date, status').in('staff_id', staffIds).gte('date', start).lte('date', end),
     (allBranchVisits
@@ -176,11 +190,13 @@ async function collectPfotmInput(
     supabase.from('patients').select('id, referred_by_staff_id, created_at').in('referred_by_staff_id', staffIds),
     // First LUNAS/DP payment of each purchase — same rows Target Progress counts.
     fetchCountedSales<{
-      id: string; fisio_id: string | null; visit_id: string | null; order_id: string | null; category: string
-      transaction_date: string; patient_id: string | null; payment_status: string | null; payment_method: string | null
+      id: string; branch_id: string; fisio_id: string | null; visit_id: string | null; order_id: string | null; category: string
+      harga: number | null; transaction_date: string; patient_id: string | null; payment_status: string | null; payment_method: string | null
     }>(admin, {
-      branchId, start, end, categories: SALES_CATEGORIES,
-      columns: 'id, fisio_id, visit_id, order_id, category, transaction_date, patient_id, payment_status, payment_method',
+      branchId, start, end,
+      categories: byLayanan ? layananKategori : SALES_CATEGORIES,
+      columns: 'id, branch_id, fisio_id, visit_id, order_id, category, harga, transaction_date, patient_id, payment_status, payment_method',
+      fullLunasIsNewSale: byLayanan,
     }),
   ])
   const periodVisits = (visitRes.data ?? []) as unknown as VisitForPayroll[]
@@ -214,7 +230,12 @@ async function collectPfotmInput(
   // Same rule as the finance pages (fisio_id → linked visit's therapist), so a
   // therapist's sales here are exactly their rows there. No guessing: a sale
   // without either lands in the "Di luar Jumlah" gap until finance sets a Fisio.
-  const therapistByTx = await resolveTherapistIds(admin, txRows)
+  const [therapistByTx, layananByTx] = await Promise.all([
+    resolveTherapistIds(admin, txRows),
+    byLayanan
+      ? resolveTransactionLayanan<LayananForMatch & { pfotm_metric: string | null }>(admin, branchId, txRows, 'pfotm_metric')
+      : Promise.resolve(null),
+  ])
 
   const sales: SaleForPfotm[] = txRows.map((t) => ({
     id: t.id,
@@ -222,6 +243,7 @@ async function collectPfotmInput(
     category: t.category,
     transaction_date: t.transaction_date, patient_id: t.patient_id, package: pkgOf(t),
     payment_status: t.payment_status, payment_method: t.payment_method,
+    ...(layananByTx ? { metric: layananByTx.get(t.id)?.pfotm_metric ?? null } : {}),
   }))
 
   // Referral date = the referred patient's first visit (fallback: registration date).
@@ -297,6 +319,7 @@ export async function getPfotmBoard(branchIdParam: string | null, year: number, 
     liveRules,
     entries,
     wins,
+    salesByLayanan: branchId ? (await loadPfotmLayananKategori(branchId)).length > 0 : false,
     permissions: {
       canInput: INPUT_ROLES.includes(actor.role) && (!p?.is_locked || actor.role === 'director'),
       canLock: INPUT_ROLES.includes(actor.role),

@@ -44,6 +44,8 @@ interface Props {
   value: Compensation
   onChange: (c: Compensation) => void
   activityTypes: ActivityType[]
+  /** false = role earns no Bonus Visit (VISIT_BONUS_ROLES) — the rate section is hidden. */
+  visitBonus?: boolean
 }
 
 function Money({ label, value, onChange, hint }: { label: string; value: number; onChange: (n: number) => void; hint?: string }) {
@@ -56,7 +58,7 @@ function Money({ label, value, onChange, hint }: { label: string; value: number;
   )
 }
 
-export function CompensationEditor({ value: c, onChange, activityTypes }: Props) {
+export function CompensationEditor({ value: c, onChange, activityTypes, visitBonus = true }: Props) {
   const set = (patch: Partial<Compensation>) => onChange({ ...c, ...patch })
   const types = sortActivityTypes(activityTypes).map((t) => ({ ...t, ...activityDisplay(t) }))
   const groups = [...new Set(types.map((t) => t.group))]
@@ -162,23 +164,27 @@ export function CompensationEditor({ value: c, onChange, activityTypes }: Props)
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-primary">Tarif per aktivitas (bonus visit)</h4>
-        {groups.map((g) => (
-          <div key={g}>
-            <p className="text-[11px] font-medium text-muted-foreground mb-1">{g}</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {types.filter((t) => t.group === g).map((t) => (
-                <div key={t.code}>
-                  <label className="block text-[10px] text-muted-foreground mb-0.5">{t.label}</label>
-                  <CurrencyInput value={c.activity_rates[t.code] ?? 0} inputClassName="py-1.5 rounded-lg"
-                    onChange={(v) => set({ activity_rates: { ...c.activity_rates, [t.code]: v } })} />
-                </div>
-              ))}
+      {visitBonus ? (
+        <section className="space-y-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-primary">Tarif per aktivitas (bonus visit)</h4>
+          {groups.map((g) => (
+            <div key={g}>
+              <p className="text-[11px] font-medium text-muted-foreground mb-1">{g}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {types.filter((t) => t.group === g).map((t) => (
+                  <div key={t.code}>
+                    <label className="block text-[10px] text-muted-foreground mb-0.5">{t.label}</label>
+                    <CurrencyInput value={c.activity_rates[t.code] ?? 0} inputClassName="py-1.5 rounded-lg"
+                      onChange={(v) => set({ activity_rates: { ...c.activity_rates, [t.code]: v } })} />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </section>
+          ))}
+        </section>
+      ) : (
+        <p className="text-[11px] text-muted-foreground">Bonus visit hanya untuk Fisioterapis dan Terapis Sport Massage — karyawan ini dibayar lewat insentif target.</p>
+      )}
     </div>
   )
 }

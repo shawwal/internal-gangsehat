@@ -25,7 +25,7 @@ type Role = 'director' | 'manager' | 'finance' | 'hr' | 'marketing' | 'staff' | 
 
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
-const PAYMENT_STATUSES = ['LUNAS', 'DP', 'PELUNASAN']
+const PAYMENT_STATUSES = ['LUNAS', 'DP', 'CICILAN', 'PELUNASAN']
 
 function shiftISO(iso: string, days: number) {
   const d = new Date(iso + 'T00:00:00')

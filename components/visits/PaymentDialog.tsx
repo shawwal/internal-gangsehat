@@ -623,6 +623,7 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
                   >
                     <option value="LUNAS">LUNAS</option>
                     <option value="DP">DP</option>
+                    <option value="CICILAN">CICILAN</option>
                     <option value="PELUNASAN">PELUNASAN</option>
                   </select>
                 </div>

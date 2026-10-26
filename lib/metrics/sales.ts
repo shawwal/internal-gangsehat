@@ -4,7 +4,7 @@ import { countedSaleIds, type SalePayment } from './achievement'
 type ServerClient = Awaited<ReturnType<typeof createClient>>
 
 // Columns countedSaleIds needs — merged into whatever the caller selects.
-const RULE_COLUMNS = ['id', 'patient_id', 'category', 'payment_status', 'transaction_date', 'created_at', 'harga', 'discount', 'amount']
+const RULE_COLUMNS = ['id', 'patient_id', 'category', 'payment_status', 'transaction_date', 'created_at', 'harga', 'discount', 'amount', 'order_id']
 
 // How far back an installment's opening payment is looked for.
 const LOOKBACK_MONTHS = 12
@@ -17,7 +17,7 @@ const LOOKBACK_MONTHS = 12
  */
 export async function fetchCountedSales<T extends { id: string }>(
   db: { from: ServerClient['from'] },
-  opts: { branchId: string; start: string; end: string; categories: string[]; columns: string },
+  opts: { branchId: string; start: string; end: string; categories: string[]; columns: string; fullLunasIsNewSale?: boolean },
 ): Promise<T[]> {
   const { branchId, start, end, categories } = opts
   if (!categories.length) return []
@@ -51,7 +51,7 @@ export async function fetchCountedSales<T extends { id: string }>(
     history.push(...((earlier ?? []) as unknown as SalePayment[]))
   }
 
-  const counted = countedSaleIds([...history, ...rows])
+  const counted = countedSaleIds([...history, ...rows], { fullLunasIsNewSale: opts.fullLunasIsNewSale })
   return rows
     .filter((r) => counted.has(r.id))
     .sort((a, b) => a.transaction_date.localeCompare(b.transaction_date))

@@ -24,6 +24,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/
 const PAY_STATUS_CLS: Record<string, string> = {
   LUNAS: 'bg-green-500/15 text-green-400',
   DP: 'bg-yellow-500/15 text-yellow-400',
+  CICILAN:   'bg-orange-500/15 text-orange-400',
   PELUNASAN: 'bg-primary/15 text-primary',
 }
 

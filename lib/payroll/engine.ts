@@ -149,6 +149,8 @@ export interface ComputePayrollInput {
   deductionRules: DeductionRule[]
   adjustments: Adjustment[]
   roundingUnit: number
+  /** false = no Bonus Visit for this employee (only therapist roles earn it — VISIT_BONUS_ROLES). Default true. */
+  visitBonus?: boolean
 }
 
 /** One employee's GAJI row + SLIP lines. */
@@ -158,7 +160,9 @@ export function computePayroll(input: ComputePayrollInput): PayrollResult {
 
   const ops = computeOperasional(c, a, unit)
   const incentive = computeIncentive(c, activity, unit)
-  const visit = computeVisitBonus(c, activity)
+  const visit = input.visitBonus === false
+    ? { amount: 0, detail: 'Bonus visit hanya untuk terapis' }
+    : computeVisitBonus(c, activity)
 
   lines.push({ code: 'GAJI_POKOK', label: 'Gaji Pokok', kind: 'earning', amount: c.gaji_pokok, detail: 'Sesuai data kompensasi' })
   lines.push({ code: 'TJ_JABATAN', label: 'Tunjangan Jabatan', kind: 'earning', amount: c.tj_jabatan, detail: 'Sesuai data kompensasi' })

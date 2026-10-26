@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { decryptPatientPII } from '@/lib/encryption'
 import { fetchAllRows, fetchInChunks } from '@/lib/supabase/fetchAll'
 import { resolveTherapistNames } from '@/lib/finance/therapists'
+import { pickLayanan } from '@/lib/finance/priceList'
 import { UUID_RE, byDateDesc, isServiceCategory, selectAttributedTransactions, type QueryBuilder } from '@/lib/finance/attribution'
 import {
   MONTH_LABELS, PAGE_SIZE, PERIOD_SEMESTERS, currentSemester, isFinancePeriod,
@@ -60,7 +61,7 @@ export function parseFinanceParams(params: RawSearchParams, savedPeriod?: string
     noPatient: params.no_patient === '1',
     txType:    params.tx_type === 'income' ? 'income' : params.tx_type === 'expense' ? 'expense' : '',
     status:    params.status === 'pending' || params.status === 'confirmed' || params.status === 'rejected' ? params.status : '',
-    payStatus: params.pay_status === 'LUNAS' || params.pay_status === 'DP' || params.pay_status === 'PELUNASAN' ? params.pay_status : '',
+    payStatus: params.pay_status === 'LUNAS' || params.pay_status === 'DP' || params.pay_status === 'CICILAN' || params.pay_status === 'PELUNASAN' ? params.pay_status : '',
     sort:      params.sort === 'patient_asc' || params.sort === 'patient_desc' ? params.sort : '',
     page:      Math.max(1, Number(params.page) || 1),
   }
@@ -316,15 +317,8 @@ export async function loadFinanceData(params: FinanceParams, { all = false }: { 
       : Promise.resolve({ data: [] as { id: string; branch_id: string; nama: string; kategori: string; harga: number }[] }),
   ])
   const visitLayanan = new Map(visits.map(v => [v.id, v.layanan_id]))
-  const layananById = new Map((layananRows ?? []).map(l => [l.id, l]))
   function serviceName(r: { branch_id: string; category: string; harga: number | null; visit_id: string | null }): string | null {
-    const booked = r.visit_id ? visitLayanan.get(r.visit_id) : null
-    if (booked && layananById.has(booked)) return layananById.get(booked)!.nama
-    const sameCat = (layananRows ?? []).filter(l => l.branch_id === r.branch_id && l.kategori === r.category)
-    const byPrice = sameCat.filter(l => Number(l.harga) === Number(r.harga))
-    if (byPrice.length === 1) return byPrice[0].nama
-    if (sameCat.length === 1) return sameCat[0].nama
-    return null
+    return pickLayanan(r, r.visit_id ? visitLayanan.get(r.visit_id) : null, layananRows ?? [])?.nama ?? null
   }
 
   for (const p of patients) {

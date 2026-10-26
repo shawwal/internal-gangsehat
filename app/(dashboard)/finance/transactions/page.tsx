@@ -36,6 +36,7 @@ const STATUS_LABEL: Record<TransactionStatus, string> = {
 const PAY_STATUS_BADGE: Record<PaymentDetailStatus, string> = {
   LUNAS:     'bg-chart-4/15 text-chart-4',
   DP:        'bg-secondary/20 text-secondary-foreground',
+  CICILAN:   'bg-orange-500/15 text-orange-400',
   PELUNASAN: 'bg-primary/15 text-primary',
 }
 
@@ -55,7 +56,7 @@ const EXPENSE_CATEGORIES = [
   'LAINNYA',
 ]
 const PAYMENT_METHODS: PaymentMethod[]         = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
-const PAYMENT_STATUSES: PaymentDetailStatus[]  = ['LUNAS', 'DP', 'PELUNASAN']
+const PAYMENT_STATUSES: PaymentDetailStatus[]  = ['LUNAS', 'DP', 'CICILAN', 'PELUNASAN']
 
 function getDefaultForm() {
   return {

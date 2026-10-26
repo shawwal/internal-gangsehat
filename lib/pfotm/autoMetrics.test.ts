@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { computePfotmAutoMetrics, pfotmHits, pfotmHitsWithGap } from './autoMetrics'
 import { rankBoard, type PointRule } from './engine'
+import { countedSaleIds } from '@/lib/metrics/achievement'
 import type { VisitForPayroll } from '@/lib/payroll/autoActivity'
 
 const visit = (over: Partial<VisitForPayroll>): VisitForPayroll => ({
@@ -41,6 +42,15 @@ describe('PFOTM auto metrics', () => {
     ])
     expect(out.a).toMatchObject({ paket_1: 1, paket_2: 1 })
     expect(out.b).toMatchObject({ ta_sesi_visit: 2, paket_visit: 1 })
+  })
+
+  it('maps sales by their Layanan tag when the branch has one (null = no column)', () => {
+    const out = run([], [
+      { staff_id: 'a', category: 'PAKET KLINIK', package: { id: 'p', jenis_paket: 'P2', total_sessions: 10 }, metric: 'paket_3' },
+      { staff_id: 'a', category: 'PAKET VISIT', package: null, metric: 'paket_visit' },
+      { staff_id: 'a', category: 'PAKET KLINIK', package: null, metric: null },
+    ])
+    expect(out.a).toMatchObject({ paket_1: 0, paket_2: 0, paket_3: 1, paket_visit: 1 })
   })
 })
 
@@ -89,5 +99,31 @@ describe('PFOTM gap', () => {
     expect(hits).toEqual(pfotmHits(params))
     expect(computePfotmAutoMetrics(params).a).toMatchObject({ kunjungan: 1, ta_sesi_visit: 1, paket_visit: 0 })
     expect(gap.map((g) => [g.key, g.staff_id])).toEqual([['kunjungan', 'mgr'], ['kunjungan', null], ['paket_visit', null]])
+  })
+})
+
+describe('sales rule', () => {
+  const row = (id: string, transaction_date: string, payment_status: string, amount: number, order_id = 'o1') =>
+    ({ id, patient_id: 'p', category: 'PAKET KLINIK', payment_status, transaction_date, harga: 750000, discount: 0, amount, order_id })
+  const rows = [
+    row('dp1', '2026-10-01', 'DP', 300000),
+    row('dp2', '2026-10-05', 'DP', 100000),               // second DP = installment, not a sale
+    row('cic', '2026-10-06', 'CICILAN', 100000),
+    row('close', '2026-10-07', 'LUNAS', 150000),           // remainder mislabelled LUNAS
+    row('new', '2026-10-08', 'LUNAS', 750000, 'o2'),       // a new package paid in full
+    row('dp3', '2026-10-09', 'DP', 300000, 'o3'),
+    row('full', '2026-10-10', 'LUNAS', 450000, 'o3'),      // same order → closes dp3
+  ]
+
+  it('counts only the first payment of each purchase by default', () => {
+    expect([...countedSaleIds(rows)]).toEqual(['dp1', 'new', 'dp3'])
+  })
+
+  it('also counts a full-price LUNAS on another order with fullLunasIsNewSale', () => {
+    const newPackage = [row('dp1', '2026-10-01', 'DP', 300000), row('new', '2026-10-02', 'LUNAS', 750000, 'o2')]
+    expect([...countedSaleIds(newPackage)]).toEqual(['dp1'])
+    expect([...countedSaleIds(newPackage, { fullLunasIsNewSale: true })]).toEqual(['dp1', 'new'])
+    const remainder = [row('dp1', '2026-10-01', 'DP', 300000), row('close', '2026-10-02', 'LUNAS', 450000)]
+    expect([...countedSaleIds(remainder, { fullLunasIsNewSale: true })]).toEqual(['dp1'])
   })
 })

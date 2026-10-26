@@ -386,8 +386,9 @@ export type TransactionStatus = 'pending' | 'confirmed' | 'rejected'
 export type PaymentMethod = 'TUNAI' | 'TRANSFER BCA' | 'EDC BCA' | 'TRANSFER BANK KALBAR' | 'DOKU QRIS' | 'DOKU VA'
 
 // Payment detail status (KETERANGAN BAYAR) — independent of approval `status`
-// LUNAS = fully paid, DP = down payment, PELUNASAN = final/settlement payment
-export type PaymentDetailStatus = 'LUNAS' | 'DP' | 'PELUNASAN'
+// LUNAS = fully paid, DP = down payment (first installment), CICILAN = a later
+// installment, PELUNASAN = final/settlement payment
+export type PaymentDetailStatus = 'LUNAS' | 'DP' | 'CICILAN' | 'PELUNASAN'
 
 export interface Transaction {
   id: string

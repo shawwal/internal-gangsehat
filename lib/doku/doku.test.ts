@@ -126,15 +126,15 @@ describe('buildIncomePayload', () => {
     expect(p).toMatchObject({ payment_method: 'DOKU VA', payment_status: 'DP', branch_id: 'b2', fisio_id: 's1', order_id: 'ORD-1', visit_id: 'v1' })
   })
 
-  it('order installment copies the template and settles to LUNAS / PELUNASAN', () => {
+  it('order installment copies the template and settles to PELUNASAN / CICILAN', () => {
     const order = {
       template: { patient_id: 'p1', branch_id: 'b1', visit_id: 'v0', fisio_id: 's1', category: 'PAKET KLINIK', harga: 1_000_000, discount: 0 },
       totalPaid: 600_000,
     }
     const full = buildIncomePayload({ ...link, order_id: 'ORD-9', amount: 400_000 }, { order }, paid)
-    expect(full).toMatchObject({ order_id: 'ORD-9', category: 'PAKET KLINIK', harga: 1_000_000, amount: 400_000, payment_status: 'LUNAS' })
+    expect(full).toMatchObject({ order_id: 'ORD-9', category: 'PAKET KLINIK', harga: 1_000_000, amount: 400_000, payment_status: 'PELUNASAN' })
     const part = buildIncomePayload({ ...link, order_id: 'ORD-9', amount: 100_000 }, { order }, paid)
-    expect(part.payment_status).toBe('PELUNASAN')
+    expect(part.payment_status).toBe('CICILAN')
   })
 
   it('paymentStatusFor', () => {

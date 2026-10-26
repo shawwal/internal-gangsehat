@@ -6,6 +6,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/activityLog'
 import type { ActivityType, BonusTier, Compensation, DeductionRule, Weekday } from '@/lib/payroll/types'
+import { BRANCH_TOTAL_SALE_CATEGORIES } from '@/lib/payroll/paymentActivity'
 
 type Ok<T> = { ok: true; data: T }
 type Err = { ok: false; error: string }
@@ -58,6 +59,8 @@ export interface EmployeeRow {
   hire_date: string | null
   termination_date: string | null
   include_in_payroll: boolean
+  /** Activity codes counted over the whole branch for this employee (migration 115). */
+  branch_total_codes: string[]
   versions: (Compensation & { id: string; effective_from: string; notes: string | null; created_at: string })[]
 }
 
@@ -171,6 +174,7 @@ export async function getPayrollSettingsData(branchIdParam?: string | null): Pro
         hire_date: (pp?.hire_date as string) ?? null,
         termination_date: (pp?.termination_date as string) ?? null,
         include_in_payroll: (pp?.include_in_payroll as boolean) ?? true,
+        branch_total_codes: (pp?.branch_total_codes as string[]) ?? [],
         versions: compBy.get(st.id) ?? [],
       }
     }),
@@ -350,6 +354,7 @@ export async function saveEmployeePayrollProfile(staffId: string, input: {
   hire_date: string | null
   termination_date: string | null
   include_in_payroll: boolean
+  branch_total_codes: string[]
 }): Promise<Result> {
   const actor = await getActor()
   if (isErr(actor)) return actor
@@ -367,6 +372,7 @@ export async function saveEmployeePayrollProfile(staffId: string, input: {
     hire_date: input.hire_date || null,
     termination_date: input.termination_date || null,
     include_in_payroll: input.include_in_payroll,
+    branch_total_codes: input.branch_total_codes.filter((c) => c in BRANCH_TOTAL_SALE_CATEGORIES),
     updated_by: actor.userId,
   }
   const { error } = await supabase.from('employee_payroll_profiles').upsert(row, { onConflict: 'staff_id' })

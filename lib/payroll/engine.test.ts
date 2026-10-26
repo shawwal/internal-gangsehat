@@ -197,6 +197,21 @@ describe('payroll engine (ABS / INS / GAJI sheets)', () => {
     })
     expect(r.net).toBe(1250000)
   })
+
+  it('pays a content target as prorated Insentif, and no Bonus Visit for non-therapists', () => {
+    const emp = fixture.employees[3]
+    const { attendance } = run(emp)
+    const compensation = {
+      ...emp.compensation, insentif_base: 700000, incentive_target: 20, incentive_activity_codes: ['KONTEN'],
+      bonus_tiers: [], activity_rates: { KONTEN: 700000 },
+    }
+    const pay = (qty: number) => computePayroll({
+      compensation, attendance, activity: { KONTEN: qty }, deductionRules: [], adjustments: [], roundingUnit: 1000, visitBonus: false,
+    })
+    expect(pay(10).lines.find((l) => l.code === 'INSENTIF')?.amount).toBe(350000)
+    expect(pay(25).lines.find((l) => l.code === 'INSENTIF')?.amount).toBe(700000)
+    expect(pay(20).visit).toBe(0)
+  })
 })
 
 describe('compensation history', () => {

@@ -63,10 +63,11 @@ export const TX_STATUS_LABEL: Record<string, string> = {
   pending: 'Menunggu', confirmed: 'Dikonfirmasi', rejected: 'Ditolak',
 }
 
-export const PAY_STATUS_VALUES = ['LUNAS', 'DP', 'PELUNASAN'] as const
+export const PAY_STATUS_VALUES = ['LUNAS', 'DP', 'CICILAN', 'PELUNASAN'] as const
 export const PAY_STATUS_BADGE: Record<string, string> = {
   LUNAS:     'bg-green-500/15 text-green-400',
   DP:        'bg-yellow-500/15 text-yellow-400',
+  CICILAN:   'bg-orange-500/15 text-orange-400',
   PELUNASAN: 'bg-primary/15 text-primary',
 }
 

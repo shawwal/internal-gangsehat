@@ -6,7 +6,8 @@ import { useToast } from '@/context/ToastContext'
 import {
   addCompensationVersion, deleteCompensationVersion, saveEmployeePayrollProfile, type EmployeeRow, type PayrollSettingsData,
 } from '@/app/actions/payrollSettings'
-import type { Compensation } from '@/lib/payroll/types'
+import { VISIT_BONUS_ROLES, type Compensation } from '@/lib/payroll/types'
+import { BRANCH_TOTAL_SALE_CATEGORIES } from '@/lib/payroll/paymentActivity'
 import { formatIDR, formatRupiah } from '../format'
 import { Modal, btn, inputCls, labelCls } from '../Modal'
 import { CompensationEditor, EMPTY_COMPENSATION } from './CompensationEditor'
@@ -22,7 +23,7 @@ export function EmployeesTab({ data, onChanged }: Props) {
   const { showToast } = useToast()
   const [open, setOpen] = useState<EmployeeRow | null>(null)
   const [tab, setTab] = useState<'profile' | 'comp' | 'history'>('comp')
-  const [profile, setProfile] = useState({ employee_no: '', jabatan: '', hire_date: '', termination_date: '', include_in_payroll: true })
+  const [profile, setProfile] = useState({ employee_no: '', jabatan: '', hire_date: '', termination_date: '', include_in_payroll: true, branch_total_codes: [] as string[] })
   const [comp, setComp] = useState<Compensation>(EMPTY_COMPENSATION)
   const [effectiveFrom, setEffectiveFrom] = useState(today())
   const [notes, setNotes] = useState('')
@@ -34,6 +35,7 @@ export function EmployeesTab({ data, onChanged }: Props) {
     setProfile({
       employee_no: e.employee_no ?? '', jabatan: e.jabatan ?? '', hire_date: e.hire_date ?? '',
       termination_date: e.termination_date ?? '', include_in_payroll: e.include_in_payroll,
+      branch_total_codes: e.branch_total_codes,
     })
     const current = e.versions[0]
     if (current) {
@@ -58,6 +60,7 @@ export function EmployeesTab({ data, onChanged }: Props) {
       employee_no: profile.employee_no || null, jabatan: profile.jabatan || null,
       hire_date: profile.hire_date || null, termination_date: profile.termination_date || null,
       include_in_payroll: profile.include_in_payroll,
+      branch_total_codes: profile.branch_total_codes,
     })
     setSaving(false)
     if (!res.ok) return showToast(res.error, 'error')
@@ -68,7 +71,9 @@ export function EmployeesTab({ data, onChanged }: Props) {
   async function saveComp() {
     if (!open) return
     setSaving(true)
-    const res = await addCompensationVersion(open.id, effectiveFrom, comp, notes)
+    // Non-therapists earn no Bonus Visit — don't carry hidden rates into the new version.
+    const payload = VISIT_BONUS_ROLES.includes(open.role) ? comp : { ...comp, activity_rates: {} }
+    const res = await addCompensationVersion(open.id, effectiveFrom, payload, notes)
     setSaving(false)
     if (!res.ok) return showToast(res.error, 'error')
     showToast('Versi kompensasi baru disimpan', 'success')
@@ -182,6 +187,21 @@ export function EmployeesTab({ data, onChanged }: Props) {
                   onChange={(e) => setProfile({ ...profile, include_in_payroll: e.target.checked })} />
                 Ikutkan otomatis saat periode penggajian dibuka
               </label>
+              {Object.entries(BRANCH_TOTAL_SALE_CATEGORIES).map(([code, categories]) => (
+                <label key={code} className="sm:col-span-2 flex items-start gap-2 text-sm cursor-pointer">
+                  <input type="checkbox" className="accent-[var(--primary)] mt-1" checked={profile.branch_total_codes.includes(code)}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      branch_total_codes: e.target.checked
+                        ? [...profile.branch_total_codes, code]
+                        : profile.branch_total_codes.filter((c) => c !== code),
+                    })} />
+                  <span>
+                    {categories.join(' + ')} dihitung dari total cabang
+                    <span className="block text-[11px] text-muted-foreground">Sama dengan Capaian di Progress Target (periode gaji), bukan pasien yang ditangani sendiri.</span>
+                  </span>
+                </label>
+              ))}
             </div>
           )}
 
@@ -198,7 +218,8 @@ export function EmployeesTab({ data, onChanged }: Props) {
                   <input className={inputCls} value={notes} placeholder="mis. Kenaikan gaji pokok 2026" onChange={(e) => setNotes(e.target.value)} />
                 </div>
               </div>
-              <CompensationEditor value={comp} onChange={setComp} activityTypes={data.activityTypes.filter((t) => t.is_active)} />
+              <CompensationEditor value={comp} onChange={setComp} activityTypes={data.activityTypes.filter((t) => t.is_active)}
+                visitBonus={VISIT_BONUS_ROLES.includes(open.role)} />
             </div>
           )}
 

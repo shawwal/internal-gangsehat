@@ -311,14 +311,16 @@ export async function addPaymentToOrder(
 
   const { data: existingRows, error: fetchErr } = await supabase
     .from('transactions')
-    .select('id, harga, discount, patient_id, branch_id, visit_id, fisio_id, category')
+    .select('id, harga, discount, amount, patient_id, branch_id, visit_id, fisio_id, category')
     .eq('order_id', orderId)
     .neq('status', 'rejected')
     .order('transaction_date', { ascending: true })
-    .limit(1)
 
   if (fetchErr || !existingRows?.length) return { error: 'Order tidak ditemukan' }
   const template = existingRows[0]
+  // A later installment is CICILAN; the one that pays the order off is PELUNASAN.
+  const paidBefore = existingRows.reduce((sum, r) => sum + Number(r.amount ?? 0), 0)
+  const fullyPaid = paidBefore + amount >= Math.max(Number(template.harga ?? 0) - Number(template.discount ?? 0), 0)
 
   const insertPayload = {
     order_id:         orderId,
@@ -331,6 +333,7 @@ export async function addPaymentToOrder(
     harga:            template.harga,
     discount:         template.discount,
     amount,
+    payment_status:   fullyPaid ? 'PELUNASAN' : 'CICILAN',
     payment_method:   paymentMethod,
     description:      keterangan || null,
     receipt_url:      receiptUrl ?? null,

@@ -184,6 +184,7 @@ export function EditPackageTransactionDialog({ transaction, onClose, onSuccess }
                 <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={inputCls}>
                   <option value="LUNAS">LUNAS</option>
                   <option value="DP">DP</option>
+                  <option value="CICILAN">CICILAN</option>
                   <option value="PELUNASAN">PELUNASAN</option>
                 </select>
               </div>

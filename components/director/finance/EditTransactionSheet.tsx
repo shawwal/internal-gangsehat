@@ -15,7 +15,7 @@ import { LayananIncomePicker, type LayananPick } from '@/components/finance/Laya
 // Income categories come from the branch's Tarif Layanan (LayananIncomePicker)
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
-const PAYMENT_STATUSES = ['LUNAS', 'DP', 'PELUNASAN']
+const PAYMENT_STATUSES = ['LUNAS', 'DP', 'CICILAN', 'PELUNASAN']
 
 const CLINICAL_INCOME = new Set(['TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT'])
 

@@ -157,7 +157,7 @@ export const navigation: NavItem[] = [
     label: 'Tarif Layanan',
     href: '/director/layanan',
     icon: 'Tag',
-    roles: ['director'],
+    roles: ['director', 'manager'],
     group: 'management',
   },
   {

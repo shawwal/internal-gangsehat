@@ -14,7 +14,13 @@ export interface LayananRow {
   /** NULL = not bookable on gangsehat.com; else the visit service_type it books (110-online-booking.sql) */
   online_service_type?: OnlineServiceType | null
   deskripsi?: string | null
+  /** Payroll activity code → units counted per LUNAS/PELUNASAN payment (115-layanan-activity-tags.sql) */
+  payroll_units?: Record<string, number>
+  /** PFOTM sales column this Layanan counts toward */
+  pfotm_metric?: PfotmLayananMetric | null
 }
+
+export type PfotmLayananMetric = 'paket_1' | 'paket_2' | 'paket_3' | 'ta_sesi_visit' | 'paket_visit'
 
 export type OnlineServiceType = 'TERAPI AWAL' | 'SESI TERAPI'
 
@@ -22,10 +28,21 @@ export async function fetchLayananByBranch(branchId: string): Promise<LayananRow
   const supabase = await createClient()
   const { data } = await supabase
     .from('internal_layanan')
-    .select('id, branch_id, nama, kategori, jumlah_sesi, harga, is_active, created_at, online_service_type, deskripsi')
+    .select('id, branch_id, nama, kategori, jumlah_sesi, harga, is_active, created_at, online_service_type, deskripsi, payroll_units, pfotm_metric')
     .eq('branch_id', branchId)
     .order('kategori')
   return (data ?? []) as LayananRow[]
+}
+
+/** Payroll activity columns a Layanan can count toward (Tarif Layanan → "Dihitung untuk"). */
+export async function fetchPayrollActivityOptions(): Promise<{ code: string; label: string }[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('payroll_activity_types')
+    .select('code, label')
+    .eq('is_active', true)
+    .order('sort_order')
+  return (data ?? []) as { code: string; label: string }[]
 }
 
 // Active Sport Massage service types for a branch — each row is one bookable

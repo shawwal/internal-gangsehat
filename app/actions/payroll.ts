@@ -12,6 +12,13 @@ import { buildPeriodDays, countWorkdays, MONTH_NAMES } from '@/lib/payroll/perio
 import { codeFromRow, rowFromCode, type AttendanceDbRow } from '@/lib/payroll/attendance'
 import { pickCompensation } from '@/lib/payroll/engine'
 import { computeAutoActivity, payrollActivityHits, VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
+import {
+  BRANCH_TOTAL_SALE_CATEGORIES, PAYROLL_PAYMENT_STATUSES, paymentActivityHits, paymentModeCodes, sumPaymentHits,
+  type PaymentForPayroll, type PayrollUnits,
+} from '@/lib/payroll/paymentActivity'
+import { resolveTransactionLayanan, type LayananForMatch } from '@/lib/finance/priceList'
+import { resolveTherapistIds } from '@/lib/finance/therapists'
+import { fetchCountedSales } from '@/lib/metrics/sales'
 import type { MetricDetail } from '@/lib/metrics/achievement'
 import { resolvePatientNames } from '@/lib/metrics/patientNames'
 import {
@@ -127,6 +134,22 @@ async function loadActivityTypes(supabase: ServerClient): Promise<ActivityType[]
     .select('code, label, group_label, count_mode, source_service_types, source_layanan_ids, max_per_period, sort_order, is_active')
     .order('sort_order')
   return (data ?? []) as ActivityType[]
+}
+
+type LayananWithUnits = LayananForMatch & { payroll_units: PayrollUnits | null }
+
+/** The branch's Tarif Layanan with their payroll tags (migration 115). */
+async function loadBranchLayananUnits(branchId: string): Promise<LayananWithUnits[]> {
+  const { data } = await createAdminClient()
+    .from('internal_layanan')
+    .select('id, branch_id, nama, kategori, harga, payroll_units')
+    .eq('branch_id', branchId)
+  return (data ?? []) as LayananWithUnits[]
+}
+
+/** Codes this branch counts from payments, marked on the types (`from_payments`). */
+function withPaymentMode(types: ActivityType[], paymentCodes: Set<string>): ActivityType[] {
+  return types.map((t) => (paymentCodes.has(t.code) ? { ...t, from_payments: true } : t))
 }
 
 function normalizeCompensation(row: Record<string, unknown>): Compensation {
@@ -350,17 +373,18 @@ export async function getPayrollWorkspace(periodId: string): Promise<Result<Payr
     }
   }
 
-  const [settings, deductionRules, activityTypes, profilesRes, payrollProfilesRes, compRes, attendanceRes, countsRes, adjRes, slipsRes] =
+  const [settings, deductionRules, activityTypes, branchLayanan, profilesRes, payrollProfilesRes, compRes, attendanceRes, countsRes, adjRes, slipsRes] =
     await Promise.all([
       loadSettings(supabase, period.branch_id),
       loadDeductionRules(supabase, period.branch_id),
       loadActivityTypes(supabase),
+      loadBranchLayananUnits(period.branch_id),
       staffIds.length
         ? supabase.from('internal_profiles').select('id, full_name, nickname, role').in('id', staffIds)
         : Promise.resolve({ data: [] as { id: string; full_name: string; nickname: string | null; role: string }[] }),
       staffIds.length
-        ? supabase.from('employee_payroll_profiles').select('staff_id, employee_no, jabatan').in('staff_id', staffIds)
-        : Promise.resolve({ data: [] as { staff_id: string; employee_no: string | null; jabatan: string | null }[] }),
+        ? supabase.from('employee_payroll_profiles').select('staff_id, employee_no, jabatan, branch_total_codes').in('staff_id', staffIds)
+        : Promise.resolve({ data: [] as { staff_id: string; employee_no: string | null; jabatan: string | null; branch_total_codes: string[] | null }[] }),
       staffIds.length
         ? supabase.from('employee_compensation').select('*').in('staff_id', staffIds).lte('effective_from', period.end_date)
         : Promise.resolve({ data: [] as Record<string, unknown>[] }),
@@ -395,6 +419,7 @@ export async function getPayrollWorkspace(periodId: string): Promise<Result<Payr
       jabatan: pp?.jabatan ?? null,
       compensation: current ? normalizeCompensation(current) : null,
       compensation_effective_from: current?.effective_from ?? null,
+      branch_total_codes: pp?.branch_total_codes ?? [],
     }
   }).sort((a, b) => (a.employee_no ?? '~').localeCompare(b.employee_no ?? '~') || a.full_name.localeCompare(b.full_name))
 
@@ -439,7 +464,7 @@ export async function getPayrollWorkspace(periodId: string): Promise<Result<Payr
     settings,
     staff,
     attendance,
-    activityTypes: activityTypes.filter((t) => t.is_active),
+    activityTypes: withPaymentMode(activityTypes.filter((t) => t.is_active), paymentModeCodes(branchLayanan)),
     activity,
     adjustments,
     deductionRules,
@@ -580,22 +605,104 @@ async function loadActivityInput(
   }
 }
 
+/**
+ * Income payments of the branch behind the payment-counted codes, with their
+ * Layanan and Fisio resolved like the finance pages. Service role for the same
+ * reason as the visits above.
+ */
+async function loadPaymentInput(
+  period: { branch_id: string; start_date: string; end_date: string }, layanan: LayananWithUnits[], codes: Set<string>,
+): Promise<PaymentForPayroll[]> {
+  const categories = [...new Set(layanan
+    .filter((l) => Object.keys(l.payroll_units ?? {}).some((c) => codes.has(c)))
+    .map((l) => l.kategori))]
+  if (!categories.length) return []
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('transactions')
+    .select('id, branch_id, patient_id, visit_id, fisio_id, category, harga, payment_status, transaction_date')
+    .eq('branch_id', period.branch_id)
+    .eq('type', 'income')
+    .neq('status', 'rejected')
+    .in('category', categories)
+    .in('payment_status', [...PAYROLL_PAYMENT_STATUSES])
+    .gte('transaction_date', period.start_date)
+    .lte('transaction_date', period.end_date)
+    .limit(20000)
+  if (error) throw new Error(error.message)
+  const rows = (data ?? []) as {
+    id: string; branch_id: string; patient_id: string | null; visit_id: string | null; fisio_id: string | null
+    category: string; harga: number | null; payment_status: string | null; transaction_date: string
+  }[]
+  const [layananByTx, staffByTx] = await Promise.all([
+    resolveTransactionLayanan<LayananWithUnits>(admin, period.branch_id, rows, 'payroll_units'),
+    resolveTherapistIds(admin, rows),
+  ])
+  return rows.map((r) => {
+    const l = layananByTx.get(r.id)
+    return {
+      id: r.id,
+      staff_id: staffByTx.get(r.id) ?? null,
+      patient_id: r.patient_id,
+      transaction_date: r.transaction_date,
+      payment_status: r.payment_status,
+      layanan: l ? { nama: l.nama, payroll_units: l.payroll_units ?? {} } : null,
+    }
+  })
+}
+
+/** Sales behind a branch-total code (Target Progress rule, same window). */
+async function loadBranchTotalSales(period: { branch_id: string; start_date: string; end_date: string }, code: string) {
+  return fetchCountedSales<{ id: string; transaction_date: string; patient_id: string | null; category: string; payment_status: string | null }>(
+    createAdminClient(),
+    {
+      branchId: period.branch_id, start: period.start_date, end: period.end_date,
+      categories: BRANCH_TOTAL_SALE_CATEGORIES[code] ?? [],
+      columns: 'id, transaction_date, patient_id, category, payment_status',
+    },
+  )
+}
+
+async function loadBranchTotalCodes(supabase: ServerClient, staffIds: string[]): Promise<Map<string, string[]>> {
+  if (!staffIds.length) return new Map()
+  const { data } = await supabase.from('employee_payroll_profiles').select('staff_id, branch_total_codes').in('staff_id', staffIds)
+  return new Map(((data ?? []) as { staff_id: string; branch_total_codes: string[] | null }[])
+    .map((p) => [p.staff_id, (p.branch_total_codes ?? []).filter((c) => c in BRANCH_TOTAL_SALE_CATEGORIES)] as const)
+    .filter(([, codes]) => codes.length > 0))
+}
+
 async function refreshActivityFor(supabase: ServerClient, periodId: string, userId: string): Promise<Result<{ updated: number }>> {
   const period = await loadPeriod(supabase, periodId)
   if (!period) return fail('Periode tidak ditemukan.')
   if (period.status !== 'draft' && period.status !== 'submitted') return fail('Periode sudah dikunci.')
 
-  const [{ data: bound }, types] = await Promise.all([
+  const [{ data: bound }, types, layanan] = await Promise.all([
     supabase.from('payroll_period_staff').select('staff_id').eq('period_id', periodId),
     loadActivityTypes(supabase),
+    loadBranchLayananUnits(period.branch_id),
   ])
   const staffIds = (bound ?? []).map((b) => b.staff_id)
-  const autoTypes = types.filter((t) => t.is_active && t.count_mode !== 'manual' && t.source_service_types.length)
+  const paymentCodes = paymentModeCodes(layanan)
+  const paymentTypes = types.filter((t) => t.is_active && paymentCodes.has(t.code))
+  const visitTypes = types.filter((t) => t.is_active && !paymentCodes.has(t.code) && t.count_mode !== 'manual' && t.source_service_types.length)
+  const autoTypes = [...visitTypes, ...paymentTypes]
   if (!staffIds.length || !autoTypes.length) return ok({ updated: 0 })
 
   let counts: Record<string, Record<string, number>>
   try {
-    counts = computeAutoActivity(await loadActivityInput(period, staffIds, autoTypes))
+    const branchTotalCodes = await loadBranchTotalCodes(supabase, staffIds)
+    const [visitCounts, payments, totals] = await Promise.all([
+      visitTypes.length ? loadActivityInput(period, staffIds, visitTypes).then(computeAutoActivity) : ({} as Record<string, Record<string, number>>),
+      paymentTypes.length ? loadPaymentInput(period, layanan, paymentCodes) : [],
+      Promise.all([...new Set([...branchTotalCodes.values()].flat())].map(async (code) => [code, (await loadBranchTotalSales(period, code)).length] as const)),
+    ])
+    const paymentCounts = sumPaymentHits(paymentActivityHits({ payments, codes: paymentCodes, staffIds }))
+    const totalByCode = new Map(totals)
+    counts = {}
+    for (const staffId of staffIds) {
+      counts[staffId] = { ...visitCounts[staffId], ...paymentCounts[staffId] }
+      for (const code of branchTotalCodes.get(staffId) ?? []) counts[staffId][code] = totalByCode.get(code) ?? 0
+    }
   } catch (e) {
     return fail((e as Error).message)
   }
@@ -637,14 +744,48 @@ export async function getPayrollActivityDetail(periodId: string, staffId: string
   const { supabase } = actor
   const period = await loadPeriod(supabase, periodId)
   if (!period) return fail('Periode tidak ditemukan.')
-  const [types, { data: cell }] = await Promise.all([
+  const [types, { data: cell }, layanan, branchTotalCodes] = await Promise.all([
     loadActivityTypes(supabase),
     supabase.from('payroll_activity_counts').select('override_qty')
       .eq('period_id', periodId).eq('staff_id', staffId).eq('activity_code', code).maybeSingle(),
+    loadBranchLayananUnits(period.branch_id),
+    loadBranchTotalCodes(supabase, [staffId]),
   ])
   const type = types.find((t) => t.code === code)
-  if (!type || type.count_mode === 'manual' || !type.source_service_types.length) return fail('Aktivitas ini diisi manual — tidak ada rincian.')
+  const override = cell?.override_qty ?? null
   try {
+    if (branchTotalCodes.get(staffId)?.includes(code)) {
+      const sales = await loadBranchTotalSales(period, code)
+      const names = await resolvePatientNames(sales.map((t) => t.patient_id))
+      return ok({
+        rows: sales.map((t) => ({
+          date: t.transaction_date,
+          patientName: (t.patient_id && names.get(t.patient_id)) || '—',
+          label: `${t.category} · total cabang`,
+          paymentStatus: t.payment_status,
+        })),
+        auto: sales.length,
+        override,
+      })
+    }
+    const paymentCodes = paymentModeCodes(layanan)
+    if (paymentCodes.has(code)) {
+      const payments = await loadPaymentInput(period, layanan, new Set([code]))
+      const hits = paymentActivityHits({ payments, codes: new Set([code]), staffIds: [staffId] })
+        .sort((a, b) => a.payment.transaction_date.localeCompare(b.payment.transaction_date))
+      const names = await resolvePatientNames(hits.map((h) => h.payment.patient_id))
+      return ok({
+        rows: hits.map((h) => ({
+          date: h.payment.transaction_date,
+          patientName: (h.payment.patient_id && names.get(h.payment.patient_id)) || '—',
+          label: h.units > 1 ? `${h.payment.layanan?.nama} (×${h.units})` : (h.payment.layanan?.nama ?? null),
+          paymentStatus: h.payment.payment_status,
+        })),
+        auto: hits.reduce((s, h) => s + h.units, 0),
+        override,
+      })
+    }
+    if (!type || type.count_mode === 'manual' || !type.source_service_types.length) return fail('Aktivitas ini diisi manual — tidak ada rincian.')
     const hits = payrollActivityHits(await loadActivityInput(period, [staffId], [type]))
       .sort((a, b) => a.visit.visit_date.localeCompare(b.visit.visit_date))
     const names = await resolvePatientNames(hits.map((h) => h.visit.patient_id))
@@ -655,7 +796,7 @@ export async function getPayrollActivityDetail(periodId: string, staffId: string
         label: h.visit.service_type,
       })),
       auto: hits.length,
-      override: cell?.override_qty ?? null,
+      override,
     })
   } catch (e) {
     return fail((e as Error).message)

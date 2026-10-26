@@ -51,7 +51,7 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
   const extraNum   = Number(extra) || 0
   const newAmount  = transaction.amount + extraNum
   const sisaAfter  = Math.max(transaction.harga - newAmount - transaction.discount, 0)
-  const newStatus  = sisaAfter <= 0 ? 'LUNAS' : 'PELUNASAN'
+  const newStatus  = sisaAfter <= 0 ? 'PELUNASAN' : 'CICILAN'
 
   // "Pembayaran baru ditambahkan sebagai riwayat, bukan menimpa pembayaran
   // sebelumnya" — insert a new transactions row against the same order_id,

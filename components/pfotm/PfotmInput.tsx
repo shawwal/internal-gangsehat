@@ -30,6 +30,8 @@ interface Props {
   onExclude: (entryId: string, excluded: boolean) => void
   onWorkingDays: (days: number | null) => void
   onAddParticipant: () => void
+  /** Sales columns come from Tarif Layanan tags — only Kunjungan still equals Progress Target. */
+  salesByLayanan?: boolean
 }
 
 /**
@@ -99,7 +101,7 @@ export function PfotmInput(p: Props) {
       </div>
 
       {p.gap && (() => {
-        const rows = TARGET_PROGRESS_ROWS.map((r) => {
+        const rows = TARGET_PROGRESS_ROWS.filter((r) => !p.salesByLayanan || r.label === 'Kunjungan').map((r) => {
           const inBoard = r.keys.reduce((t, k) => t + sumOf(statEntries.map((e) => metricValue(e, k))), 0)
           const outside = r.keys.reduce((t, k) => t + (p.gap?.[k]?.auto ?? 0), 0)
           return { ...r, inBoard, outside }
@@ -301,9 +303,19 @@ export function PfotmInput(p: Props) {
           <li>Rentang data diatur di atas — samakan dengan mode tanggal (&quot;Periode gaji&quot;) di Progress Target agar angkanya bisa dicocokkan.</li>
           <li><b className="text-foreground">Hadir / Terlambat / Alfa</b> dari absensi.</li>
           <li><b className="text-foreground">Jumlah Kunjungan</b> = kunjungan yang hadir, aturan sama dengan Kunjungan di Progress Target (tanpa Sport Massage dan TA Visit).</li>
-          <li><b className="text-foreground">Paket 1 / 2 / 3</b> dari transaksi PAKET KLINIK, satu per pembelian (pembayaran LUNAS/DP pertama); ketiganya dijumlah = Paket Klinik di Progress Target.</li>
-          <li><b className="text-foreground">Paket Visit</b> dari transaksi PAKET VISIT = Paket Visit di Progress Target.</li>
-          <li><b className="text-foreground">TA/Sesi Visit</b> dari transaksi TA VISIT + SESI VISIT — poin khusus PFOTM, tidak ada di Progress Target (TA VISIT tidak masuk target mana pun; SESI VISIT masuk &quot;Sesi&quot;).</li>
+          {p.salesByLayanan ? (
+            <li>
+              <b className="text-foreground">Paket 1 / 2 / 3, TA/Sesi Visit, Paket Visit</b> dari Layanan transaksi sesuai pengaturan Tarif Layanan cabang ini
+              (Paket 1 = 5 sesi, Paket 2 = 10 sesi, Paket 3 = 20 sesi). Dihitung setiap pembayaran LUNAS dan DP
+              (PELUNASAN tidak dihitung) — karena itu angkanya bisa berbeda dari Progress Target.
+            </li>
+          ) : (
+            <>
+              <li><b className="text-foreground">Paket 1 / 2 / 3</b> dari transaksi PAKET KLINIK, satu per pembelian (pembayaran LUNAS/DP pertama); ketiganya dijumlah = Paket Klinik di Progress Target.</li>
+              <li><b className="text-foreground">Paket Visit</b> dari transaksi PAKET VISIT = Paket Visit di Progress Target.</li>
+              <li><b className="text-foreground">TA/Sesi Visit</b> dari transaksi TA VISIT + SESI VISIT — poin khusus PFOTM, tidak ada di Progress Target (TA VISIT tidak masuk target mana pun; SESI VISIT masuk &quot;Sesi&quot;).</li>
+            </>
+          )}
           <li><b className="text-foreground">Rujukan SM</b> dari kolom &quot;Dirujuk oleh&quot; pasien.</li>
           <li>Penjualan dihitung ke Fisio transaksi (atau terapis kunjungan yang ditautkan) — aturan sama dengan halaman Keuangan. Tanpa Fisio, staf bukan peserta, atau peserta yang dikeluarkan = &quot;Di luar Jumlah&quot;.</li>
           <li>Jumlah &amp; Rata-rata hanya dari peserta yang ikut peringkat.</li>
