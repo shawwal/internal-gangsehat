@@ -123,7 +123,7 @@ export interface PackagePayment {
 
 export type PatientPackageWithPayment = PatientPackage & { payment: PackagePayment | null }
 
-interface PkgTxRow { order_id: string | null; category: string; payment_method: string | null; transaction_date: string; harga: number; amount: number; discount: number; status: string }
+interface PkgTxRow { id: string; order_id: string | null; category: string; payment_method: string | null; transaction_date: string; harga: number; amount: number; discount: number; status: string }
 
 export async function fetchPatientPackagesWithPayment(
   patientId: string,
@@ -138,7 +138,7 @@ export async function fetchPatientPackagesWithPayment(
   const [orderTxRes, linkedVisitsRes] = await Promise.all([
     orderIds.length > 0
       ? supabase.from('transactions')
-          .select('order_id, category, payment_method, transaction_date, harga, amount, discount, status')
+          .select('id, order_id, category, payment_method, transaction_date, harga, amount, discount, status')
           .in('order_id', orderIds)
           .in('category', [...PACKAGE_CATEGORIES])
           .neq('status', 'rejected')
@@ -154,7 +154,7 @@ export async function fetchPatientPackagesWithPayment(
 
   const visitTxRes = visitIds.length > 0
     ? await supabase.from('transactions')
-        .select('visit_id, order_id, category, payment_method, transaction_date, harga, amount, discount, status')
+        .select('id, visit_id, order_id, category, payment_method, transaction_date, harga, amount, discount, status')
         .in('visit_id', visitIds)
         .in('category', [...PACKAGE_CATEGORIES])
         .neq('status', 'rejected')
@@ -164,6 +164,8 @@ export async function fetchPatientPackagesWithPayment(
   function addRow(pkgId: string | undefined, row: PkgTxRow) {
     if (!pkgId) return
     const list = byPackage.get(pkgId) ?? []
+    // A payment linked by both its order and its visit counts once.
+    if (list.some((r) => r.id === row.id)) return
     list.push(row)
     byPackage.set(pkgId, list)
   }
@@ -206,6 +208,61 @@ export async function fetchPatientPackagesWithPayment(
       },
     }
   })
+}
+
+// ── Give a legacy package payment an order, so installments can be added ──────
+// Older package sales were recorded against a visit with no order_id, and
+// addPaymentToOrder adds installments by order. Stamps one new order_id on the
+// package's order-less payment rows (only order_id changes — amounts, status
+// and dates are untouched) and returns it. Returns the existing order if the
+// package's payments already have one.
+export async function ensurePackagePaymentOrder(
+  packageId: string,
+): Promise<{ orderId: string | null; error: string | null }> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { orderId: null, error: 'Tidak terautentikasi' }
+  const { data: profile } = await supabase.from('internal_profiles').select('role').eq('id', user.id).single()
+  if (!profile || !PAYMENT_ROLES.includes(profile.role)) {
+    return { orderId: null, error: 'Tidak memiliki akses untuk mencatat pembayaran' }
+  }
+
+  const { data: pkg } = await supabase.from('patient_packages').select('order_id').eq('id', packageId).single()
+  if (!pkg) return { orderId: null, error: 'Paket tidak ditemukan' }
+
+  const { data: visits } = await supabase.from('patient_visits').select('id').eq('package_id', packageId)
+  const links = [
+    pkg.order_id ? `order_id.eq.${pkg.order_id}` : null,
+    visits?.length ? `visit_id.in.(${visits.map((v) => v.id).join(',')})` : null,
+  ].filter(Boolean)
+  if (links.length === 0) return { orderId: null, error: 'Belum ada pembayaran untuk paket ini' }
+
+  const { data: rows } = await supabase
+    .from('transactions')
+    .select('id, order_id, transaction_date')
+    .or(links.join(','))
+    .in('category', [...PACKAGE_CATEGORIES])
+    .neq('status', 'rejected')
+    .order('transaction_date', { ascending: true })
+  if (!rows?.length) return { orderId: null, error: 'Belum ada pembayaran untuk paket ini' }
+
+  const existing = rows.find((r) => r.order_id)?.order_id
+  if (existing) return { orderId: existing, error: null }
+
+  const orderId = await generateOrderId(supabase)
+  const ids = rows.map((r) => r.id)
+  const { data: updated, error } = await supabase
+    .from('transactions')
+    .update({ order_id: orderId })
+    .in('id', ids)
+    .is('order_id', null)
+    .select('id')
+  if (error) return { orderId: null, error: error.message }
+  if ((updated?.length ?? 0) !== ids.length) {
+    return { orderId: null, error: 'Gagal menautkan pembayaran lama — hubungi director' }
+  }
+  return { orderId, error: null }
 }
 
 // ── Fetch all visits linked to a specific package ──────────────────────────────

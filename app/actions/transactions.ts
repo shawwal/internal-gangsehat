@@ -296,6 +296,8 @@ export async function addPaymentToOrder(
     return { error: 'Tidak memiliki akses untuk mencatat pembayaran' }
   }
 
+  if (!Number.isFinite(amount) || amount <= 0) return { error: 'Jumlah pembayaran tidak valid' }
+
   const proofErr = paymentProofError(paymentMethod, receiptUrl)
   if (proofErr) return { error: proofErr }
 
@@ -310,7 +312,10 @@ export async function addPaymentToOrder(
   const template = existingRows[0]
   // A later installment is CICILAN; the one that pays the order off is PELUNASAN.
   const paidBefore = existingRows.reduce((sum, r) => sum + Number(r.amount ?? 0), 0)
-  const fullyPaid = paidBefore + amount >= Math.max(Number(template.harga ?? 0) - Number(template.discount ?? 0), 0)
+  const sisa = Math.max(Number(template.harga ?? 0) - Number(template.discount ?? 0) - paidBefore, 0)
+  if (sisa <= 0) return { error: 'Order ini sudah lunas' }
+  if (amount > sisa) return { error: `Melebihi sisa tagihan (Rp${sisa.toLocaleString('id-ID')})` }
+  const fullyPaid = amount >= sisa
 
   const insertPayload = {
     order_id:         orderId,

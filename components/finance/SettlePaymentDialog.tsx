@@ -14,6 +14,8 @@ import { PayOnlineButton } from '@/components/payment-links/PayOnlineButton'
 
 const PAYMENT_METHODS = ['TUNAI', 'TRANSFER BCA', 'EDC BCA', 'TRANSFER BANK KALBAR']
 
+const toNum = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
+
 export interface SettleTransaction {
   id: string
   order_id: string | null
@@ -35,9 +37,9 @@ interface Props {
 
 export function SettlePaymentDialog({ transaction, onClose, onSaved }: Props) {
   const router = useRouter()
-  const sisaNow = Math.max(transaction.harga - transaction.amount - transaction.discount, 0)
-
-  const [extra, setExtra]     = useState(String(sisaNow))
+  const [extra, setExtra]     = useState(() => String(Math.max(
+    toNum(transaction.harga) - toNum(transaction.amount) - toNum(transaction.discount), 0,
+  )))
   const [method, setMethod]   = useState(transaction.payment_method ?? 'TUNAI')
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -48,19 +50,31 @@ export function SettlePaymentDialog({ transaction, onClose, onSaved }: Props) {
 
   useEffect(() => {
     if (!transaction.order_id) return
-    fetchOrderPaymentHistory(transaction.order_id).then(setHistory)
+    fetchOrderPaymentHistory(transaction.order_id).then((h) => {
+      setHistory(h)
+      setExtra(String(h.sisa))
+    })
   }, [transaction.order_id])
 
-  const extraNum   = Number(extra) || 0
-  const newAmount  = transaction.amount + extraNum
-  const sisaAfter  = Math.max(transaction.harga - newAmount - transaction.discount, 0)
+  // The order's own payment rows are the source of truth once loaded; the
+  // caller's figures only fill in until then (and never as NaN).
+  const harga    = history ? history.harga     : toNum(transaction.harga)
+  const paid     = history ? history.totalPaid : toNum(transaction.amount)
+  const discount = history ? history.discount  : toNum(transaction.discount)
+  const sisaNow  = Math.max(harga - paid - discount, 0)
+
+  const extraNum   = toNum(extra)
+  const sisaAfter  = Math.max(sisaNow - extraNum, 0)
   const newStatus  = sisaAfter <= 0 ? 'PELUNASAN' : 'CICILAN'
+  const overpaid   = extraNum > sisaNow
 
   // "Pembayaran baru ditambahkan sebagai riwayat, bukan menimpa pembayaran
   // sebelumnya" — insert a new transactions row against the same order_id,
   // never mutate the existing one.
   async function handleConfirm() {
-    if (submitting || proofUploading || !transaction.order_id) return
+    if (submitting || proofUploading || !transaction.order_id || !history) return
+    if (extraNum <= 0) { setError('Isi jumlah pembayaran.'); return }
+    if (overpaid) { setError(`Melebihi sisa tagihan (${formatCurrency(sisaNow)}).`); return }
     const needsProof = requiresPaymentProof(method)
     if (needsProof && !proofPath) { setError(PAYMENT_PROOF_REQUIRED_MSG); return }
     setSubmitting(true)
@@ -98,11 +112,11 @@ export function SettlePaymentDialog({ transaction, onClose, onSaved }: Props) {
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="rounded-xl bg-white/5 border border-white/10 px-2 py-2.5">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Harga</p>
-              <p className="text-xs font-semibold text-foreground">{formatCurrency(transaction.harga)}</p>
+              <p className="text-xs font-semibold text-foreground">{formatCurrency(harga)}</p>
             </div>
             <div className="rounded-xl bg-white/5 border border-white/10 px-2 py-2.5">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Dibayar</p>
-              <p className="text-xs font-semibold text-[#34C759]">{formatCurrency(transaction.amount)}</p>
+              <p className="text-xs font-semibold text-[#34C759]">{formatCurrency(paid)}</p>
             </div>
             <div className="rounded-xl bg-[#FFB35C]/10 border border-[#FFB35C]/30 px-2 py-2.5">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Sisa</p>
@@ -122,7 +136,7 @@ export function SettlePaymentDialog({ transaction, onClose, onSaved }: Props) {
             <div className="flex items-center gap-1.5 p-2.5 rounded-xl bg-destructive/8 border border-destructive/20">
               <AlertTriangle size={13} className="text-destructive shrink-0" />
               <p className="text-xs text-destructive">
-                Transaksi ini tidak memiliki order_id — tidak bisa menambah riwayat pembayaran.
+                Pembayaran lama ini tidak punya kode order, jadi cicilan tidak bisa ditambahkan di sini. Catat lewat Keuangan → Transaksi.
               </p>
             </div>
           )}
@@ -137,6 +151,9 @@ export function SettlePaymentDialog({ transaction, onClose, onSaved }: Props) {
               onChange={(e) => setExtra(e.target.value)}
               className="w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
             />
+            {overpaid && (
+              <p className="mt-1 text-[11px] text-destructive">Melebihi sisa tagihan ({formatCurrency(sisaNow)}).</p>
+            )}
           </div>
 
           {transaction.order_id && sisaNow > 0 && (
@@ -146,7 +163,7 @@ export function SettlePaymentDialog({ transaction, onClose, onSaved }: Props) {
               target={{
                 patientName: transaction.patient_name,
                 orderId: transaction.order_id,
-                amount: Math.max(extraNum, 0) || sisaNow,
+                amount: Math.min(Math.max(extraNum, 0), sisaNow) || sisaNow,
                 category: transaction.category,
                 description: 'Pelunasan',
               }}
@@ -219,7 +236,7 @@ export function SettlePaymentDialog({ transaction, onClose, onSaved }: Props) {
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={submitting || proofUploading || success || extraNum <= 0 || !transaction.order_id}
+            disabled={submitting || proofUploading || success || extraNum <= 0 || overpaid || !history || !transaction.order_id}
             className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-70 transition-colors cursor-pointer"
           >
             {submitting

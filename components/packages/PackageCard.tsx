@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Pencil, Trash2, Plus, ChevronDown, ChevronUp, CalendarDays, Wallet, OctagonMinus } from 'lucide-react'
-import { fetchPackageSessions } from '@/app/actions/packages'
+import { fetchPackageSessions, ensurePackagePaymentOrder } from '@/app/actions/packages'
 import { fetchOrderPaymentHistory } from '@/app/actions/transactions'
 import { fetchBranchStaff, fetchVisitWithPatient, updateVisit, deleteVisit, createVisit, type BranchStaffMember, type VisitWithPatient } from '@/app/actions/jadwal'
 import { fetchBookingIdByKode } from '@/app/actions/orders'
@@ -75,6 +75,9 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
 
   const [paymentExpanded, setPaymentExpanded] = useState(false)
   const [settling, setSettling]               = useState(false)
+  const [settleOrderId, setSettleOrderId]     = useState<string | null>(null)
+  const [settlePreparing, setSettlePreparing] = useState(false)
+  const [settleError, setSettleError]         = useState<string | null>(null)
   const [paymentHistory, setPaymentHistory]   = useState<OrderPaymentHistoryEntry[] | null>(null)
   const [loadingPayments, setLoadingPayments] = useState(false)
 
@@ -140,10 +143,28 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
     onSessionChange()
   }
 
+  // Payments of older packages carry their own order, not the package's.
+  const paymentOrderId = pkg.payment?.orderId ?? pkg.order_id ?? null
+
+  // Old package sales have no order yet — link one first so installments can be added.
+  async function openSettle() {
+    setSettleError(null)
+    let orderId = pkg.payment?.orderId ?? null
+    if (!orderId) {
+      setSettlePreparing(true)
+      const res = await ensurePackagePaymentOrder(pkg.id)
+      setSettlePreparing(false)
+      if (res.error || !res.orderId) { setSettleError(res.error ?? 'Gagal menyiapkan pembayaran'); return }
+      orderId = res.orderId
+    }
+    setSettleOrderId(orderId)
+    setSettling(true)
+  }
+
   async function togglePayments() {
-    if (!paymentExpanded && paymentHistory === null && pkg.order_id) {
+    if (!paymentExpanded && paymentHistory === null && paymentOrderId) {
       setLoadingPayments(true)
-      const summary = await fetchOrderPaymentHistory(pkg.order_id)
+      const summary = await fetchOrderPaymentHistory(paymentOrderId)
       setPaymentHistory(summary.history)
       setLoadingPayments(false)
     }
@@ -328,10 +349,11 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
             </span>
             {pkg.payment.outstanding > 0 && canEditPayment && (
               <button
-                onClick={() => setSettling(true)}
-                className="shrink-0 font-medium px-2 py-1 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
+                onClick={openSettle}
+                disabled={settlePreparing}
+                className="shrink-0 font-medium px-2 py-1 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors disabled:opacity-60"
               >
-                Bayar Sisa
+                {settlePreparing ? 'Memuat...' : 'Bayar Sisa'}
               </button>
             )}
           </span>
@@ -357,6 +379,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
           )}
         </div>
       )}
+      {settleError && <p className="text-[11px] text-destructive px-1">{settleError}</p>}
 
       {/* Session progress bar */}
       <div className="space-y-1.5">
@@ -414,7 +437,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
         </div>
       )}
 
-      {pkg.order_id && (
+      {paymentOrderId && (
         <>
           <button
             onClick={togglePayments}
@@ -663,9 +686,9 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
           onClose={() => setEditPaymentTarget(null)}
           onSuccess={async () => {
             setEditPaymentTarget(null)
-            if (pkg.order_id) {
+            if (paymentOrderId) {
               setLoadingPayments(true)
-              const summary = await fetchOrderPaymentHistory(pkg.order_id)
+              const summary = await fetchOrderPaymentHistory(paymentOrderId)
               setPaymentHistory(summary.history)
               setLoadingPayments(false)
             }
@@ -679,7 +702,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
         <SettlePaymentDialog
           transaction={{
             id:             pkg.id,
-            order_id:       pkg.payment.orderId,
+            order_id:       settleOrderId,
             patient_name:   patientName || null,
             category:       pkg.payment.category,
             harga:          pkg.payment.harga ?? 0,
