@@ -12,6 +12,7 @@ import { SessionList } from './SessionList'
 import { PaymentHistoryTable } from '@/components/finance/PaymentHistoryTable'
 import { EditPackageTransactionDialog, type EditableTransaction } from '@/components/visits/EditPackageTransactionDialog'
 import { ConfirmDialog } from '@/components/leave/ConfirmDialog'
+import { SettlePaymentDialog } from '@/components/finance/SettlePaymentDialog'
 import {
   OP_STATUS_BADGE, STATUS_BADGE, STATUS_LABEL, COMPLETION_BADGE, COMPLETION_LABEL, INPUT_CLS, LABEL_CLS,
 } from './types'
@@ -63,15 +64,17 @@ interface PackageCardProps {
   onSchedule?: (pkg: PatientPackage) => void
   onSessionChange: () => void
   onRecordPayment?: (pkg: PatientPackage) => void
+  patientName?: string
 }
 
-export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedule, onSessionChange, onRecordPayment }: PackageCardProps) {
+export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedule, onSessionChange, onRecordPayment, patientName }: PackageCardProps) {
   const pct = pkg.total_sessions > 0 ? (pkg.used_sessions / pkg.total_sessions) * 100 : 0
   const [expanded, setExpanded]             = useState(false)
   const [sessions, setSessions]             = useState<PackageSession[] | null>(null)
   const [loadingSessions, setLoadingSessions] = useState(false)
 
   const [paymentExpanded, setPaymentExpanded] = useState(false)
+  const [settling, setSettling]               = useState(false)
   const [paymentHistory, setPaymentHistory]   = useState<OrderPaymentHistoryEntry[] | null>(null)
   const [loadingPayments, setLoadingPayments] = useState(false)
 
@@ -315,12 +318,22 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
               </span>
             )}
           </span>
-          <span className={`font-semibold px-2 py-0.5 rounded-full border ${
-            pkg.payment.paymentStatus === 'LUNAS'
-              ? 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/20'
-              : 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/25'
-          }`}>
-            {pkg.payment.paymentStatus === 'LUNAS' ? 'Lunas' : `Sisa ${formatCurrency(pkg.payment.outstanding)}`}
+          <span className="flex items-center gap-1.5">
+            <span className={`font-semibold px-2 py-0.5 rounded-full border ${
+              pkg.payment.paymentStatus === 'LUNAS'
+                ? 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/20'
+                : 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/25'
+            }`}>
+              {pkg.payment.paymentStatus === 'LUNAS' ? 'Lunas' : `Sisa ${formatCurrency(pkg.payment.outstanding)}`}
+            </span>
+            {pkg.payment.outstanding > 0 && canEditPayment && (
+              <button
+                onClick={() => setSettling(true)}
+                className="shrink-0 font-medium px-2 py-1 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
+              >
+                Bayar Sisa
+              </button>
+            )}
           </span>
         </div>
       ) : pkg.payment_ok ? (
@@ -658,6 +671,25 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
             }
             onSessionChange()
           }}
+        />
+      )}
+
+      {/* Pay the remaining balance — a new CICILAN / PELUNASAN row on the same order */}
+      {settling && pkg.payment && (
+        <SettlePaymentDialog
+          transaction={{
+            id:             pkg.id,
+            order_id:       pkg.payment.orderId,
+            patient_name:   patientName || null,
+            category:       pkg.payment.category,
+            harga:          pkg.payment.harga ?? 0,
+            discount:       pkg.payment.discount,
+            amount:         pkg.payment.amountPaid,
+            payment_method: pkg.payment.paymentMethod,
+            visitLabel:     pkg.package_name,
+          }}
+          onClose={() => setSettling(false)}
+          onSaved={() => { setPaymentHistory(null); setPaymentExpanded(false); onSessionChange() }}
         />
       )}
     </div>

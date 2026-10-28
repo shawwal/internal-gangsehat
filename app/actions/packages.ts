@@ -111,14 +111,19 @@ async function countAttendedSessions(
 export interface PackagePayment {
   harga: number | null
   amountPaid: number
+  discount: number
   outstanding: number
+  /** order the installments are added to (addPaymentToOrder) — null on legacy rows */
+  orderId: string | null
+  category: string
+  paymentMethod: string | null
   paymentStatus: 'LUNAS' | 'DP'
   transactionStatus: 'pending' | 'confirmed'
 }
 
 export type PatientPackageWithPayment = PatientPackage & { payment: PackagePayment | null }
 
-interface PkgTxRow { harga: number; amount: number; discount: number; status: string }
+interface PkgTxRow { order_id: string | null; category: string; payment_method: string | null; transaction_date: string; harga: number; amount: number; discount: number; status: string }
 
 export async function fetchPatientPackagesWithPayment(
   patientId: string,
@@ -133,7 +138,7 @@ export async function fetchPatientPackagesWithPayment(
   const [orderTxRes, linkedVisitsRes] = await Promise.all([
     orderIds.length > 0
       ? supabase.from('transactions')
-          .select('order_id, harga, amount, discount, status')
+          .select('order_id, category, payment_method, transaction_date, harga, amount, discount, status')
           .in('order_id', orderIds)
           .in('category', [...PACKAGE_CATEGORIES])
           .neq('status', 'rejected')
@@ -149,7 +154,7 @@ export async function fetchPatientPackagesWithPayment(
 
   const visitTxRes = visitIds.length > 0
     ? await supabase.from('transactions')
-        .select('visit_id, harga, amount, discount, status')
+        .select('visit_id, order_id, category, payment_method, transaction_date, harga, amount, discount, status')
         .in('visit_id', visitIds)
         .in('category', [...PACKAGE_CATEGORIES])
         .neq('status', 'rejected')
@@ -162,10 +167,10 @@ export async function fetchPatientPackagesWithPayment(
     list.push(row)
     byPackage.set(pkgId, list)
   }
-  for (const t of (orderTxRes.data ?? []) as { order_id: string; harga: number; amount: number; discount: number; status: string }[]) {
+  for (const t of (orderTxRes.data ?? []) as (PkgTxRow & { order_id: string })[]) {
     addRow(orderToPackage.get(t.order_id), t)
   }
-  for (const t of (visitTxRes.data ?? []) as { visit_id: string; harga: number; amount: number; discount: number; status: string }[]) {
+  for (const t of (visitTxRes.data ?? []) as (PkgTxRow & { visit_id: string })[]) {
     addRow(visitToPackage.get(t.visit_id), t)
   }
 
@@ -173,9 +178,17 @@ export async function fetchPatientPackagesWithPayment(
     const rows = byPackage.get(p.id)
     if (!rows || rows.length === 0) return { ...p, payment: null }
 
+    rows.sort((a, b) => a.transaction_date.localeCompare(b.transaction_date))
+    // The package's own order first; else the order of its first payment.
+    const orderId = rows.find((r) => p.order_id && r.order_id === p.order_id)?.order_id
+      ?? rows.find((r) => r.order_id)?.order_id
+      ?? null
+    const latest  = rows[rows.length - 1]
+
     const harga         = rows[0].harga
     const amountPaid     = rows.reduce((s, r) => s + (r.amount ?? 0), 0)
-    const discountTotal  = rows.reduce((s, r) => s + (r.discount ?? 0), 0)
+    // Installments copy the first payment's discount — count it once (SALDO model).
+    const discountTotal  = rows[0].discount ?? 0
     const outstanding    = Math.max(harga - amountPaid - discountTotal, 0)
 
     return {
@@ -183,7 +196,11 @@ export async function fetchPatientPackagesWithPayment(
       payment: {
         harga,
         amountPaid,
+        discount:          discountTotal,
         outstanding,
+        orderId,
+        category:          rows[0].category,
+        paymentMethod:     latest.payment_method,
         paymentStatus:     outstanding === 0 ? 'LUNAS' : 'DP',
         transactionStatus: rows.some((r) => r.status === 'pending') ? 'pending' : 'confirmed',
       },

@@ -120,6 +120,7 @@ export default function PatientPackagesPage() {
               key={pkg.id}
               pkg={pkg}
               userRole={userRole}
+              patientName={patientName}
               onEdit={openEdit}
               onDelete={(pkgId) => setDeleteTarget(pkgId)}
               onStop={(pkgId) => setStopTarget(pkgId)}

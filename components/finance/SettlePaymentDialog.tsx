@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { Wallet, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react'
 import { addPaymentToOrder, fetchOrderPaymentHistory } from '@/app/actions/transactions'
@@ -28,9 +29,11 @@ export interface SettleTransaction {
 interface Props {
   transaction: SettleTransaction
   onClose: () => void
+  /** called after a payment is saved (pages that load client-side, e.g. Paket Terapi) */
+  onSaved?: () => void
 }
 
-export function SettlePaymentDialog({ transaction, onClose }: Props) {
+export function SettlePaymentDialog({ transaction, onClose, onSaved }: Props) {
   const router = useRouter()
   const sisaNow = Math.max(transaction.harga - transaction.amount - transaction.discount, 0)
 
@@ -69,10 +72,12 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
       return
     }
     setSuccess(true)
-    setTimeout(() => { onClose(); router.refresh() }, 900)
+    setTimeout(() => { onClose(); onSaved?.(); router.refresh() }, 900)
   }
 
-  return (
+  // Portal: a parent with backdrop-filter (.glass-card) would otherwise trap the
+  // fixed overlay inside its own box.
+  return createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
         className="bg-card rounded-2xl border border-border w-full max-w-sm shadow-2xl max-h-[90dvh] overflow-y-auto"
@@ -145,7 +150,7 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
                 category: transaction.category,
                 description: 'Pelunasan',
               }}
-              onChange={(l) => { if (l.status === 'paid') router.refresh() }}
+              onChange={(l) => { if (l.status === 'paid') { onSaved?.(); router.refresh() } }}
             />
           )}
 
@@ -224,6 +229,7 @@ export function SettlePaymentDialog({ transaction, onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
