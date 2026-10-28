@@ -66,16 +66,16 @@ function decrypt(text: string): string {
 // ── Session type mapping ─────────────────────────────────────────────────────
 // links_to_package: true = consume a session from patient's active package
 const SESSION_MAP: Record<string, { service_type: string; links_to_package: boolean }> = {
-  'K.ST - SESI TERAPI':               { service_type: 'SESI TERAPI', links_to_package: true  },
-  'K.ST - SESI TERAPI NEW':           { service_type: 'SESI TERAPI', links_to_package: true  },
-  'K.TA - TERAPI AWAL':               { service_type: 'TERAPI AWAL', links_to_package: false },
-  'K.L - SESI TERAPI':                { service_type: 'SESI TERAPI', links_to_package: true  },
-  'STUDIO.SKOLIOSIS - SESI TERAPI':   { service_type: 'SESI TERAPI', links_to_package: true  },
-  'STUDIO.SKOLIOSIS- SESI TERAPI':    { service_type: 'SESI TERAPI', links_to_package: true  }, // typo variant
+  'K.ST - SESI TERAPI':               { service_type: 'SESI KLINIK', links_to_package: true  },
+  'K.ST - SESI TERAPI NEW':           { service_type: 'SESI KLINIK', links_to_package: true  },
+  'K.TA - TERAPI AWAL':               { service_type: 'TERAPI AWAL KLINIK', links_to_package: false },
+  'K.L - SESI TERAPI':                { service_type: 'SESI KLINIK', links_to_package: true  },
+  'STUDIO.SKOLIOSIS - SESI TERAPI':   { service_type: 'SESI KLINIK', links_to_package: true  },
+  'STUDIO.SKOLIOSIS- SESI TERAPI':    { service_type: 'SESI KLINIK', links_to_package: true  }, // typo variant
   'V.ST - SESI VISIT':                { service_type: 'SESI VISIT',  links_to_package: true  },
   'V.ST - SESI VISIT + JARAK':        { service_type: 'SESI VISIT',  links_to_package: true  },
-  'V.TA - TERAPI AWAL VISIT':         { service_type: 'TA VISIT',    links_to_package: false },
-  'V.TA - TERAPI AWAL VISIT + JARAK': { service_type: 'TA VISIT',    links_to_package: false },
+  'V.TA - TERAPI AWAL VISIT':         { service_type: 'TERAPI AWAL VISIT', links_to_package: false },
+  'V.TA - TERAPI AWAL VISIT + JARAK': { service_type: 'TERAPI AWAL VISIT', links_to_package: false },
 }
 
 function normalizeName(name: string): string {

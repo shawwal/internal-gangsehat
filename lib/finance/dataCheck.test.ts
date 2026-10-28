@@ -8,7 +8,7 @@ const tx = (over: Partial<Parameters<typeof txIssues>[0]>) => ({
 
 describe('Fisio rule', () => {
   it('every income except TOKO needs a Fisio (empty category = LAINNYA)', () => {
-    for (const c of ['TA KLINIK', 'PAKET KLINIK', 'SESI VISIT', 'SPORT MASSAGE', 'LAINNYA', '', null]) expect(isTherapistCategory(c)).toBe(true)
+    for (const c of ['TERAPI AWAL KLINIK', 'PAKET KLINIK', 'SESI VISIT', 'SPORT MASSAGE', 'LAINNYA', '', null]) expect(isTherapistCategory(c)).toBe(true)
     expect(isTherapistCategory('TOKO')).toBe(false)
   })
 

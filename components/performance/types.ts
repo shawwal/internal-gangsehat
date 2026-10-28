@@ -11,7 +11,7 @@ export interface FisioInfo {
 
 export interface StaffTargetRow {
   staff_id: string
-  target_ta: number
+  target_terapi_awal: number
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number
@@ -50,9 +50,9 @@ export interface FisioStats {
   staff_id: string
   name: string
   avatar_url: string | null
-  ta: number       // TERAPI AWAL + TA VISIT
-  paket: number    // PAKET TERAPI + PAKET VISIT
-  sesi: number     // SESI TERAPI + SESI VISIT
+  ta: number       // TERAPI AWAL KLINIK + TERAPI AWAL VISIT
+  paket: number    // PAKET KLINIK + PAKET VISIT
+  sesi: number     // SESI KLINIK + SESI VISIT
   total: number
 }
 

@@ -1,4 +1,4 @@
-export type CategoryKey = 'ta' | 'paket_klinik' | 'kunjungan' | 'paket_visit' | 'sesi'
+export type CategoryKey = 'terapi_awal' | 'paket_klinik' | 'kunjungan' | 'paket_visit' | 'sesi'
 
 export interface CategoryDef {
   key: CategoryKey
@@ -8,7 +8,7 @@ export interface CategoryDef {
 
 // Fixed order — same categories/colors already used in components/performance/KontrolTargetTab.tsx
 export const CATEGORY_DEFS: CategoryDef[] = [
-  { key: 'ta',           label: 'TA',           color: 'var(--primary)' },
+  { key: 'terapi_awal',  label: 'Terapi Awal',  color: 'var(--primary)' },
   { key: 'paket_klinik', label: 'Paket Klinik', color: 'var(--chart-4)' },
   { key: 'kunjungan',    label: 'Kunjungan',    color: 'var(--secondary)' },
   // Visit target = PAKET VISIT only (home visit), compared against target_visit
@@ -34,14 +34,14 @@ export interface TransactionForProgress {
   transaction_date: string
 }
 
-// TA = clinic only (TA KLINIK → target_ta). Home-visit TA (TA VISIT) counts
+// TA = clinic only (TERAPI AWAL KLINIK → target_terapi_awal). Home-visit TA (TERAPI AWAL VISIT) counts
 // toward no target; Visit = PAKET VISIT only. Sesi stays merged Klinik+Visit.
 export const TRANSACTION_CATEGORY_MAP: Record<string, CategoryKey> = {
-  'TA KLINIK': 'ta',
-  'SESI KLINIK': 'sesi',
-  'SESI VISIT': 'sesi',
-  'PAKET KLINIK': 'paket_klinik',
-  'PAKET VISIT': 'paket_visit',
+  'TERAPI AWAL KLINIK': 'terapi_awal',
+  'SESI KLINIK':        'sesi',
+  'SESI VISIT':         'sesi',
+  'PAKET KLINIK':       'paket_klinik',
+  'PAKET VISIT':        'paket_visit',
 }
 
 // Reverse of TRANSACTION_CATEGORY_MAP — which transactions.category strings
@@ -59,7 +59,7 @@ export const CATEGORY_TO_TRANSACTION_TYPES: Partial<Record<CategoryKey, string[]
 export const EDITABLE_ROLES = ['finance', 'manager', 'director', 'admin'] as const
 
 export interface BranchTargetForProgress {
-  target_ta: number
+  target_terapi_awal: number
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number

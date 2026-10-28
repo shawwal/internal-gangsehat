@@ -66,7 +66,7 @@ export function useStaffTargets() {
       .from('staff_targets')
       .select(`
         id, staff_id, branch_id, bulan, tahun,
-        target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi,
+        target_terapi_awal, target_paket_klinik, target_kunjungan, target_visit, target_sesi,
         notes, status, rejection_note, created_at,
         internal_profiles!staff_id(full_name, email),
         branches!branch_id(name)

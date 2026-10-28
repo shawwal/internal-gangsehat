@@ -128,7 +128,7 @@ export default function TargetProgressPage() {
     const [{ data: targetRow }, { data: visits }, transactionRows, { data: categorySettings }] = await Promise.all([
       supabase
         .from('branch_targets')
-        .select('target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi')
+        .select('target_terapi_awal, target_paket_klinik, target_kunjungan, target_visit, target_sesi')
         .eq('branch_id', selectedBranchId)
         .eq('bulan', month)
         .eq('tahun', year)
@@ -162,7 +162,7 @@ export default function TargetProgressPage() {
     const daily = mergeDailyCounts(visitDaily, transactionDaily)
     const t = targetRow as BranchTargetForProgress | null
     const targetFields: Record<CategoryKey, number> = {
-      ta: t?.target_ta ?? 0,
+      terapi_awal: t?.target_terapi_awal ?? 0,
       paket_klinik: t?.target_paket_klinik ?? 0,
       kunjungan: t?.target_kunjungan ?? 0,
       paket_visit: t?.target_visit ?? 0,

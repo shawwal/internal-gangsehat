@@ -42,11 +42,14 @@ const BATCH_SIZE = 100
 
 // ── Category / status mappings ────────────────────────────────────────────────
 const INCOME_CATEGORIES = new Set([
-  'TA KLINIK', 'PAKET KLINIK', 'SESI KLINIK',
-  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA',
+  'TERAPI AWAL KLINIK', 'PAKET KLINIK', 'SESI KLINIK',
+  'TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA',
 ])
+// Sheets still use the old abbreviations (renamed in migration 119).
+const LEGACY_CATEGORY: Record<string, string> = { 'TA KLINIK': 'TERAPI AWAL KLINIK', 'TA VISIT': 'TERAPI AWAL VISIT' }
 function mapIncomeCategory(raw: string): string {
-  const v = String(raw ?? '').trim().toUpperCase()
+  const s = String(raw ?? '').trim().toUpperCase()
+  const v = LEGACY_CATEGORY[s] ?? s
   return INCOME_CATEGORIES.has(v) ? v : 'LAINNYA'
 }
 function mapPaymentStatus(raw: string): string {

@@ -48,8 +48,8 @@ export function PackageSessionWizard({ pkg, patientId, branchId, onClose, onSucc
   const [fisioId, setFisioId]   = useState('')
 
   const serviceType = pkg.jenis_paket?.startsWith('P')
-    ? (pkg.package_name.toLowerCase().includes('visit') ? 'PAKET VISIT' : 'PAKET TERAPI')
-    : 'PAKET TERAPI'
+    ? (pkg.package_name.toLowerCase().includes('visit') ? 'PAKET VISIT' : 'PAKET KLINIK')
+    : 'PAKET KLINIK'
 
   function updateRow(i: number, patch: Partial<SessionRow>) {
     setSessions((prev) => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r))

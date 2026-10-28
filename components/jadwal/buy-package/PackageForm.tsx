@@ -46,7 +46,7 @@ export function PackageForm({ patientId, patientName, branchId, lockedCategory, 
   // e.g. pulls the real "Paket Home Visit" name for the PAKET VISIT category.
   useEffect(() => {
     let cancelled = false
-    const virtualServiceType = isVisit ? 'PAKET VISIT' : 'PAKET TERAPI'
+    const virtualServiceType = isVisit ? 'PAKET VISIT' : 'PAKET KLINIK'
     fetchLayananDetail(virtualServiceType, branchId, sessions).then((detail) => {
       if (cancelled) return
       setHarga(detail ? String(detail.harga) : '')

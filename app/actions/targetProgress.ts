@@ -51,7 +51,7 @@ interface VisitRow {
   internal_profiles: any
 }
 
-// Same wording the clinic's own visit log uses: a TERAPI AWAL is "diperiksa"
+// Same wording the clinic's own visit log uses: a TERAPI AWAL KLINIK is "diperiksa"
 // (assessed), every follow-up session is "ditangani" (treated).
 function statusKunjunganLabel(v: VisitRow, formStatus: string | undefined): string {
   const verb = getVisitFormRoute(v.service_type) === 'assessment' ? 'Diperiksa' : 'Ditangani'

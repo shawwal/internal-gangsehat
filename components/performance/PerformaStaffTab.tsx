@@ -214,20 +214,20 @@ export function PerformaStaffTab({ year, branchFilter }: PerformaStaffTabProps) 
           >
             <ServiceMiniChart
               title="Terapi Awal"
-              subtitle="TA Klinik + TA Visit"
+              subtitle="Terapi Awal Klinik + Terapi Awal Visit"
               data={taMini}
               color="var(--primary)"
               gradientId="perf-ta-mini"
             />
             <ServiceMiniChart
-              title="Paket Terapi"
+              title="Paket"
               subtitle="Paket Klinik + Paket Visit"
               data={paketMini}
               color="var(--chart-4)"
               gradientId="perf-paket-mini"
             />
             <ServiceMiniChart
-              title="Sesi Terapi"
+              title="Sesi"
               subtitle="Sesi Klinik + Sesi Visit"
               data={sesiMini}
               color="var(--secondary)"

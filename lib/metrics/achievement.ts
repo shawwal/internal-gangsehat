@@ -11,10 +11,10 @@ export const KUNJUNGAN_SERVICE_FILTER = 'service_type.is.null,service_type.neq."
 
 /**
  * Never a kunjungan: sport massage (tracked separately) and home-visit TA
- * (TA VISIT counts toward no target). TA VISIT is filtered here, not in the
- * query filter above — payroll reads the same visits for its VISIT_TA activity.
+ * (TERAPI AWAL VISIT counts toward no target). TERAPI AWAL VISIT is filtered here, not in the
+ * query filter above — payroll reads the same visits for its TERAPI_AWAL_VISIT activity.
  */
-export const NON_KUNJUNGAN_SERVICE_TYPES = ['SPORT MASSAGE', 'TA VISIT'] as const
+export const NON_KUNJUNGAN_SERVICE_TYPES = ['SPORT MASSAGE', 'TERAPI AWAL VISIT'] as const
 
 /**
  * Payment statuses that can open a sale. PELUNASAN never does, and installments
@@ -107,7 +107,7 @@ export function visitAttended(v: Pick<VisitForAchievement, 'kehadiran' | 'visit_
   return v.kehadiran == null && v.visit_date < todayISO
 }
 
-/** A "Kunjungan": an attended, non-cancelled visit that isn't sport massage / TA VISIT. */
+/** A "Kunjungan": an attended, non-cancelled visit that isn't sport massage / TERAPI AWAL VISIT. */
 export function countsAsKunjungan(v: VisitForAchievement, todayISO: string): boolean {
   if (v.status != null && !(KUNJUNGAN_VISIT_STATUSES as readonly string[]).includes(v.status)) return false
   if ((NON_KUNJUNGAN_SERVICE_TYPES as readonly string[]).includes(v.service_type ?? '')) return false

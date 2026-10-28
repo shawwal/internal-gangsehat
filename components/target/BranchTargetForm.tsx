@@ -9,7 +9,7 @@ export interface BranchTargetFormState {
   branchId: string
   bulan: number
   tahun: number
-  target_ta: number
+  target_terapi_awal: number
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number
@@ -30,7 +30,7 @@ interface Props {
 }
 
 const METRICS: { field: keyof BranchTargetFormState; label: string; category: CategoryKey }[] = [
-  { field: 'target_ta', label: 'Target TA (Terapi Awal)', category: 'ta' },
+  { field: 'target_terapi_awal', label: 'Target Terapi Awal', category: 'terapi_awal' },
   { field: 'target_paket_klinik', label: 'Target Paket Klinik', category: 'paket_klinik' },
   { field: 'target_kunjungan', label: 'Target Kunjungan', category: 'kunjungan' },
   { field: 'target_visit', label: 'Target Visit', category: 'paket_visit' },

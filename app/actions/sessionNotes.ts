@@ -31,7 +31,7 @@ export async function fetchSessionNote(visitId: string): Promise<SessionNote | n
   return data as SessionNote
 }
 
-// ── Pull-forward context: most recent completed TERAPI AWAL/TA VISIT assessment ─
+// ── Pull-forward context: most recent completed TERAPI AWAL KLINIK/TERAPI AWAL VISIT assessment ─
 export async function fetchLatestCompletedAssessment(patientId: string): Promise<TerapiAwalAssessment | null> {
   const supabase = await createClient()
   const { data, error } = await supabase

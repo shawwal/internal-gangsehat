@@ -6,13 +6,13 @@ import type { VisitRow } from './types'
 import { formatDateShort } from './utils'
 
 const SERVICE_BADGE: Record<string, string> = {
-  'TERAPI AWAL':  'bg-primary/15 text-primary',
-  'PAKET TERAPI': 'bg-chart-4/15 text-chart-4',
-  'SESI TERAPI':  'bg-secondary/15 text-secondary',
-  'TA VISIT':     'bg-primary/10 text-primary',
-  'PAKET VISIT':  'bg-chart-4/10 text-chart-4',
-  'SESI VISIT':   'bg-secondary/10 text-secondary',
-  'LAINNYA':      'bg-muted text-muted-foreground',
+  'TERAPI AWAL KLINIK':       'bg-primary/15 text-primary',
+  'PAKET KLINIK':      'bg-chart-4/15 text-chart-4',
+  'SESI KLINIK':       'bg-secondary/15 text-secondary',
+  'TERAPI AWAL VISIT': 'bg-primary/10 text-primary',
+  'PAKET VISIT':       'bg-chart-4/10 text-chart-4',
+  'SESI VISIT':        'bg-secondary/10 text-secondary',
+  'LAINNYA':           'bg-muted text-muted-foreground',
 }
 
 const PAGE_SIZE = 10

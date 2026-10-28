@@ -32,7 +32,7 @@ const MISSING_LAYANAN = [
   { nama: 'Paket Silver',      kategori: 'PAKET KLINIK', jumlah_sesi: 5,  harga: 750000 },
   { nama: 'Paket Penyesuaian', kategori: 'SESI KLINIK',  jumlah_sesi: 3,  harga: 0 },
   { nama: 'Paket Home Visit',  kategori: 'PAKET VISIT',  jumlah_sesi: 10, harga: 1800000 },
-  { nama: 'Home Visit',        kategori: 'TA VISIT',     jumlah_sesi: 1,  harga: 300000 },
+  { nama: 'Home Visit',        kategori: 'TERAPI AWAL VISIT',     jumlah_sesi: 1,  harga: 300000 },
   { nama: 'Paket 2',           kategori: 'PAKET KLINIK', jumlah_sesi: 10, harga: 1200000 },
   { nama: 'Paket 1',           kategori: 'PAKET KLINIK', jumlah_sesi: 5,  harga: 650000 },
   { nama: 'Sesi',              kategori: 'SESI KLINIK',  jumlah_sesi: 1,  harga: 150000 },

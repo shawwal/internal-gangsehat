@@ -81,7 +81,7 @@ export function ArusKasTab({ branchId, branchName }: Props) {
   }, [branchId, year, firstHalfOnly])
 
   // Income rows key off the same coarse category bucket `transactions.category`
-  // stores app-wide (TA KLINIK, PAKET KLINIK, ...) — not the specific item name,
+  // stores app-wide (TERAPI AWAL KLINIK, PAKET KLINIK, ...) — not the specific item name,
   // since that's the only thing consistently recorded across every entry point
   // (finance/transactions, director/finance, PaymentDialog, and this page).
   const incomeRows = useMemo<MatrixRow[]>(() => {

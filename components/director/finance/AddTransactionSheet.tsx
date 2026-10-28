@@ -287,7 +287,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
           {/* Category — income: kategori + layanan from the branch's Tarif Layanan */}
           {isIncome ? (
             <LayananIncomePicker
-              key={form.branch_id}
+              key={`layanan-${form.branch_id}`}
               branchId={form.branch_id || null}
               kategori={form.category}
               layananId={form.layanan_id}
@@ -421,7 +421,7 @@ export function AddTransactionSheet({ branches }: AddTransactionSheetProps) {
 
           {isIncome && !isOnline && form.branch_id && (
             <FisioSelect
-              key={form.branch_id}
+              key={`fisio-${form.branch_id}`}
               patientId={null}
               branchId={form.branch_id}
               value={form.fisio_id}

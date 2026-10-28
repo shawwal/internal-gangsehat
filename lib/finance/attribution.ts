@@ -5,10 +5,10 @@ import { fetchAllRows } from '@/lib/supabase/fetchAll'
 
 /** Income categories offered as the "layanan" (service) filter. */
 export const SERVICE_CATEGORIES = [
-  'TA KLINIK',
+  'TERAPI AWAL KLINIK',
   'SESI KLINIK',
   'PAKET KLINIK',
-  'TA VISIT',
+  'TERAPI AWAL VISIT',
   'SESI VISIT',
   'PAKET VISIT',
   'SPORT MASSAGE',

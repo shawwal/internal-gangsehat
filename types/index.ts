@@ -47,13 +47,13 @@ export interface Patient {
 export type VisitStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled'
 
 // Service types (LAYANAN) — maps to Excel purchase codes:
-// K.TA → TERAPI AWAL, K.ST → SESI TERAPI, K.PT → PAKET TERAPI
-// V.TA → TA VISIT, V.ST → SESI VISIT, V.PT → PAKET VISIT
+// K.TA → TERAPI AWAL KLINIK, K.ST → SESI KLINIK, K.PT → PAKET KLINIK
+// V.TA → TERAPI AWAL VISIT, V.ST → SESI VISIT, V.PT → PAKET VISIT
 export type ServiceType =
-  | 'TERAPI AWAL'
-  | 'PAKET TERAPI'
-  | 'SESI TERAPI'
-  | 'TA VISIT'
+  | 'TERAPI AWAL KLINIK'
+  | 'PAKET KLINIK'
+  | 'SESI KLINIK'
+  | 'TERAPI AWAL VISIT'
   | 'SESI VISIT'
   | 'PAKET VISIT'
   | 'SPORT MASSAGE'
@@ -138,7 +138,7 @@ export type ObservationFinding =
 // ICF Functional Framework severity (form v2, migration 047)
 export type IcfSeverity = 'Ringan' | 'Sedang' | 'Berat' | 'Total' | 'TidakDiperiksa'
 
-// Guided MSK & Sports Assessment — one row per TERAPI AWAL patient_visits row (migration 031)
+// Guided MSK & Sports Assessment — one row per TERAPI AWAL KLINIK patient_visits row (migration 031)
 export interface TerapiAwalAssessment {
   id: string
   visit_id: string
@@ -223,7 +223,7 @@ export type TreatmentPerformed =
   | 'DRY_NEEDLING'
   | 'TAPING'
 
-// Follow-up SOAP session note — one row per SESI/PAKET TERAPI|VISIT patient_visits row (migration 033)
+// Follow-up SOAP session note — one row per SESI/PAKET KLINIK|VISIT patient_visits row (migration 033)
 export interface SessionNote {
   id: string
   visit_id: string
@@ -248,7 +248,7 @@ export interface SessionNote {
   next_plan: string | null
 }
 
-// Griya Anak's own Terapi Awal intake — one row per Griya Anak TERAPI AWAL
+// Griya Anak's own Terapi Awal intake — one row per Griya Anak TERAPI AWAL KLINIK
 // patient_visits row (migration 074). Separate from TerapiAwalAssessment (adult
 // MSK) — mirrors the paper "REKAM MEDIS SENSORI INTEGRASI" form instead.
 export interface GriyaTerapiAwal {

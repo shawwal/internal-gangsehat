@@ -5,7 +5,7 @@ import { countedSaleIds } from '@/lib/metrics/achievement'
 import type { VisitForPayroll } from '@/lib/payroll/autoActivity'
 
 const visit = (over: Partial<VisitForPayroll>): VisitForPayroll => ({
-  id: Math.random().toString(36), attending_staff_id: 'a', service_type: 'SESI TERAPI', layanan_id: null,
+  id: Math.random().toString(36), attending_staff_id: 'a', service_type: 'SESI KLINIK', layanan_id: null,
   visit_date: '2026-10-01', kehadiran: 'HADIR', package_id: null,
   status: 'completed', diagnosis: 'PFPS', treatment: 'TENS', regio: null, ...over,
 })
@@ -25,7 +25,7 @@ describe('PFOTM auto metrics', () => {
       visit({ kehadiran: 'TIDAK HADIR' }),                          // absent
       visit({ kehadiran: null, visit_date: '2026-10-20' }),         // unmarked, still in the future
       visit({ service_type: 'SPORT MASSAGE' }),                     // tracked separately
-      visit({ service_type: 'TA VISIT' }),                          // counts toward no target
+      visit({ service_type: 'TERAPI AWAL VISIT' }),                          // counts toward no target
       visit({ status: 'cancelled' }),
     ])
     expect(out.a.kunjungan).toBe(3)
@@ -35,13 +35,13 @@ describe('PFOTM auto metrics', () => {
     const out = run([], [
       { staff_id: 'a', category: 'PAKET KLINIK', package: { id: 'p1', jenis_paket: 'P1', total_sessions: 5 } },
       { staff_id: 'a', category: 'PAKET KLINIK', package: { id: 'p2', jenis_paket: null, total_sessions: 10 } },
-      { staff_id: 'b', category: 'TA VISIT', package: null },
+      { staff_id: 'b', category: 'TERAPI AWAL VISIT', package: null },
       { staff_id: 'b', category: 'SESI VISIT', package: null },
       { staff_id: 'b', category: 'PAKET VISIT', package: null },
       { staff_id: null, category: 'PAKET VISIT', package: null },
     ])
     expect(out.a).toMatchObject({ paket_1: 1, paket_2: 1 })
-    expect(out.b).toMatchObject({ ta_sesi_visit: 2, paket_visit: 1 })
+    expect(out.b).toMatchObject({ terapi_awal_sesi_visit: 2, paket_visit: 1 })
   })
 
   it('maps sales by their Layanan tag when the branch has one (null = no column)', () => {
@@ -90,14 +90,14 @@ describe('PFOTM gap', () => {
       attendance: [], referrals: [],
       periodVisits: [visit({}), visit({ attending_staff_id: 'mgr' }), visit({ attending_staff_id: null })],
       sales: [
-        { id: 't1', staff_id: 'a', category: 'TA VISIT', transaction_date: '2026-10-03', package: null },
+        { id: 't1', staff_id: 'a', category: 'TERAPI AWAL VISIT', transaction_date: '2026-10-03', package: null },
         { id: 't2', staff_id: null, category: 'PAKET VISIT', transaction_date: '2026-10-05', package: null },
-        { id: 't3', staff_id: null, category: 'TA KLINIK', transaction_date: '2026-10-05', package: null }, // not a PFOTM column
+        { id: 't3', staff_id: null, category: 'TERAPI AWAL KLINIK', transaction_date: '2026-10-05', package: null }, // not a PFOTM column
       ],
     }
     const { hits, gap } = pfotmHitsWithGap(params)
     expect(hits).toEqual(pfotmHits(params))
-    expect(computePfotmAutoMetrics(params).a).toMatchObject({ kunjungan: 1, ta_sesi_visit: 1, paket_visit: 0 })
+    expect(computePfotmAutoMetrics(params).a).toMatchObject({ kunjungan: 1, terapi_awal_sesi_visit: 1, paket_visit: 0 })
     expect(gap.map((g) => [g.key, g.staff_id])).toEqual([['kunjungan', 'mgr'], ['kunjungan', null], ['paket_visit', null]])
   })
 })

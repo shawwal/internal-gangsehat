@@ -18,7 +18,7 @@ export function Legend() {
       ))}
       <div className="flex items-center gap-1.5">
         <Star size={12} className="fill-[#FFB35C] text-[#FFB35C]" />
-        <span>Perlu diperhatikan (TA, sesi pertama setelah TA, sesi terakhir paket)</span>
+        <span>Perlu diperhatikan (Terapi Awal, sesi pertama setelah Terapi Awal, sesi terakhir paket)</span>
       </div>
       <div className="flex items-center gap-1.5 ml-auto">
         <div className="w-2 h-2 rounded-full bg-primary" />

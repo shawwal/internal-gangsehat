@@ -129,7 +129,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
       ...f,
       itemId: item?.id ?? '',
       itemNama: item?.nama ?? '',
-      // `category` stores the coarse bucket (TA KLINIK, PAKET KLINIK, ...) —
+      // `category` stores the coarse bucket (TERAPI AWAL KLINIK, PAKET KLINIK, ...) —
       // the same convention used everywhere else transactions are written
       // (finance/transactions, PaymentDialog, director/finance), so income
       // recorded here still aggregates correctly in Laporan/Arus Kas and in

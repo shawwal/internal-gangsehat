@@ -11,17 +11,17 @@ import {
 import type { UserRole } from '@/types'
 
 // service_types where regio is compulsory, formatted for PostgREST in.() lists
-const REGIO_REQUIRED_IN = '("TERAPI AWAL","TA VISIT")'
+const REGIO_REQUIRED_IN = '("TERAPI AWAL KLINIK","TERAPI AWAL VISIT")'
 
-// Package sessions can be stored with the literal 'SESI TERAPI'/'SESI VISIT'
+// Package sessions can be stored with the literal 'SESI KLINIK'/'SESI VISIT'
 // service_type even once tied to a package (package_id set) — see
 // getEffectivePackageServiceType's own comment. /visits and the package detail
 // page both display the *effective* PAKET variant for those rows, so this filter
 // (and the row's displayed service_type below) need to match: filtering by
-// 'PAKET TERAPI' must also catch package-linked 'SESI TERAPI' rows, and
-// filtering by 'SESI TERAPI' must exclude them.
+// 'PAKET KLINIK' must also catch package-linked 'SESI KLINIK' rows, and
+// filtering by 'SESI KLINIK' must exclude them.
 const PACKAGE_VARIANT_OF: Record<string, string> = {
-  'SESI TERAPI': 'PAKET TERAPI',
+  'SESI KLINIK': 'PAKET KLINIK',
   'SESI VISIT':  'PAKET VISIT',
 }
 const SESI_EQUIVALENT_OF: Record<string, string> = Object.fromEntries(
@@ -32,13 +32,13 @@ const SESI_EQUIVALENT_OF: Record<string, string> = Object.fromEntries(
 function applyServiceTypeFilter(query: any, serviceType: string) {
   const sesiEquivalent = SESI_EQUIVALENT_OF[serviceType]
   if (sesiEquivalent) {
-    // e.g. serviceType === 'PAKET TERAPI' → literal PAKET TERAPI rows, or
-    // SESI TERAPI rows that turned out to be package-linked.
+    // e.g. serviceType === 'PAKET KLINIK' → literal PAKET KLINIK rows, or
+    // SESI KLINIK rows that turned out to be package-linked.
     return query.or(`service_type.eq."${serviceType}",and(service_type.eq."${sesiEquivalent}",package_id.not.is.null)`)
   }
   if (PACKAGE_VARIANT_OF[serviceType]) {
-    // e.g. serviceType === 'SESI TERAPI' → literal SESI TERAPI rows with no
-    // package attached (package-linked ones display/filter as PAKET TERAPI).
+    // e.g. serviceType === 'SESI KLINIK' → literal SESI KLINIK rows with no
+    // package attached (package-linked ones display/filter as PAKET KLINIK).
     return query.eq('service_type', serviceType).is('package_id', null)
   }
   return query.eq('service_type', serviceType)
@@ -95,7 +95,7 @@ export interface MedicalRecordsParams {
   groupBy?: RecordGroupBy
   staffId?: string   // 'all' or uuid — only honored for team-scope viewers
   branchId?: string  // 'all' or uuid — only honored for director
-  serviceType?: string  // 'all' or a ServiceType value (e.g. 'TERAPI AWAL')
+  serviceType?: string  // 'all' or a ServiceType value (e.g. 'TERAPI AWAL KLINIK')
 }
 
 export interface MedicalRecordsResult {
@@ -185,7 +185,7 @@ async function searchPatientIds(supabase: SupabaseServerClient, term: string): P
 }
 
 // A visit is "lengkap" (complete) once diagnosis and treatment are filled, and
-// regio too — but only for assessment-type visits (TERAPI AWAL, TA VISIT), where
+// regio too — but only for assessment-type visits (TERAPI AWAL KLINIK, TERAPI AWAL VISIT), where
 // it's compulsory. Same signal sendMedicalRecordReminder() and the
 // jadwal-harian incomplete-records banner already use.
 // Griya Anak branches (`griyaIds`) keep their own rekam medis, which SQL here

@@ -127,7 +127,7 @@ function PodiumCard({
         )}
 
         <div className="flex justify-center gap-3 border-t border-border/40 pt-2">
-          <StatPill label="TA"    value={fisio.ta}    color="var(--primary)"    />
+          <StatPill label="Terapi Awal" value={fisio.ta}    color="var(--primary)"    />
           <StatPill label="Paket" value={fisio.paket} color="var(--chart-4)"   />
           <StatPill label="Sesi"  value={fisio.sesi}  color="var(--secondary)"  />
         </div>

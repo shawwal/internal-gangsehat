@@ -62,7 +62,7 @@ export function LeaderboardTable({ data, targets, onSelectTherapist }: Leaderboa
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border/40">
-              {['#', 'Fisioterapis', 'Total', 'TA', 'Paket', 'Sesi', '% Capaian'].map(h => (
+              {['#', 'Fisioterapis', 'Total', 'Terapi Awal', 'Paket', 'Sesi', '% Capaian'].map(h => (
                 <th
                   key={h}
                   className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground"

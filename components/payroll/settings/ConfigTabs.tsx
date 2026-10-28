@@ -26,7 +26,7 @@ const BASIS_LABEL: Record<DeductionRule['basis'], string> = {
   sakit_days: 'per hari sakit',
 }
 
-const SERVICE_TYPES = ['TERAPI AWAL', 'SESI TERAPI', 'PAKET TERAPI', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA']
+const SERVICE_TYPES = ['TERAPI AWAL KLINIK', 'SESI KLINIK', 'PAKET KLINIK', 'TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA']
 
 function ScopeBadge({ branchId }: { branchId: string | null }) {
   return (

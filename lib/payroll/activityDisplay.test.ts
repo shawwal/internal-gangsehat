@@ -8,8 +8,8 @@ const type = (code: string, count_mode: ActivityType['count_mode'], source: stri
 
 describe('activityDisplay', () => {
   it('names automatic types after their layanan kategori', () => {
-    expect(activityDisplay(type('KLINIK_PT', 'session', ['PAKET TERAPI'], 10))).toEqual({ label: 'PAKET KLINIK', group: 'Klinik', order: 2 })
-    expect(activityDisplay(type('VISIT_PT', 'package', ['PAKET VISIT'], 30))).toMatchObject({ label: 'PAKET VISIT', group: 'Visit' })
+    expect(activityDisplay(type('PAKET_KLINIK', 'session', ['PAKET KLINIK'], 10))).toEqual({ label: 'PAKET KLINIK', group: 'Klinik', order: 2 })
+    expect(activityDisplay(type('PAKET_VISIT', 'package', ['PAKET VISIT'], 30))).toMatchObject({ label: 'PAKET VISIT', group: 'Visit' })
   })
 
   it('keeps manual types under Lainnya', () => {
@@ -19,10 +19,10 @@ describe('activityDisplay', () => {
   it('sorts by kategori order, manual last', () => {
     const sorted = sortActivityTypes([
       type('KONTEN', 'manual', [], 1),
-      type('KLINIK_PT', 'session', ['PAKET TERAPI'], 10),
-      type('VISIT_TA', 'session', ['TA VISIT'], 32),
-      type('KLINIK_TA', 'session', ['TERAPI AWAL'], 12),
+      type('PAKET_KLINIK', 'session', ['PAKET KLINIK'], 10),
+      type('TERAPI_AWAL_VISIT', 'session', ['TERAPI AWAL VISIT'], 32),
+      type('TERAPI_AWAL_KLINIK', 'session', ['TERAPI AWAL KLINIK'], 12),
     ])
-    expect(sorted.map((t) => t.code)).toEqual(['KLINIK_TA', 'KLINIK_PT', 'VISIT_TA', 'KONTEN'])
+    expect(sorted.map((t) => t.code)).toEqual(['TERAPI_AWAL_KLINIK', 'PAKET_KLINIK', 'TERAPI_AWAL_VISIT', 'KONTEN'])
   })
 })

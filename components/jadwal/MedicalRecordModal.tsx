@@ -12,8 +12,8 @@ import { STATUS_LABEL } from './types'
 const STATUS_OPTIONS: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
 
 const SERVICE_TYPES: ServiceType[] = [
-  'TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI',
-  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
+  'TERAPI AWAL KLINIK', 'PAKET KLINIK', 'SESI KLINIK',
+  'TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
 ]
 
 const BODY_REGIONS: BodyRegion[] = [

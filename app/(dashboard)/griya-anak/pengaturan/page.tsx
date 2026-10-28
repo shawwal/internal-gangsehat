@@ -10,7 +10,7 @@ import { resolveGriyaBranchId } from '@/app/actions/griyaJadwal'
 import { createClient } from '@/lib/supabase/client'
 import { RowsSkeleton } from '@/components/ui/Skeleton'
 
-const KATEGORI_OPTIONS = ['TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA']
+const KATEGORI_OPTIONS = ['TERAPI AWAL KLINIK', 'SESI KLINIK', 'PAKET KLINIK', 'TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA']
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
 function rp(n: number) {

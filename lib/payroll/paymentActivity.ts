@@ -15,7 +15,7 @@ export const PAYROLL_PAYMENT_STATUSES = ['LUNAS', 'PELUNASAN'] as const
  * number equals its Capaian for the payroll window.
  */
 export const BRANCH_TOTAL_SALE_CATEGORIES: Record<string, string[]> = {
-  KLINIK_TA: ['TA KLINIK'],
+  TERAPI_AWAL_KLINIK: ['TERAPI AWAL KLINIK'],
 }
 
 export type PayrollUnits = Record<string, number>

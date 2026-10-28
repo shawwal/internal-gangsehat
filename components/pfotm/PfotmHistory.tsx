@@ -17,8 +17,8 @@ interface Props {
 const pct = (n: number | undefined) => (n === undefined ? '—' : `${(n * 100).toFixed(0)}%`)
 const METRIC_COLS: [string, string][] = [
   ['hadir', 'Hadir'], ['terlambat', 'Terlambat'], ['alfa', 'Alfa'], ['kunjungan', 'Jumlah Kunjungan'],
-  ['paket_1', LABEL.paket_1], ['paket_2', LABEL.paket_2], ['paket_3', LABEL.paket_3], ['ta_sesi_visit', LABEL.ta_sesi_visit],
-  ['paket_visit', LABEL.paket_visit], ['rujukan_sm', LABEL.rujukan_sm], ['kegiatan_external', 'Kegiatan External'],
+  ['paket_1', LABEL.paket_1], ['paket_2', LABEL.paket_2], ['paket_3', LABEL.paket_3], ['terapi_awal_sesi_visit', LABEL.terapi_awal_sesi_visit],
+  ['paket_visit', LABEL.paket_visit], ['rujukan_sport_massage', LABEL.rujukan_sport_massage], ['kegiatan_external', 'Kegiatan External'],
 ]
 
 /** Rekap Data + Rekap Poin + Daftar Pemenang, generated from locked periods. */

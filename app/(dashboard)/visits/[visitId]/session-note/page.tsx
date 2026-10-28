@@ -64,7 +64,7 @@ export default function SessionNotePage() {
     ]).then(([v, n, settings]) => {
       if (cancelled) return
       setFormMode((settings.data?.form_mode as FormMode) ?? 'single_step')
-      if (!v || (v.service_type !== 'SESI TERAPI' && v.service_type !== 'PAKET TERAPI'
+      if (!v || (v.service_type !== 'SESI KLINIK' && v.service_type !== 'PAKET KLINIK'
         && v.service_type !== 'SESI VISIT' && v.service_type !== 'PAKET VISIT')) {
         router.replace(backTo)
         return

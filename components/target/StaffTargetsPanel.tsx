@@ -29,7 +29,7 @@ export function StaffTargetsPanel({ branches, state }: Props) {
       { header: 'Cabang',        value: (r) => (r as unknown as { branches: { name: string } }).branches?.name ?? '' },
       { header: 'Bulan',         value: (r) => r.bulan },
       { header: 'Tahun',         value: (r) => r.tahun },
-      { header: 'Target TA',     value: (r) => r.target_ta },
+      { header: 'Target Terapi Awal', value: (r) => r.target_terapi_awal },
       { header: 'Target Paket',  value: (r) => r.target_paket_klinik },
       { header: 'Target Kunjungan', value: (r) => r.target_kunjungan },
       { header: 'Target Visit',  value: (r) => r.target_visit },

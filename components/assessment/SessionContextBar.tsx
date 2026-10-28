@@ -42,7 +42,7 @@ export function SessionContextBar({ sessionNumber, totalSessions, isPackage, pri
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline shrink-0 ml-auto"
         >
-          Lihat TA Terakhir <ExternalLink size={10} />
+          Lihat Terapi Awal Terakhir <ExternalLink size={10} />
         </Link>
       )}
     </div>

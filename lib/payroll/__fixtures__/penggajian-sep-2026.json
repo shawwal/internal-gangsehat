@@ -148,13 +148,13 @@
     "insentif_base": 500000.0,
     "incentive_target": 110,
     "incentive_activity_codes": [
-     "ADMIN_TA"
+     "TERAPI_AWAL_ADMIN"
     ],
     "bonus_tiers": [],
     "activity_rates": {}
    },
    "activity": {
-    "ADMIN_TA": 161.0
+    "TERAPI_AWAL_ADMIN": 161.0
    },
    "attendance": [
     "H",
@@ -294,26 +294,26 @@
     "insentif_base": 1500000.0,
     "incentive_target": 60,
     "incentive_activity_codes": [
-     "KLINIK_PT",
-     "KLINIK_ST",
-     "KLINIK_TA"
+     "PAKET_KLINIK",
+     "SESI_KLINIK",
+     "TERAPI_AWAL_KLINIK"
     ],
     "bonus_tiers": [],
     "activity_rates": {
-     "VISIT_PT": 900000.0,
-     "VISIT_ST": 100000.0,
-     "VISIT_TA": 150000.0,
-     "VISIT_JARAK": 50000.0
+     "PAKET_VISIT": 900000.0,
+     "SESI_VISIT": 100000.0,
+     "TERAPI_AWAL_VISIT": 150000.0,
+     "JARAK_VISIT": 50000.0
     }
    },
    "activity": {
-    "KLINIK_PT": 55.0,
-    "KLINIK_ST": 6.0,
-    "KLINIK_TA": 15.0,
-    "VISIT_PT": 1.0,
-    "VISIT_ST": 0.0,
-    "VISIT_TA": 1.0,
-    "VISIT_JARAK": 1.0
+    "PAKET_KLINIK": 55.0,
+    "SESI_KLINIK": 6.0,
+    "TERAPI_AWAL_KLINIK": 15.0,
+    "PAKET_VISIT": 1.0,
+    "SESI_VISIT": 0.0,
+    "TERAPI_AWAL_VISIT": 1.0,
+    "JARAK_VISIT": 1.0
    },
    "attendance": [
     "H",
@@ -380,26 +380,26 @@
     "insentif_base": 0.0,
     "incentive_target": 60,
     "incentive_activity_codes": [
-     "KLINIK_PT",
-     "KLINIK_ST",
-     "KLINIK_TA"
+     "PAKET_KLINIK",
+     "SESI_KLINIK",
+     "TERAPI_AWAL_KLINIK"
     ],
     "bonus_tiers": [],
     "activity_rates": {
-     "VISIT_PT": 900000.0,
-     "VISIT_ST": 100000.0,
-     "VISIT_TA": 150000.0,
-     "VISIT_JARAK": 50000.0
+     "PAKET_VISIT": 900000.0,
+     "SESI_VISIT": 100000.0,
+     "TERAPI_AWAL_VISIT": 150000.0,
+     "JARAK_VISIT": 50000.0
     }
    },
    "activity": {
-    "KLINIK_PT": 0.0,
-    "KLINIK_ST": 0.0,
-    "KLINIK_TA": 0.0,
-    "VISIT_PT": 0.0,
-    "VISIT_ST": 0.0,
-    "VISIT_TA": 0.0,
-    "VISIT_JARAK": 0.0
+    "PAKET_KLINIK": 0.0,
+    "SESI_KLINIK": 0.0,
+    "TERAPI_AWAL_KLINIK": 0.0,
+    "PAKET_VISIT": 0.0,
+    "SESI_VISIT": 0.0,
+    "TERAPI_AWAL_VISIT": 0.0,
+    "JARAK_VISIT": 0.0
    },
    "attendance": [
     "H",
@@ -466,26 +466,26 @@
     "insentif_base": 1500000.0,
     "incentive_target": 60,
     "incentive_activity_codes": [
-     "KLINIK_PT",
-     "KLINIK_ST",
-     "KLINIK_TA"
+     "PAKET_KLINIK",
+     "SESI_KLINIK",
+     "TERAPI_AWAL_KLINIK"
     ],
     "bonus_tiers": [],
     "activity_rates": {
-     "VISIT_PT": 900000.0,
-     "VISIT_ST": 100000.0,
-     "VISIT_TA": 150000.0,
-     "VISIT_JARAK": 50000.0
+     "PAKET_VISIT": 900000.0,
+     "SESI_VISIT": 100000.0,
+     "TERAPI_AWAL_VISIT": 150000.0,
+     "JARAK_VISIT": 50000.0
     }
    },
    "activity": {
-    "KLINIK_PT": 34.0,
-    "KLINIK_ST": 15.0,
-    "KLINIK_TA": 20.0,
-    "VISIT_PT": 0.0,
-    "VISIT_ST": 0.0,
-    "VISIT_TA": 1.0,
-    "VISIT_JARAK": 1.0
+    "PAKET_KLINIK": 34.0,
+    "SESI_KLINIK": 15.0,
+    "TERAPI_AWAL_KLINIK": 20.0,
+    "PAKET_VISIT": 0.0,
+    "SESI_VISIT": 0.0,
+    "TERAPI_AWAL_VISIT": 1.0,
+    "JARAK_VISIT": 1.0
    },
    "attendance": [
     "H",
@@ -552,26 +552,26 @@
     "insentif_base": 1500000.0,
     "incentive_target": 60,
     "incentive_activity_codes": [
-     "KLINIK_PT",
-     "KLINIK_ST",
-     "KLINIK_TA"
+     "PAKET_KLINIK",
+     "SESI_KLINIK",
+     "TERAPI_AWAL_KLINIK"
     ],
     "bonus_tiers": [],
     "activity_rates": {
-     "VISIT_PT": 900000.0,
-     "VISIT_ST": 100000.0,
-     "VISIT_TA": 150000.0,
-     "VISIT_JARAK": 50000.0
+     "PAKET_VISIT": 900000.0,
+     "SESI_VISIT": 100000.0,
+     "TERAPI_AWAL_VISIT": 150000.0,
+     "JARAK_VISIT": 50000.0
     }
    },
    "activity": {
-    "KLINIK_PT": 52.0,
-    "KLINIK_ST": 4.0,
-    "KLINIK_TA": 12.0,
-    "VISIT_PT": 0.0,
-    "VISIT_ST": 1.0,
-    "VISIT_TA": 0.0,
-    "VISIT_JARAK": 1.0
+    "PAKET_KLINIK": 52.0,
+    "SESI_KLINIK": 4.0,
+    "TERAPI_AWAL_KLINIK": 12.0,
+    "PAKET_VISIT": 0.0,
+    "SESI_VISIT": 1.0,
+    "TERAPI_AWAL_VISIT": 0.0,
+    "JARAK_VISIT": 1.0
    },
    "attendance": [
     "H",
@@ -638,26 +638,26 @@
     "insentif_base": 1500000.0,
     "incentive_target": 60,
     "incentive_activity_codes": [
-     "KLINIK_PT",
-     "KLINIK_ST",
-     "KLINIK_TA"
+     "PAKET_KLINIK",
+     "SESI_KLINIK",
+     "TERAPI_AWAL_KLINIK"
     ],
     "bonus_tiers": [],
     "activity_rates": {
-     "VISIT_PT": 900000.0,
-     "VISIT_ST": 100000.0,
-     "VISIT_TA": 150000.0,
-     "VISIT_JARAK": 50000.0
+     "PAKET_VISIT": 900000.0,
+     "SESI_VISIT": 100000.0,
+     "TERAPI_AWAL_VISIT": 150000.0,
+     "JARAK_VISIT": 50000.0
     }
    },
    "activity": {
-    "KLINIK_PT": 61.0,
-    "KLINIK_ST": 1.0,
-    "KLINIK_TA": 15.0,
-    "VISIT_PT": 0.0,
-    "VISIT_ST": 1.0,
-    "VISIT_TA": 0.0,
-    "VISIT_JARAK": 0.0
+    "PAKET_KLINIK": 61.0,
+    "SESI_KLINIK": 1.0,
+    "TERAPI_AWAL_KLINIK": 15.0,
+    "PAKET_VISIT": 0.0,
+    "SESI_VISIT": 1.0,
+    "TERAPI_AWAL_VISIT": 0.0,
+    "JARAK_VISIT": 0.0
    },
    "attendance": [
     "H",
@@ -724,26 +724,26 @@
     "insentif_base": 1500000.0,
     "incentive_target": 60,
     "incentive_activity_codes": [
-     "KLINIK_PT",
-     "KLINIK_ST",
-     "KLINIK_TA"
+     "PAKET_KLINIK",
+     "SESI_KLINIK",
+     "TERAPI_AWAL_KLINIK"
     ],
     "bonus_tiers": [],
     "activity_rates": {
-     "VISIT_PT": 900000.0,
-     "VISIT_ST": 100000.0,
-     "VISIT_TA": 150000.0,
-     "VISIT_JARAK": 50000.0
+     "PAKET_VISIT": 900000.0,
+     "SESI_VISIT": 100000.0,
+     "TERAPI_AWAL_VISIT": 150000.0,
+     "JARAK_VISIT": 50000.0
     }
    },
    "activity": {
-    "KLINIK_PT": 39.0,
-    "KLINIK_ST": 7.0,
-    "KLINIK_TA": 22.0,
-    "VISIT_PT": 0.0,
-    "VISIT_ST": 0.0,
-    "VISIT_TA": 2.0,
-    "VISIT_JARAK": 2.0
+    "PAKET_KLINIK": 39.0,
+    "SESI_KLINIK": 7.0,
+    "TERAPI_AWAL_KLINIK": 22.0,
+    "PAKET_VISIT": 0.0,
+    "SESI_VISIT": 0.0,
+    "TERAPI_AWAL_VISIT": 2.0,
+    "JARAK_VISIT": 2.0
    },
    "attendance": [
     "H",
@@ -817,26 +817,26 @@
     "insentif_base": 1500000.0,
     "incentive_target": 60,
     "incentive_activity_codes": [
-     "KLINIK_PT",
-     "KLINIK_ST",
-     "KLINIK_TA"
+     "PAKET_KLINIK",
+     "SESI_KLINIK",
+     "TERAPI_AWAL_KLINIK"
     ],
     "bonus_tiers": [],
     "activity_rates": {
-     "VISIT_PT": 900000.0,
-     "VISIT_ST": 100000.0,
-     "VISIT_TA": 150000.0,
-     "VISIT_JARAK": 50000.0
+     "PAKET_VISIT": 900000.0,
+     "SESI_VISIT": 100000.0,
+     "TERAPI_AWAL_VISIT": 150000.0,
+     "JARAK_VISIT": 50000.0
     }
    },
    "activity": {
-    "KLINIK_PT": 53.0,
-    "KLINIK_ST": 1.0,
-    "KLINIK_TA": 9.0,
-    "VISIT_PT": 0.0,
-    "VISIT_ST": 0.0,
-    "VISIT_TA": 1.0,
-    "VISIT_JARAK": 1.0
+    "PAKET_KLINIK": 53.0,
+    "SESI_KLINIK": 1.0,
+    "TERAPI_AWAL_KLINIK": 9.0,
+    "PAKET_VISIT": 0.0,
+    "SESI_VISIT": 0.0,
+    "TERAPI_AWAL_VISIT": 1.0,
+    "JARAK_VISIT": 1.0
    },
    "attendance": [
     "H",
@@ -903,26 +903,26 @@
     "insentif_base": 1500000.0,
     "incentive_target": 60,
     "incentive_activity_codes": [
-     "KLINIK_PT",
-     "KLINIK_ST",
-     "KLINIK_TA"
+     "PAKET_KLINIK",
+     "SESI_KLINIK",
+     "TERAPI_AWAL_KLINIK"
     ],
     "bonus_tiers": [],
     "activity_rates": {
-     "VISIT_PT": 900000.0,
-     "VISIT_ST": 100000.0,
-     "VISIT_TA": 150000.0,
-     "VISIT_JARAK": 50000.0
+     "PAKET_VISIT": 900000.0,
+     "SESI_VISIT": 100000.0,
+     "TERAPI_AWAL_VISIT": 150000.0,
+     "JARAK_VISIT": 50000.0
     }
    },
    "activity": {
-    "KLINIK_PT": 43.0,
-    "KLINIK_ST": 9.0,
-    "KLINIK_TA": 13.0,
-    "VISIT_PT": 1.0,
-    "VISIT_ST": 1.0,
-    "VISIT_TA": 1.0,
-    "VISIT_JARAK": 2.0
+    "PAKET_KLINIK": 43.0,
+    "SESI_KLINIK": 9.0,
+    "TERAPI_AWAL_KLINIK": 13.0,
+    "PAKET_VISIT": 1.0,
+    "SESI_VISIT": 1.0,
+    "TERAPI_AWAL_VISIT": 1.0,
+    "JARAK_VISIT": 2.0
    },
    "attendance": [
     "H",
@@ -989,26 +989,26 @@
     "insentif_base": 1500000.0,
     "incentive_target": 60,
     "incentive_activity_codes": [
-     "KLINIK_PT",
-     "KLINIK_ST",
-     "KLINIK_TA"
+     "PAKET_KLINIK",
+     "SESI_KLINIK",
+     "TERAPI_AWAL_KLINIK"
     ],
     "bonus_tiers": [],
     "activity_rates": {
-     "VISIT_PT": 900000.0,
-     "VISIT_ST": 100000.0,
-     "VISIT_TA": 150000.0,
-     "VISIT_JARAK": 50000.0
+     "PAKET_VISIT": 900000.0,
+     "SESI_VISIT": 100000.0,
+     "TERAPI_AWAL_VISIT": 150000.0,
+     "JARAK_VISIT": 50000.0
     }
    },
    "activity": {
-    "KLINIK_PT": 43.0,
-    "KLINIK_ST": 9.0,
-    "KLINIK_TA": 18.0,
-    "VISIT_PT": 1.0,
-    "VISIT_ST": 0.0,
-    "VISIT_TA": 1.0,
-    "VISIT_JARAK": 11.0
+    "PAKET_KLINIK": 43.0,
+    "SESI_KLINIK": 9.0,
+    "TERAPI_AWAL_KLINIK": 18.0,
+    "PAKET_VISIT": 1.0,
+    "SESI_VISIT": 0.0,
+    "TERAPI_AWAL_VISIT": 1.0,
+    "JARAK_VISIT": 11.0
    },
    "attendance": [
     "H",
@@ -1075,26 +1075,26 @@
     "insentif_base": 1500000.0,
     "incentive_target": 60,
     "incentive_activity_codes": [
-     "KLINIK_PT",
-     "KLINIK_ST",
-     "KLINIK_TA"
+     "PAKET_KLINIK",
+     "SESI_KLINIK",
+     "TERAPI_AWAL_KLINIK"
     ],
     "bonus_tiers": [],
     "activity_rates": {
-     "VISIT_PT": 900000.0,
-     "VISIT_ST": 100000.0,
-     "VISIT_TA": 150000.0,
-     "VISIT_JARAK": 50000.0
+     "PAKET_VISIT": 900000.0,
+     "SESI_VISIT": 100000.0,
+     "TERAPI_AWAL_VISIT": 150000.0,
+     "JARAK_VISIT": 50000.0
     }
    },
    "activity": {
-    "KLINIK_PT": 33.0,
-    "KLINIK_ST": 9.0,
-    "KLINIK_TA": 20.0,
-    "VISIT_PT": 0.0,
-    "VISIT_ST": 0.0,
-    "VISIT_TA": 0.0,
-    "VISIT_JARAK": 0.0
+    "PAKET_KLINIK": 33.0,
+    "SESI_KLINIK": 9.0,
+    "TERAPI_AWAL_KLINIK": 20.0,
+    "PAKET_VISIT": 0.0,
+    "SESI_VISIT": 0.0,
+    "TERAPI_AWAL_VISIT": 0.0,
+    "JARAK_VISIT": 0.0
    },
    "attendance": [
     "H",
@@ -1161,8 +1161,8 @@
     "insentif_base": 1400000.0,
     "incentive_target": 39,
     "incentive_activity_codes": [
-     "SM_FB",
-     "SM_SG"
+     "SPORT_MASSAGE_FULL_BODY",
+     "SPORT_MASSAGE_SEGMENTAL"
     ],
     "bonus_tiers": [
      {
@@ -1177,20 +1177,20 @@
      }
     ],
     "activity_rates": {
-     "VISIT_SM_FB": 150000.0,
-     "VISIT_SM_SG": 95000.0,
-     "VISIT_SM_PAKET_FB": 285000.0,
-     "VISIT_SM_PAKET_SG": 270000.0,
-     "VISIT_SM_JARAK": 50000.0
+     "SPORT_MASSAGE_VISIT_FULL_BODY": 150000.0,
+     "SPORT_MASSAGE_VISIT_SEGMENTAL": 95000.0,
+     "PAKET_SPORT_MASSAGE_VISIT_FULL_BODY": 285000.0,
+     "PAKET_SPORT_MASSAGE_VISIT_SEGMENTAL": 270000.0,
+     "JARAK_SPORT_MASSAGE_VISIT": 50000.0
     }
    },
    "activity": {
-    "SM_FB": 23.0,
-    "SM_SG": 11.0,
-    "VISIT_SM_FB": 0.0,
-    "VISIT_SM_SG": 0.0,
-    "VISIT_SM_PAKET_FB": 0.0,
-    "VISIT_SM_PAKET_SG": 0.0
+    "SPORT_MASSAGE_FULL_BODY": 23.0,
+    "SPORT_MASSAGE_SEGMENTAL": 11.0,
+    "SPORT_MASSAGE_VISIT_FULL_BODY": 0.0,
+    "SPORT_MASSAGE_VISIT_SEGMENTAL": 0.0,
+    "PAKET_SPORT_MASSAGE_VISIT_FULL_BODY": 0.0,
+    "PAKET_SPORT_MASSAGE_VISIT_SEGMENTAL": 0.0
    },
    "attendance": [
     "H",

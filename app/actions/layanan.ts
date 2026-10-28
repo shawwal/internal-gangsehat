@@ -20,9 +20,9 @@ export interface LayananRow {
   pfotm_metric?: PfotmLayananMetric | null
 }
 
-export type PfotmLayananMetric = 'paket_1' | 'paket_2' | 'paket_3' | 'ta_sesi_visit' | 'paket_visit'
+export type PfotmLayananMetric = 'paket_1' | 'paket_2' | 'paket_3' | 'terapi_awal_sesi_visit' | 'paket_visit'
 
-export type OnlineServiceType = 'TERAPI AWAL' | 'SESI TERAPI'
+export type OnlineServiceType = 'TERAPI AWAL KLINIK' | 'SESI KLINIK'
 
 export async function fetchLayananByBranch(branchId: string): Promise<LayananRow[]> {
   const supabase = await createClient()
@@ -107,7 +107,7 @@ export async function setLayananOnlineServiceType(
   id: string,
   value: OnlineServiceType | null,
 ): Promise<{ error: string | null }> {
-  if (value !== null && value !== 'TERAPI AWAL' && value !== 'SESI TERAPI') return { error: 'Nilai tidak valid' }
+  if (value !== null && value !== 'TERAPI AWAL KLINIK' && value !== 'SESI KLINIK') return { error: 'Nilai tidak valid' }
   const supabase = await createClient()
   const { error } = await supabase
     .from('internal_layanan')

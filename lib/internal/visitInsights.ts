@@ -3,8 +3,8 @@ import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 
 type Supabase = Awaited<ReturnType<typeof createClient>>
 
-const TA_TYPES = new Set(['TERAPI AWAL', 'TA VISIT'])
-const SESI_TYPES = new Set(['SESI TERAPI', 'SESI VISIT'])
+const TA_TYPES = new Set(['TERAPI AWAL KLINIK', 'TERAPI AWAL VISIT'])
+const SESI_TYPES = new Set(['SESI KLINIK', 'SESI VISIT'])
 
 export const isTaServiceType = (t: string | null | undefined) => TA_TYPES.has(t ?? '')
 export const isSesiServiceType = (t: string | null | undefined) => SESI_TYPES.has(t ?? '')
@@ -15,7 +15,7 @@ export type AdminStatus = 'BELUM_DIPERIKSA' | 'BELUM_DITANGANI' | 'LENGKAP'
 // intake or note) is completed — the same source of truth the session-note and
 // medical-records pages use. Session notes don't always fill `diagnosis`
 // (clinical impression is optional), so the column check is only a fallback for
-// service types without a dedicated form (TA VISIT, SPORT MASSAGE, LAINNYA).
+// service types without a dedicated form (TERAPI AWAL VISIT, SPORT MASSAGE, LAINNYA).
 export function deriveAdminStatus(
   v: {
     diagnosis: string | null

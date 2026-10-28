@@ -72,12 +72,12 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const canSendWhatsAppConfirmation = !!visit.patient_phone && !!onWhatsAppConfirmation
 
   // A visit scheduled against an existing package keeps its literal service_type
-  // (e.g. 'SESI TERAPI') but is still a package session — package_id wins.
+  // (e.g. 'SESI KLINIK') but is still a package session — package_id wins.
   const serviceTypeLabel   = visit.package_id
     ? 'Paket'
     : (visit.layanan_nama ?? (visit.service_type ? SERVICE_TYPE_LABEL[visit.service_type] : undefined))
 
-  const isAssessmentVisit   = visit.service_type === 'TERAPI AWAL' || visit.service_type === 'TA VISIT'
+  const isAssessmentVisit   = visit.service_type === 'TERAPI AWAL KLINIK' || visit.service_type === 'TERAPI AWAL VISIT'
   // Selling a package is always offered on a completed visit — including one that's
   // already part of an existing package (patients can buy ahead/renew). A fresh TA
   // assessment is the one case that must be paid for first, before upselling a package.

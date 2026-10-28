@@ -13,7 +13,7 @@ interface ServiceDonutChartProps {
 export function ServiceDonutChart({ ta, paket, sesi }: ServiceDonutChartProps) {
   const total = ta + paket + sesi
   const data = [
-    { name: 'TA Klinik',   value: ta    },
+    { name: 'Terapi Awal Klinik', value: ta },
     { name: 'Sesi Klinik', value: sesi  },
     { name: 'Paket Klinik', value: paket },
   ].filter(d => d.value > 0)

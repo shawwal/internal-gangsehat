@@ -5,7 +5,7 @@ import { Unlink, AlertTriangle, Loader2 } from 'lucide-react'
 import { detachVisitFromPackage } from '@/app/actions/jadwal'
 import type { DailyVisit } from './types'
 
-const SERVICE_TYPES = ['TERAPI AWAL', 'SESI TERAPI', 'TA VISIT', 'SESI VISIT', 'LAINNYA'] as const
+const SERVICE_TYPES = ['TERAPI AWAL KLINIK', 'SESI KLINIK', 'TERAPI AWAL VISIT', 'SESI VISIT', 'LAINNYA'] as const
 
 interface Props {
   visit: DailyVisit
@@ -15,7 +15,7 @@ interface Props {
 
 export function DetachPackageDialog({ visit, onClose, onDetached }: Props) {
   const [serviceType, setServiceType] = useState<string>(
-    visit.service_type?.includes('VISIT') ? 'SESI VISIT' : 'SESI TERAPI',
+    visit.service_type?.includes('VISIT') ? 'SESI VISIT' : 'SESI KLINIK',
   )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState<string | null>(null)

@@ -41,17 +41,17 @@ const PACKAGE_TYPES: Record<string, {
 }
 
 const SERVICE_TYPES: Record<string, string> = {
-  'TERAPI AWAL':     'TERAPI AWAL',
-  'SESI TERAPI':     'SESI TERAPI',
-  'PAKET TERAPI':    'PAKET TERAPI',
-  'TA HOME CARE':    'TA VISIT',
+  'TERAPI AWAL':     'TERAPI AWAL KLINIK',
+  'SESI TERAPI':     'SESI KLINIK',
+  'PAKET TERAPI':    'PAKET KLINIK',
+  'TA HOME CARE':    'TERAPI AWAL VISIT',
   'SESI HOME CARE':  'SESI VISIT',
   'PAKET HOME CARE': 'PAKET VISIT',
 }
 
 // Which package category a paket visit draws from
 const VISIT_PACKAGE_CATEGORY: Record<string, string> = {
-  'PAKET TERAPI': 'PAKET KLINIK',
+  'PAKET KLINIK': 'PAKET KLINIK',
   'PAKET VISIT':  'PAKET VISIT',
 }
 

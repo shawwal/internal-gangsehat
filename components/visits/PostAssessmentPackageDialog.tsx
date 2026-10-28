@@ -31,8 +31,8 @@ export function PostAssessmentPackageDialog({
   onClose,
   onSuccess,
 }: PostAssessmentPackageDialogProps) {
-  // Home-visit service types are 'TA VISIT' / 'SESI VISIT' / 'PAKET VISIT';
-  // in-clinic ones are 'TERAPI AWAL' / 'SESI TERAPI' / 'PAKET TERAPI'. Selling
+  // Home-visit service types are 'TERAPI AWAL VISIT' / 'SESI VISIT' / 'PAKET VISIT';
+  // in-clinic ones are 'TERAPI AWAL KLINIK' / 'SESI KLINIK' / 'PAKET KLINIK'. Selling
   // a package from ANY completed visit (not just a fresh TA) must classify correctly.
   const isVisit = sourceServiceType.includes('VISIT')
 
@@ -54,7 +54,7 @@ export function PostAssessmentPackageDialog({
   // Auto-fill harga from the branch's price list (internal_layanan), keyed by category + session count
   useEffect(() => {
     let cancelled = false
-    const virtualServiceType = isVisit ? 'PAKET VISIT' : 'PAKET TERAPI'
+    const virtualServiceType = isVisit ? 'PAKET VISIT' : 'PAKET KLINIK'
     fetchLayananHarga(virtualServiceType, branchId, sessions).then((price) => {
       if (!cancelled) setHarga(price != null ? String(price) : '')
     })

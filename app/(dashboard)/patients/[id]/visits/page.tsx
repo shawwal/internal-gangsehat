@@ -58,14 +58,14 @@ const BODY_REGIONS: BodyRegion[] = [
 ]
 
 const SERVICE_BADGE: Record<ServiceType, string> = {
-  'TERAPI AWAL':  'bg-primary/15 text-primary border-primary/20',
-  'PAKET TERAPI': 'bg-chart-4/15 text-chart-4 border-chart-4/20',
-  'SESI TERAPI':  'bg-secondary/20 text-secondary-foreground border-secondary/20',
-  'TA VISIT':     'bg-primary/10 text-primary border-primary/15',
-  'SESI VISIT':   'bg-muted/40 text-muted-foreground border-border',
-  'PAKET VISIT':  'bg-chart-4/10 text-chart-4 border-chart-4/15',
-  'SPORT MASSAGE': 'bg-amber-500/15 text-amber-600 border-amber-500/20',
-  'LAINNYA':      'bg-muted/40 text-muted-foreground border-border',
+  'TERAPI AWAL KLINIK':       'bg-primary/15 text-primary border-primary/20',
+  'PAKET KLINIK':      'bg-chart-4/15 text-chart-4 border-chart-4/20',
+  'SESI KLINIK':       'bg-secondary/20 text-secondary-foreground border-secondary/20',
+  'TERAPI AWAL VISIT': 'bg-primary/10 text-primary border-primary/15',
+  'SESI VISIT':        'bg-muted/40 text-muted-foreground border-border',
+  'PAKET VISIT':       'bg-chart-4/10 text-chart-4 border-chart-4/15',
+  'SPORT MASSAGE':     'bg-amber-500/15 text-amber-600 border-amber-500/20',
+  'LAINNYA':           'bg-muted/40 text-muted-foreground border-border',
 }
 
 const STAFF_PICKER_ROLES: UserRole[] = ['admin', 'manager', 'director', 'hr']
@@ -244,7 +244,7 @@ export default function PatientVisitsPage() {
 
   // package_id → package_name/jenis_paket, so the Layanan column can show which
   // specific package a visit's session was drawn from (a patient can have several
-  // packages of the same service_type at once — e.g. two "PAKET TERAPI" packages
+  // packages of the same service_type at once — e.g. two "PAKET KLINIK" packages
   // bought months apart — and the badge alone doesn't disambiguate them).
   const packageById = useMemo(() => {
     const map = new Map<string, { package_name: string; jenis_paket: string | null }>()
@@ -1076,7 +1076,7 @@ export default function PatientVisitsPage() {
           if (
             ctx &&
             ctx.status === 'completed' &&
-            ctx.service_type === 'TA VISIT' &&
+            ctx.service_type === 'TERAPI AWAL VISIT' &&
             visitId &&
             canRecordPayment
           ) {

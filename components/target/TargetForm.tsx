@@ -7,7 +7,7 @@ import { MONTHS } from './types'
 interface FormState {
   bulan: number
   tahun: number
-  target_ta: number
+  target_terapi_awal: number
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number
@@ -98,7 +98,7 @@ export function TargetForm({ editTarget, form, saving, onChange, onSubmit, onCan
         {/* Target metrics */}
         <div className="grid grid-cols-2 gap-3">
           {[
-            { field: 'target_ta' as const,           label: 'Target TA (Terapi Awal)' },
+            { field: 'target_terapi_awal' as const,           label: 'Target Terapi Awal' },
             { field: 'target_paket_klinik' as const,  label: 'Target Paket Klinik' },
             { field: 'target_kunjungan' as const,     label: 'Target Kunjungan' },
             { field: 'target_visit' as const,         label: 'Target Visit' },

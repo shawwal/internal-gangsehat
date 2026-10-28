@@ -15,8 +15,8 @@ export const PAYMENT_STATUSES: PaymentDetailStatus[] = ['LUNAS', 'DP', 'CICILAN'
 // (Laporan, Arus Kas) must key off this list, not the specific item name, or they
 // won't match any transaction actually recorded anywhere else in the app.
 export const INCOME_CATEGORIES = [
-  'TA KLINIK', 'SESI KLINIK', 'PAKET KLINIK',
-  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'TOKO', 'LAINNYA',
+  'TERAPI AWAL KLINIK', 'SESI KLINIK', 'PAKET KLINIK',
+  'TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'TOKO', 'LAINNYA',
 ]
 
 export function formatRp(n: number): string {

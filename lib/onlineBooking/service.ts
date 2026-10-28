@@ -38,17 +38,17 @@ interface LayananRow {
  * Which visit type an internal_layanan row books online, or null if it can't
  * be booked. The director's explicit setting (online_service_type) wins for
  * the branch; a branch with nothing configured falls back to its regular
- * clinic prices: TA KLINIK → Terapi Awal, SESI KLINIK → Sesi Terapi
+ * clinic prices: TERAPI AWAL KLINIK → Terapi Awal, SESI KLINIK → Sesi Terapi
  * (skipping Rp 0 adjustment rows and sport massage, which has its own jadwal).
  */
-export function onlineServiceTypeFor(l: LayananRow, branchConfigured: boolean): 'TERAPI AWAL' | 'SESI TERAPI' | null {
+export function onlineServiceTypeFor(l: LayananRow, branchConfigured: boolean): 'TERAPI AWAL KLINIK' | 'SESI KLINIK' | null {
   if (Number(l.harga) < 1000) return null
   if (branchConfigured) {
-    return l.online_service_type === 'TERAPI AWAL' || l.online_service_type === 'SESI TERAPI' ? l.online_service_type : null
+    return l.online_service_type === 'TERAPI AWAL KLINIK' || l.online_service_type === 'SESI KLINIK' ? l.online_service_type : null
   }
   if (/sport|massage/i.test(l.nama)) return null
-  if (l.kategori === 'TA KLINIK') return 'TERAPI AWAL'
-  if (l.kategori === 'SESI KLINIK') return 'SESI TERAPI'
+  if (l.kategori === 'TERAPI AWAL KLINIK') return 'TERAPI AWAL KLINIK'
+  if (l.kategori === 'SESI KLINIK') return 'SESI KLINIK'
   return null
 }
 
@@ -57,7 +57,7 @@ function bookableServices(rows: LayananRow[]) {
   const configured = new Set(rows.filter((l) => l.online_service_type).map((l) => l.branch_id))
   return rows
     .map((l) => ({ l, type: onlineServiceTypeFor(l, configured.has(l.branch_id)) }))
-    .filter((x): x is { l: LayananRow; type: 'TERAPI AWAL' | 'SESI TERAPI' } => x.type !== null)
+    .filter((x): x is { l: LayananRow; type: 'TERAPI AWAL KLINIK' | 'SESI KLINIK' } => x.type !== null)
 }
 
 /** Terapi Awal is the first visit; afterwards patients book regular sessions. */
@@ -66,7 +66,7 @@ async function hasHadAssessment(admin: Admin, patientId: string) {
     .from('patient_visits')
     .select('id', { count: 'exact', head: true })
     .eq('patient_id', patientId)
-    .in('service_type', ['TERAPI AWAL', 'TA VISIT'])
+    .in('service_type', ['TERAPI AWAL KLINIK', 'TERAPI AWAL VISIT'])
     .neq('status', 'cancelled')
   return (count ?? 0) > 0
 }
@@ -163,7 +163,7 @@ export async function getBookingOptions(patientId: string, profileId: string): P
       .filter((p) => p.remaining > 0),
     // New patients start with Terapi Awal; patients who had one book sessions.
     services: bookableServices((layanan ?? []) as LayananRow[])
-      .filter(({ type }) => (hadAssessment ? type === 'SESI TERAPI' : type === 'TERAPI AWAL'))
+      .filter(({ type }) => (hadAssessment ? type === 'SESI KLINIK' : type === 'TERAPI AWAL KLINIK'))
       .map(({ l, type }) => ({ id: l.id, name: l.nama, branchId: l.branch_id, price: Number(l.harga), serviceType: type })),
   }
 }
@@ -265,7 +265,7 @@ export async function createOnlineBooking(input: CreateBookingInput): Promise<Cr
   let layananName: string | null = null
   if (input.mode === 'package') {
     if (!input.packageId) throw new BookingError('invalid_package', 'Pilih paket.')
-    serviceType = 'PAKET TERAPI'
+    serviceType = 'PAKET KLINIK'
   } else if (input.mode === 'pay') {
     if (!input.layananId) throw new BookingError('invalid_service', 'Pilih layanan.')
     if (input.method !== 'QRIS' && input.method !== 'VA') throw new BookingError('invalid_method', 'Pilih metode pembayaran.')
@@ -278,7 +278,7 @@ export async function createOnlineBooking(input: CreateBookingInput): Promise<Cr
     const match = bookableServices((branchLayanan ?? []) as LayananRow[]).find(({ l }) => l.id === input.layananId)
     if (!match) throw new BookingError('invalid_service', 'Layanan tidak tersedia untuk booking online.')
     const hadAssessment = await hasHadAssessment(admin, input.patientId)
-    if (hadAssessment !== (match.type === 'SESI TERAPI')) {
+    if (hadAssessment !== (match.type === 'SESI KLINIK')) {
       throw new BookingError('invalid_service', hadAssessment
         ? 'Anda sudah pernah Terapi Awal. Silakan pilih sesi terapi.'
         : 'Pasien baru dimulai dengan Terapi Awal.')

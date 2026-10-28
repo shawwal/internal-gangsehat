@@ -21,8 +21,8 @@ import type { ServiceType, UserRole } from '@/types'
 import type { Shift } from '@/lib/shifts'
 
 const SESSION_SERVICE_TYPES: ServiceType[] = [
-  'TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI',
-  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
+  'TERAPI AWAL KLINIK', 'PAKET KLINIK', 'SESI KLINIK',
+  'TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
 ]
 
 type EditSessionForm = {
@@ -48,7 +48,7 @@ function toEditSessionForm(v: VisitWithPatient): EditSessionForm {
 const DEFAULT_ADD_SESSION_FORM: EditSessionForm = {
   visit_date:         '',
   attending_staff_id: '',
-  service_type:       'PAKET TERAPI',
+  service_type:       'PAKET KLINIK',
   shift:              '',
   kehadiran:          'HADIR',
   sumber_pasien:       '',
@@ -179,7 +179,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
   function openAddSession() {
     setAddSessionForm({
       ...DEFAULT_ADD_SESSION_FORM,
-      service_type: pkg.category === 'PAKET VISIT' ? 'PAKET VISIT' : 'PAKET TERAPI',
+      service_type: pkg.category === 'PAKET VISIT' ? 'PAKET VISIT' : 'PAKET KLINIK',
     })
     setAddSessionError(null)
     setAddSessionOpen(true)

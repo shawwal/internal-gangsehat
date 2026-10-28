@@ -88,7 +88,7 @@ export async function startGriyaPackage(input: {
     .gte('visit_date', input.fromDate)
     .neq('status', 'cancelled')
   const relinkIds = (visits ?? [])
-    .filter((v) => v.service_type !== 'TERAPI AWAL')
+    .filter((v) => v.service_type !== 'TERAPI AWAL KLINIK')
     .filter((v) => !v.package_id || prevPkgIds.includes(v.package_id as string))
     .map((v) => v.id as string)
   if (relinkIds.length > 0) {

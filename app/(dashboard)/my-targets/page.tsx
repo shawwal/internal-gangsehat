@@ -15,7 +15,7 @@ import type { TargetRow, StatusFilter } from '@/components/target/types'
 interface FormState {
   bulan: number
   tahun: number
-  target_ta: number
+  target_terapi_awal: number
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number
@@ -29,7 +29,7 @@ function defaultForm(): FormState {
   return {
     bulan: now.getMonth() + 1,
     tahun: now.getFullYear(),
-    target_ta: 0,
+    target_terapi_awal: 0,
     target_paket_klinik: 0,
     target_kunjungan: 0,
     target_visit: 0,
@@ -55,7 +55,7 @@ export default function MyTargetsPage() {
     if (!user) return
     const { data } = await supabase
       .from('staff_targets')
-      .select('id, staff_id, branch_id, bulan, tahun, target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi, notes, status, rejection_note, created_at')
+      .select('id, staff_id, branch_id, bulan, tahun, target_terapi_awal, target_paket_klinik, target_kunjungan, target_visit, target_sesi, notes, status, rejection_note, created_at')
       .eq('staff_id', user.id)
       .order('tahun', { ascending: false })
       .order('bulan', { ascending: false })
@@ -76,7 +76,7 @@ export default function MyTargetsPage() {
     setForm({
       bulan: t.bulan,
       tahun: t.tahun,
-      target_ta: t.target_ta,
+      target_terapi_awal: t.target_terapi_awal,
       target_paket_klinik: t.target_paket_klinik,
       target_kunjungan: t.target_kunjungan,
       target_visit: t.target_visit,
@@ -110,7 +110,7 @@ export default function MyTargetsPage() {
       branch_id: profile?.branch_id ?? null,
       bulan: form.bulan,
       tahun: form.tahun,
-      target_ta: form.target_ta,
+      target_terapi_awal: form.target_terapi_awal,
       target_paket_klinik: form.target_paket_klinik,
       target_kunjungan: form.target_kunjungan,
       target_visit: form.target_visit,

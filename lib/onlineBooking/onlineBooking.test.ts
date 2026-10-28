@@ -133,16 +133,16 @@ describe('onlineServiceTypeFor', async () => {
     ({ id: nama, nama, kategori, harga, branch_id: 'B1', online_service_type: online })
 
   it('falls back to clinic prices when the branch has nothing configured', () => {
-    expect(onlineServiceTypeFor(row('Terapi Awal', 'TA KLINIK', 250000), false)).toBe('TERAPI AWAL')
-    expect(onlineServiceTypeFor(row('Sesi Terapi', 'SESI KLINIK', 180000), false)).toBe('SESI TERAPI')
+    expect(onlineServiceTypeFor(row('Terapi Awal', 'TERAPI AWAL KLINIK', 250000), false)).toBe('TERAPI AWAL KLINIK')
+    expect(onlineServiceTypeFor(row('Sesi Terapi', 'SESI KLINIK', 180000), false)).toBe('SESI KLINIK')
     expect(onlineServiceTypeFor(row('Sport Massage', 'SESI KLINIK', 150000), false)).toBeNull()
     expect(onlineServiceTypeFor(row('Paket Penyesuaian', 'SESI KLINIK', 0), false)).toBeNull()
     expect(onlineServiceTypeFor(row('Paket 1', 'PAKET KLINIK', 650000), false)).toBeNull()
-    expect(onlineServiceTypeFor(row('Home Visit', 'TA VISIT', 300000), false)).toBeNull()
+    expect(onlineServiceTypeFor(row('Home Visit', 'TERAPI AWAL VISIT', 300000), false)).toBeNull()
   })
 
   it('uses only the director setting once the branch has one', () => {
     expect(onlineServiceTypeFor(row('Sesi', 'SESI KLINIK', 150000), true)).toBeNull()
-    expect(onlineServiceTypeFor(row('Sesi Terapi', 'SESI KLINIK', 180000, 'SESI TERAPI'), true)).toBe('SESI TERAPI')
+    expect(onlineServiceTypeFor(row('Sesi Terapi', 'SESI KLINIK', 180000, 'SESI KLINIK'), true)).toBe('SESI KLINIK')
   })
 })

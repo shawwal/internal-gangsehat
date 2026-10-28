@@ -16,9 +16,9 @@ export const TODAY_ISO = todayISO()
 export const PIE_COLORS = ['#FF0090', '#FFB35C', '#34C759']
 
 // Service type groupers
-export const TA_TYPES    = ['TERAPI AWAL', 'TA VISIT']   as const
-export const PAKET_TYPES = ['PAKET TERAPI', 'PAKET VISIT'] as const
-export const SESI_TYPES  = ['SESI TERAPI', 'SESI VISIT']  as const
+export const TA_TYPES    = ['TERAPI AWAL KLINIK', 'TERAPI AWAL VISIT']   as const
+export const PAKET_TYPES = ['PAKET KLINIK', 'PAKET VISIT'] as const
+export const SESI_TYPES  = ['SESI KLINIK', 'SESI VISIT']  as const
 export const VISIT_STATUS_FILTER = ['scheduled', 'completed'] as const
 
 // Month-based weekly ranges (Data Studio style: wk1=1-7, wk2=8-14, wk3=15-21, wk4=22-end)

@@ -6,9 +6,9 @@ export const PFOTM_METRIC_LABELS = {
   paket_1: 'Paket 5 sessions',
   paket_2: 'Paket 10 sessions',
   paket_3: 'Paket 20 sessions',
-  ta_sesi_visit: 'Terapi Awal dan Sesi Terapi Visit',
+  terapi_awal_sesi_visit: 'Terapi Awal Visit dan Sesi Visit',
   paket_visit: 'Paket Visit',
-  rujukan_sm: 'Rujukan Sports Massage',
+  rujukan_sport_massage: 'Rujukan Sport Massage',
 } as const
 
 export type PfotmLabeledMetric = keyof typeof PFOTM_METRIC_LABELS

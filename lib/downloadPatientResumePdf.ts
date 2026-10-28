@@ -5,7 +5,7 @@ import { downloadHtmlAsPdf } from '@/lib/downloadHtmlAsPdf'
 // Patient-facing "Download Resume" — replaces the old window.open +
 // document.write + window.print() flow, which silently no-oped when
 // popups were blocked and required a second manual click plus the OS
-// print dialog. Shared by the assessment (TERAPI AWAL) and session-note
+// print dialog. Shared by the assessment (TERAPI AWAL KLINIK) and session-note
 // "Download Resume" buttons.
 export async function downloadPatientResumePdf(data: PublicResumeData, filenamePrefix: string) {
   const html = renderPatientResumeHtml(data, false)

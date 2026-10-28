@@ -4,7 +4,7 @@ export interface TargetRow {
   branch_id: string
   bulan: number
   tahun: number
-  target_ta: number
+  target_terapi_awal: number
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number
@@ -79,7 +79,7 @@ export interface BranchTargetRow {
   branch_id: string
   bulan: number
   tahun: number
-  target_ta: number
+  target_terapi_awal: number
   target_paket_klinik: number
   target_kunjungan: number
   target_visit: number

@@ -12,10 +12,10 @@ import type { VisitForPayroll } from '@/lib/payroll/autoActivity'
 export { SALE_PAYMENT_STATUSES as SALES_PAYMENT_STATUSES } from '@/lib/metrics/achievement'
 
 // Income categories that feed the sales columns.
-export const SALES_CATEGORIES = ['PAKET KLINIK', 'TA VISIT', 'SESI VISIT', 'PAKET VISIT']
+export const SALES_CATEGORIES = ['PAKET KLINIK', 'TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT']
 
 /** Metrics that come with a patient + date list (clickable in the input table). */
-export const DRILLDOWN_METRICS = ['kunjungan', 'paket_1', 'paket_2', 'paket_3', 'ta_sesi_visit', 'paket_visit', 'rujukan_sm'] as const
+export const DRILLDOWN_METRICS = ['kunjungan', 'paket_1', 'paket_2', 'paket_3', 'terapi_awal_sesi_visit', 'paket_visit', 'rujukan_sport_massage'] as const
 
 export interface AttendanceForPfotm {
   staff_id: string
@@ -85,7 +85,7 @@ export interface PfotmAutoInput {
   referrals: PfotmReferral[]
 }
 
-const EMPTY_METRICS = () => ({ hadir: 0, terlambat: 0, alfa: 0, kunjungan: 0, paket_1: 0, paket_2: 0, paket_3: 0, ta_sesi_visit: 0, paket_visit: 0, rujukan_sm: 0 })
+const EMPTY_METRICS = () => ({ hadir: 0, terlambat: 0, alfa: 0, kunjungan: 0, paket_1: 0, paket_2: 0, paket_3: 0, terapi_awal_sesi_visit: 0, paket_visit: 0, rujukan_sport_massage: 0 })
 
 function packageTierKey(pkg: PackageInfo | null): 'paket_1' | 'paket_2' | 'paket_3' {
   const tier = pkg?.jenis_paket ?? (pkg && pkg.total_sessions >= 10 ? 'P2' : 'P1')
@@ -136,7 +136,7 @@ export function pfotmHitsWithGap(params: PfotmAutoInput): { hits: PfotmHit[]; ga
     const key = s.metric !== undefined ? s.metric
       : s.category === 'PAKET KLINIK' ? packageTierKey(s.package)
       : s.category === 'PAKET VISIT' ? 'paket_visit'
-      : s.category === 'TA VISIT' || s.category === 'SESI VISIT' ? 'ta_sesi_visit'
+      : s.category === 'TERAPI AWAL VISIT' || s.category === 'SESI VISIT' ? 'terapi_awal_sesi_visit'
       : null
     if (key) hit(s.staff_id, key, s.transaction_date ?? start, {
       patient_id: s.patient_id ?? null, ref_id: s.id ?? null, label: s.layanan_name || s.category,
@@ -145,7 +145,7 @@ export function pfotmHitsWithGap(params: PfotmAutoInput): { hits: PfotmHit[]; ga
   }
 
   for (const r of params.referrals) {
-    if (r.first_date >= start && r.first_date <= end) hit(r.staff_id, 'rujukan_sm', r.first_date, { patient_id: r.patient_id ?? null })
+    if (r.first_date >= start && r.first_date <= end) hit(r.staff_id, 'rujukan_sport_massage', r.first_date, { patient_id: r.patient_id ?? null })
   }
   return { hits, gap }
 }

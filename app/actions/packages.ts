@@ -207,7 +207,7 @@ export async function fetchPackageSessions(
   if (error || !data?.length) return []
 
   // Every row here is scoped to this exact package (query filters on package_id),
-  // but package sessions can still carry the literal 'SESI TERAPI'/'SESI VISIT'
+  // but package sessions can still carry the literal 'SESI KLINIK'/'SESI VISIT'
   // service_type depending on which flow created the visit (see
   // getEffectivePackageServiceType's own comment) — normalize to the PAKET
   // variant so "Riwayat Sesi" matches what /visits shows for the same rows.

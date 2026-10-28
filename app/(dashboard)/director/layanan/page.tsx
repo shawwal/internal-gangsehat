@@ -28,7 +28,7 @@ type SortKey = 'nama' | 'kategori' | 'harga'
 
 const PFOTM_METRIC_LABEL: Record<PfotmLayananMetric, string> = {
   paket_1: PFOTM_METRIC_LABELS.paket_1, paket_2: PFOTM_METRIC_LABELS.paket_2, paket_3: PFOTM_METRIC_LABELS.paket_3,
-  ta_sesi_visit: PFOTM_METRIC_LABELS.ta_sesi_visit, paket_visit: PFOTM_METRIC_LABELS.paket_visit,
+  terapi_awal_sesi_visit: PFOTM_METRIC_LABELS.terapi_awal_sesi_visit, paket_visit: PFOTM_METRIC_LABELS.paket_visit,
 }
 
 interface AddForm {
@@ -118,7 +118,7 @@ export default function LayananPage() {
 
   // ── Online booking (gangsehat.com) ─────────────────────────────────────────
   async function handleOnline(id: string, value: string) {
-    await setLayananOnlineServiceType(id, value === 'TERAPI AWAL' || value === 'SESI TERAPI' ? value : null)
+    await setLayananOnlineServiceType(id, value === 'TERAPI AWAL KLINIK' || value === 'SESI KLINIK' ? value : null)
     reload()
   }
 
@@ -367,8 +367,8 @@ export default function LayananPage() {
                           aria-label={`Booking online untuk ${row.nama}`}
                         >
                           <option value="">Tidak</option>
-                          <option value="TERAPI AWAL">Terapi Awal</option>
-                          <option value="SESI TERAPI">Sesi Terapi</option>
+                          <option value="TERAPI AWAL KLINIK">Terapi Awal Klinik</option>
+                          <option value="SESI KLINIK">Sesi Klinik</option>
                         </select>
                       )}
                     </td>

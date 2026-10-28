@@ -110,7 +110,7 @@ export default function GriyaSiswaPage() {
               <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Usia</th>
               <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden lg:table-cell">Keluhan</th>
               <th className="text-center px-4 py-2 font-medium text-muted-foreground">Jadwal</th>
-              <th className="text-center px-4 py-2 font-medium text-muted-foreground">TA</th>
+              <th className="text-center px-4 py-2 font-medium text-muted-foreground">Terapi Awal</th>
               <th className="text-left px-4 py-2 font-medium text-muted-foreground">Status</th>
               <th className="px-4 py-2" />
             </tr>

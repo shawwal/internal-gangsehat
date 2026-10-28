@@ -41,7 +41,7 @@ export function AssignStudentDialog({ target, onClose, onSaved }: Props) {
   const [nGender, setNGender] = useState<'male' | 'female'>('male')
 
   // slot options
-  const [serviceType, setServiceType] = useState<string>('SESI TERAPI')
+  const [serviceType, setServiceType] = useState<string>('SESI KLINIK')
   const [layanan, setLayanan] = useState<LayananRow[]>([])
   const [layananId, setLayananId] = useState<string>('')
 

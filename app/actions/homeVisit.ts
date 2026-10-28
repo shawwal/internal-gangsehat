@@ -8,13 +8,13 @@ import type { BodyRegion, ServiceType, UserRole, VisitStatus } from '@/types'
 import type { HomeVisitSessionRow, HomeVisitStatsData } from '@/components/homeVisit/types'
 import type { Shift } from '@/lib/shifts'
 
-const HOME_VISIT_TYPES: ServiceType[] = ['TA VISIT', 'SESI VISIT', 'PAKET VISIT']
+const HOME_VISIT_TYPES: ServiceType[] = ['TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT']
 
 // A visit's own service_type must never be 'PAKET VISIT' — that value is only
 // used as the transactions/patient_packages category for a package purchase.
-// Individual sessions consuming a package are logged as TA VISIT / SESI VISIT
+// Individual sessions consuming a package are logged as TERAPI AWAL VISIT / SESI VISIT
 // with package_id pointing at the package.
-const NO_PACKAGE_SERVICE_TYPES = new Set(['TA VISIT'])
+const NO_PACKAGE_SERVICE_TYPES = new Set(['TERAPI AWAL VISIT'])
 const PACKAGE_CATEGORIES = new Set(['PAKET VISIT', 'PAKET KLINIK'])
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
@@ -221,7 +221,7 @@ export async function fetchHomeVisitStats(branchId?: string): Promise<HomeVisitS
 // Shared by the "+ New Session" flow (quick booking against a service card)
 // and any future detailed-entry form. Generates a fresh order_id per session
 // and resolves package_id the same way jadwal.ts::createVisit does — a
-// TA VISIT can never draw from a package.
+// TERAPI AWAL VISIT can never draw from a package.
 export interface CreateHomeVisitSessionInput {
   patient_id: string
   branch_id: string

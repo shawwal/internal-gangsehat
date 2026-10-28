@@ -115,7 +115,7 @@ export function NewSessionDialog({ branchId: ownBranchId, onClose, onSuccess }: 
         fetchPatientPackages(patient.id),
       ])
       const byHarga = (k: string) => layanan.filter((l) => l.is_active && l.kategori === k).sort((a, b) => a.harga - b.harga)
-      setTaRows(byHarga('TA VISIT'))
+      setTaRows(byHarga('TERAPI AWAL VISIT'))
       setSesiRows(byHarga('SESI VISIT'))
       setPaketRows(byHarga('PAKET VISIT'))
       const active = packages.find((p) => p.category === 'PAKET VISIT' && p.status === 'active' && p.remaining_sessions > 0) ?? null
@@ -245,15 +245,15 @@ export function NewSessionDialog({ branchId: ownBranchId, onClose, onSuccess }: 
                   </p>
                 )}
 
-                {/* Terapi Awal */}
+                {/* Terapi Awal Visit */}
                 {taRows.length > 0 && (
                 <div className="border border-border rounded-2xl p-4 flex flex-col gap-2">
-                  <p className="text-sm font-semibold text-foreground">Terapi Awal</p>
+                  <p className="text-sm font-semibold text-foreground">Terapi Awal Visit</p>
                   <span className="w-fit text-xs px-2 py-0.5 rounded-md bg-muted text-foreground font-medium">1 Sesi</span>
                   <TariffList rows={taRows} />
                   <p className="text-xs text-muted-foreground flex-1">Asesmen awal dan sesi pertama.</p>
                   <button
-                    onClick={() => selectService('TA VISIT', null)}
+                    onClick={() => selectService('TERAPI AWAL VISIT', null)}
                     className="py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
                   >
                     Pesan Sesi
@@ -261,10 +261,10 @@ export function NewSessionDialog({ branchId: ownBranchId, onClose, onSuccess }: 
                 </div>
                 )}
 
-                {/* Sesi Terapi */}
+                {/* Sesi Visit */}
                 {sesiRows.length > 0 && (
                 <div className="border border-border rounded-2xl p-4 flex flex-col gap-2">
-                  <p className="text-sm font-semibold text-foreground">Sesi Terapi</p>
+                  <p className="text-sm font-semibold text-foreground">Sesi Visit</p>
                   <span className="w-fit text-xs px-2 py-0.5 rounded-md bg-muted text-foreground font-medium">1 Sesi</span>
                   <TariffList rows={sesiRows} />
                   <p className="text-xs text-muted-foreground flex-1">Sesi lanjutan, dibayar per kunjungan.</p>
@@ -277,10 +277,10 @@ export function NewSessionDialog({ branchId: ownBranchId, onClose, onSuccess }: 
                 </div>
                 )}
 
-                {/* Paket Terapi */}
+                {/* Paket Visit */}
                 {(activePackage || paketRows.length > 0) && (
                 <div className="border-2 border-primary rounded-2xl p-4 flex flex-col gap-2">
-                  <p className="text-sm font-semibold text-foreground">Paket Terapi</p>
+                  <p className="text-sm font-semibold text-foreground">Paket Visit</p>
                   {activePackage ? (
                     <>
                       <span className="w-fit text-xs px-2 py-0.5 rounded-md bg-[#34C759]/15 text-[#34C759] font-medium">

@@ -80,7 +80,7 @@ const PACKAGE_CATEGORIES = new Set(['PAKET VISIT', 'PAKET KLINIK'])
 
 // TA (initial assessment) visits must always be billed on their own — never
 // drawn from an existing package — regardless of what the client sends.
-const NO_PACKAGE_SERVICE_TYPES = new Set(['TERAPI AWAL', 'TA VISIT'])
+const NO_PACKAGE_SERVICE_TYPES = new Set(['TERAPI AWAL KLINIK', 'TERAPI AWAL VISIT'])
 function resolvePackageId(serviceType: string | null | undefined, packageId: string | null | undefined) {
   if (NO_PACKAGE_SERVICE_TYPES.has(serviceType ?? '')) return null
   return packageId ?? null
@@ -608,7 +608,7 @@ export async function updateVisit(
   return { error: error?.message ?? null }
 }
 
-// A visit re-typed after it was paid (e.g. LAINNYA → TERAPI AWAL) takes its
+// A visit re-typed after it was paid (e.g. LAINNYA → TERAPI AWAL KLINIK) takes its
 // payments along: Target Progress / PFOTM read the transaction category, not the
 // visit. Only payments still filed under the old type's category move; package
 // payments stay with their package. Best-effort — RLS skips roles without

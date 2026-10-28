@@ -7,8 +7,8 @@ import type { BookingSession } from './orders'
 
 // ── Service type mapping: booking → patient_visits enum ──────────────────────
 const VISIT_SERVICE_TYPES = [
-  'TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI',
-  'TA VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
+  'TERAPI AWAL KLINIK', 'PAKET KLINIK', 'SESI KLINIK',
+  'TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
 ] as const
 type VisitServiceType = typeof VISIT_SERVICE_TYPES[number]
 
@@ -17,10 +17,10 @@ function mapToVisitServiceType(bookingServiceType: string): VisitServiceType {
   if (t.includes('SPORT') && t.includes('MASSAGE')) return 'SPORT MASSAGE'
   if (t.includes('PAKET') && t.includes('VISIT')) return 'PAKET VISIT'
   if (t.includes('SESI') && t.includes('VISIT')) return 'SESI VISIT'
-  if (t.includes('TA VISIT') || (t.includes('TERAPI AWAL') && t.includes('VISIT'))) return 'TA VISIT'
-  if (t.includes('PAKET')) return 'PAKET TERAPI'
-  if (t.includes('SESI')) return 'SESI TERAPI'
-  if (t.includes('TA') || t.includes('TERAPI AWAL') || t === 'TA') return 'TERAPI AWAL'
+  if (t.includes('TA VISIT') || (t.includes('TERAPI AWAL') && t.includes('VISIT'))) return 'TERAPI AWAL VISIT'
+  if (t.includes('PAKET')) return 'PAKET KLINIK'
+  if (t.includes('SESI')) return 'SESI KLINIK'
+  if (t.includes('TA') || t.includes('TERAPI AWAL') || t === 'TA') return 'TERAPI AWAL KLINIK'
   return 'LAINNYA'
 }
 

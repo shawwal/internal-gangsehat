@@ -82,7 +82,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
           let q = supabase
             .from('staff_targets')
             .select(
-              'staff_id, target_ta, target_paket_klinik, target_kunjungan, target_visit, ' +
+              'staff_id, target_terapi_awal, target_paket_klinik, target_kunjungan, target_visit, ' +
               'internal_profiles!staff_id(full_name)',
             )
             .eq('status', 'approved')
@@ -127,17 +127,17 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
   // (which roll up into TA/SESI/PAKET progress) only count visits with a
   // confirmed payment behind them.
   const attended = visits.filter(v => isAttended(v, TODAY_ISO))
-  // Same rule as Progress Target / PFOTM: no sport massage, no TA VISIT.
+  // Same rule as Progress Target / PFOTM: no sport massage, no TERAPI AWAL VISIT.
   const kunjunganVisits = visits.filter(v => countsAsKunjungan(v, TODAY_ISO))
   const paidAttended = attended.filter(v => paidVisitIds.has(v.id))
-  // package_id is the source of truth — package sessions may be stored as SESI TERAPI/SESI VISIT.
+  // package_id is the source of truth — package sessions may be stored as SESI KLINIK/SESI VISIT.
   const effType = (v: VisitRow) => getEffectivePackageServiceType(v.service_type, v.package_id) ?? ''
   const paketAttended = paidAttended.filter(v => (PAKET_TYPES as readonly string[]).includes(effType(v)))
 
-  // TA target = clinic TA only; Visit target = PAKET VISIT only (TA VISIT
+  // TA target = clinic TA only; Visit target = PAKET VISIT only (TERAPI AWAL VISIT
   // counts toward no target) — same as Progress Target.
-  const taVisits      = paidAttended.filter(v => v.service_type === 'TERAPI AWAL')
-  const paketVisits   = firstPackageVisits(paketAttended.filter(v => effType(v) === 'PAKET TERAPI'))
+  const taVisits      = paidAttended.filter(v => v.service_type === 'TERAPI AWAL KLINIK')
+  const paketVisits   = firstPackageVisits(paketAttended.filter(v => effType(v) === 'PAKET KLINIK'))
   const visitVisits   = firstPackageVisits(paketAttended.filter(v => effType(v) === 'PAKET VISIT'))
 
   const actualTA     = taVisits.length
@@ -149,7 +149,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
     id: v.id, patientId: v.patient_id, visitDate: v.visit_date, serviceType: v.service_type,
   })
 
-  const targetTA         = targets.reduce((s, t) => s + (t.target_ta ?? 0), 0)
+  const targetTA         = targets.reduce((s, t) => s + (t.target_terapi_awal ?? 0), 0)
   const targetPaket      = targets.reduce((s, t) => s + (t.target_paket_klinik ?? 0), 0)
   const targetKunjungan  = targets.reduce((s, t) => s + (t.target_kunjungan ?? 0), 0)
   const targetVisit      = targets.reduce((s, t) => s + (t.target_visit ?? 0), 0)
@@ -160,7 +160,7 @@ export function KontrolTargetTab({ year, branchFilter }: KontrolTargetTabProps) 
     if (!v.attending_staff_id) continue
     const name = (v.internal_profiles as any)?.full_name ?? 'Unknown'
     const cur = fisioMap.get(v.attending_staff_id) ?? { fullName: name, ta: 0 }
-    if (v.service_type === 'TERAPI AWAL' && paidVisitIds.has(v.id)) {
+    if (v.service_type === 'TERAPI AWAL KLINIK' && paidVisitIds.has(v.id)) {
       fisioMap.set(v.attending_staff_id, { ...cur, ta: cur.ta + 1 })
     } else if (!fisioMap.has(v.attending_staff_id)) {
       fisioMap.set(v.attending_staff_id, cur)

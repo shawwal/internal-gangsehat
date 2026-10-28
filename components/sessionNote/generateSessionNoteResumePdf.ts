@@ -4,7 +4,7 @@ import { fetchResumeTherapistName, type PublicResumeData } from '@/app/actions/r
 import { downloadPatientResumePdf } from '@/lib/downloadPatientResumePdf'
 
 // Staff-side "Download Resume" for follow-up SOAP session notes — mirrors
-// components/assessment/generatePatientResumePdf.ts (the TERAPI AWAL variant),
+// components/assessment/generatePatientResumePdf.ts (the TERAPI AWAL KLINIK variant),
 // sharing the same patient-facing markup via lib/patientResumeStyles.ts.
 export async function generateSessionNoteResumePdf(visit: VisitWithPatient, note: SessionNote) {
   const plan = [note.next_plan, note.hep_given].filter(Boolean).join('') || visit.treatment

@@ -88,7 +88,7 @@ export default function TerapiAwalAssessmentPage() {
     ]).then(([v, a, settings]) => {
       if (cancelled) return
       setFormMode((settings.data?.assessment_form_mode as FormMode) ?? 'single_step')
-      if (!v || v.service_type !== 'TERAPI AWAL') {
+      if (!v || v.service_type !== 'TERAPI AWAL KLINIK') {
         router.replace(backTo)
         return
       }
@@ -219,7 +219,7 @@ export default function TerapiAwalAssessmentPage() {
     if (err) { setError(err); return }
 
     setAlreadyCompleted(true)
-    if (visit.service_type === 'TERAPI AWAL' && canRecordPayment) {
+    if (visit.service_type === 'TERAPI AWAL KLINIK' && canRecordPayment) {
       setShowPackagePrompt(true)
     } else {
       router.push(backTo)
@@ -373,7 +373,7 @@ export default function TerapiAwalAssessmentPage() {
           patientName={visit.patient_name}
           branchId={visit.branch_id}
           visitId={visit.id}
-          sourceServiceType={visit.service_type ?? 'TERAPI AWAL'}
+          sourceServiceType={visit.service_type ?? 'TERAPI AWAL KLINIK'}
           onClose={() => { setShowPackagePrompt(false); router.push(backTo) }}
           onSuccess={() => { setShowPackagePrompt(false); router.push(backTo) }}
         />

@@ -52,7 +52,7 @@ export interface JadwalTarifOption {
 
 interface TarifRow extends JadwalTarifOption { branch_id: string; harga: number; jumlah_sesi: number | null }
 
-const CLINIC_SERVICE_TYPES = ['TERAPI AWAL', 'PAKET TERAPI', 'SESI TERAPI', 'LAINNYA']
+const CLINIC_SERVICE_TYPES = ['TERAPI AWAL KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'LAINNYA']
 
 function isoOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

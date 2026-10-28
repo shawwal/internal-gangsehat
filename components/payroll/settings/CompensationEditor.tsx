@@ -20,8 +20,8 @@ export const PRESETS: { key: string; label: string; apply: (c: Compensation) => 
     label: 'Fisioterapis',
     apply: (c) => ({
       ...c, operasional_mode: 'prorata', operasional_threshold: 0.75, incentive_target: 60,
-      incentive_activity_codes: ['KLINIK_PT', 'KLINIK_ST', 'KLINIK_TA'],
-      activity_rates: { VISIT_PT: 900000, VISIT_ST: 100000, VISIT_TA: 150000, VISIT_JARAK: 50000, ...c.activity_rates },
+      incentive_activity_codes: ['PAKET_KLINIK', 'SESI_KLINIK', 'TERAPI_AWAL_KLINIK'],
+      activity_rates: { PAKET_VISIT: 900000, SESI_VISIT: 100000, TERAPI_AWAL_VISIT: 150000, JARAK_VISIT: 50000, ...c.activity_rates },
     }),
   },
   {
@@ -29,9 +29,9 @@ export const PRESETS: { key: string; label: string; apply: (c: Compensation) => 
     label: 'Masseur (Sport Massage)',
     apply: (c) => ({
       ...c, operasional_mode: 'daily_deduction', operasional_daily_rate: 100000, incentive_target: 39,
-      incentive_activity_codes: ['SM_FB', 'SM_SG'],
+      incentive_activity_codes: ['SPORT_MASSAGE_FULL_BODY', 'SPORT_MASSAGE_SEGMENTAL'],
       bonus_tiers: [{ min_qty: 40, amount: 200000, label: 'Bonus Insentif 1' }, { min_qty: 70, amount: 200000, label: 'Bonus Insentif 2' }],
-      activity_rates: { VISIT_SM_FB: 150000, VISIT_SM_SG: 95000, VISIT_SM_PAKET_FB: 285000, VISIT_SM_PAKET_SG: 270000, VISIT_SM_JARAK: 50000, ...c.activity_rates },
+      activity_rates: { SPORT_MASSAGE_VISIT_FULL_BODY: 150000, SPORT_MASSAGE_VISIT_SEGMENTAL: 95000, PAKET_SPORT_MASSAGE_VISIT_FULL_BODY: 285000, PAKET_SPORT_MASSAGE_VISIT_SEGMENTAL: 270000, JARAK_SPORT_MASSAGE_VISIT: 50000, ...c.activity_rates },
     }),
   },
   {

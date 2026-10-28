@@ -13,7 +13,7 @@ export function daysInMonth(year: number, month: number): number {
 
 function emptyDaily(n: number): DailyCounts {
   return {
-    ta: Array(n).fill(0),
+    terapi_awal: Array(n).fill(0),
     paket_klinik: Array(n).fill(0),
     kunjungan: Array(n).fill(0),
     paket_visit: Array(n).fill(0),
@@ -57,13 +57,13 @@ export function buildTransactionDailyCounts(transactions: TransactionForProgress
 
 export function mergeDailyCounts(a: DailyCounts, b: DailyCounts): DailyCounts {
   const merged: DailyCounts = {
-    ta: [...a.ta],
+    terapi_awal: [...a.terapi_awal],
     paket_klinik: [...a.paket_klinik],
     kunjungan: [...a.kunjungan],
     paket_visit: [...a.paket_visit],
     sesi: [...a.sesi],
   }
-  for (const key of ['ta', 'paket_klinik', 'kunjungan', 'paket_visit', 'sesi'] as const) {
+  for (const key of ['terapi_awal', 'paket_klinik', 'kunjungan', 'paket_visit', 'sesi'] as const) {
     for (let i = 0; i < merged[key].length; i++) merged[key][i] += b[key][i] ?? 0
   }
   return merged

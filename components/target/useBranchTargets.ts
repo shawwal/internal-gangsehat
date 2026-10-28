@@ -18,7 +18,7 @@ function defaultBranchForm(): BranchTargetFormState {
     branchId: '',
     bulan: now.getMonth() + 1,
     tahun: now.getFullYear(),
-    target_ta: 0,
+    target_terapi_awal: 0,
     target_paket_klinik: 0,
     target_kunjungan: 0,
     target_visit: 0,
@@ -70,7 +70,7 @@ export function useBranchTargets(role: 'director' | 'manager' | null, myBranchId
       .from('branch_targets')
       .select(`
         id, branch_id, bulan, tahun,
-        target_ta, target_paket_klinik, target_kunjungan, target_visit, target_sesi,
+        target_terapi_awal, target_paket_klinik, target_kunjungan, target_visit, target_sesi,
         notes, status, rejection_note, created_at,
         branches!branch_id(name),
         internal_profiles!set_by(full_name)
@@ -151,7 +151,7 @@ export function useBranchTargets(role: 'director' | 'manager' | null, myBranchId
       branchId: t.branch_id,
       bulan: t.bulan,
       tahun: t.tahun,
-      target_ta: t.target_ta,
+      target_terapi_awal: t.target_terapi_awal,
       target_paket_klinik: t.target_paket_klinik,
       target_kunjungan: t.target_kunjungan,
       target_visit: t.target_visit,
@@ -181,7 +181,7 @@ export function useBranchTargets(role: 'director' | 'manager' | null, myBranchId
       branch_id:           branchId,
       bulan:               form.bulan,
       tahun:               form.tahun,
-      target_ta:           form.target_ta,
+      target_terapi_awal:           form.target_terapi_awal,
       target_paket_klinik: form.target_paket_klinik,
       target_kunjungan:    form.target_kunjungan,
       target_visit:        form.target_visit,

@@ -72,7 +72,7 @@ DOKU Checkout (hosted page; merchant shared with human-atlas/bansa-web). Code: `
 |-------|-------------|
 | `attendance` | staff_id, branch_id, date, check_in, check_out, status(present/absent/late/leave/sick), notes, recorded_by — UNIQUE(staff_id, date) |
 | `leave_requests` | staff_id, branch_id, start_date, end_date, leave_type(TUGAS/TERLAMBAT/CUTI/SAKIT/TUKAR SHIFT/TUKAR OFF/IZIN BELAJAR — label only, migration 106), reason, proof_url, status(pending/approved/rejected), rejection_note, reviewed_by |
-| `staff_targets` | staff_id, branch_id, bulan(1-12), tahun, target_ta, target_paket_klinik, target_kunjungan, target_visit, status(pending/approved/rejected) — UNIQUE(staff_id, bulan, tahun) |
+| `staff_targets` | staff_id, branch_id, bulan(1-12), tahun, target_terapi_awal, target_paket_klinik, target_kunjungan, target_visit, status(pending/approved/rejected) — UNIQUE(staff_id, bulan, tahun) |
 
 ### Payroll (migration 095 — replaces `payroll_records` / `salary_settings` / `employee_salaries`)
 | Table | Key columns |
@@ -92,10 +92,10 @@ Layanan tags (migration 115, per branch — only Pontianak tagged): `internal_la
 
 ### PFOTM leaderboard (migration 096)
 `pfotm_point_rules` (metric_key, weight — never hardcode weights), `pfotm_periods` (is_locked, rules_snapshot), `pfotm_entries` (auto_metrics, override_metrics; metrics/total_points/rank/kpis frozen at lock). `patients.referred_by_staff_id` feeds Rujukan SM. Engine: `lib/pfotm/engine.ts`. Only director may edit/unlock a locked period.
-Column names (no abbreviations, migration 117): Paket 5 / 10 / 20 sessions, Terapi Awal dan Sesi Terapi Visit, Paket Visit, Rujukan Sports Massage — DB `metric_label` + `lib/pfotm/labels.ts` (keys `paket_1/2/3`, `ta_sesi_visit`, `rujukan_sm` unchanged). Drill-downs show the transaction's Layanan name.
+Column names (no abbreviations, migrations 117/119): Paket 5 / 10 / 20 sessions, Terapi Awal Visit dan Sesi Visit, Paket Visit, Rujukan Sport Massage — DB `metric_label` + `lib/pfotm/labels.ts` (keys `paket_1/2/3`, `terapi_awal_sesi_visit`, `paket_visit`, `rujukan_sport_massage`). Drill-downs show the transaction's Layanan name.
 
 ### Achievement counting — one rule (`lib/metrics/achievement.ts`)
-Target Progress (branch), PFOTM and payroll auto-activity (per therapist) share it: Kunjungan = visit status scheduled/completed, not SPORT MASSAGE / TA VISIT, attended (HADIR, or unmarked and past) — no record-completeness gate; sales = income, not rejected, one per purchase: the first LUNAS/DP payment counts, later installments (DP, DP, … LUNAS/PELUNASAN, same patient + category + harga, 12-month lookback) don't — `countedSaleIds` + `fetchCountedSales` (`lib/metrics/sales.ts`). Engines emit dated "hits" (`pfotmHits`, `payrollActivityHits`) that drive the counts, the drill-down lists (`MetricDetailModal`) and the PFOTM daily bump chart, so a number and its list never disagree. Target Progress has a "Periode gaji" toggle (payroll window via `getPayrollWindow`) to compare 1:1.
+Target Progress (branch), PFOTM and payroll auto-activity (per therapist) share it: Kunjungan = visit status scheduled/completed, not SPORT MASSAGE / TERAPI AWAL VISIT, attended (HADIR, or unmarked and past) — no record-completeness gate; sales = income, not rejected, one per purchase: the first LUNAS/DP payment counts, later installments (DP, DP, … LUNAS/PELUNASAN, same patient + category + harga, 12-month lookback) don't — `countedSaleIds` + `fetchCountedSales` (`lib/metrics/sales.ts`). Engines emit dated "hits" (`pfotmHits`, `payrollActivityHits`) that drive the counts, the drill-down lists (`MetricDetailModal`) and the PFOTM daily bump chart, so a number and its list never disagree. Target Progress has a "Periode gaji" toggle (payroll window via `getPayrollWindow`) to compare 1:1.
 
 ### Sport Massage payroll — migration 118
 `sport_massage_fee_rates` (branch_id, staff_id NULL = branch default, layanan_id → internal_layanan, fee; UNIQUE NULLS NOT DISTINCT). Page `/jadwal-sport-massage/payroll` (director/manager/admin/hr; rates editable by director/manager): payroll window via `getPayrollWindow`, fee = therapist rate ?? default per attended (HADIR, not cancelled) SPORT MASSAGE visit. Package visits resolve their Layanan by package name / session count. Shared loader `fetchSportMassageExportRows` (`app/actions/sportMassageExport.ts`) also feeds the Jadwal Sport Massage export. Standalone — does not write to the main `/payroll`.
@@ -116,8 +116,8 @@ Patients may set a custom code or roll a random one (migration 109, `set_patient
 ### Online clinic booking + account linking — migration 110
 gangsehat.com patients book real clinic slots into Jadwal Harian. gangsehat never writes patient_visits or calls DOKU: it calls `POST /api/public/booking` here (actions options/availability/create/status), HMAC-signed with `GS_API_SECRET` (`lib/onlineBooking/auth.ts`; `proxy.ts` exempts `/api/public/`). gangsehat env: `INTERNAL_API_URL`, `GS_API_SECRET`.
 - Availability (`lib/onlineBooking/availability.ts`): therapists from `buildScheduledStaff` (`lib/jadwal/dayStaff.ts`, shared with `useJadwalHarian`), branch `schedule_slots`, minus non-cancelled visits and live `online_bookings` holds, ≥2h lead, 30 days ahead. Role `therapist` only.
-- `reserve_online_booking()` claims the hour atomically (advisory locks, also checks package capacity). Package mode → visit created immediately (`PAKET TERAPI` + package_id). Pay mode → 60-min hold + DOKU link (`lib/doku/createLink.ts`, `payment_links.online_booking_id`, created_by NULL); `settle.ts` creates the visit (`lib/onlineBooking/confirm.ts`) before the income transaction so it carries visit_id. Online visits have `booking_source='online'` (badge in VisitCard).
-- Services bookable online: `internal_layanan.online_service_type` ('TERAPI AWAL' | 'SESI TERAPI'), set in /director/layanan.
+- `reserve_online_booking()` claims the hour atomically (advisory locks, also checks package capacity). Package mode → visit created immediately (`PAKET KLINIK` + package_id). Pay mode → 60-min hold + DOKU link (`lib/doku/createLink.ts`, `payment_links.online_booking_id`, created_by NULL); `settle.ts` creates the visit (`lib/onlineBooking/confirm.ts`) before the income transaction so it carries visit_id. Online visits have `booking_source='online'` (badge in VisitCard).
+- Services bookable online: `internal_layanan.online_service_type` ('TERAPI AWAL KLINIK' | 'SESI KLINIK', FK `visit_service_types`), set in /director/layanan.
 - Account linking: signup rows have `account_linked_at` NULL. `link_patient_account(web, target)` repoints every FK to patients(id) from the web row to the clinic record and moves profile_id/referral code. Auto on phone_hash + birth date match (gangsehat), else `patient_link_requests` reviewed at /patient-registrations/accounts (`app/actions/accountLinks.ts`).
 
 ### Marketing
@@ -131,13 +131,15 @@ get_my_branch()        → uuid   -- branch_id of auth.uid(); NULL for director
 
 ## Domain Values
 
-**Service types** (`patient_visits.service_type`): `TERAPI AWAL` | `SESI TERAPI` | `PAKET TERAPI` | `TA VISIT` | `SESI VISIT` | `PAKET VISIT` | `SPORT MASSAGE` | `LAINNYA`
+**Service types** (`patient_visits.service_type` → FK `visit_service_types.code`, itself FK → `income_categories.code`): `TERAPI AWAL KLINIK` | `SESI KLINIK` | `PAKET KLINIK` | `TERAPI AWAL VISIT` | `SESI VISIT` | `PAKET VISIT` | `SPORT MASSAGE` | `LAINNYA`
 
-**Income categories**: `TA KLINIK` | `PAKET KLINIK` | `SESI KLINIK` | `TA VISIT` | `SESI VISIT` | `PAKET VISIT` | `SPORT MASSAGE` | `PAKET SPORT MASSAGE` | `LAINNYA`
+**Income categories** (lookup `income_categories.code`; FK from `internal_layanan.kategori`, `patient_packages.category`, `payment_links.category` ; income `transactions` checked by trigger `transactions_income_category` — the column also holds per-branch expense categories): `TERAPI AWAL KLINIK` | `PAKET KLINIK` | `SESI KLINIK` | `TERAPI AWAL VISIT` | `SESI VISIT` | `PAKET VISIT` | `SPORT MASSAGE` | `PAKET SPORT MASSAGE` | `LAINNYA`
 
 **Package categories** (`patient_packages.category`, migration 105): `PAKET KLINIK` | `PAKET VISIT` | `PAKET SPORT MASSAGE` — use `PACKAGE_CATEGORIES` / `packageCategoryForKategori()` in `lib/serviceType.ts`, never hardcode. Paying a visit with a package tariff in `PaymentDialog` creates the package (`createPackageForVisit`).
 
-**Targets**: TA target = `TERAPI AWAL`/`TA KLINIK` only; Visit target = `PAKET VISIT` only (`TA VISIT` counts toward no target).
+**Targets**: Terapi Awal target = `TERAPI AWAL KLINIK` only (column `target_terapi_awal`, category key `terapi_awal`); Visit target = `PAKET VISIT` only (`TERAPI AWAL VISIT` counts toward no target).
+
+**One vocabulary** (migration 119): the Tarif Layanan kategori names everywhere, no abbreviations. A visit's service type = its income category (`SERVICE_TO_CATEGORY` is identity). Payroll activity codes follow the same words (`TERAPI_AWAL_KLINIK`, `SESI_KLINIK`, `PAKET_KLINIK`, `TERAPI_AWAL_VISIT`, `SESI_VISIT`, `PAKET_VISIT`, `JARAK_VISIT`, `SPORT_MASSAGE_FULL_BODY`/`_SEGMENTAL`, `SPORT_MASSAGE_VISIT_*`, `PAKET_SPORT_MASSAGE_VISIT_*`, `JARAK_SPORT_MASSAGE_VISIT`, `TERAPI_AWAL_ADMIN`, `KONTEN`). Rename a category by ONE `UPDATE income_categories SET code = …` — FKs cascade (`ON UPDATE CASCADE`) and trigger `income_categories_cascade_code` covers income transactions + `payroll_activity_types.source_service_types`. `public.service_types` is gangsehat.com's catalog, unrelated; `bookings.service_type` is legacy free text from the old booking app.
 
 **Expense categories**: `BEBAN PELAYANAN` | `GAJI` | `SEWA` | `LISTRIK` | `MARKETING` | `TUKAR TUNAI` | `LAINNYA`
 

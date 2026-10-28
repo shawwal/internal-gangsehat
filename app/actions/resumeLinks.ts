@@ -220,7 +220,7 @@ async function buildResumeData(admin: AdminClient, visitId: string): Promise<Pub
     .eq('visit_id', visitId)
     .maybeSingle()
 
-  // Follow-up (SESI/PAKET TERAPI|VISIT) visits have no terapi_awal_assessments
+  // Follow-up (SESI/PAKET KLINIK|VISIT) visits have no terapi_awal_assessments
   // row — fall back to session_notes so shared links from those visits carry
   // the richer SOAP content instead of just the plain patient_visits columns.
   const { data: sessionNote } = assessment ? { data: null } : await admin

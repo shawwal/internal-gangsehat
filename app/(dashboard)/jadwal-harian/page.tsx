@@ -492,7 +492,7 @@ export default function JadwalHarianPage() {
             return
           }
           if (visitId) silentReload({ type: 'visit', visitId })
-          if (ctx?.status === 'completed' && ctx.service_type === 'TA VISIT' && visitId && canRecordPayment) {
+          if (ctx?.status === 'completed' && ctx.service_type === 'TERAPI AWAL VISIT' && visitId && canRecordPayment) {
             setPackagePrompt({ ...ctx, patientName: visit?.patient_name ?? '', branchId: visit?.branch_id ?? null, visitId })
           }
         }}

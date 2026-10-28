@@ -27,24 +27,24 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const BOOK_PATH = process.env.AKUNTANSI_XLSX ?? join(__dirname, '../AKUNTANSI FGS SINGKAWANG .xlsx')
 
 const INCOME_CATEGORY: Record<string, string> = {
-  'TERAPI AWAL':             'TA KLINIK',
+  'TERAPI AWAL':             'TERAPI AWAL KLINIK',
   'SESI TERAPI':             'SESI KLINIK',
   'PAKET TERAPI 1':          'PAKET KLINIK',
   'PAKET TERAPI 2':          'PAKET KLINIK',
   'PAKET TERAPI 3':          'PAKET KLINIK',
-  'TERAPI AWAL HOMEVISIT':   'TA VISIT',
+  'TERAPI AWAL HOMEVISIT':   'TERAPI AWAL VISIT',
   'SESI TERAPI HOMEVISIT':   'SESI VISIT',
   'PAKET TERAPI HOMEVISIT':  'PAKET VISIT',
 }
 
 // Income category → the visit service it pays for
 const VISIT_SERVICE: Record<string, string> = {
-  'TA KLINIK':    'TERAPI AWAL',
-  'SESI KLINIK':  'SESI TERAPI',
-  'PAKET KLINIK': 'PAKET TERAPI',
-  'TA VISIT':     'TA VISIT',
-  'SESI VISIT':   'SESI VISIT',
-  'PAKET VISIT':  'PAKET VISIT',
+  'TERAPI AWAL KLINIK': 'TERAPI AWAL KLINIK',
+  'SESI KLINIK':        'SESI KLINIK',
+  'PAKET KLINIK':       'PAKET KLINIK',
+  'TERAPI AWAL VISIT':  'TERAPI AWAL VISIT',
+  'SESI VISIT':         'SESI VISIT',
+  'PAKET VISIT':        'PAKET VISIT',
 }
 
 const EXPENSE_CATEGORY: Record<string, string> = {

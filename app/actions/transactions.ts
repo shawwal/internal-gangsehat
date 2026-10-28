@@ -5,20 +5,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { listTherapistOptions, resolveTherapistNames, type TherapistOption, type TherapistRef } from '@/lib/finance/therapists'
 import { computeOrderPaymentSummary, type OrderPaymentSummary, type OrderPaymentRow } from '@/lib/internal/orderPayments'
 import { logActivity } from '@/lib/activityLog'
-import { PACKAGE_CATEGORIES as PACKAGE_CATEGORY_LIST } from '@/lib/serviceType'
+import { PACKAGE_CATEGORIES as PACKAGE_CATEGORY_LIST, SERVICE_TO_CATEGORY } from '@/lib/serviceType'
+import type { ServiceType } from '@/types'
 import { priceListCategoryError } from '@/lib/finance/priceList'
 import { PAYMENT_PROOF_BUCKET, PAYMENT_PROOF_REQUIRED_MSG, isGatewayPayment, isPaymentProofRequiredOnEdit, isValidPaymentProofPath, paymentProofError, requiresPaymentProof } from '@/lib/paymentProof'
-
-const SERVICE_TO_CATEGORY: Record<string, string> = {
-  'TERAPI AWAL':  'TA KLINIK',
-  'SESI TERAPI':  'SESI KLINIK',
-  'PAKET TERAPI': 'PAKET KLINIK',
-  'TA VISIT':     'TA VISIT',
-  'SESI VISIT':   'SESI VISIT',
-  'PAKET VISIT':  'PAKET VISIT',
-  'SPORT MASSAGE': 'SPORT MASSAGE',
-  'LAINNYA':      'LAINNYA',
-}
 
 const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
 const PACKAGE_CATEGORIES = new Set<string>(PACKAGE_CATEGORY_LIST)
@@ -78,7 +68,7 @@ export interface OutstandingTransaction {
 }
 
 export async function fetchLayananHarga(serviceType: string, branchId?: string | null, jumlahSesi?: number | null): Promise<number | null> {
-  const kategori = SERVICE_TO_CATEGORY[serviceType]
+  const kategori = SERVICE_TO_CATEGORY[serviceType as ServiceType] as string | undefined
   if (!kategori || kategori === 'LAINNYA') return null
   const supabase = await createClient()
   let query = supabase
@@ -98,7 +88,7 @@ export async function fetchLayananHarga(serviceType: string, branchId?: string |
 export async function fetchLayananDetail(
   serviceType: string, branchId?: string | null, jumlahSesi?: number | null,
 ): Promise<{ nama: string; harga: number } | null> {
-  const kategori = SERVICE_TO_CATEGORY[serviceType]
+  const kategori = SERVICE_TO_CATEGORY[serviceType as ServiceType] as string | undefined
   if (!kategori || kategori === 'LAINNYA') return null
   const supabase = await createClient()
   let query = supabase

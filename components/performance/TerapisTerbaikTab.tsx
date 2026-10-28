@@ -62,7 +62,7 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
           let q = supabase
             .from('staff_targets')
             .select(
-              'staff_id, target_ta, target_paket_klinik, target_kunjungan, target_visit, ' +
+              'staff_id, target_terapi_awal, target_paket_klinik, target_kunjungan, target_visit, ' +
               'internal_profiles!staff_id(full_name)',
             )
             .eq('bulan', month)
@@ -73,7 +73,7 @@ export function TerapisTerbaikTab({ branchFilter }: TerapisTerbaikTabProps) {
         })(),
       ])
 
-      // Kunjungan = the Progress Target / PFOTM rule (no sport massage, no TA VISIT).
+      // Kunjungan = the Progress Target / PFOTM rule (no sport massage, no TERAPI AWAL VISIT).
       const vData = visitRows.filter(v => countsAsKunjungan(v, TODAY_ISO))
       const tData = (targetsRes.data ?? []) as unknown as StaffTargetRow[]
 

@@ -76,14 +76,14 @@ export const STATUS_BADGE: Record<VisitStatus, string> = {
 }
 
 export const SERVICE_TYPE_LABEL: Record<string, string> = {
-  'TERAPI AWAL':  'TA',
-  'TA VISIT':     'TA',
-  'PAKET TERAPI': 'Paket',
-  'PAKET VISIT':  'Paket',
-  'SESI TERAPI':  'Sesi',
-  'SESI VISIT':   'Sesi',
-  'SPORT MASSAGE': 'Sport Massage',
-  'LAINNYA':      'Lainnya',
+  'TERAPI AWAL KLINIK':       'Terapi Awal',
+  'TERAPI AWAL VISIT': 'Terapi Awal',
+  'PAKET KLINIK':      'Paket',
+  'PAKET VISIT':       'Paket',
+  'SESI KLINIK':       'Sesi',
+  'SESI VISIT':        'Sesi',
+  'SPORT MASSAGE':     'Sport Massage',
+  'LAINNYA':           'Lainnya',
 }
 
 export const GRID_START  = 8

@@ -8,9 +8,9 @@ function formatDate(d: string) {
 }
 
 const SERVICE_BADGE: Record<string, string> = {
-  'TA VISIT':    'bg-primary/10 text-primary border-primary/15',
-  'SESI VISIT':  'bg-muted/40 text-muted-foreground border-border',
-  'PAKET VISIT': 'bg-chart-4/10 text-chart-4 border-chart-4/15',
+  'TERAPI AWAL VISIT': 'bg-primary/10 text-primary border-primary/15',
+  'SESI VISIT':        'bg-muted/40 text-muted-foreground border-border',
+  'PAKET VISIT':       'bg-chart-4/10 text-chart-4 border-chart-4/15',
 }
 
 const PAYMENT_BADGE: Record<string, string> = {

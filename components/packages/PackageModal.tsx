@@ -55,7 +55,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
   useEffect(() => {
     if (isEdit) return
     let cancelled = false
-    const virtualServiceType = form.category === 'PAKET VISIT' ? 'PAKET VISIT' : 'PAKET TERAPI'
+    const virtualServiceType = form.category === 'PAKET VISIT' ? 'PAKET VISIT' : 'PAKET KLINIK'
     fetchLayananHarga(virtualServiceType, branchId, sessionCount).then((price) => {
       if (!cancelled) set('harga', price != null ? String(price) : '')
     })

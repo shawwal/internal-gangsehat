@@ -240,7 +240,7 @@ export function PfotmInput(p: Props) {
                     const g = p.gap?.[r.metric_key]
                     return (
                       <td key={r.metric_key} className="px-1 py-1.5 text-center">
-                        {!g || r.metric_key === 'rujukan_sm' ? '' : g.auto === 0 ? '0' : (
+                        {!g || r.metric_key === 'rujukan_sport_massage' ? '' : g.auto === 0 ? '0' : (
                           <button onClick={() => setGapDetail(r)} title="Lihat transaksi / kunjungan yang tidak teratribusi"
                             className="font-semibold text-destructive hover:underline">
                             {g.auto}
@@ -263,9 +263,9 @@ export function PfotmInput(p: Props) {
                     const inTp = IN_TARGET_PROGRESS.has(r.metric_key)
                     return (
                       <td key={r.metric_key}
-                        title={g && r.metric_key !== 'rujukan_sm' && !inTp ? 'Metrik khusus PFOTM — tidak ada di Progress Target' : undefined}
+                        title={g && r.metric_key !== 'rujukan_sport_massage' && !inTp ? 'Metrik khusus PFOTM — tidak ada di Progress Target' : undefined}
                         className={`px-1 py-1.5 text-center ${inTp ? '' : 'text-muted-foreground font-normal'}`}>
-                        {!g || r.metric_key === 'rujukan_sm' ? '' : formatStat(sumOf(statEntries.map((e) => metricValue(e, r.metric_key))) + g.auto)}
+                        {!g || r.metric_key === 'rujukan_sport_massage' ? '' : formatStat(sumOf(statEntries.map((e) => metricValue(e, r.metric_key))) + g.auto)}
                       </td>
                     )
                   })}
@@ -303,10 +303,10 @@ export function PfotmInput(p: Props) {
         <ul className="list-disc space-y-1 px-3 pb-3 pl-7">
           <li>Rentang data diatur di atas — samakan dengan mode tanggal (&quot;Periode gaji&quot;) di Progress Target agar angkanya bisa dicocokkan.</li>
           <li><b className="text-foreground">Hadir / Terlambat / Alfa</b> dari absensi.</li>
-          <li><b className="text-foreground">Jumlah Kunjungan</b> = kunjungan yang hadir, aturan sama dengan Kunjungan di Progress Target (tanpa Sport Massage dan TA Visit).</li>
+          <li><b className="text-foreground">Jumlah Kunjungan</b> = kunjungan yang hadir, aturan sama dengan Kunjungan di Progress Target (tanpa Sport Massage dan Terapi Awal Visit).</li>
           {p.salesByLayanan ? (
             <li>
-              <b className="text-foreground">{LABEL.paket_1} / {LABEL.paket_2} / {LABEL.paket_3}, {LABEL.ta_sesi_visit}, {LABEL.paket_visit}</b> dari
+              <b className="text-foreground">{LABEL.paket_1} / {LABEL.paket_2} / {LABEL.paket_3}, {LABEL.terapi_awal_sesi_visit}, {LABEL.paket_visit}</b> dari
               nama Layanan transaksi sesuai tag PFOTM di Tarif Layanan cabang ini (nama Layanan tampil di &quot;rincian&quot;). Dihitung setiap pembayaran LUNAS dan DP
               (PELUNASAN tidak dihitung) — karena itu angkanya bisa berbeda dari Progress Target.
             </li>
@@ -314,10 +314,10 @@ export function PfotmInput(p: Props) {
             <>
               <li><b className="text-foreground">{LABEL.paket_1} / {LABEL.paket_2} / {LABEL.paket_3}</b> dari transaksi PAKET KLINIK, satu per pembelian (pembayaran LUNAS/DP pertama); ketiganya dijumlah = Paket Klinik di Progress Target.</li>
               <li><b className="text-foreground">{LABEL.paket_visit}</b> dari transaksi PAKET VISIT = Paket Visit di Progress Target.</li>
-              <li><b className="text-foreground">{LABEL.ta_sesi_visit}</b> dari transaksi TA VISIT + SESI VISIT — poin khusus PFOTM, tidak ada di Progress Target (TA VISIT tidak masuk target mana pun; SESI VISIT masuk &quot;Sesi&quot;).</li>
+              <li><b className="text-foreground">{LABEL.terapi_awal_sesi_visit}</b> dari transaksi TERAPI AWAL VISIT + SESI VISIT — poin khusus PFOTM, tidak ada di Progress Target (TERAPI AWAL VISIT tidak masuk target mana pun; SESI VISIT masuk &quot;Sesi&quot;).</li>
             </>
           )}
-          <li><b className="text-foreground">{LABEL.rujukan_sm}</b> dari kolom &quot;Dirujuk oleh&quot; pasien.</li>
+          <li><b className="text-foreground">{LABEL.rujukan_sport_massage}</b> dari kolom &quot;Dirujuk oleh&quot; pasien.</li>
           <li>Penjualan dihitung ke Fisio transaksi (atau terapis kunjungan yang ditautkan) — aturan sama dengan halaman Keuangan. Tanpa Fisio, staf bukan peserta, atau peserta yang dikeluarkan = &quot;Di luar Jumlah&quot;.</li>
           <li>Jumlah &amp; Rata-rata hanya dari peserta yang ikut peringkat.</li>
           <li>Klik &quot;rincian&quot; untuk melihat pasien &amp; tanggal. Ketik untuk mengoreksi (kuning). Merah = di bawah rata-rata kolom (Terlambat/Alfa: di atas rata-rata). Total &amp; peringkat langsung dihitung ulang.</li>

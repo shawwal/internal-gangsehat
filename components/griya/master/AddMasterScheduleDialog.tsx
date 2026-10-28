@@ -80,7 +80,7 @@ export function AddMasterScheduleDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [discipline])
 
-  const [serviceType, setServiceType] = useState<string>('SESI TERAPI')
+  const [serviceType, setServiceType] = useState<string>('SESI KLINIK')
   const [layanan, setLayanan] = useState<LayananRow[]>([])
   const [layananId, setLayananId] = useState<string>('')
 

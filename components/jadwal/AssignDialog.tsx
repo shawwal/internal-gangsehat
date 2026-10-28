@@ -74,7 +74,7 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
   const [packages, setPackages]          = useState<PatientPackage[]>([])
   // Jadwal harian is the clinic schedule — home-visit and Sport Massage packages
   // are booked on their own pages, so they're never offered/auto-picked here
-  // (a PAKET VISIT session used to land here as a clinic SESI TERAPI).
+  // (a PAKET VISIT session used to land here as a clinic SESI KLINIK).
   const clinicPackages = packages.filter(isClinicPackage)
   const [pkgLoading, setPkgLoading]      = useState(false)
   const [selectedPkgId, setSelectedPkg]  = useState<string | null>(null)
@@ -271,7 +271,7 @@ export function AssignDialog({ target, onClose, onSaved, canManagePackages = fal
       patient_id:         selectedPatient.id,
       branch_id:          target.branchId,
       attending_staff_id: target.staffId,
-      service_type:       mode === 'terapi_awal' ? 'TERAPI AWAL' : 'SESI TERAPI',
+      service_type:       mode === 'terapi_awal' ? 'TERAPI AWAL KLINIK' : 'SESI KLINIK',
       shift:              target.shift ?? null,
       visit_time:         visitTime || null,
       chief_complaint:    chiefComplaint.trim() || null,
