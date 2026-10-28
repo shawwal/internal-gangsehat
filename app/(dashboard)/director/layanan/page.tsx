@@ -11,12 +11,15 @@ import {
   upsertLayanan,
   deleteLayanan,
   fetchPayrollActivityOptions,
+  fetchLayananKategori,
+  createLayananKategori,
+  type LayananKategori,
   type LayananRow,
   type PfotmLayananMetric,
 } from '@/app/actions/layanan'
 import { RowsSkeleton } from '@/components/ui/Skeleton'
+import { useProfile } from '@/hooks/useProfile'
 import { PFOTM_METRIC_LABELS } from '@/lib/pfotm/labels'
-import { LAYANAN_KATEGORI as KATEGORI_OPTIONS } from '@/lib/serviceType'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('id-ID').format(n)
@@ -67,9 +70,30 @@ export default function LayananPage() {
   // add / edit row modal (editRow = null → add)
   const [showAdd, setShowAdd]   = useState(false)
   const [editRow, setEditRow]   = useState<LayananRow | null>(null)
-  const [addForm, setAddForm]   = useState<AddForm>({ ...EMPTY_FORM, kategori: KATEGORI_OPTIONS[0] })
+  const [addForm, setAddForm]   = useState<AddForm>(EMPTY_FORM)
   const [addSaving, setAddSaving] = useState(false)
   const [addError, setAddError]   = useState<string | null>(null)
+
+  // kategori list (income_categories) — directors can add one from the form
+  const profile = useProfile()
+  const canAddKategori = profile?.role === 'director'
+  const [kategoriList, setKategoriList]       = useState<LayananKategori[]>([])
+  const [newKategori, setNewKategori]         = useState<string | null>(null)   // null = field hidden
+  const [kategoriSaving, setKategoriSaving]   = useState(false)
+  const [kategoriError, setKategoriError]     = useState<string | null>(null)
+  useEffect(() => { fetchLayananKategori().then(setKategoriList) }, [])
+
+  async function handleAddKategori() {
+    if (!newKategori?.trim()) return
+    setKategoriSaving(true)
+    setKategoriError(null)
+    const { data, error } = await createLayananKategori(newKategori)
+    setKategoriSaving(false)
+    if (error || !data) { setKategoriError(error); return }
+    setKategoriList(await fetchLayananKategori())
+    setAddForm((f) => ({ ...f, kategori: data.code }))
+    setNewKategori(null)
+  }
 
   // payroll activity columns a Layanan can count toward
   const [activityOptions, setActivityOptions] = useState<{ code: string; label: string }[]>([])
@@ -140,8 +164,10 @@ export default function LayananPage() {
   // ── Add new / edit ───────────────────────────────────────────────────────────
   function openAdd() {
     setEditRow(null)
-    setAddForm({ ...EMPTY_FORM, kategori: KATEGORI_OPTIONS[0] })
+    setAddForm({ ...EMPTY_FORM, kategori: kategoriList[0]?.code ?? '' })
     setAddError(null)
+    setNewKategori(null)
+    setKategoriError(null)
     setShowAdd(true)
   }
 
@@ -157,12 +183,18 @@ export default function LayananPage() {
       pfotm_metric:  row.pfotm_metric ?? '',
     })
     setAddError(null)
+    setNewKategori(null)
+    setKategoriError(null)
     setShowAdd(true)
   }
 
   async function handleAdd() {
     if (!selectedBranch || !addForm.nama.trim()) {
       setAddError('Nama wajib diisi.')
+      return
+    }
+    if (!addForm.kategori) {
+      setAddError('Kategori wajib dipilih.')
       return
     }
     setAddSaving(true)
@@ -471,8 +503,20 @@ export default function LayananPage() {
                       onChange={(e) => setAddForm((f) => ({ ...f, kategori: e.target.value }))}
                       className={inputCls + ' cursor-pointer'}
                     >
-                      {KATEGORI_OPTIONS.map((k) => <option key={k} value={k}>{k}</option>)}
+                      {kategoriList.map((k) => <option key={k.code} value={k.code}>{k.code}</option>)}
+                      {addForm.kategori && !kategoriList.some((k) => k.code === addForm.kategori) && (
+                        <option value={addForm.kategori}>{addForm.kategori}</option>
+                      )}
                     </select>
+                    {canAddKategori && newKategori === null && (
+                      <button
+                        type="button"
+                        onClick={() => { setNewKategori(''); setKategoriError(null) }}
+                        className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
+                      >
+                        <Plus size={11} /> Kategori baru
+                      </button>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1.5">Jumlah Sesi <span className="text-muted-foreground font-normal">(opsional)</span></label>
@@ -486,6 +530,49 @@ export default function LayananPage() {
                     />
                   </div>
                 </div>
+
+                {newKategori !== null && (
+                  <div className="rounded-xl border border-border p-3 space-y-2">
+                    <label className="block text-xs font-medium">Kategori baru</label>
+                    <div className="flex gap-2">
+                      <input
+                        autoFocus
+                        value={newKategori}
+                        onChange={(e) => setNewKategori(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); handleAddKategori() }
+                          if (e.key === 'Escape') setNewKategori(null)
+                        }}
+                        placeholder="mis. Terapi Wicara"
+                        className={inputCls}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddKategori}
+                        disabled={kategoriSaving || !newKategori.trim()}
+                        className="px-3 rounded-xl bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors cursor-pointer shrink-0"
+                      >
+                        {kategoriSaving ? <Loader2 size={13} className="animate-spin" /> : 'Tambah'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewKategori(null)}
+                        className="p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer text-muted-foreground shrink-0"
+                        aria-label="Batal tambah kategori"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {newKategori.trim()
+                        ? <>Disimpan sebagai <span className="font-semibold text-foreground">{newKategori.trim().replace(/\s+/g, ' ').toUpperCase()}</span> — berlaku untuk semua cabang.</>
+                        : 'Berlaku untuk semua cabang dan langsung bisa dipakai untuk pembayaran.'}
+                    </p>
+                    {kategoriError && (
+                      <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-xl">{kategoriError}</p>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-medium mb-1.5">Harga (Rp)</label>

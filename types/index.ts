@@ -469,6 +469,8 @@ export interface PatientPackage {
   completion_status: PackageCompletionStatus | null
   category: 'PAKET KLINIK' | 'PAKET VISIT' | 'PAKET SPORT MASSAGE' | null
   order_id: string | null
+  /** Tarif Layanan product this package was sold as (migration 120); null = no match */
+  layanan_id?: string | null
   purchased_at: string
   stopped_at: string | null
   stopped_by: string | null

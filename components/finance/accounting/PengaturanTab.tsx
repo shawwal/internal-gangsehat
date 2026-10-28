@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, Check, X, EyeOff, Eye } from 'lucide-react'
 import {
   fetchLayananByBranch, updateLayananHarga, toggleLayananActive, upsertLayanan, deleteLayanan,
-  type LayananRow,
+  fetchLayananKategori, type LayananRow,
 } from '@/app/actions/layanan'
 import {
   fetchExpenseCategories, addExpenseCategory, renameExpenseCategory,
@@ -17,7 +17,6 @@ interface Props {
   branchId: string
 }
 
-const KATEGORI_OPTIONS = ['TERAPI AWAL KLINIK', 'SESI KLINIK', 'PAKET KLINIK', 'TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'PAKET SPORT MASSAGE', 'LAINNYA']
 
 export function PengaturanTab({ branchId }: Props) {
   return (
@@ -34,7 +33,10 @@ function LayananSection({ branchId }: { branchId: string }) {
   const [editId, setEditId] = useState<string | null>(null)
   const [editHarga, setEditHarga] = useState('')
   const [showAdd, setShowAdd] = useState(false)
-  const [addForm, setAddForm] = useState({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '' })
+  // Kategori list lives in income_categories (directors add new ones in Tarif Layanan).
+  const [kategoriOptions, setKategoriOptions] = useState<string[]>([])
+  useEffect(() => { fetchLayananKategori().then((ks) => setKategoriOptions(ks.map((k) => k.code))) }, [])
+  const [addForm, setAddForm] = useState({ nama: '', kategori: '', jumlah_sesi: '', harga: '' })
   const [addSaving, setAddSaving] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
 
@@ -68,6 +70,7 @@ function LayananSection({ branchId }: { branchId: string }) {
     e.preventDefault()
     setAddError(null)
     if (!addForm.nama.trim() || !addForm.harga) { setAddError('Nama dan harga wajib diisi'); return }
+    if (!addForm.kategori) { setAddError('Kategori wajib dipilih'); return }
     setAddSaving(true)
     const { error } = await upsertLayanan({
       id: crypto.randomUUID(),
@@ -81,7 +84,7 @@ function LayananSection({ branchId }: { branchId: string }) {
     setAddSaving(false)
     if (error) { setAddError(error); return }
     setShowAdd(false)
-    setAddForm({ nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '' })
+    setAddForm({ nama: '', kategori: kategoriOptions[0] ?? '', jumlah_sesi: '', harga: '' })
     reload()
   }
 
@@ -155,7 +158,8 @@ function LayananSection({ branchId }: { branchId: string }) {
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Kategori</label>
                 <select value={addForm.kategori} onChange={(e) => setAddForm((f) => ({ ...f, kategori: e.target.value }))} className={inputCls}>
-                  {KATEGORI_OPTIONS.map((k) => <option key={k} value={k}>{k}</option>)}
+                  {!addForm.kategori && <option value="">Pilih kategori</option>}
+                  {kategoriOptions.map((k) => <option key={k} value={k}>{k}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">

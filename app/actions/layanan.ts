@@ -34,6 +34,54 @@ export async function fetchLayananByBranch(branchId: string): Promise<LayananRow
   return (data ?? []) as LayananRow[]
 }
 
+/** A Layanan kategori = an income category (income_categories, migration 119). */
+export interface LayananKategori {
+  code: string
+  label: string
+}
+
+// TOKO is written by /toko sales only — never a price-list kategori.
+const NON_LAYANAN_KATEGORI = ['TOKO']
+
+/** Kategori a Layanan can be filed under, in display order. */
+export async function fetchLayananKategori(): Promise<LayananKategori[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('income_categories')
+    .select('code, label')
+    .order('sort_order')
+    .order('code')
+  return ((data ?? []) as LayananKategori[]).filter((k) => !NON_LAYANAN_KATEGORI.includes(k.code))
+}
+
+/**
+ * Director: add a kategori. The code is the name in capitals ("Terapi Wicara" →
+ * "TERAPI WICARA"), like every existing kategori. It slots in before TOKO / LAINNYA.
+ */
+export async function createLayananKategori(
+  name: string,
+): Promise<{ data: LayananKategori | null; error: string | null }> {
+  const code = name.trim().replace(/\s+/g, ' ').toUpperCase()
+  if (!/^[A-Z0-9][A-Z0-9 &/-]{1,39}$/.test(code)) {
+    return { data: null, error: 'Nama kategori 2–40 karakter: huruf, angka, spasi, & / -' }
+  }
+  const label = code.toLowerCase().replace(/(^|[\s/-])\S/g, (c) => c.toUpperCase())
+
+  const supabase = await createClient()
+  const { data: existing } = await supabase.from('income_categories').select('code, sort_order')
+  const rows = (existing ?? []) as { code: string; sort_order: number }[]
+  if (rows.some((r) => r.code === code)) return { data: null, error: `Kategori "${code}" sudah ada` }
+  const last = Math.max(0, ...rows.filter((r) => r.code !== 'TOKO' && r.code !== 'LAINNYA').map((r) => r.sort_order))
+
+  const { error } = await supabase
+    .from('income_categories')
+    .insert({ code, label, sort_order: last + 1 })
+  if (error) {
+    return { data: null, error: error.code === '42501' ? 'Hanya direktur yang dapat menambah kategori.' : error.message }
+  }
+  return { data: { code, label }, error: null }
+}
+
 /** Payroll activity columns a Layanan can count toward (Tarif Layanan → "Dihitung untuk"). */
 export async function fetchPayrollActivityOptions(): Promise<{ code: string; label: string }[]> {
   const supabase = await createClient()

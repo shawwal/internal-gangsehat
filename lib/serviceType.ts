@@ -35,7 +35,9 @@ export function isPriceListExempt(category: string | null | undefined): boolean 
 export function branchIncomeKategori(layanan: { kategori: string; is_active: boolean }[]): string[] {
   const active = new Set(layanan.filter((l) => l.is_active).map((l) => l.kategori))
   const priced = LAYANAN_KATEGORI.filter((k) => active.has(k) && !isPriceListExempt(k))
-  return [...priced, ...FREE_INCOME_CATEGORIES]
+  // Kategori added from Tarif Layanan (income_categories) after the built-in ones.
+  const added = [...active].filter((k) => !LAYANAN_KATEGORI.includes(k) && !isPriceListExempt(k)).sort()
+  return [...priced, ...added, ...FREE_INCOME_CATEGORIES]
 }
 
 // Reverse of SERVICE_TO_CATEGORY — lets a Kategori control drive the paired Layanan

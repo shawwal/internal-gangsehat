@@ -88,9 +88,9 @@ export async function fetchSportMassageExportRows(
       branchIds,
       (c) => supabase.from('internal_layanan').select('id, branch_id, nama, kategori, harga, jumlah_sesi').in('branch_id', c),
     ),
-    fetchInChunks<{ id: string; package_name: string; category: string | null; total_sessions: number }>(
+    fetchInChunks<{ id: string; package_name: string; category: string | null; total_sessions: number; layanan_id: string | null }>(
       packageIds,
-      (c) => supabase.from('patient_packages').select('id, package_name, category, total_sessions').in('id', c),
+      (c) => supabase.from('patient_packages').select('id, package_name, category, total_sessions, layanan_id').in('id', c),
     ),
   ])
 
@@ -125,10 +125,12 @@ export async function fetchSportMassageExportRows(
   const layananMap = new Map(layanan.map((l) => [l.id, l]))
   const packageMap = new Map(packages.map((p) => [p.id, p]))
 
-  // Package visits don't store a layanan_id: match the package to the branch's
-  // Layanan of the same kategori by name, then by session count.
+  // Package visits don't store a layanan_id: use the package's linked Layanan
+  // (migration 120), else the branch's Layanan of the same kategori by name, then
+  // by session count.
   const only = <T>(list: T[]) => (list.length === 1 ? list[0] : undefined)
-  function packageLayanan(branchId: string, pkg: { package_name: string; category: string | null; total_sessions: number }) {
+  function packageLayanan(branchId: string, pkg: { package_name: string; category: string | null; total_sessions: number; layanan_id: string | null }) {
+    if (pkg.layanan_id && layananMap.has(pkg.layanan_id)) return layananMap.get(pkg.layanan_id)
     const sameCat = layanan.filter((l) => l.branch_id === branchId && l.kategori === (pkg.category ?? 'PAKET SPORT MASSAGE'))
     const norm = (s: string) => s.trim().toLowerCase()
     return only(sameCat.filter((l) => norm(l.nama) === norm(pkg.package_name)))

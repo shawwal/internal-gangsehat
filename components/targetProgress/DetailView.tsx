@@ -9,6 +9,7 @@ import { PAY_STATUS_BADGE, formatRp } from '@/components/director/finance/types'
 import { TherapistCombobox, type TherapistOption } from '@/components/finance/TherapistServiceFilters'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { SkeletonRegion, TableSkeleton } from '@/components/ui/Skeleton'
+import { Pagination } from '@/components/leave/Pagination'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { DETAIL_SORT_OPTIONS, type CategoryKey, type DetailSort } from './types'
 
@@ -92,20 +93,28 @@ interface Props {
   backQuery: string
 }
 
+// A busy branch has 700+ kunjungan a month — render a page at a time; filters,
+// counts, totals and the export still cover every row.
+const PAGE_SIZE = 50
+
 /** Full-page "which patients make up this number" for a Progress Target cell. */
 export function DetailView({ branchId, branchName, category, label, start, end, canEdit, initial, backQuery }: Props) {
   const [rows, setRows] = useState<TargetProgressDetailRow[] | null>(null)
+  const [loadError, setLoadError] = useState(false)
+  const [page, setPage] = useState(1)
   const [filters, setFilters] = useState<DetailFilters>(initial)
   const [editingRow, setEditingRow] = useState<TargetProgressDetailRow | null>(null)
   const { q, therapist, service, payment, sort } = filters
-  const set = (patch: Partial<DetailFilters>) => setFilters((f) => ({ ...f, ...patch }))
+  const set = (patch: Partial<DetailFilters>) => { setFilters((f) => ({ ...f, ...patch })); setPage(1) }
 
   const isKunjungan = category === 'kunjungan'
   const hasTx = !!rows?.some((r) => r.tx)
   const editable = canEdit && hasTx
 
   const load = useCallback(() => {
-    fetchTargetProgressDetail(branchId, start, category, end).then(setRows)
+    fetchTargetProgressDetail(branchId, start, category, end)
+      .then(setRows)
+      .catch(() => setLoadError(true))
   }, [branchId, start, category, end])
   useEffect(() => { load() }, [load])
 
@@ -150,6 +159,9 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
       .sort(SORTERS[sort])
   }, [rows, q, therapist, service, payment, sort])
 
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const pageRows = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const filtered = !!(q.trim() || therapist || service || payment)
   const patientCount = new Set(visible.map((r) => r.patientId ?? r.id)).size
   const totalHarga = visible.reduce((s, r) => s + (r.tx?.harga ?? 0), 0)
@@ -272,7 +284,18 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
         </div>
       </div>
 
-      {!rows ? (
+      {loadError ? (
+        <div className="glass-card p-8 text-center space-y-3">
+          <p className="text-sm text-muted-foreground">Data gagal dimuat.</p>
+          <button
+            type="button"
+            onClick={() => { setRows(null); setLoadError(false); load() }}
+            className="h-9 px-4 text-xs font-medium rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+          >
+            Coba lagi
+          </button>
+        </div>
+      ) : !rows ? (
         <SkeletonRegion>
           <TableSkeleton rows={10} cols={7} />
         </SkeletonRegion>
@@ -292,6 +315,7 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
               {rows.length === 0 ? 'Tidak ada data pada periode ini' : 'Tidak ada data yang cocok dengan filter'}
             </div>
           ) : (
+            <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -302,7 +326,7 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((r, i) => (
+                  {pageRows.map((r, i) => (
                     <tr
                       key={r.id}
                       onClick={editable && r.tx ? () => setEditingRow(r) : undefined}
@@ -310,7 +334,7 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
                         editable && r.tx ? 'hover:bg-muted/30 cursor-pointer' : 'hover:bg-muted/20'
                       }`}
                     >
-                      <td className="px-3 py-2.5 text-xs text-muted-foreground w-10">{i + 1}</td>
+                      <td className="px-3 py-2.5 text-xs text-muted-foreground w-10">{(currentPage - 1) * PAGE_SIZE + i + 1}</td>
                       <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
                         {r.visitDate ? formatExportDate(r.visitDate) : '—'}
                       </td>
@@ -369,6 +393,10 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
                 </tbody>
               </table>
             </div>
+            {visible.length > PAGE_SIZE && (
+              <Pagination page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
+            )}
+            </>
           )}
         </div>
       )}

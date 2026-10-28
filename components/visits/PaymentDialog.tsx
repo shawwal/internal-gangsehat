@@ -176,13 +176,13 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
 
   useEffect(refreshOutstanding, [visit.patient_id])
 
-  // Preselect the tariff: booked layanan → the visit's package (by name, then
-  // size) → the only option. Otherwise staff choose. Editing never re-prices.
+  // Preselect the tariff: booked layanan → the visit's package (its linked
+  // Layanan, else by name, then size) → the only option. Otherwise staff choose. Editing never re-prices.
   function preselectLayanan(rows: LayananRow[], pkg: PackageBrief | null, st: ServiceType) {
     const opts = layananOptionsFor(rows, st)
     const initial =
       opts.find((r) => r.id === visit.layanan_id) ??
-      (pkg ? (opts.find((r) => r.nama === pkg.package_name) ?? opts.find((r) => r.jumlah_sesi === pkg.total_sessions)) : undefined) ??
+      (pkg ? (opts.find((r) => r.id === pkg.layanan_id) ?? opts.find((r) => r.nama === pkg.package_name) ?? opts.find((r) => r.jumlah_sesi === pkg.total_sessions)) : undefined) ??
       (opts.length === 1 ? opts[0] : null)
     setLayananId(initial?.id ?? null)
     if (!isEditing && initial) { setHarga(String(initial.harga)); setAmountManual(false) }

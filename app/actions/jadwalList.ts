@@ -178,9 +178,9 @@ export async function fetchJadwalListRows(
     ),
     mapInChunks(packageIds, (c) => fetchPackagePositions(supabase, c)),
     mapInChunks(patientIds, (c) => fetchLatestComplaints(supabase, c)),
-    fetchInChunks<{ id: string; package_name: string; total_sessions: number; category: string | null }>(
+    fetchInChunks<{ id: string; package_name: string; total_sessions: number; category: string | null; layanan_id: string | null }>(
       packageIds,
-      (c) => supabase.from('patient_packages').select('id, package_name, total_sessions, category').in('id', c),
+      (c) => supabase.from('patient_packages').select('id, package_name, total_sessions, category, layanan_id').in('id', c),
     ),
     supabase.from('internal_layanan').select('id, branch_id, nama, kategori, harga, jumlah_sesi, is_active').in('branch_id', branchIds)
       .then(({ data }) => (data ?? []) as TarifRow[]),
@@ -211,13 +211,14 @@ export async function fetchJadwalListRows(
 
   // Clinic visits don't store their layanan (only Sport Massage / online
   // bookings do), so resolve the Tarif Layanan entry from what the visit was
-  // sold as: its package (same name / size), its payment (category + price,
+  // sold as: its package (linked Layanan, else same name / size), its payment (category + price,
   // the finance pages' rule), or its service type's kategori.
   function resolveTarif(v: (typeof visits)[number]): TarifRow | null {
     if (v.layanan_id && tarifById.has(v.layanan_id)) return tarifById.get(v.layanan_id)!
     const inBranch = (kategori: string) => tarifRows.filter((l) => l.branch_id === v.branch_id && l.kategori === kategori)
 
     const pkg = v.package_id ? packageMap.get(v.package_id) : undefined
+    if (pkg?.layanan_id && tarifById.has(pkg.layanan_id)) return tarifById.get(pkg.layanan_id)!
     if (pkg?.category) {
       const sameCat = inBranch(pkg.category)
       const hit = only(sameCat.filter((l) => l.nama === pkg.package_name))

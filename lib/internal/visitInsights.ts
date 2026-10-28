@@ -1,4 +1,5 @@
 import type { createClient } from '@/lib/supabase/server'
+import { fetchInChunks } from '@/lib/supabase/fetchAll'
 import { getVisitFormRoute, isRegioRequired } from '@/lib/visitRouting'
 
 type Supabase = Awaited<ReturnType<typeof createClient>>
@@ -89,20 +90,24 @@ export async function fetchPackagePositions(
   const result = new Map<string, { pertemuan: number; total: number | null }>()
   if (packageIds.length === 0) return result
 
-  const [{ data: pkgVisits }, { data: pkgs }] = await Promise.all([
-    supabase
+  // Chunked: hundreds of package ids overflow the URL, and one request for all
+  // their visits would pass PostgREST's 1000-row cap (≈ 20+ visits a package).
+  type PkgVisit = { id: string; package_id: string; visit_date: string; visit_time: string | null; status: string; kehadiran: string | null }
+  type Pkg = { id: string; total_sessions: number | null; legacy_used_sessions: number | null }
+  const [pkgVisits, pkgs] = await Promise.all([
+    fetchInChunks<PkgVisit>(packageIds, (ids) => supabase
       .from('patient_visits')
       .select('id, package_id, visit_date, visit_time, status, kehadiran')
-      .in('package_id', packageIds)
-      .neq('status', 'cancelled'),
-    supabase
+      .in('package_id', ids)
+      .neq('status', 'cancelled'), 30),
+    fetchInChunks<Pkg>(packageIds, (ids) => supabase
       .from('patient_packages_with_stats')
       .select('id, total_sessions, legacy_used_sessions')
-      .in('id', packageIds),
+      .in('id', ids)),
   ])
 
   const pkgMap = new Map<string, { total: number | null; legacy: number }>()
-  for (const p of pkgs ?? []) {
+  for (const p of pkgs) {
     pkgMap.set(p.id, { total: p.total_sessions ?? null, legacy: p.legacy_used_sessions ?? 0 })
   }
 
@@ -111,7 +116,7 @@ export async function fetchPackagePositions(
   // TIDAK HADIR / unrecorded visit gets the number of the slot it would have
   // filled, so the count never runs past the package size.
   const byPackage = new Map<string, { id: string; key: string; consumes: boolean }[]>()
-  for (const v of pkgVisits ?? []) {
+  for (const v of pkgVisits) {
     const pid = v.package_id as string
     const list = byPackage.get(pid) ?? []
     const consumes = v.kehadiran === 'HADIR' || (v.status === 'scheduled' && v.kehadiran == null)

@@ -11,6 +11,7 @@ import type { TransactionForEdit } from '@/components/director/finance/EditTrans
 import { deriveAdminStatus, fetchPackagePositions } from '@/lib/internal/visitInsights'
 import { getVisitFormRoute } from '@/lib/visitRouting'
 import { resolveTherapistNames } from '@/lib/finance/therapists'
+import { fetchAllRows, fetchInChunks } from '@/lib/supabase/fetchAll'
 
 export interface TargetProgressDetailRow {
   id: string
@@ -147,12 +148,13 @@ export async function fetchTargetProgressDetail(
     })
 
     const patientIds = [...new Set(rows.map((row) => row.patient_id).filter((id): id is string => !!id))]
-    const [{ data: patients }, therapists] = await Promise.all([
-      db.from('patients').select('id, encrypted_name, no_rm').in('id', patientIds),
+    const [patients, therapists] = await Promise.all([
+      fetchInChunks<{ id: string; encrypted_name: string | null; no_rm: string | null }>(
+        patientIds, (ids) => db.from('patients').select('id, encrypted_name, no_rm').in('id', ids)),
       // fisio_id, else the linked visit's attending staff — same rule as the finance pages.
       resolveTherapistNames(supabase, rows),
     ])
-    const patientById = new Map((patients ?? []).map((p) => [p.id as string, p]))
+    const patientById = new Map(patients.map((p) => [p.id, p]))
 
     return rows.map((row) => {
       const patient = row.patient_id ? patientById.get(row.patient_id) : undefined
@@ -193,22 +195,29 @@ export async function fetchTargetProgressDetail(
 
   // Kunjungan comes from attendance alone (isAttended), unconditionally — no
   // payment gating, matching exactly how the summary table computes it.
-  const { data, error } = await supabase
-    .from('patient_visits')
-    .select(
-      'id, patient_id, attending_staff_id, visit_date, visit_time, kehadiran, status, service_type, package_id, ' +
-      'diagnosis, treatment, regio, internal_profiles!attending_staff_id(full_name, nickname)',
-    )
-    .eq('branch_id', branchId)
-    .gte('visit_date', startDate)
-    .lte('visit_date', endDate)
-    .in('status', [...KUNJUNGAN_VISIT_STATUSES])
-    // Sport massage is tracked separately — not a "kunjungan" (matches target-progress page)
-    .or(KUNJUNGAN_SERVICE_FILTER)
+  // A month of a busy branch is ~800 visits and a pay period can pass 1000
+  // (PostgREST's cap), so page through them; every id lookup below is chunked
+  // (`.in()` with hundreds of ids is too long for the URL and fails).
+  let allVisits: VisitRow[]
+  try {
+    allVisits = await fetchAllRows<VisitRow>((from, to) => supabase
+      .from('patient_visits')
+      .select(
+        'id, patient_id, attending_staff_id, visit_date, visit_time, kehadiran, status, service_type, package_id, ' +
+        'diagnosis, treatment, regio, internal_profiles!attending_staff_id(full_name, nickname)',
+      )
+      .eq('branch_id', branchId)
+      .gte('visit_date', startDate)
+      .lte('visit_date', endDate)
+      .in('status', [...KUNJUNGAN_VISIT_STATUSES])
+      // Sport massage is tracked separately — not a "kunjungan" (matches target-progress page)
+      .or(KUNJUNGAN_SERVICE_FILTER)
+      .order('id')
+      .range(from, to) as unknown as PromiseLike<{ data: VisitRow[] | null; error: unknown }>)
+  } catch {
+    return []
+  }
 
-  if (error || !data) return []
-
-  const allVisits = data as unknown as VisitRow[]
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date())
   const rows = allVisits.filter((v) => countsAsKunjungan(v, today))
   rows.sort((a, b) =>
@@ -217,46 +226,42 @@ export async function fetchTargetProgressDetail(
   // patient_visits has no FK relationship registered for `patient_id` in the
   // PostgREST schema cache, so `patients!patient_id(...)` embedding silently
   // returns 0 rows — fetch patients separately instead (two-step, per CLAUDE.md).
-  const patientIds = [...new Set(rows.map((row) => row.patient_id))]
-  const { data: patients } = await supabase
-    .from('patients')
-    .select('id, encrypted_name, no_rm')
-    .in('id', patientIds)
-  const patientById = new Map((patients ?? []).map((p) => [p.id as string, p]))
-
   // Layanan / pertemuan ke / status kunjungan — derived the same way as the
   // Jadwal List page (app/actions/jadwalList.ts) so both views agree.
+  const patientIds = [...new Set(rows.map((row) => row.patient_id))]
   const visitIds = rows.map((row) => row.id)
   const packageIds = [...new Set(rows.map((row) => row.package_id).filter((id): id is string => !!id))]
-  const [packagePositions, packages, assessments, sessionNotes, griyaIntakes, griyaNotes] = await Promise.all([
+  type FormRow = { visit_id: string; status: string }
+  type PackageLayanan = { id: string; package_name: string; internal_layanan: { nama: string } | null }
+  const formStatus = (table: string) => fetchInChunks<FormRow>(
+    visitIds, (ids) => supabase.from(table).select('visit_id, status').in('visit_id', ids))
+  const [patients, packagePositions, packages, ...forms] = await Promise.all([
+    fetchInChunks<{ id: string; encrypted_name: string | null; no_rm: string | null }>(
+      patientIds, (ids) => supabase.from('patients').select('id, encrypted_name, no_rm').in('id', ids)),
     fetchPackagePositions(supabase, packageIds),
-    packageIds.length > 0
-      ? supabase.from('patient_packages_with_stats').select('id, jenis_paket').in('id', packageIds)
-      : Promise.resolve({ data: [] as { id: string; jenis_paket: string | null }[] }),
-    supabase.from('terapi_awal_assessments').select('visit_id, status').in('visit_id', visitIds),
-    supabase.from('session_notes').select('visit_id, status').in('visit_id', visitIds),
-    supabase.from('griya_terapi_awal').select('visit_id, status').in('visit_id', visitIds),
-    supabase.from('griya_session_notes').select('visit_id, status').in('visit_id', visitIds),
+    fetchInChunks<PackageLayanan>(
+      packageIds, (ids) => supabase.from('patient_packages')
+        .select('id, package_name, internal_layanan!layanan_id(nama)')
+        .in('id', ids) as unknown as PromiseLike<{ data: PackageLayanan[] | null; error: unknown }>),
+    formStatus('terapi_awal_assessments'),
+    formStatus('session_notes'),
+    formStatus('griya_terapi_awal'),
+    formStatus('griya_session_notes'),
   ])
+  const patientById = new Map(patients.map((p) => [p.id, p]))
 
-  const jenisPaketById = new Map((packages.data ?? []).map((p) => [p.id as string, p.jenis_paket as string | null]))
+  // Package visits show the Tarif Layanan product the package was sold as.
+  const packageLayananById = new Map(packages.map((p) => [p.id, p.internal_layanan?.nama ?? p.package_name]))
 
   // Record-form status per visit; 'completed' wins if a visit has more than one row.
   const formStatusMap = new Map<string, string>()
-  for (const r of [
-    ...(assessments.data ?? []), ...(sessionNotes.data ?? []),
-    ...(griyaIntakes.data ?? []), ...(griyaNotes.data ?? []),
-  ]) {
-    const vid = r.visit_id as string
-    if (formStatusMap.get(vid) !== 'completed') formStatusMap.set(vid, r.status as string)
+  for (const r of forms.flat()) {
+    if (formStatusMap.get(r.visit_id) !== 'completed') formStatusMap.set(r.visit_id, r.status)
   }
 
   return rows.map((row) => {
-    // P1/P2 → "PAKET 1"/"PAKET 2"; a package with no jenis is just "PAKET".
-    const jenisPaket = row.package_id ? jenisPaketById.get(row.package_id) ?? null : null
-    const layanan = row.package_id
-      ? `PAKET ${jenisPaket?.replace(/^P/, '') ?? ''}`.trim()
-      : row.service_type
+    // Package visit → its Tarif Layanan name; otherwise the visit's kategori.
+    const layanan = (row.package_id ? packageLayananById.get(row.package_id) : null) ?? row.service_type
     const patient = patientById.get(row.patient_id)
     const name = patient?.encrypted_name
       ? decryptPatientPII({ encrypted_name: patient.encrypted_name, encrypted_phone: '' }).name

@@ -306,6 +306,7 @@ export async function createPackageFromLayanan(input: {
       patient_id:     input.patient_id,
       branch_id:      input.branch_id,
       package_name:   input.package_name?.trim() || layanan.nama,
+      layanan_id:     input.layanan_id,
       package_type:   'fixed',
       total_sessions,
       jenis_paket,
@@ -328,11 +329,11 @@ export async function createPackageFromLayanan(input: {
 // pre-select the matching price-list entry (and so its harga). ───────────────
 export async function fetchPackageBrief(
   id: string,
-): Promise<{ package_name: string; total_sessions: number; category: string | null; order_id: string | null } | null> {
+): Promise<{ package_name: string; total_sessions: number; category: string | null; order_id: string | null; layanan_id: string | null } | null> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('patient_packages')
-    .select('package_name, total_sessions, category, order_id')
+    .select('package_name, total_sessions, category, order_id, layanan_id')
     .eq('id', id)
     .maybeSingle()
   return data ?? null

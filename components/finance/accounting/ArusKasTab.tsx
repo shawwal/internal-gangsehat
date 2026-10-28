@@ -85,7 +85,12 @@ export function ArusKasTab({ branchId, branchName }: Props) {
   // since that's the only thing consistently recorded across every entry point
   // (finance/transactions, director/finance, PaymentDialog, and this page).
   const incomeRows = useMemo<MatrixRow[]>(() => {
-    return INCOME_CATEGORIES.map((cat) => {
+    // Plus any other category with income this year (e.g. one added in Tarif
+    // Layanan), so the totals never drop a transaction.
+    const extra = [...new Set(txns.filter((t) => t.type === 'income').map((t) => t.category))]
+      .filter((c) => !INCOME_CATEGORIES.includes(c))
+      .sort()
+    return [...INCOME_CATEGORIES, ...extra].map((cat) => {
       const monthly = Array.from({ length: 12 }, (_, mi) =>
         txns.filter((t) => t.type === 'income' && t.category === cat && monthIndexOf(t.transaction_date) === mi)
           .reduce((s, t) => s + Number(t.amount), 0),

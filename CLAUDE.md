@@ -139,7 +139,7 @@ get_my_branch()        → uuid   -- branch_id of auth.uid(); NULL for director
 
 **Targets**: Terapi Awal target = `TERAPI AWAL KLINIK` only (column `target_terapi_awal`, category key `terapi_awal`); Visit target = `PAKET VISIT` only (`TERAPI AWAL VISIT` counts toward no target).
 
-**One vocabulary** (migration 119): the Tarif Layanan kategori names everywhere, no abbreviations. A visit's service type = its income category (`SERVICE_TO_CATEGORY` is identity). Payroll activity codes follow the same words (`TERAPI_AWAL_KLINIK`, `SESI_KLINIK`, `PAKET_KLINIK`, `TERAPI_AWAL_VISIT`, `SESI_VISIT`, `PAKET_VISIT`, `JARAK_VISIT`, `SPORT_MASSAGE_FULL_BODY`/`_SEGMENTAL`, `SPORT_MASSAGE_VISIT_*`, `PAKET_SPORT_MASSAGE_VISIT_*`, `JARAK_SPORT_MASSAGE_VISIT`, `TERAPI_AWAL_ADMIN`, `KONTEN`). Rename a category by ONE `UPDATE income_categories SET code = …` — FKs cascade (`ON UPDATE CASCADE`) and trigger `income_categories_cascade_code` covers income transactions + `payroll_activity_types.source_service_types`. `public.service_types` is gangsehat.com's catalog, unrelated; `bookings.service_type` is legacy free text from the old booking app.
+**One vocabulary** (migration 119): the Tarif Layanan kategori names everywhere, no abbreviations. A visit's service type = its income category (`SERVICE_TO_CATEGORY` is identity). Payroll activity codes follow the same words (`TERAPI_AWAL_KLINIK`, `SESI_KLINIK`, `PAKET_KLINIK`, `TERAPI_AWAL_VISIT`, `SESI_VISIT`, `PAKET_VISIT`, `JARAK_VISIT`, `SPORT_MASSAGE_FULL_BODY`/`_SEGMENTAL`, `SPORT_MASSAGE_VISIT_*`, `PAKET_SPORT_MASSAGE_VISIT_*`, `JARAK_SPORT_MASSAGE_VISIT`, `TERAPI_AWAL_ADMIN`, `KONTEN`). Rename a category by ONE `UPDATE income_categories SET code = …` — FKs cascade (`ON UPDATE CASCADE`) and trigger `income_categories_cascade_code` covers income transactions + `payroll_activity_types.source_service_types`. Directors add kategori in /director/layanan ("Kategori baru" → `createLayananKategori`, code = name in capitals); read the list with `fetchLayananKategori`, not `LAYANAN_KATEGORI` (built-ins only — keeps their order and logic). `public.service_types` is gangsehat.com's catalog, unrelated; `bookings.service_type` is legacy free text from the old booking app.
 
 **Expense categories**: `BEBAN PELAYANAN` | `GAJI` | `SEWA` | `LISTRIK` | `MARKETING` | `TUKAR TUNAI` | `LAINNYA`
 
@@ -149,7 +149,7 @@ get_my_branch()        → uuid   -- branch_id of auth.uid(); NULL for director
 
 **Body regions** (regio): `HEAD` `NECK` `SHOULDER` `UPPER ARM` `ELBOW` `LOWER ARM` `WRIST` `HAND` `SPINE` `CHEST` `UPPER BACK` `LOWER BACK` `ABDOMINAL` `HIP/PELVIC` `THIGH` `KNEE` `CALF` `ANKLE` `FOOT` `CNS` `PNS` `SYSTEMIC` `CARDIOVASCULAR` `PULMONAL` `PERFORMANCE`
 
-**Packages**: P1=5 sessions, P2=10 sessions. Completion: `LANJUT` | `SEMBUH` | `TIDAK LANJUT` | `STOP`
+**Packages**: P1=5 sessions, P2=10 sessions. `patient_packages.layanan_id` → `internal_layanan` (migration 120): the Tarif Layanan product it was sold as; `package_name` = that Layanan's name. Triggers link a package saved without it (exact name in its branch) and rename packages when their Layanan is renamed. Resolve a package's Layanan by `layanan_id` first, name/size only as fallback (85 legacy rows have no match). Completion: `LANJUT` | `SEMBUH` | `TIDAK LANJUT` | `STOP`
 
 **Religion** (agama): `ISLAM` | `KRISTEN PROTESTAN` | `KRISTEN KATOLIK` | `HINDU` | `BUDHA` | `KONGHUCU` | `LAINNYA`
 
