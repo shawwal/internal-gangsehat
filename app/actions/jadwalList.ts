@@ -24,7 +24,7 @@ export interface JadwalListRow {
   attending_staff_id: string | null
   attending_staff_name: string | null
   service_type: string | null
-  // Display label — same rule as the jadwal-harian VisitCard (package_id wins → 'Paket')
+  // Display label — Tarif Layanan name when resolvable, else the kategori
   layanan_label: string | null
   // Tarif Layanan (internal_layanan) entry the visit resolves to — see resolveTarif
   tarif_id: string | null
@@ -257,9 +257,10 @@ export async function fetchJadwalListRows(
       attending_staff_id:    v.attending_staff_id ?? null,
       attending_staff_name:  staff?.nickname || staff?.full_name || null,
       service_type:          v.service_type,
-      layanan_label:         v.package_id
-        ? 'Paket'
-        : (booked?.nama ?? (v.service_type ? SERVICE_TYPE_LABEL[v.service_type] ?? v.service_type : null)),
+      // Tarif Layanan name when resolvable (booked → package → payment), else the kategori.
+      layanan_label:         booked?.nama ?? tarif?.nama
+        ?? (v.package_id ? packageMap.get(v.package_id)?.package_name : undefined)
+        ?? (v.service_type ? SERVICE_TYPE_LABEL[v.service_type] ?? v.service_type : null),
       tarif_id:              tarif?.id ?? null,
       tarif_nama:            tarif?.nama ?? null,
       pertemuan_ke:          v.package_id ? (packagePositions.get(v.id)?.pertemuan ?? 1) : 1,

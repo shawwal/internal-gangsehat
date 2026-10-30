@@ -19,7 +19,22 @@ function groupOf(kategori: string): string {
   return 'Lainnya'
 }
 
+// Sport Massage + distance codes: fixed names (the Tarif Layanan wording) and slotted
+// into the Klinik / Visit groups right after the fisio columns, so the Sport Massage
+// table gets the same KLINIK / VISIT header as the Fisioterapis one.
+const BY_CODE: Record<string, ActivityDisplay> = {
+  SPORT_MASSAGE_FULL_BODY:             { label: 'Sesi Full Body Sports Massage',                group: 'Klinik', order: 2.1 },
+  SPORT_MASSAGE_SEGMENTAL:             { label: 'Sesi Segmental Sports Massage',                group: 'Klinik', order: 2.2 },
+  JARAK_VISIT:                         { label: 'Jarak Visit',                                  group: 'Visit',  order: 5.05 },
+  SPORT_MASSAGE_VISIT_FULL_BODY:       { label: 'Sesi Full Body Sports Massage Home Visit',     group: 'Visit',  order: 5.1 },
+  SPORT_MASSAGE_VISIT_SEGMENTAL:       { label: 'Sesi Segmental Sports Massage Home Visit',     group: 'Visit',  order: 5.2 },
+  PAKET_SPORT_MASSAGE_VISIT_FULL_BODY: { label: 'Paket Full Body Sports Massage Home Visit',    group: 'Visit',  order: 5.3 },
+  PAKET_SPORT_MASSAGE_VISIT_SEGMENTAL: { label: 'Paket Segmental Sports Massage Home Visit',    group: 'Visit',  order: 5.4 },
+  JARAK_SPORT_MASSAGE_VISIT:           { label: 'Jarak Visit Sport Massage',                    group: 'Visit',  order: 5.5 },
+}
+
 export function activityDisplay(t: ActivityType): ActivityDisplay {
+  if (BY_CODE[t.code]) return BY_CODE[t.code]
   const kategori = t.count_mode === 'manual'
     ? []
     : [...new Set(t.source_service_types.map((s) => SERVICE_TO_CATEGORY[s as ServiceType] ?? s))]

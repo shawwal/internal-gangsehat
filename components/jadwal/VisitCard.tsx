@@ -6,9 +6,8 @@ import { useDraggable } from '@dnd-kit/core'
 import { Check, X, UserX, Trash2, CreditCard, BanknoteArrowUp, BellRing, Loader2, Package, FileText, Unlink, Link2, UserCheck, UserCog, Star, QrCode } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { DailyVisit } from './types'
-import { STATUS_COLOR, STATUS_BADGE, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
+import { STATUS_COLOR, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
 import type { VisitStatus } from '@/types'
-import { formatCurrency } from '@/lib/utils'
 import { isRegioRequired } from '@/lib/visitRouting'
 
 const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
@@ -65,7 +64,10 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const showPayOnlineItem = !!onPayOnline && canRecordPayment
     && (visit.status === 'scheduled' || visit.status === 'completed')
     && (!visit.has_payment || visit.visit_payment_status === 'DP' || visit.package_payment_ok === false)
-  const showUnpaidBadge  = visit.status === 'completed' && !visit.has_payment && (!visit.package_id || visit.package_payment_ok === false)
+  // Fully paid: own payment settled, or a package session whose package passes its payment gate.
+  const isPaid           = visit.package_id
+    ? visit.package_payment_ok === true
+    : visit.has_payment && (visit.visit_payment_status === 'LUNAS' || visit.visit_payment_status === 'PELUNASAN')
   const isIncomplete     = visit.status === 'completed' && (!visit.diagnosis || !visit.treatment || (isRegioRequired(visit.service_type) && !visit.regio))
   const canRemind        = !!userRole && REMIND_ROLES.includes(userRole) && isIncomplete && !!onRemind
   const canSendWhatsApp             = !!visit.patient_phone && !!onWhatsApp
@@ -74,7 +76,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   // A visit scheduled against an existing package keeps its literal service_type
   // (e.g. 'SESI KLINIK') but is still a package session — package_id wins.
   const serviceTypeLabel   = visit.package_id
-    ? 'Paket'
+    ? (visit.package_name ?? 'Paket')
     : (visit.layanan_nama ?? (visit.service_type ? SERVICE_TYPE_LABEL[visit.service_type] : undefined))
 
   const isAssessmentVisit   = visit.service_type === 'TERAPI AWAL KLINIK' || visit.service_type === 'TERAPI AWAL VISIT'
@@ -228,73 +230,29 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
         )}
       </div>
 
-      {/* Time + status row */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {visit.visit_time && (
-          <span className="text-[9px] font-mono opacity-70">{visit.visit_time}</span>
-        )}
+      {/* Service + payment — kept minimal so overlapping cards stay readable */}
+      <div className="flex items-center gap-1 min-w-0">
         {serviceTypeLabel && (
-          <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-white/10 text-foreground/70 border border-white/10">
+          <span className="text-[9px] opacity-80 truncate flex-1 min-w-0" title={serviceTypeLabel}>
             {serviceTypeLabel}
           </span>
         )}
-        <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${STATUS_BADGE[visit.status]}`}>
-          {STATUS_LABEL[visit.status]}
-        </span>
-
-        {/* Payment badge */}
-        {showUnpaidBadge && (
+        {visit.status !== 'cancelled' && (
           <span
-            className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-[#FFB35C]/20 text-[#FFB35C] border border-[#FFB35C]/30"
-            style={{ animation: 'vcBadgeIn 350ms cubic-bezier(0.34,1.56,0.64,1) forwards' }}
-          >
-            Belum Bayar
-          </span>
-        )}
-        {visit.status === 'completed' && visit.has_payment && (
-          <span
-            className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold border ${
-              visit.visit_payment_status === 'LUNAS'
+            className={`shrink-0 text-[8px] px-1.5 py-0.5 rounded-full font-bold border ${
+              isPaid
                 ? 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/30'
                 : 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/30'
             }`}
           >
-            {visit.visit_payment_status ?? 'Bayar'}
-          </span>
-        )}
-
-        {/* Package price — shown after a new package is sold from this visit.
-            Shows remaining balance too when the sale was a DP, not a full payment. */}
-        {visit.visit_package_price != null && (
-          <span
-            className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-primary/15 text-primary border border-primary/30"
-            title="Harga paket"
-          >
-            Paket {formatCurrency(visit.visit_package_price)}
-            {!!visit.visit_package_outstanding && ` · Sisa ${formatCurrency(visit.visit_package_outstanding)}`}
-          </span>
-        )}
-
-        {/* Incomplete medical record warning */}
-        {isIncomplete && (
-          <span
-            className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-400 border border-amber-400/30"
-            title="Rekam medis belum lengkap"
-          >
-            Rekam Medis
+            {isPaid ? 'Lunas' : 'Belum Lunas'}
           </span>
         )}
       </div>
 
-      {/* Chief complaint preview */}
-      {visit.chief_complaint && (
-        <span className="text-[9px] opacity-60 truncate">{visit.chief_complaint}</span>
-      )}
-
       {/* Context menu */}
       {menuOpen && createPortal(
         <>
-          <style>{`@keyframes vcBadgeIn { from{opacity:0;transform:scale(0.6)} to{opacity:1;transform:scale(1)} }`}</style>
           <div className="fixed inset-0 z-200" onClick={() => setMenuOpen(false)} />
 
           <div

@@ -31,6 +31,9 @@ const ROLE_GROUPS = [
 ]
 const GROUPED_ROLES = new Set(ROLE_GROUPS.flatMap((g) => g.roles))
 
+const NAME_COL_W = 160
+const DATA_COL_W = 110
+
 type Detail = { staffId: string; name: string; code: string; label: string }
 
 export function ActivityStep({ ws, rows, refreshing, onRefresh, onOverride }: Props) {
@@ -156,7 +159,13 @@ function ActivityTable({ ws, rows, showAll, editable, drafts, setDrafts, onOverr
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-      <table className="text-xs border-collapse min-w-full">
+      {/* Fixed layout: every activity + result column gets the same width, labels wrap. */}
+      <table className="text-xs border-collapse min-w-full table-fixed"
+        style={{ width: NAME_COL_W + (columns.length + 3) * DATA_COL_W }}>
+        <colgroup>
+          <col style={{ width: NAME_COL_W }} />
+          {Array.from({ length: columns.length + 3 }, (_, i) => <col key={i} style={{ width: DATA_COL_W }} />)}
+        </colgroup>
         <thead>
           <tr className="bg-muted/30">
             <th className="sticky left-0 z-10 bg-muted" />
@@ -166,9 +175,9 @@ function ActivityTable({ ws, rows, showAll, editable, drafts, setDrafts, onOverr
             <th colSpan={3} className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary border-l border-border">Hasil</th>
           </tr>
           <tr className="bg-muted/50 border-b border-border">
-            <th className="sticky left-0 z-10 bg-muted px-3 py-2 text-left font-medium text-muted-foreground min-w-[110px] sm:min-w-[150px]">Karyawan</th>
+            <th className="sticky left-0 z-10 bg-muted px-3 py-2 text-left font-medium text-muted-foreground">Karyawan</th>
             {columns.map((t) => (
-              <th key={t.code} className="px-2 py-2 text-center font-medium text-muted-foreground border-l border-border min-w-[78px] whitespace-nowrap" title={t.code}>
+              <th key={t.code} className="px-2 py-2 text-center font-medium text-muted-foreground border-l border-border align-bottom leading-tight" title={t.code}>
                 {t.label}
                 <div className="text-[9px] font-normal opacity-70">{isAuto(t) ? 'otomatis' : 'manual'}</div>
               </th>

@@ -69,6 +69,8 @@ export interface DailyVisit {
   // a confirmed transaction) — null when package_id is null. See
   // patient_packages_with_stats.payment_ok.
   package_payment_ok: boolean | null
+  // Linked package's Layanan name (patient_packages.package_name) — null when package_id is null
+  package_name: string | null
   // "Pasien yang perlu diperhatikan hari ini": TA, first SESI after a TA, or the
   // last session of a package.
   is_priority: boolean
@@ -225,12 +227,16 @@ export async function fetchDailyVisits(
   // See patient_packages_with_stats.payment_ok (supabase/079-...).
   const packageIds = [...new Set(visits.map((v) => v.package_id).filter((id): id is string => !!id))]
   const packagePaymentOkMap = new Map<string, boolean>()
+  const packageNameMap = new Map<string, string>()
   if (packageIds.length > 0) {
     const { data: pkgs } = await supabase
       .from('patient_packages_with_stats')
-      .select('id, payment_ok')
+      .select('id, payment_ok, package_name')
       .in('id', packageIds)
-    for (const p of pkgs ?? []) packagePaymentOkMap.set(p.id, !!p.payment_ok)
+    for (const p of pkgs ?? []) {
+      packagePaymentOkMap.set(p.id, !!p.payment_ok)
+      if (p.package_name) packageNameMap.set(p.id, p.package_name)
+    }
   }
 
   // Priority flags — last package session and first SESI after TA
@@ -288,6 +294,7 @@ export async function fetchDailyVisits(
       visit_package_outstanding: pkg?.outstanding ?? null,
       visit_transaction:    latestTxnMap.get(v.id) ?? null,
       package_payment_ok:  v.package_id ? (packagePaymentOkMap.get(v.package_id) ?? false) : null,
+      package_name:        v.package_id ? (packageNameMap.get(v.package_id) ?? null) : null,
       is_priority:          isTaServiceType(v.service_type) || firstSesiAfterTa.has(v.id)
         || (!!v.package_id && isLastPackageSession(v.id)),
       booking_source:       v.booking_source ?? null,

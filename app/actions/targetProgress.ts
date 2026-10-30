@@ -12,6 +12,7 @@ import { deriveAdminStatus, fetchPackagePositions } from '@/lib/internal/visitIn
 import { getVisitFormRoute } from '@/lib/visitRouting'
 import { resolveTherapistNames } from '@/lib/finance/therapists'
 import { fetchAllRows, fetchInChunks } from '@/lib/supabase/fetchAll'
+import { pickLayanan, type LayananForMatch } from '@/lib/finance/priceList'
 
 export interface TargetProgressDetailRow {
   id: string
@@ -44,6 +45,7 @@ interface VisitRow {
   kehadiran: 'HADIR' | 'TIDAK HADIR' | null
   status: string | null
   service_type: string | null
+  layanan_id?: string | null
   package_id: string | null
   diagnosis: string | null
   treatment: string | null
@@ -203,7 +205,7 @@ export async function fetchTargetProgressDetail(
     allVisits = await fetchAllRows<VisitRow>((from, to) => supabase
       .from('patient_visits')
       .select(
-        'id, patient_id, attending_staff_id, visit_date, visit_time, kehadiran, status, service_type, package_id, ' +
+        'id, patient_id, attending_staff_id, visit_date, visit_time, kehadiran, status, service_type, package_id, layanan_id, ' +
         'diagnosis, treatment, regio, internal_profiles!attending_staff_id(full_name, nickname)',
       )
       .eq('branch_id', branchId)
@@ -235,7 +237,8 @@ export async function fetchTargetProgressDetail(
   type PackageLayanan = { id: string; package_name: string; internal_layanan: { nama: string } | null }
   const formStatus = (table: string) => fetchInChunks<FormRow>(
     visitIds, (ids) => supabase.from(table).select('visit_id, status').in('visit_id', ids))
-  const [patients, packagePositions, packages, ...forms] = await Promise.all([
+  type VisitTx = { visit_id: string; branch_id: string; category: string; harga: number | null }
+  const [patients, packagePositions, packages, branchLayanan, visitTxs, ...forms] = await Promise.all([
     fetchInChunks<{ id: string; encrypted_name: string | null; no_rm: string | null }>(
       patientIds, (ids) => supabase.from('patients').select('id, encrypted_name, no_rm').in('id', ids)),
     fetchPackagePositions(supabase, packageIds),
@@ -243,6 +246,11 @@ export async function fetchTargetProgressDetail(
       packageIds, (ids) => supabase.from('patient_packages')
         .select('id, package_name, internal_layanan!layanan_id(nama)')
         .in('id', ids) as unknown as PromiseLike<{ data: PackageLayanan[] | null; error: unknown }>),
+    supabase.from('internal_layanan').select('id, branch_id, nama, kategori, harga').eq('branch_id', branchId)
+      .then(({ data }) => (data ?? []) as LayananForMatch[]),
+    fetchInChunks<VisitTx>(
+      visitIds, (ids) => supabase.from('transactions').select('visit_id, branch_id, category, harga')
+        .eq('type', 'income').neq('status', 'rejected').in('visit_id', ids)),
     formStatus('terapi_awal_assessments'),
     formStatus('session_notes'),
     formStatus('griya_terapi_awal'),
@@ -253,6 +261,13 @@ export async function fetchTargetProgressDetail(
   // Package visits show the Tarif Layanan product the package was sold as.
   const packageLayananById = new Map(packages.map((p) => [p.id, p.internal_layanan?.nama ?? p.package_name]))
 
+  // Non-package visits: the Layanan they were booked / paid as (pickLayanan, the finance rule).
+  const txByVisit = new Map(visitTxs.map((t) => [t.visit_id, t]))
+  const visitLayanan = (row: VisitRow): string | null => {
+    const tx = txByVisit.get(row.id) ?? { branch_id: branchId, category: row.service_type ?? '', harga: null }
+    return pickLayanan(tx, row.layanan_id, branchLayanan)?.nama ?? null
+  }
+
   // Record-form status per visit; 'completed' wins if a visit has more than one row.
   const formStatusMap = new Map<string, string>()
   for (const r of forms.flat()) {
@@ -260,8 +275,8 @@ export async function fetchTargetProgressDetail(
   }
 
   return rows.map((row) => {
-    // Package visit → its Tarif Layanan name; otherwise the visit's kategori.
-    const layanan = (row.package_id ? packageLayananById.get(row.package_id) : null) ?? row.service_type
+    // Tarif Layanan name (package → booked / paid Layanan); kategori only when ambiguous.
+    const layanan = (row.package_id ? packageLayananById.get(row.package_id) : visitLayanan(row)) ?? row.service_type
     const patient = patientById.get(row.patient_id)
     const name = patient?.encrypted_name
       ? decryptPatientPII({ encrypted_name: patient.encrypted_name, encrypted_phone: '' }).name
