@@ -9,6 +9,7 @@ import type { DailyVisit } from './types'
 import { STATUS_COLOR, STATUS_LABEL, SERVICE_TYPE_LABEL } from './types'
 import type { VisitStatus } from '@/types'
 import { isRegioRequired } from '@/lib/visitRouting'
+import { endTime, visitMinutes } from '@/lib/jadwal/duration'
 
 const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
 const REMIND_ROLES  = ['admin', 'director', 'manager', 'hr']
@@ -79,9 +80,17 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
 
   // A visit scheduled against an existing package keeps its literal service_type
   // (e.g. 'SESI KLINIK') but is still a package session — package_id wins.
+  // An itemised package session (Combo) also names which session it is.
+  const sessionKind = visit.package_id && visit.layanan_nama && visit.layanan_nama !== visit.package_name
+    ? visit.layanan_nama.replace(/^Sesi\s+/i, '').replace(/\s*Sports?\s+Massage$/i, '')
+    : null
   const serviceTypeLabel   = visit.package_id
-    ? (visit.package_name ?? 'Paket')
+    ? `${visit.package_name ?? 'Paket'}${sessionKind ? ` · ${sessionKind}` : ''}`
     : (visit.layanan_nama ?? (visit.service_type ? SERVICE_TYPE_LABEL[visit.service_type] : undefined))
+  // Shown when the visit isn't a plain on-the-hour hour (e.g. 13:00–14:30)
+  const timeRange = visit.visit_time && (visit.duration_minutes || !visit.visit_time.endsWith(':00'))
+    ? `${visit.visit_time}–${endTime(visit.visit_time, visitMinutes(visit))}`
+    : null
 
   const isAssessmentVisit   = visit.service_type === 'TERAPI AWAL KLINIK' || visit.service_type === 'TERAPI AWAL VISIT'
   // Selling a package is always offered on a completed visit — including one that's
@@ -236,6 +245,9 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
 
       {/* Service + payment — kept minimal so overlapping cards stay readable */}
       <div className="flex items-center gap-1 min-w-0">
+        {timeRange && (
+          <span className="shrink-0 text-[9px] font-mono text-primary">{timeRange}</span>
+        )}
         {serviceTypeLabel && (
           <span className="text-[9px] opacity-80 truncate flex-1 min-w-0" title={serviceTypeLabel}>
             {serviceTypeLabel}

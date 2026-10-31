@@ -255,6 +255,7 @@ export default function JadwalSportMassagePage() {
                   <GridSkeleton />
                 ) : (
                   <DailyGrid
+                    showDurations
                     staff={visibleStaff}
                     visits={visits}
                     date={toIso(selectedDate)}

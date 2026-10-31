@@ -34,6 +34,8 @@ export interface AssignTarget {
   staffName: string
   branchId: string | null
   hour: number     // 8..19
+  /** Start minute within the hour — 30 when an earlier visit runs until :30 */
+  minute?: number
   date: string     // ISO yyyy-mm-dd
   shift?: string   // Shift
 }

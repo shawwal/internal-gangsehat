@@ -10,6 +10,7 @@ import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
 import { SERVICE_TO_CATEGORY, isPackageCategory } from '@/lib/serviceType'
 import { countBookedSessions } from '@/app/actions/packages'
+import { DEFAULT_VISIT_MINUTES, minutesToTime, timeToMinutes, visitMinutes } from '@/lib/jadwal/duration'
 import { fetchFirstSesiAfterTa, fetchPackagePositions, isTaServiceType } from '@/lib/internal/visitInsights'
 
 async function decryptedPatientName(supabase: Awaited<ReturnType<typeof createClient>>, patientId: string | null | undefined): Promise<string> {
@@ -45,6 +46,8 @@ export interface DailyVisit {
   branch_id: string
   visit_date: string
   visit_time: string | null    // HH:MM or null
+  /** Minutes the visit takes; null = one hour slot (124) */
+  duration_minutes: number | null
   service_type: string | null
   package_id: string | null    // set → visit is part of a package
   order_id: string | null
@@ -130,6 +133,8 @@ export interface CreateVisitInput {
   package_id?: string | null
   kehadiran?: string | null
   layanan_id?: string | null
+  /** Minutes the visit takes (Layanan durasi_menit); null = one hour */
+  duration_minutes?: number | null
 }
 
 // ── Fetch all visits for a date with decrypted patient names ───────────────────
@@ -142,7 +147,7 @@ export async function fetchDailyVisits(
 
   let query = supabase
     .from('patient_visits')
-    .select('id, patient_id, attending_staff_id, visit_date, visit_time, service_type, package_id, order_id, layanan_id, chief_complaint, diagnosis, treatment, regio, status, notes, branch_id, kehadiran, booking_source')
+    .select('id, patient_id, attending_staff_id, visit_date, visit_time, duration_minutes, service_type, package_id, order_id, layanan_id, chief_complaint, diagnosis, treatment, regio, status, notes, branch_id, kehadiran, booking_source')
     .eq('visit_date', date)
     .order('visit_time', { ascending: true })
   if (branchId) query = query.eq('branch_id', branchId)
@@ -275,6 +280,7 @@ export async function fetchDailyVisits(
       branch_id:            v.branch_id,
       visit_date:           v.visit_date,
       visit_time:           v.visit_time ? String(v.visit_time).slice(0, 5) : null,
+      duration_minutes:     v.duration_minutes ?? null,
       service_type:         v.service_type,
       package_id:           v.package_id ?? null,
       order_id:             v.order_id ?? null,
@@ -302,12 +308,92 @@ export async function fetchDailyVisits(
   })
 }
 
+// ── Sport Massage booking rules ────────────────────────────────────────────────
+// A therapist massages one patient at a time: a Sport Massage visit may not
+// overlap any other live visit of the same therapist that day (a 90-minute Full
+// Body at 13:00 blocks until 14:30). Untimed visits are ignored.
+async function checkStaffOverlap(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  v: { id?: string; attending_staff_id: string | null; visit_date: string; visit_time: string | null; duration_minutes?: number | null },
+): Promise<string | null> {
+  if (!v.attending_staff_id || !v.visit_time) return null
+  const start = timeToMinutes(v.visit_time)
+  const end   = start + visitMinutes(v)
+  let q = supabase
+    .from('patient_visits')
+    .select('id, visit_time, duration_minutes, status, kehadiran')
+    .eq('attending_staff_id', v.attending_staff_id)
+    .eq('visit_date', v.visit_date)
+    .not('visit_time', 'is', null)
+    .not('status', 'in', '(cancelled,no_show)')
+  if (v.id) q = q.neq('id', v.id)
+  const { data } = await q
+  for (const o of data ?? []) {
+    if (o.kehadiran === 'TIDAK HADIR') continue
+    const oStart = timeToMinutes(String(o.visit_time))
+    const oEnd   = oStart + visitMinutes(o)
+    if (start < oEnd && oStart < end) {
+      return `Terapis masih menangani pasien ${minutesToTime(oStart)}–${minutesToTime(oEnd)}. `
+        + `Pilih jam mulai ${minutesToTime(oEnd)} atau terapis lain.`
+    }
+  }
+  return null
+}
+
+// A package with an itemised composition (e.g. Combo 1 = 2 Full Body + 1
+// Segmental) holds only that many sessions of each kind.
+async function checkPackageComponent(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  v: { id?: string; package_id?: string | null; layanan_id?: string | null },
+): Promise<string | null> {
+  if (!v.package_id || !v.layanan_id) return null
+  const { data: pkg } = await supabase
+    .from('patient_packages')
+    .select('package_name, internal_layanan!layanan_id(paket_komposisi)')
+    .eq('id', v.package_id)
+    .maybeSingle()
+  const komposisi = (pkg?.internal_layanan as unknown as { paket_komposisi: Record<string, number> | null } | null)?.paket_komposisi
+  if (!komposisi || !(v.layanan_id in komposisi)) return null
+  let q = supabase
+    .from('patient_visits')
+    .select('id', { count: 'exact', head: true })
+    .eq('package_id', v.package_id)
+    .eq('layanan_id', v.layanan_id)
+    .neq('status', 'cancelled')
+    .or('kehadiran.eq.HADIR,and(status.eq.scheduled,kehadiran.is.null)')
+  if (v.id) q = q.neq('id', v.id)
+  const { count } = await q
+  const max = Number(komposisi[v.layanan_id]) || 0
+  if ((count ?? 0) >= max) {
+    return `Sesi jenis ini di paket "${pkg?.package_name ?? ''}" sudah habis (${max}x). Pilih jenis sesi lain.`
+  }
+  return null
+}
+
+async function checkSportMassageBooking(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  v: Parameters<typeof checkStaffOverlap>[1] & { package_id?: string | null; layanan_id?: string | null },
+): Promise<string | null> {
+  return (await checkStaffOverlap(supabase, v)) ?? (await checkPackageComponent(supabase, v))
+}
+
 // ── Create a new visit ─────────────────────────────────────────────────────────
 export async function createVisit(input: CreateVisitInput): Promise<{ error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const capacityError = await checkPackageCapacity(supabase, [input])
   if (capacityError) return { error: capacityError }
+  if (input.service_type === 'SPORT MASSAGE') {
+    const bookingError = await checkSportMassageBooking(supabase, {
+      attending_staff_id: input.attending_staff_id ?? user?.id ?? null,
+      visit_date:         input.visit_date,
+      visit_time:         input.visit_time,
+      duration_minutes:   input.duration_minutes,
+      package_id:         input.package_id,
+      layanan_id:         input.layanan_id,
+    })
+    if (bookingError) return { error: bookingError }
+  }
   const orderId = await generateOrderId(supabase)
 
   const { data, error } = await supabase.from('patient_visits').insert({
@@ -324,6 +410,7 @@ export async function createVisit(input: CreateVisitInput): Promise<{ error: str
     package_id:          resolvePackageId(input.service_type, input.package_id),
     kehadiran:           input.kehadiran ?? null,
     layanan_id:          input.layanan_id ?? null,
+    duration_minutes:    input.duration_minutes && input.duration_minutes !== DEFAULT_VISIT_MINUTES ? input.duration_minutes : null,
     order_id:            orderId,
     updated_at:          new Date().toISOString(),
   }).select('id').single()
@@ -583,10 +670,30 @@ export async function updateVisit(
     status?: VisitStatus
     notes?: string | null
     layanan_id?: string | null
+    duration_minutes?: number | null
   },
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  // A Sport Massage visit moved to another time / therapist / length must not
+  // land on top of another booking.
+  const moves = ['visit_date', 'visit_time', 'attending_staff_id', 'duration_minutes', 'layanan_id']
+    .some((k) => k in data)
+  if (moves) {
+    const { data: cur } = await supabase
+      .from('patient_visits')
+      .select('service_type, visit_date, visit_time, attending_staff_id, duration_minutes, package_id, layanan_id')
+      .eq('id', visitId)
+      .single()
+    if (cur && (data.service_type ?? cur.service_type) === 'SPORT MASSAGE') {
+      const next = { ...cur, ...data }
+      const bookingError = await checkStaffOverlap(supabase, { id: visitId, ...next })
+        ?? ('layanan_id' in data ? await checkPackageComponent(supabase, { id: visitId, ...next }) : null)
+      if (bookingError) return { error: bookingError }
+    }
+  }
+
   const { data: oldRow } = await supabase
     .from('patient_visits')
     .select('visit_date, visit_time, attending_staff_id, service_type, shift, kehadiran, regio, sumber_pasien, chief_complaint, diagnosis, treatment, status, notes, layanan_id, patient_id, branch_id')

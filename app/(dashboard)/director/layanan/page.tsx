@@ -20,6 +20,7 @@ import {
 import { RowsSkeleton } from '@/components/ui/Skeleton'
 import { useProfile } from '@/hooks/useProfile'
 import { PFOTM_METRIC_LABELS } from '@/lib/pfotm/labels'
+import { packageCategoryForKategori } from '@/lib/serviceType'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('id-ID').format(n)
@@ -40,11 +41,14 @@ interface AddForm {
   jumlah_sesi: string
   harga: string
   deskripsi: string
+  durasi_menit: string
+  /** Package contents: session layanan id → count (Sport Massage packages) */
+  paket_komposisi: Record<string, number>
   payroll_units: Record<string, number>
   pfotm_metric: PfotmLayananMetric | ''
 }
 
-const EMPTY_FORM: AddForm = { nama: '', kategori: '', jumlah_sesi: '', harga: '', deskripsi: '', payroll_units: {}, pfotm_metric: '' }
+const EMPTY_FORM: AddForm = { nama: '', kategori: '', jumlah_sesi: '', harga: '', deskripsi: '', durasi_menit: '60', paket_komposisi: {}, payroll_units: {}, pfotm_metric: '' }
 
 const inputCls = 'w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary'
 
@@ -179,6 +183,8 @@ export default function LayananPage() {
       jumlah_sesi: row.jumlah_sesi != null ? String(row.jumlah_sesi) : '',
       harga:       String(row.harga),
       deskripsi:   row.deskripsi ?? '',
+      durasi_menit: String(row.durasi_menit ?? 60),
+      paket_komposisi: row.paket_komposisi ?? {},
       payroll_units: row.payroll_units ?? {},
       pfotm_metric:  row.pfotm_metric ?? '',
     })
@@ -187,6 +193,14 @@ export default function LayananPage() {
     setKategoriError(null)
     setShowAdd(true)
   }
+
+  // Sport Massage: sessions have a duration on the schedule; packages list
+  // which sessions they contain (booking asks which one each visit is).
+  const isSmSesi  = !packageCategoryForKategori(addForm.kategori) && addForm.kategori.includes('SPORT MASSAGE')
+  const isSmPaket = packageCategoryForKategori(addForm.kategori) === 'PAKET SPORT MASSAGE'
+  const smSesiRows = rows.filter((r) => r.kategori === 'SPORT MASSAGE' && r.is_active)
+  const komposisi = Object.fromEntries(Object.entries(addForm.paket_komposisi).filter(([, n]) => n > 0))
+  const komposisiTotal = isSmPaket ? Object.values(komposisi).reduce((a, n) => a + n, 0) : 0
 
   async function handleAdd() {
     if (!selectedBranch || !addForm.nama.trim()) {
@@ -204,9 +218,12 @@ export default function LayananPage() {
       branch_id:   editRow?.branch_id ?? selectedBranch,
       nama:        addForm.nama.trim(),
       kategori:    addForm.kategori,
-      jumlah_sesi: addForm.jumlah_sesi ? Number(addForm.jumlah_sesi) : null,
+      // An itemised package holds exactly its contents
+      jumlah_sesi: komposisiTotal > 0 ? komposisiTotal : addForm.jumlah_sesi ? Number(addForm.jumlah_sesi) : null,
       harga:       Number(addForm.harga) || 0,
       deskripsi:   addForm.deskripsi.trim() || null,
+      durasi_menit: Math.min(240, Math.max(15, Number(addForm.durasi_menit) || 60)),
+      paket_komposisi: isSmPaket && komposisiTotal > 0 ? komposisi : null,
       payroll_units: Object.fromEntries(Object.entries(addForm.payroll_units).filter(([, n]) => n > 0)),
       pfotm_metric:  addForm.pfotm_metric || null,
       is_active:   editRow?.is_active ?? true,
@@ -530,6 +547,50 @@ export default function LayananPage() {
                     />
                   </div>
                 </div>
+
+                {isSmSesi && (
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5">Durasi per sesi (menit)</label>
+                    <input
+                      type="number"
+                      min="15"
+                      max="240"
+                      step="15"
+                      value={addForm.durasi_menit}
+                      onChange={(e) => setAddForm((f) => ({ ...f, durasi_menit: e.target.value }))}
+                      className={inputCls}
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">Lama kunjungan di Jadwal Sport Massage, mis. Full Body 90.</p>
+                  </div>
+                )}
+
+                {isSmPaket && smSesiRows.length > 0 && (
+                  <div className="rounded-xl border border-border p-3 space-y-2">
+                    <div>
+                      <label className="block text-xs font-medium">Isi paket</label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Jumlah tiap jenis sesi. Saat booking, admin memilih sesi mana yang dipakai.
+                        {komposisiTotal > 0 && <> Total <span className="font-semibold text-foreground">{komposisiTotal} sesi</span>.</>}
+                      </p>
+                    </div>
+                    {smSesiRows.map((r) => (
+                      <div key={r.id} className="flex items-center justify-between gap-3">
+                        <span className="text-sm truncate">{r.nama}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={addForm.paket_komposisi[r.id] ?? ''}
+                          onChange={(e) => {
+                            const n = Math.max(0, Math.floor(Number(e.target.value) || 0))
+                            setAddForm((f) => ({ ...f, paket_komposisi: { ...f.paket_komposisi, [r.id]: n } }))
+                          }}
+                          placeholder="0"
+                          className={inputCls + ' w-20 text-right'}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {newKategori !== null && (
                   <div className="rounded-xl border border-border p-3 space-y-2">

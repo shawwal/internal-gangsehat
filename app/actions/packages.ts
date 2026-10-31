@@ -265,6 +265,55 @@ export async function ensurePackagePaymentOrder(
   return { orderId, error: null }
 }
 
+// ── Session kinds of an itemised package ──────────────────────────────────────
+// For a package whose Layanan lists its contents (internal_layanan.paket_komposisi,
+// e.g. Combo 1 = 2 Full Body + 1 Segmental): each session Layanan with how many
+// the package holds and how many are already booked (attended or scheduled —
+// same rule as countBookedSessions). Empty when the package isn't itemised.
+export interface PackageSessionKind {
+  layanan_id: string
+  nama: string
+  durasi_menit: number
+  total: number
+  booked: number
+}
+
+export async function fetchPackageSessionKinds(packageId: string): Promise<PackageSessionKind[]> {
+  const supabase = await createClient()
+  const { data: pkg } = await supabase
+    .from('patient_packages')
+    .select('internal_layanan!layanan_id(paket_komposisi)')
+    .eq('id', packageId)
+    .maybeSingle()
+  const komposisi = (pkg?.internal_layanan as unknown as { paket_komposisi: Record<string, number> | null } | null)?.paket_komposisi
+  const ids = Object.keys(komposisi ?? {})
+  if (!komposisi || ids.length === 0) return []
+
+  const [{ data: rows }, { data: visits }] = await Promise.all([
+    supabase.from('internal_layanan').select('id, nama, durasi_menit').in('id', ids),
+    supabase.from('patient_visits')
+      .select('layanan_id')
+      .eq('package_id', packageId)
+      .neq('status', 'cancelled')
+      .or('kehadiran.eq.HADIR,and(status.eq.scheduled,kehadiran.is.null)'),
+  ])
+  const booked = new Map<string, number>()
+  for (const v of visits ?? []) {
+    if (v.layanan_id) booked.set(v.layanan_id, (booked.get(v.layanan_id) ?? 0) + 1)
+  }
+  return ids.flatMap((id) => {
+    const l = rows?.find((r) => r.id === id)
+    if (!l) return []
+    return [{
+      layanan_id:   id,
+      nama:         l.nama,
+      durasi_menit: l.durasi_menit ?? 60,
+      total:        Number(komposisi[id]) || 0,
+      booked:       booked.get(id) ?? 0,
+    }]
+  })
+}
+
 // ── Fetch all visits linked to a specific package ──────────────────────────────
 export async function fetchPackageSessions(
   packageId: string,

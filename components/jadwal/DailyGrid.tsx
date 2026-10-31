@@ -11,6 +11,7 @@ import type { VisitStatus } from '@/types'
 import { hourInFilter, VIEW_SORE_START, type ShiftFilter } from '@/lib/shifts'
 import { VisitCard } from './VisitCard'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { minutesToTime, timeToMinutes, visitMinutes } from '@/lib/jadwal/duration'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function parseHour(hhmm: string): number {
@@ -127,10 +128,13 @@ interface Props {
   onChangeTherapist?: (visitId: string) => void
   /** Drag-and-drop reassign; `hour` null = dropped on the untimed row */
   onMoveVisit?: (visitId: string, staffId: string, hour: number | null) => void
+  /** Visits occupy their duration (Sport Massage): a 13:00 Full Body (90′) shows
+   *  as running into the 14:00 cell, whose add button then starts at 14:30. */
+  showDurations?: boolean
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onPayOnline, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onPayOnline, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit, showDurations = false }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const canDrop = !!onMoveVisit
   // Narrower columns on phones so ~2 therapists fit on screen instead of ~1.7.
@@ -175,6 +179,24 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
     const list    = hourMap.get(hour) ?? []
     list.push(v)
     hourMap.set(hour, list)
+  }
+
+  // Overhang of visits into later hour cells: staffId → hour → the visit still
+  // running at the start of that hour, and the minute (since midnight) it ends.
+  const overhangMap = new Map<string, Map<number, { visit: DailyVisit; until: number }>>()
+  if (showDurations) {
+    for (const v of visits) {
+      if (!v.visit_time || v.status === 'no_show' || v.status === 'cancelled' || v.kehadiran === 'TIDAK HADIR') continue
+      const sid   = v.attending_staff_id ?? '__unassigned__'
+      const start = timeToMinutes(v.visit_time)
+      const end   = start + visitMinutes(v)
+      for (let h = Math.floor(start / 60) + 1; h * 60 < end; h++) {
+        if (!overhangMap.has(sid)) overhangMap.set(sid, new Map())
+        const byHour = overhangMap.get(sid)!
+        const until  = Math.min(end, (h + 1) * 60)
+        if ((byHour.get(h)?.until ?? 0) < until) byHour.set(h, { visit: v, until })
+      }
+    }
   }
 
   // Visible hour rows are the branch's active schedule_slots, so adding or
@@ -509,6 +531,9 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
                 {/* Time slot cells */}
                 {HOURS_VISIBLE.map((h, i) => {
                   const cellVisits = hourMap?.get(h) ?? []
+                  const overhang   = overhangMap.get(s.staff_id)?.get(h)
+                  // Cell fully taken by an earlier visit → nothing can start here
+                  const fullyBusy  = !!overhang && overhang.until >= (h + 1) * 60
                   const isInShift  = s.hasSchedule && !s.isOnLeave
                     && parseHour(s.jam_mulai) <= h && h < parseHour(s.jam_selesai)
 
@@ -532,7 +557,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
                       }}
                     >
                       {/* Hover tooltip — only on empty in-shift cells so it doesn't overlap visit cards */}
-                      {isInShift && !s.isOnLeave && cellVisits.length === 0 && (
+                      {isInShift && !s.isOnLeave && cellVisits.length === 0 && !overhang && (
                         <div className="absolute top-1.5 left-1.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10">
                           <span className="text-[17px] font-semibold text-white bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-md leading-none whitespace-nowrap">
                             {displayName(s)}
@@ -551,6 +576,20 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
                             backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 5px, color-mix(in srgb, currentColor 7%, transparent) 5px, color-mix(in srgb, currentColor 7%, transparent) 6px)',
                           }}
                         />
+                      )}
+
+                      {/* Earlier visit still running in this hour */}
+                      {overhang && (
+                        <button
+                          type="button"
+                          onClick={() => onOpen(overhang.visit.id)}
+                          className="w-full shrink-0 flex items-center gap-1 px-2 rounded-lg border border-dashed border-primary/40 bg-primary/10 text-[10px] text-foreground/80 cursor-pointer hover:bg-primary/15 transition-colors overflow-hidden"
+                          style={{ flexBasis: `${((overhang.until - h * 60) / 60) * 100}%`, minHeight: 22, flexGrow: fullyBusy ? 1 : 0 }}
+                          title={`${overhang.visit.patient_name} · sampai ${minutesToTime(overhang.until)}`}
+                        >
+                          <span className="truncate">↳ {overhang.visit.patient_name}</span>
+                          <span className="ml-auto shrink-0 font-mono text-primary">s/d {minutesToTime(overhang.until)}</span>
+                        </button>
                       )}
 
                       {/* Visit cards */}
@@ -586,7 +625,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
                       )}
 
                       {/* Add button — only for in-shift, non-leave, empty cells */}
-                      {cellVisits.length === 0 && isInShift && !s.isOnLeave
+                      {cellVisits.length === 0 && isInShift && !s.isOnLeave && !fullyBusy
                         && !(refreshingCell?.type === 'cell' && refreshingCell.staffId === s.staff_id && refreshingCell.hour === h) && (
                         <button
                           onClick={() =>
@@ -595,14 +634,16 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
                               staffName: s.full_name,
                               branchId:  s.branch_id,
                               hour:      h,
+                              minute:    overhang ? overhang.until % 60 : undefined,
                               date,
                               shift:     s.shift || undefined,
                             })
                           }
                           className="w-full flex-1 flex items-center justify-center rounded-lg border border-dashed opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer border-[#34C759]/40 hover:bg-[#34C759]/8 hover:border-[#34C759]/70"
-                          aria-label={`Tambah kunjungan — ${s.full_name} jam ${fmtHour(h)}`}
+                          aria-label={`Tambah kunjungan — ${s.full_name} jam ${overhang ? minutesToTime(overhang.until) : fmtHour(h)}`}
                         >
                           <Plus size={14} className="text-[#34C759]/60" />
+                          {overhang && <span className="ml-1 text-[10px] font-mono text-[#34C759]/80">{minutesToTime(overhang.until)}</span>}
                         </button>
                       )}
                     </DropCell>

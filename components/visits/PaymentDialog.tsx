@@ -176,13 +176,15 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
 
   useEffect(refreshOutstanding, [visit.patient_id])
 
-  // Preselect the tariff: booked layanan → the visit's package (its linked
-  // Layanan, else by name, then size) → the only option. Otherwise staff choose. Editing never re-prices.
+  // Preselect the tariff: the visit's package (its linked Layanan, else by name,
+  // then size) → booked layanan → the only option. Otherwise staff choose. A
+  // package session's own layanan is its session kind (e.g. Full Body in a
+  // Combo), not what the package is billed as. Editing never re-prices.
   function preselectLayanan(rows: LayananRow[], pkg: PackageBrief | null, st: ServiceType) {
     const opts = layananOptionsFor(rows, st)
     const initial =
-      opts.find((r) => r.id === visit.layanan_id) ??
       (pkg ? (opts.find((r) => r.id === pkg.layanan_id) ?? opts.find((r) => r.nama === pkg.package_name) ?? opts.find((r) => r.jumlah_sesi === pkg.total_sessions)) : undefined) ??
+      opts.find((r) => r.id === visit.layanan_id) ??
       (opts.length === 1 ? opts[0] : null)
     setLayananId(initial?.id ?? null)
     if (!isEditing && initial) { setHarga(String(initial.harga)); setAmountManual(false) }
@@ -301,7 +303,11 @@ export function PaymentDialog({ visit, existingTransaction, onClose, onSuccess }
       || packageCategoryForKategori(bookedLayanan.kategori) === billingCategory
     // The billed price-list item becomes the visit's layanan (packages excepted:
     // their tariff is the package, not this session).
-    const nextLayananId = isSportMassage || !isPackageCategory(billingCategory)
+    // A package session keeps its session-kind layanan (payroll counts by it).
+    const keepSessionKind = !!visit.package_id && !!bookedLayanan && !packageCategoryForKategori(bookedLayanan.kategori)
+    const nextLayananId = keepSessionKind
+      ? (visit.layanan_id ?? null)
+      : isSportMassage || !isPackageCategory(billingCategory)
       ? (selectedLayanan?.id ?? (layananStillFits ? (visit.layanan_id ?? null) : null))
       : (layananStillFits ? (visit.layanan_id ?? null) : null)
     const visitPatch: { service_type?: string; layanan_id?: string | null } = {}

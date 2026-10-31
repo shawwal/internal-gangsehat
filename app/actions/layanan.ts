@@ -14,6 +14,10 @@ export interface LayananRow {
   /** NULL = not bookable on gangsehat.com; else the visit service_type it books (110-online-booking.sql) */
   online_service_type?: OnlineServiceType | null
   deskripsi?: string | null
+  /** Minutes one session takes on the schedule (124) */
+  durasi_menit?: number
+  /** Package contents {session_layanan_id: count} (124); null = not itemised */
+  paket_komposisi?: Record<string, number> | null
   /** Payroll activity code → units counted per LUNAS/PELUNASAN payment (115-layanan-activity-tags.sql) */
   payroll_units?: Record<string, number>
   /** PFOTM sales column this Layanan counts toward */
@@ -28,7 +32,7 @@ export async function fetchLayananByBranch(branchId: string): Promise<LayananRow
   const supabase = await createClient()
   const { data } = await supabase
     .from('internal_layanan')
-    .select('id, branch_id, nama, kategori, jumlah_sesi, harga, is_active, created_at, online_service_type, deskripsi, payroll_units, pfotm_metric')
+    .select('id, branch_id, nama, kategori, jumlah_sesi, harga, is_active, created_at, online_service_type, deskripsi, payroll_units, pfotm_metric, durasi_menit, paket_komposisi')
     .eq('branch_id', branchId)
     .order('kategori')
   return (data ?? []) as LayananRow[]
@@ -99,9 +103,24 @@ export async function fetchSportMassageLayanan(branchId: string): Promise<Layana
   const supabase = await createClient()
   const { data } = await supabase
     .from('internal_layanan')
-    .select('id, branch_id, nama, kategori, jumlah_sesi, harga, is_active, created_at')
+    .select('id, branch_id, nama, kategori, jumlah_sesi, harga, is_active, created_at, durasi_menit, paket_komposisi')
     .eq('branch_id', branchId)
     .eq('kategori', 'SPORT MASSAGE')
+    .eq('is_active', true)
+    .order('harga', { ascending: true })
+    .order('nama', { ascending: true })
+  return (data ?? []) as LayananRow[]
+}
+
+// Active Sport Massage packages for a branch — sold from the Sport Massage
+// schedule's booking dialog.
+export async function fetchSportMassagePackageLayanan(branchId: string): Promise<LayananRow[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('internal_layanan')
+    .select('id, branch_id, nama, kategori, jumlah_sesi, harga, is_active, created_at, durasi_menit, paket_komposisi')
+    .eq('branch_id', branchId)
+    .eq('kategori', 'PAKET SPORT MASSAGE')
     .eq('is_active', true)
     .order('harga', { ascending: true })
     .order('nama', { ascending: true })

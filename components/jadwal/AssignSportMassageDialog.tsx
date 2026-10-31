@@ -1,18 +1,19 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { X, User, Clock, Check } from 'lucide-react'
+import { X, User, Clock, Check, Package } from 'lucide-react'
 import { searchPatients, type PatientPlain } from '@/app/actions/patients'
 import { createVisit } from '@/app/actions/jadwal'
-import { fetchSportMassageLayanan, type LayananRow } from '@/app/actions/layanan'
-import { fetchPatientPackages } from '@/app/actions/packages'
+import { fetchSportMassageLayanan, fetchSportMassagePackageLayanan, type LayananRow } from '@/app/actions/layanan'
+import { fetchPatientPackages, createPackageFromLayanan, deletePatientPackage, fetchPackageSessionKinds, type PackageSessionKind } from '@/app/actions/packages'
+import { DEFAULT_VISIT_MINUTES, endTime } from '@/lib/jadwal/duration'
 import type { PatientPackage } from '@/types'
 import type { AssignTarget } from './types'
 import type { VisitStatus } from '@/types'
 
-import { fmtHour } from './assign/constants'
 import { PatientSearch } from './assign/PatientSearch'
 import { VisitFields } from './assign/VisitFields'
+import { PaketPaymentStep } from './assign/paket/PaketPaymentStep'
 
 interface Props {
   target: AssignTarget
@@ -26,9 +27,12 @@ function fmtRp(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 }
 
-// Sport Massage booking. A patient with an active Sport Massage package (sold
-// from the payment dialog with a PAKET SPORT MASSAGE tariff) gets the session
-// linked to it, like fisio package sessions; otherwise it's a single session.
+// Sport Massage booking. A patient with an active Sport Massage package gets
+// the session linked to it, like fisio package sessions. Otherwise the admin
+// picks a single session, or buys a package here: the package is created, this
+// visit becomes its first session and the payment form opens right away.
+// Each visit takes its service's duration (Full Body = 90 min); a package that
+// lists its contents (Combo = Full Body + Segmental) asks which session this is.
 export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
   const [view, setView]                = useState<DialogView>('search')
 
@@ -38,19 +42,29 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
   const [selectedPatient, setSelected] = useState<PatientPlain | null>(null)
   const searchRef                      = useRef<HTMLInputElement>(null)
 
-  const [visitTime, setVisitTime]      = useState(`${String(target.hour).padStart(2, '0')}:00`)
+  const [visitTime, setVisitTime]      = useState(
+    `${String(target.hour).padStart(2, '0')}:${String(target.minute ?? 0).padStart(2, '0')}`)
+  // Length of this visit; follows the chosen service until the admin overrides it
+  const [durationOverride, setDurationOverride] = useState<number | null>(null)
   const [chiefComplaint, setChief]     = useState('')
   const [status] = useState<VisitStatus>('scheduled')
   const [notes, setNotes]              = useState('')
 
   // Sport Massage service types (internal_layanan rows) for this branch
   const [layananList, setLayananList]  = useState<LayananRow[]>([])
+  const [paketList, setPaketList]      = useState<LayananRow[]>([])
   const [layananLoading, setLayananLoading] = useState(!!target.branchId)
   const [layananId, setLayananId]      = useState<string | null>(null)
 
   // Active Sport Massage package with sessions left → link the booking to it
   const [smPackage, setSmPackage]      = useState<PatientPackage | null>(null)
   const [usePackage, setUsePackage]    = useState(true)
+  // Itemised package (Combo): which session kind this visit is
+  const [pkgKinds, setPkgKinds]        = useState<PackageSessionKind[]>([])
+  const [kindId, setKindId]            = useState<string | null>(null)
+
+  // Package just bought from this dialog → record its payment before closing
+  const [boughtPkg, setBoughtPkg]      = useState<{ id: string; layanan: LayananRow } | null>(null)
 
   const [saving, setSaving]            = useState(false)
   const [error, setError]              = useState<string | null>(null)
@@ -62,10 +76,14 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
   useEffect(() => {
     if (!target.branchId) return
     let cancelled = false
-    fetchSportMassageLayanan(target.branchId).then((rows) => {
+    Promise.all([
+      fetchSportMassageLayanan(target.branchId),
+      fetchSportMassagePackageLayanan(target.branchId),
+    ]).then(([rows, pakets]) => {
       if (cancelled) return
       setLayananList(rows)
-      if (rows.length === 1) setLayananId(rows[0].id)
+      setPaketList(pakets)
+      if (rows.length === 1 && pakets.length === 0) setLayananId(rows[0].id)
       setLayananLoading(false)
     })
     return () => { cancelled = true }
@@ -85,12 +103,26 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
     setSelected(p)
     setView('details')
     setSmPackage(null)
-    fetchPatientPackages(p.id).then((pkgs) => {
+    setPkgKinds([])
+    setKindId(null)
+    fetchPatientPackages(p.id).then(async (pkgs) => {
       const active = pkgs.find((k) =>
         k.status === 'active' && k.category === 'PAKET SPORT MASSAGE' && k.booked_sessions < k.total_sessions)
+      const kinds = active ? await fetchPackageSessionKinds(active.id) : []
       setSmPackage(active ?? null)
       setUsePackage(true)
+      setPkgKinds(kinds)
+      setKindId(kinds.find((k) => k.booked < k.total)?.layanan_id ?? null)
     })
+  }
+
+  function selectLayanan(id: string) {
+    setLayananId(id)
+    setError(null)
+    setDurationOverride(null)
+    // Buying an itemised package: preselect its first session kind
+    const paket = paketList.find((l) => l.id === id)
+    if (paket) setKindId(Object.keys(paket.paket_komposisi ?? {})[0] ?? null)
   }
 
   function handleClearPatient() {
@@ -98,19 +130,59 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
     setView('search')
   }
 
+  const usingPackage = !!(smPackage && usePackage)
+  const buyingPaket  = !usingPackage ? paketList.find((l) => l.id === layananId) ?? null : null
+  // Session kinds of the package this visit draws from (existing, or being bought)
+  const kinds: PackageSessionKind[] = usingPackage
+    ? pkgKinds
+    : buyingPaket
+      ? Object.entries(buyingPaket.paket_komposisi ?? {}).flatMap(([id, n]) => {
+          const l = layananList.find((r) => r.id === id)
+          return l ? [{ layanan_id: id, nama: l.nama, durasi_menit: l.durasi_menit ?? DEFAULT_VISIT_MINUTES, total: Number(n) || 0, booked: 0 }] : []
+        })
+      : []
+  const kind = kinds.find((k) => k.layanan_id === kindId) ?? null
+  // The session Layanan this visit is (payroll counts by it)
+  const sessionLayananId = usingPackage || buyingPaket ? (kind?.layanan_id ?? null) : layananId
+  const serviceMinutes = kind?.durasi_menit
+    ?? layananList.find((l) => l.id === sessionLayananId)?.durasi_menit
+    ?? DEFAULT_VISIT_MINUTES
+  const duration = durationOverride ?? serviceMinutes
+
   async function handleSave() {
     if (!selectedPatient) return
     if (!target.branchId) {
       setError('Terapis tidak memiliki branch. Hubungi HR.')
       return
     }
-    const pkgId = smPackage && usePackage ? smPackage.id : null
-    if (!pkgId && layananList.length > 0 && !layananId) {
+    if (!usingPackage && layananList.length + paketList.length > 0 && !layananId) {
       setError('Pilih jenis layanan Sport Massage.')
+      return
+    }
+    if (kinds.length > 0 && !kind) {
+      setError('Pilih jenis sesi dari paket.')
       return
     }
     setSaving(true)
     setError(null)
+
+    // Buying a package: create it first, this visit is its first session.
+    const paket = buyingPaket
+    let pkgId = usingPackage ? smPackage!.id : null
+    if (paket) {
+      const { id, error: pkgErr } = await createPackageFromLayanan({
+        patient_id: selectedPatient.id,
+        branch_id:  target.branchId,
+        layanan_id: paket.id,
+        category:   'PAKET SPORT MASSAGE',
+      })
+      if (pkgErr || !id) {
+        setSaving(false)
+        setError(pkgErr ?? 'Gagal membuat paket.')
+        return
+      }
+      pkgId = id
+    }
 
     const { error: err } = await createVisit({
       patient_id:         selectedPatient.id,
@@ -124,11 +196,49 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
       status,
       notes:              notes.trim() || null,
       package_id:         pkgId,
-      layanan_id:         pkgId ? null : layananId,
+      layanan_id:         sessionLayananId,
+      duration_minutes:   duration,
     })
     setSaving(false)
-    if (err) { setError(err); return }
+    if (err) {
+      // Don't leave an empty, unpaid package behind.
+      if (paket && pkgId) await deletePatientPackage(pkgId)
+      setError(err)
+      return
+    }
+    if (paket && pkgId) { setBoughtPkg({ id: pkgId, layanan: paket }); return }
     onSaved()
+  }
+
+  function renderOption(l: LayananRow, sub?: string) {
+    const selected = l.id === layananId
+    return (
+      <button
+        key={l.id}
+        type="button"
+        role="radio"
+        aria-checked={selected}
+        onClick={() => selectLayanan(l.id)}
+        className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+          selected
+            ? 'border-primary bg-primary/10'
+            : 'border-border/40 bg-white/5 hover:bg-white/10'
+        }`}
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+            selected ? 'border-primary bg-primary text-white' : 'border-border'
+          }`}>
+            {selected && <Check size={10} />}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm text-foreground truncate">{l.nama}</span>
+            {sub && <span className="block text-[11px] text-muted-foreground">{sub}</span>}
+          </span>
+        </span>
+        <span className="text-xs font-semibold text-foreground shrink-0">{fmtRp(Number(l.harga))}</span>
+      </button>
+    )
   }
 
   return (
@@ -147,7 +257,7 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Clock size={11} />
-                  <span>{fmtHour(target.hour)}</span>
+                  <span>{visitTime}–{endTime(visitTime, duration)}</span>
                 </div>
               </div>
             </div>
@@ -186,14 +296,40 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
                   </button>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-foreground mb-1.5">Jam Kunjungan</label>
-                  <input
-                    type="time"
-                    value={visitTime}
-                    onChange={(e) => setVisitTime(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">Jam Mulai</label>
+                    <input
+                      type="time"
+                      step={900}
+                      value={visitTime}
+                      onChange={(e) => setVisitTime(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">
+                      Durasi <span className="font-normal text-muted-foreground">· selesai {visitTime ? endTime(visitTime, duration) : '—'}</span>
+                    </label>
+                    <div role="radiogroup" className="flex gap-1.5">
+                      {[...new Set([60, 90, 120, serviceMinutes])].sort((a, b) => a - b).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          role="radio"
+                          aria-checked={duration === m}
+                          onClick={() => setDurationOverride(m === serviceMinutes ? null : m)}
+                          className={`flex-1 py-2.5 rounded-xl border text-xs font-medium transition-colors cursor-pointer ${
+                            duration === m
+                              ? 'border-primary bg-primary/10 text-foreground'
+                              : 'border-border/40 bg-white/5 text-muted-foreground hover:bg-white/10'
+                          }`}
+                        >
+                          {m}′
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {smPackage && (
@@ -219,42 +355,63 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
                   <label className="block text-xs font-medium text-foreground mb-1.5">Jenis Layanan</label>
                   {layananLoading ? (
                     <p className="text-xs text-muted-foreground">Memuat layanan...</p>
-                  ) : layananList.length === 0 ? (
+                  ) : layananList.length + paketList.length === 0 ? (
                     <p className="text-xs text-muted-foreground bg-white/5 px-3 py-2 rounded-xl">
                       Belum ada layanan Sport Massage aktif untuk cabang ini. Tambahkan di menu Layanan.
                     </p>
                   ) : (
-                    <div role="radiogroup" className="space-y-1.5">
-                      {layananList.map((l) => {
-                        const selected = l.id === layananId
+                    <div role="radiogroup" className="space-y-3">
+                      {layananList.length > 0 && (
+                        <div className="space-y-1.5">
+                          {paketList.length > 0 && (
+                            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Sesi</p>
+                          )}
+                          {layananList.map((l) => renderOption(l))}
+                        </div>
+                      )}
+                      {paketList.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            <Package size={11} /> Beli Paket
+                          </p>
+                          {paketList.map((l) => renderOption(l, `${l.jumlah_sesi || 1} sesi · kunjungan ini sesi ke-1`))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                )}
+
+                {kinds.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">Sesi dari paket</label>
+                    <div role="radiogroup" className="grid grid-cols-2 gap-1.5">
+                      {kinds.map((k) => {
+                        const left = k.total - k.booked
+                        const selected = k.layanan_id === kindId
                         return (
                           <button
-                            key={l.id}
+                            key={k.layanan_id}
                             type="button"
                             role="radio"
                             aria-checked={selected}
-                            onClick={() => { setLayananId(l.id); setError(null) }}
-                            className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                            disabled={left <= 0}
+                            onClick={() => { setKindId(k.layanan_id); setDurationOverride(null); setError(null) }}
+                            className={`px-3 py-2.5 rounded-xl border text-left transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                               selected
                                 ? 'border-primary bg-primary/10'
                                 : 'border-border/40 bg-white/5 hover:bg-white/10'
                             }`}
                           >
-                            <span className="flex items-center gap-2 min-w-0">
-                              <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                                selected ? 'border-primary bg-primary text-white' : 'border-border'
-                              }`}>
-                                {selected && <Check size={10} />}
-                              </span>
-                              <span className="text-sm text-foreground truncate">{l.nama}</span>
+                            <span className="block text-sm text-foreground truncate">{k.nama.replace(/^Sesi\s+/i, '')}</span>
+                            <span className="block text-[11px] text-muted-foreground">
+                              {k.durasi_menit} menit · sisa {Math.max(0, left)}/{k.total}
                             </span>
-                            <span className="text-xs font-semibold text-foreground shrink-0">{fmtRp(Number(l.harga))}</span>
                           </button>
                         )
                       })}
                     </div>
-                  )}
-                </div>
+                  </div>
                 )}
 
                 <VisitFields
@@ -286,12 +443,27 @@ export function AssignSportMassageDialog({ target, onClose, onSaved }: Props) {
                 disabled={saving}
                 className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors cursor-pointer"
               >
-                {saving ? 'Menyimpan...' : 'Simpan Kunjungan'}
+                {saving ? 'Menyimpan...' : buyingPaket ? 'Simpan & Bayar Paket' : 'Simpan Kunjungan'}
               </button>
             )}
           </div>
         </div>
       </div>
+
+      {boughtPkg && selectedPatient && (
+        <PaketPaymentStep
+          patientId={selectedPatient.id}
+          patientName={selectedPatient.name}
+          packageId={boughtPkg.id}
+          packageName={boughtPkg.layanan.nama}
+          jumlahSesi={boughtPkg.layanan.jumlah_sesi || 1}
+          hargaDefault={Number(boughtPkg.layanan.harga)}
+          category="PAKET SPORT MASSAGE"
+          branchId={target.branchId}
+          defaultFisioId={target.staffId}
+          onDone={onSaved}
+        />
+      )}
     </>
   )
 }
