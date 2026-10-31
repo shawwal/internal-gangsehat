@@ -14,6 +14,10 @@ const PAYMENT_ROLES = ['finance', 'manager', 'director', 'admin']
 const REMIND_ROLES  = ['admin', 'director', 'manager', 'hr']
 
 const ALL_STATUSES: VisitStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show']
+// Context-menu items hidden for now — flip back to re-enable.
+const MENU_HIDDEN_STATUSES: VisitStatus[] = ['scheduled', 'completed', 'cancelled']
+const SHOW_MENU_OPEN_RECORD = false
+const SHOW_MENU_CHANGE_THERAPIST = false
 
 const STATUS_ICON: Record<VisitStatus, React.ReactNode> = {
   scheduled:   <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />,
@@ -270,7 +274,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
               Ubah Status
             </p>
 
-            {ALL_STATUSES.map((s) => (
+            {ALL_STATUSES.filter((s) => !MENU_HIDDEN_STATUSES.includes(s)).map((s) => (
               <button
                 key={s}
                 onClick={() => {
@@ -293,15 +297,19 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
               </button>
             ))}
 
-            <hr className="border-white/10 my-1.5" />
-            <button
-              onClick={() => { onOpenRecord(visit.id); setMenuOpen(false) }}
-              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-foreground/80 hover:bg-white/8 hover:text-foreground transition-colors cursor-pointer"
-              role="menuitem"
-            >
-              <FileText size={13} />
-              Buka Rekam Medis
-            </button>
+            {SHOW_MENU_OPEN_RECORD && (
+              <>
+                <hr className="border-white/10 my-1.5" />
+                <button
+                  onClick={() => { onOpenRecord(visit.id); setMenuOpen(false) }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-foreground/80 hover:bg-white/8 hover:text-foreground transition-colors cursor-pointer"
+                  role="menuitem"
+                >
+                  <FileText size={13} />
+                  Buka Rekam Medis
+                </button>
+              </>
+            )}
 
             {showMarkPresentItem && (
               <>
@@ -322,7 +330,7 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
               </>
             )}
 
-            {canMove && (
+            {SHOW_MENU_CHANGE_THERAPIST && canMove && (
               <button
                 onClick={() => { onChangeTherapist?.(visit.id); setMenuOpen(false) }}
                 className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-foreground/80 hover:bg-white/8 hover:text-foreground transition-colors cursor-pointer"
