@@ -41,6 +41,7 @@ const COLUMNS: { header: string; width: number; value: (r: JadwalListRow, i: num
   { header: 'Fisio',         width: 18, value: (r) => r.attending_staff_name ?? '' },
   { header: 'Layanan',       width: 16, value: (r) => r.layanan_label ?? '' },
   { header: 'Tarif Layanan', width: 26, value: (r) => r.tarif_nama ?? '' },
+  { header: 'Kategori',      width: 20, value: (r) => r.kategori ?? '' },
   { header: 'Pertemuan Ke',  width: 12, value: (r) => r.pertemuan_ke },
   { header: 'Kurang Bayar',  width: 14, value: (r) => ({ t: 'n', v: r.kurang_bayar, z: '#,##0' }) },
   { header: 'Kehadiran',     width: 12, value: (r) => (r.kehadiran ? KEHADIRAN_LABEL[r.kehadiran] ?? r.kehadiran : 'Belum Diisi') },

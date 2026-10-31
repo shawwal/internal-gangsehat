@@ -7,7 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activityLog'
-import { addDays, buildPeriodDays, MONTH_NAMES, weekdayOf } from '@/lib/payroll/period'
+import { addDays, buildDaysInRange, buildPeriodDays, MONTH_NAMES, weekdayOf } from '@/lib/payroll/period'
 import { VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
 import type { Weekday } from '@/lib/payroll/types'
 import {
@@ -20,6 +20,7 @@ import {
 import { resolvePatientNames } from '@/lib/metrics/patientNames'
 import { fetchCountedSales } from '@/lib/metrics/sales'
 import { resolveTherapistIds } from '@/lib/finance/therapists'
+import { CLOSING_CATEGORIES, CLOSING_WINDOW_DAYS, closingHits, closingRate, type ClosingSale } from '@/lib/pfotm/closingRate'
 import { resolveTransactionLayanan, type LayananForMatch } from '@/lib/finance/priceList'
 import { suggestLastTherapists } from '@/lib/finance/suggestTherapist'
 import { mergeMetrics, rankBoard, sanitizeMetricValue, type Metrics, type PointRule } from '@/lib/pfotm/engine'
@@ -129,13 +130,21 @@ async function loadWorkingWindow(supabase: ServerClient, branchId: string, year:
   const s = (settingsRows ?? []).find((r) => r.branch_id === branchId) ?? (settingsRows ?? []).find((r) => r.branch_id === null)
   const startDay = s?.period_start_day ?? 27
   const probe = buildPeriodDays(year, month, { startDay, weeklyOffDays: [], holidays: [] })
+  // No payroll period yet: continue right after the previous month's stored end (as openPayrollPeriod does).
+  const { data: prev } = await supabase
+    .from('payroll_periods')
+    .select('end_date')
+    .eq('branch_id', branchId)
+    .eq('period_year', month === 1 ? year - 1 : year).eq('period_month', month === 1 ? 12 : month - 1)
+    .maybeSingle()
+  const start = prev?.end_date && prev.end_date < probe.end ? addDays(prev.end_date as string, 1) : probe.start
   const { data: holidays } = await supabase
     .from('payroll_holidays')
     .select('date, name')
     .or(`branch_id.eq.${branchId},branch_id.is.null`)
-    .gte('date', probe.start).lte('date', probe.end)
-  const built = buildPeriodDays(year, month, {
-    startDay, weeklyOffDays: (s?.weekly_off_days ?? ['JUMAT']) as Weekday[], holidays: holidays ?? [],
+    .gte('date', start).lte('date', probe.end)
+  const built = buildDaysInRange(start, probe.end, {
+    weeklyOffDays: (s?.weekly_off_days ?? ['JUMAT']) as Weekday[], holidays: holidays ?? [],
   })
   return { start: built.start, end: built.end, workdays: built.workdays }
 }
@@ -715,6 +724,73 @@ export async function getPfotmMetricDetail(entryId: string, metricKey: string): 
     })),
     auto: hits.length,
     override: override ?? null,
+  })
+}
+
+// ── Closing rate (stats only) ───────────────────────────────────────────────
+
+export interface PfotmClosing {
+  rate: number
+  ta: number
+  closed: number
+  detail: MetricDetail
+}
+
+/**
+ * The participant's TERAPI AWAL KLINIK sales in the PFOTM period (first payment
+ * of each purchase, credited like the board: Fisio, else the visit's therapist)
+ * and whether each patient bought SESI / PAKET KLINIK within CLOSING_WINDOW_DAYS.
+ */
+export async function getPfotmClosingRate(entryId: string): Promise<Result<PfotmClosing>> {
+  const actor = await getActor()
+  if (isErr(actor)) return actor
+  if (!INPUT_ROLES.includes(actor.role)) return fail('Anda tidak memiliki akses.')
+  const { data: entry } = await actor.supabase
+    .from('pfotm_entries')
+    .select('staff_id, pfotm_periods!period_id(branch_id, start_date, end_date)')
+    .eq('id', entryId).maybeSingle()
+  if (!entry) return fail('Data tidak ditemukan.')
+  const per = entry.pfotm_periods as unknown as { branch_id: string; start_date: string; end_date: string } | null
+  if (!per || !entry.staff_id) return ok({ rate: 0, ta: 0, closed: 0, detail: { rows: [], auto: 0, override: null } })
+
+  const admin = createAdminClient()
+  const sales = await fetchCountedSales<ClosingSale & { fisio_id: string | null; visit_id: string | null }>(admin, {
+    branchId: per.branch_id, start: per.start_date, end: per.end_date,
+    categories: ['TERAPI AWAL KLINIK'],
+    columns: 'id, patient_id, category, transaction_date, fisio_id, visit_id',
+  })
+  const therapistOf = await resolveTherapistIds(admin, sales)
+  const ta = sales.filter((s) => therapistOf.get(s.id) === entry.staff_id)
+
+  const patientIds = [...new Set(ta.map((s) => s.patient_id).filter((x): x is string => !!x))]
+  const followUps: ClosingSale[] = []
+  for (let i = 0; i < patientIds.length; i += 300) {
+    const { data } = await admin.from('transactions')
+      .select('id, patient_id, category, transaction_date')
+      .eq('type', 'income').neq('status', 'rejected')
+      .in('category', [...CLOSING_CATEGORIES])
+      .in('patient_id', patientIds.slice(i, i + 300))
+      .gte('transaction_date', per.start_date)
+      .lte('transaction_date', addDays(per.end_date, CLOSING_WINDOW_DAYS))
+    followUps.push(...((data ?? []) as ClosingSale[]))
+  }
+
+  const hits = closingHits(ta, followUps).sort((a, b) => a.ta.transaction_date.localeCompare(b.ta.transaction_date))
+  const names = await resolvePatientNames(hits.map((h) => h.ta.patient_id))
+  const closed = hits.filter((h) => h.closedBy).length
+  return ok({
+    rate: closingRate(hits),
+    ta: hits.length,
+    closed,
+    detail: {
+      rows: hits.map((h) => ({
+        date: h.ta.transaction_date,
+        patientName: (h.ta.patient_id && names.get(h.ta.patient_id)) || '—',
+        label: h.closedBy ? `Closing — ${h.closedBy.category} (${h.closedBy.transaction_date})` : 'Tidak closing',
+      })),
+      auto: closed,
+      override: null,
+    },
   })
 }
 

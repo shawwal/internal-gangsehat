@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertTriangle, ChevronRight } from 'lucide-react'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { MONTH_NAMES } from '@/lib/payroll/period'
@@ -8,6 +8,9 @@ import type { PayrollWorkspace, WorkspaceRow } from '@/lib/payroll/workspace'
 import { ExportButton } from '@/components/ui/ExportButton'
 import { formatIDR, formatRupiah } from './format'
 import { Modal } from './Modal'
+import { getPayrollActivityDetail, getPayrollKunjunganDetail } from '@/app/actions/payroll'
+import { MetricDetailModal } from '@/components/metrics/MetricDetailModal'
+import type { AttendanceCode } from '@/lib/payroll/types'
 import { belowAvgTest, BELOW_AVG_CLS } from '@/lib/tableStats'
 
 interface Props {
@@ -21,6 +24,7 @@ const lineAmount = (row: WorkspaceRow, prefix: string) =>
 /** GAJI sheet: PENDAPATAN (KLINIK, VISIT) − POTONGAN (TERLAMBAT, ALFA, DENDA) = TOTAL GAJI. */
 export function RecapStep({ ws, rows }: Props) {
   const [detail, setDetail] = useState<WorkspaceRow | null>(null)
+  const [drill, setDrill] = useState<Drill | null>(null)
 
   const cols = rows.map((r) => {
     const late = lineAmount(r, 'RULE_LATE')
@@ -185,17 +189,7 @@ export function RecapStep({ ws, rows }: Props) {
                 ))}
               </div>
             )}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
-              {([
-                ['Hadir', detail.attendance.hadir], ['Terlambat (mnt)', detail.attendance.lateMinutes], ['Izin', detail.attendance.izin],
-                ['Sakit', detail.attendance.sakit], ['Cuti', detail.attendance.cuti], ['Alfa', detail.attendance.alfa],
-              ] as const).map(([l, v]) => (
-                <div key={l} className="rounded-xl bg-muted/50 p-2">
-                  <p className="text-base font-bold text-foreground">{v}</p>
-                  <p className="text-[10px] text-muted-foreground">{l}</p>
-                </div>
-              ))}
-            </div>
+            <SlipQuickStats ws={ws} row={detail} onOpen={setDrill} />
             {detail.result ? (
               <table className="w-full text-sm">
                 <tbody>
@@ -225,6 +219,89 @@ export function RecapStep({ ws, rows }: Props) {
           </div>
         </Modal>
       )}
+      {drill?.kind === 'metric' && (
+        <MetricDetailModal title={drill.title} subtitle="Data yang dihitung pada periode gaji ini" load={drill.load} onClose={() => setDrill(null)} />
+      )}
+      {drill?.kind === 'dates' && (
+        <Modal title={drill.title} subtitle={`${drill.rows.length} hari`} onClose={() => setDrill(null)} size="sm">
+          {drill.rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Tidak ada</p>
+          ) : (
+            <table className="w-full text-sm">
+              <tbody>
+                {drill.rows.map((r) => (
+                  <tr key={r.date} className="border-b border-border last:border-0">
+                    <td className="py-1.5">{fmtDay(r.date)}</td>
+                    <td className="py-1.5 text-right text-muted-foreground">{r.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+type Drill =
+  | { kind: 'dates'; title: string; rows: { date: string; note: string }[] }
+  | { kind: 'metric'; title: string; load: Parameters<typeof MetricDetailModal>[0]['load'] }
+
+const fmtDay = (d: string) =>
+  new Date(`${d}T00:00:00Z`).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+
+// Slip pills: attendance (from the ABS grid) + activity counts; every pill opens its list.
+const ATTENDANCE_PILLS: { label: string; match: (c: AttendanceCode) => boolean; note?: (c: AttendanceCode) => string }[] = [
+  { label: 'Hadir', match: (c) => c === 'H' || typeof c === 'number', note: (c) => (typeof c === 'number' ? `terlambat ${c} mnt` : '') },
+  { label: 'Terlambat', match: (c) => typeof c === 'number', note: (c) => `${c} menit` },
+  { label: 'Izin', match: (c) => c === 'I' },
+  { label: 'Sakit', match: (c) => c === 'S' },
+  { label: 'Cuti', match: (c) => c === 'C' },
+  { label: 'Alfa', match: (c) => c === 'A' },
+]
+const VISIT_PILLS = [
+  { code: 'TERAPI_AWAL_VISIT', label: 'Terapi Awal Visit' },
+  { code: 'PAKET_VISIT', label: 'Paket Visit' },
+  { code: 'SESI_VISIT', label: 'Sesi Visit' },
+]
+
+function SlipQuickStats({ ws, row, onOpen }: { ws: PayrollWorkspace; row: WorkspaceRow; onOpen: (d: Drill) => void }) {
+  const name = row.staff.full_name
+  const codes = ws.attendance[row.staff.id] ?? {}
+  const [kunjungan, setKunjungan] = useState<number | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    getPayrollKunjunganDetail(ws.period.id, row.staff.id).then((res) => { if (!cancelled && res.ok) setKunjungan(res.data.auto) })
+    return () => { cancelled = true }
+  }, [ws.period.id, row.staff.id])
+
+  const attendancePill = (p: typeof ATTENDANCE_PILLS[number]) => {
+    const rows = Object.entries(codes).filter(([, c]) => p.match(c)).sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, c]) => ({ date, note: p.note?.(c) ?? '' }))
+    const value = p.label === 'Terlambat' ? `${row.attendance.lateMinutes} mnt` : String(rows.length)
+    return { key: p.label, label: p.label, value, open: () => onOpen({ kind: 'dates', title: `${p.label} — ${name}`, rows }) }
+  }
+  const pills = [
+    ...ATTENDANCE_PILLS.map(attendancePill),
+    {
+      key: 'kunjungan', label: 'Jumlah Kunjungan', value: kunjungan == null ? '…' : String(kunjungan),
+      open: () => onOpen({ kind: 'metric', title: `Jumlah Kunjungan — ${name}`, load: () => getPayrollKunjunganDetail(ws.period.id, row.staff.id) }),
+    },
+    ...VISIT_PILLS.map((v) => ({
+      key: v.code, label: v.label, value: String(row.activityQty[v.code] ?? 0),
+      open: () => onOpen({ kind: 'metric', title: `${v.label} — ${name}`, load: () => getPayrollActivityDetail(ws.period.id, row.staff.id, v.code) }),
+    })),
+  ]
+  return (
+    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-center">
+      {pills.map((p) => (
+        <button key={p.key} type="button" onClick={p.open} title="Lihat rincian"
+          className="rounded-xl bg-muted/50 p-2 hover:bg-muted transition-colors cursor-pointer">
+          <p className="text-base font-bold text-foreground">{p.value}</p>
+          <p className="text-[10px] text-muted-foreground">{p.label}</p>
+        </button>
+      ))}
     </div>
   )
 }

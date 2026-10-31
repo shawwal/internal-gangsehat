@@ -77,6 +77,12 @@ export interface CategorySummary {
   actual: number
   selisih: number
   daily: number[]
+  /** Average per elapsed day; null before the period starts */
+  perDay?: number | null
+  /** Actual over the elapsed days (equals `actual` once the period has ended) */
+  current?: number
+  /** Previous period over the same number of elapsed days; null = no comparison */
+  previous?: number | null
 }
 
 // Sort options of the full-page detail list (/target-progress/detail). Lives

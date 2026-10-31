@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { getPfotmMetricDetail } from '@/app/actions/pfotm'
+import { getPfotmClosingRate, getPfotmMetricDetail } from '@/app/actions/pfotm'
 import { MetricDetailTable } from '@/components/metrics/MetricDetailModal'
 import type { MetricDetail } from '@/lib/metrics/achievement'
 
@@ -20,7 +20,10 @@ function Rincian() {
 
   useEffect(() => {
     let cancelled = false
-    getPfotmMetricDetail(entry, metric).then((res) => { if (!cancelled) setState(res) })
+    const load = metric === 'closing_rate'
+      ? getPfotmClosingRate(entry).then((res) => (res.ok ? { ok: true as const, data: res.data.detail } : res))
+      : getPfotmMetricDetail(entry, metric)
+    load.then((res) => { if (!cancelled) setState(res) })
     return () => { cancelled = true }
   }, [entry, metric])
 

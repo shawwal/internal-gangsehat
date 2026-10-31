@@ -8,12 +8,23 @@ import { Modal, btn, inputCls, labelCls } from './Modal'
 interface Props {
   ws: PayrollWorkspace
   onToggleDay: (date: string, workday: boolean, note: string | null) => Promise<void>
+  onChangeRange: (start: string, end: string) => Promise<void>
 }
 
-export function CalendarStep({ ws, onToggleDay }: Props) {
+export function CalendarStep({ ws, onToggleDay, onChangeRange }: Props) {
   const { period, permissions } = ws
   const [editing, setEditing] = useState<{ date: string; workday: boolean; note: string } | null>(null)
   const [saving, setSaving] = useState(false)
+  const [range, setRange] = useState({ start: period.start_date, end: period.end_date })
+  const [savingRange, setSavingRange] = useState(false)
+  const canEditRange = permissions.canEdit && period.status === 'draft'
+  const rangeChanged = range.start !== period.start_date || range.end !== period.end_date
+
+  async function saveRange() {
+    setSavingRange(true)
+    await onChangeRange(range.start, range.end)
+    setSavingRange(false)
+  }
 
   // Pad the grid so the first day lands under its weekday column (Senin first).
   const firstDow = (new Date(`${period.start_date}T00:00:00Z`).getUTCDay() + 6) % 7
@@ -29,6 +40,27 @@ export function CalendarStep({ ws, onToggleDay }: Props) {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-2">
+        <div>
+          <label className={labelCls}>Tanggal mulai</label>
+          <input type="date" className={inputCls} value={range.start} disabled={!canEditRange}
+            onChange={(e) => setRange({ ...range, start: e.target.value })} />
+        </div>
+        <div>
+          <label className={labelCls}>Tanggal selesai</label>
+          <input type="date" className={inputCls} value={range.end} disabled={!canEditRange}
+            onChange={(e) => setRange({ ...range, end: e.target.value })} />
+        </div>
+        {canEditRange && rangeChanged && (
+          <>
+            <button className={btn.primary} onClick={saveRange} disabled={savingRange}>
+              {savingRange ? 'Menyimpan…' : 'Simpan periode'}
+            </button>
+            <button className={btn.secondary} onClick={() => setRange({ start: period.start_date, end: period.end_date })}>Batal</button>
+          </>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <div className="px-3 py-2 rounded-xl bg-primary/10 text-primary font-semibold">
           {period.workdays} hari kerja

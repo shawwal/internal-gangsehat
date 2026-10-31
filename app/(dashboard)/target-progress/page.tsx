@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { Table2, TrendingUp, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { datesBetween, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES } from '@/lib/metrics/achievement'
+import { todayJakartaISO } from '@/lib/utils'
 import { fetchTargetProgressTransactions } from '@/app/actions/targetProgress'
 import { getPayrollWindow } from '@/app/actions/pfotm'
 import { MonthPicker } from '@/components/targetProgress/MonthPicker'
@@ -125,7 +126,45 @@ export default function TargetProgressPage() {
       if (win.ok) range = win.data
     }
 
-    const [{ data: targetRow }, { data: visits }, transactionRows, { data: categorySettings }] = await Promise.all([
+    // Daily counts for any window — same queries for the period and its comparison window.
+    const countWindow = async (start: string, end: string) => {
+      const [{ data: visits }, transactionRows] = await Promise.all([
+        supabase
+          .from('patient_visits')
+          .select('id, visit_date, kehadiran, status, service_type')
+          .eq('branch_id', selectedBranchId)
+          .gte('visit_date', start)
+          .lte('visit_date', end)
+          .in('status', [...KUNJUNGAN_VISIT_STATUSES])
+          // Sport massage is tracked separately — not a "kunjungan"
+          .or(KUNJUNGAN_SERVICE_FILTER),
+        // Server action — therapist/staff can't read `transactions` under RLS
+        fetchTargetProgressTransactions(selectedBranchId, start, end),
+      ])
+      const windowDates = datesBetween(start, end)
+      return {
+        dates: windowDates,
+        daily: mergeDailyCounts(
+          buildDailyCounts((visits ?? []) as VisitForProgress[], windowDates),
+          buildTransactionDailyCounts(transactionRows, windowDates),
+        ),
+      }
+    }
+
+    // Comparison: the previous month / payroll window over the same number of
+    // days elapsed so far (the whole period once it has ended).
+    const prevYm = month === 1 ? { m: 12, y: year - 1 } : { m: month - 1, y: year }
+    let prevRange = getMonthRange(prevYm.m, prevYm.y)
+    if (windowMode === 'payroll') {
+      const win = await getPayrollWindow(selectedBranchId, prevYm.y, prevYm.m)
+      if (win.ok) prevRange = win.data
+    }
+    const today = todayJakartaISO()
+    const elapsed = today < range.start ? 0 : datesBetween(range.start, today < range.end ? today : range.end).length
+    const prevDates = datesBetween(prevRange.start, prevRange.end)
+    const prevEnd = elapsed > 0 ? prevDates[Math.min(elapsed, prevDates.length) - 1] : null
+
+    const [{ data: targetRow }, current, previous, { data: categorySettings }] = await Promise.all([
       supabase
         .from('branch_targets')
         .select('target_terapi_awal, target_paket_klinik, target_kunjungan, target_visit, target_sesi')
@@ -134,17 +173,8 @@ export default function TargetProgressPage() {
         .eq('tahun', year)
         .eq('status', 'approved')
         .maybeSingle(),
-      supabase
-        .from('patient_visits')
-        .select('id, visit_date, kehadiran, status, service_type')
-        .eq('branch_id', selectedBranchId)
-        .gte('visit_date', range.start)
-        .lte('visit_date', range.end)
-        .in('status', [...KUNJUNGAN_VISIT_STATUSES])
-        // Sport massage is tracked separately — not a "kunjungan"
-        .or(KUNJUNGAN_SERVICE_FILTER),
-      // Server action — therapist/staff can't read `transactions` under RLS
-      fetchTargetProgressTransactions(selectedBranchId, range.start, range.end),
+      countWindow(range.start, range.end),
+      prevEnd ? countWindow(prevRange.start, prevEnd) : Promise.resolve(null),
       supabase
         .from('branch_target_category_settings')
         .select('category')
@@ -152,14 +182,8 @@ export default function TargetProgressPage() {
     ])
 
     const disabled = new Set((categorySettings ?? []).map(r => r.category as CategoryKey))
-
-    const visitRows = (visits ?? []) as VisitForProgress[]
-
-    const windowDates = datesBetween(range.start, range.end)
-    setDates(windowDates)
-    const visitDaily = buildDailyCounts(visitRows, windowDates)
-    const transactionDaily = buildTransactionDailyCounts(transactionRows, windowDates)
-    const daily = mergeDailyCounts(visitDaily, transactionDaily)
+    setDates(current.dates)
+    const daily = current.daily
     const t = targetRow as BranchTargetForProgress | null
     const targetFields: Record<CategoryKey, number> = {
       terapi_awal: t?.target_terapi_awal ?? 0,
@@ -175,7 +199,14 @@ export default function TargetProgressPage() {
       .map(def => {
         const actual = sum(daily[def.key])
         const target = targetFields[def.key]
-        return { key: def.key, label: def.label, color: def.color, target, actual, selisih: actual - target, daily: daily[def.key] }
+        // Actual so far over the elapsed days only (later days are 0 anyway).
+        const sofar = sum(daily[def.key].slice(0, elapsed))
+        return {
+          key: def.key, label: def.label, color: def.color, target, actual, selisih: actual - target, daily: daily[def.key],
+          perDay: elapsed > 0 ? sofar / elapsed : null,
+          previous: previous ? sum(previous.daily[def.key]) : null,
+          current: sofar,
+        }
       }))
     setLoading(false)
   }, [selectedBranchId, month, year, windowMode])

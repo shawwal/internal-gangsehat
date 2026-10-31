@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Crown, Medal, Trophy } from 'lucide-react'
 import type { BoardRow, PointRule } from '@/lib/pfotm/engine'
 import { DRILLDOWN_METRICS } from '@/lib/pfotm/autoMetrics'
 import { Modal } from '@/components/payroll/Modal'
+import { getPfotmClosingRate } from '@/app/actions/pfotm'
 
 interface Props {
   board: BoardRow[]
@@ -155,7 +156,7 @@ export function PfotmBoard({ board, rules, wins, live, entryIds }: Props) {
               })}
             </tbody>
           </table>
-          <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 text-center">
             {[
               ['% Kehadiran', pct(detail.kpis.kehadiran)],
               ['% Disiplin', pct(detail.kpis.disiplin)],
@@ -166,9 +167,32 @@ export function PfotmBoard({ board, rules, wins, live, entryIds }: Props) {
                 <p className="text-[10px] text-muted-foreground">{l}</p>
               </div>
             ))}
+            {entryId && <ClosingPill key={entryId} entryId={entryId} name={detail.name} />}
           </div>
         </Modal>
       )}
     </div>
+  )
+}
+
+/** Closing rate — TA KLINIK patients who bought SESI / PAKET KLINIK within 4 days. Statistic only, no points. */
+function ClosingPill({ entryId, name }: { entryId: string; name: string }) {
+  const [value, setValue] = useState<{ rate: number; ta: number; closed: number } | null | 'error'>(null)
+  useEffect(() => {
+    let cancelled = false
+    getPfotmClosingRate(entryId).then((res) => { if (!cancelled) setValue(res.ok ? res.data : 'error') })
+    return () => { cancelled = true }
+  }, [entryId])
+  const href = `/pfotm/rincian?${new URLSearchParams({ entry: entryId, metric: 'closing_rate', name, label: 'Closing Rate' })}`
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" title="Lihat pasien Terapi Awal Klinik & closing-nya"
+      className="rounded-xl bg-muted/50 p-2 hover:bg-muted transition-colors">
+      <p className="text-base font-bold text-foreground">
+        {value === null ? '…' : value === 'error' ? '—' : `${Math.round(value.rate * 100)}%`}
+      </p>
+      <p className="text-[10px] text-muted-foreground">
+        Closing rate{value && value !== 'error' ? ` (${value.closed}/${value.ta})` : ''}
+      </p>
+    </a>
   )
 }

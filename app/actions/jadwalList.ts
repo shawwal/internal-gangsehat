@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import { fetchAllRows, fetchInChunks } from '@/lib/supabase/fetchAll'
 import { calcAge } from '@/components/patients/detail/constants'
@@ -26,6 +27,8 @@ export interface JadwalListRow {
   service_type: string | null
   // Display label — Tarif Layanan name when resolvable, else the kategori
   layanan_label: string | null
+  // Tarif Layanan kategori (income category) — the small line under the Layanan name
+  kategori: string | null
   // Tarif Layanan (internal_layanan) entry the visit resolves to — see resolveTarif
   tarif_id: string | null
   tarif_nama: string | null
@@ -33,6 +36,8 @@ export interface JadwalListRow {
   kurang_bayar: number
   kehadiran: string | null
   admin_status: AdminStatus
+  // patient_visits.status (scheduled / completed / cancelled / no_show / rescheduled)
+  visit_status: string | null
   notes: string | null
   order_id: string | null
   branch_id: string
@@ -96,16 +101,27 @@ export async function fetchJadwalListRows(
   branchId?: string | null,
 ): Promise<JadwalListRow[]> {
   if (dateTo < dateFrom) [dateFrom, dateTo] = [dateTo, dateFrom]
-  const days = datesBetween(dateFrom, dateTo)
-  if (days.length > MAX_RANGE_DAYS) throw new Error(`Rentang tanggal maksimal ${MAX_RANGE_DAYS} hari`)
+  if (datesBetween(dateFrom, dateTo).length > MAX_RANGE_DAYS) throw new Error(`Rentang tanggal maksimal ${MAX_RANGE_DAYS} hari`)
+  return loadJadwalRows(dateFrom, dateTo, branchId, { serviceTypes: CLINIC_SERVICE_TYPES, griya: true })
+}
 
+/**
+ * Rows for List Jadwal and the session tracker. `serviceTypes` limits the visits
+ * (Griya branches use their grid's own rule when `griya` is set).
+ */
+async function loadJadwalRows(
+  dateFrom: string,
+  dateTo: string,
+  branchId: string | null | undefined,
+  opts: { serviceTypes: string[]; griya: boolean },
+): Promise<JadwalListRow[]> {
   const supabase = await createClient()
 
   // Griya Anak builds its day from recurring master slots + visits (see
   // griya-anak/jadwal), not from patient_visits alone — mirror that here so the
   // list shows the same children as the grid.
   let isGriya = false
-  if (branchId) {
+  if (branchId && opts.griya) {
     const { data: g } = await supabase
       .from('branch_griya_settings').select('enabled').eq('branch_id', branchId).maybeSingle()
     isGriya = !!g?.enabled
@@ -123,7 +139,7 @@ export async function fetchJadwalListRows(
       .lte('visit_date', dateTo)
     // Same service types as the jadwal-harian grid — Sport Massage and Home Visit
     // (TA/SESI/PAKET VISIT) have their own pages. Griya uses the same rule as its grid.
-    if (!isGriya) query = query.in('service_type', CLINIC_SERVICE_TYPES)
+    if (!isGriya) query = query.in('service_type', opts.serviceTypes)
     if (branchId) query = query.eq('branch_id', branchId)
     return query.order('visit_date').order('visit_time').order('id').range(f, t)
   }).catch(() => [])
@@ -131,7 +147,7 @@ export async function fetchJadwalListRows(
     ? rawVisits.filter((v) => v.griya_slot_id != null || (SERVICE_TYPES as string[]).includes(v.service_type ?? ''))
     : rawVisits
 
-  const virtualRows = isGriya && branchId ? await griyaVirtualRows(days, branchId) : []
+  const virtualRows = isGriya && branchId ? await griyaVirtualRows(datesBetween(dateFrom, dateTo), branchId) : []
   if (visits.length === 0) return virtualRows
 
   // Batch-decrypt patient name/phone/birth date for just these patients.
@@ -263,10 +279,13 @@ export async function fetchJadwalListRows(
         ?? (v.service_type ? SERVICE_TYPE_LABEL[v.service_type] ?? v.service_type : null),
       tarif_id:              tarif?.id ?? null,
       tarif_nama:            tarif?.nama ?? null,
+      kategori:              booked?.kategori ?? tarif?.kategori
+        ?? (v.package_id ? packageMap.get(v.package_id)?.category : undefined) ?? v.service_type ?? null,
       pertemuan_ke:          v.package_id ? (packagePositions.get(v.id)?.pertemuan ?? 1) : 1,
       kurang_bayar:          outstandingMap.get(v.id) ?? 0,
       kehadiran:             v.kehadiran,
       admin_status:          deriveAdminStatus(v, formStatusMap.get(v.id)),
+      visit_status:          v.status ?? null,
       notes:                 v.notes,
       order_id:              v.order_id,
       branch_id:             v.branch_id,
@@ -308,10 +327,12 @@ async function griyaVirtualRows(dates: string[], branchId: string): Promise<Jadw
         layanan_label:        s.package_id ? 'Paket' : (s.service_type ? SERVICE_TYPE_LABEL[s.service_type] ?? s.service_type : null),
         tarif_id:             null,
         tarif_nama:           null,
+        kategori:             s.service_type ?? null,
         pertemuan_ke:         1,
         kurang_bayar:         0,
         kehadiran:            null,
         admin_status:         'BELUM_DIPERIKSA',
+        visit_status:         'scheduled',
         notes:                s.notes,
         order_id:             null,
         branch_id:            branchId,
@@ -321,4 +342,47 @@ async function griyaVirtualRows(dates: string[], branchId: string): Promise<Jadw
     }
   }
   return out
+}
+
+// ── Validation Center (session tracker) ─────────────────────────────────────
+
+const SESSION_TRACKER_ROLES = ['director', 'manager', 'admin']
+/** Clinic physiotherapy + Sport Massage — the services tracked session by session. */
+const SESSION_SERVICE_TYPES = [...CLINIC_SERVICE_TYPES, 'SPORT MASSAGE']
+const RESCHEDULE_FIELDS = ['visit_date', 'visit_time', 'attending_staff_id']
+
+export interface SessionTrackerRow extends JadwalListRow {
+  /** Moved to another date / hour / therapist at least once (activity log) */
+  rescheduled: boolean
+}
+
+/** Every fisio + Sport Massage session of the branch in [dateFrom, dateTo], read-only. */
+export async function fetchSessionTrackerRows(
+  dateFrom: string,
+  dateTo: string,
+  branchId: string | null,
+): Promise<SessionTrackerRow[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data: me } = await supabase.from('internal_profiles').select('role, branch_id').eq('id', user.id).single()
+  if (!me || !SESSION_TRACKER_ROLES.includes(me.role)) return []
+  if (dateTo < dateFrom) [dateFrom, dateTo] = [dateTo, dateFrom]
+  const scope = me.role === 'director' ? branchId : me.branch_id
+
+  const rows = await loadJadwalRows(dateFrom, dateTo, scope, { serviceTypes: SESSION_SERVICE_TYPES, griya: false })
+
+  // Reschedules: drag & drop / edit of date, hour or therapist, logged by updateVisit.
+  // activity_logs is director-only under RLS — read with the service role after the role check.
+  const admin = createAdminClient()
+  const moved = new Set<string>()
+  const logs = await fetchInChunks<{ resource_id: string; changed_fields: string[] | null }>(
+    rows.map((r) => r.id),
+    (c) => admin.from('activity_logs').select('resource_id, changed_fields')
+      .eq('resource_type', 'patient_visit').eq('action', 'update')
+      .overlaps('changed_fields', RESCHEDULE_FIELDS)
+      .in('resource_id', c),
+  )
+  for (const l of logs) moved.add(l.resource_id)
+  return rows.map((r) => ({ ...r, rescheduled: moved.has(r.id) || r.visit_status === 'rescheduled' }))
 }

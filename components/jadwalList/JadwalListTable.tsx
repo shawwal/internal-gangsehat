@@ -3,6 +3,8 @@
 import { CalendarX2 } from 'lucide-react'
 import { JadwalListRow, type EditField } from './JadwalListRow'
 import type { JadwalListRow as Row } from './types'
+import { ColumnFilter, filterOptions, type SortState } from '@/components/ui/ColumnFilter'
+import { JADWAL_LIST_COLUMNS } from './columns'
 
 interface Props {
   rows: Row[]
@@ -14,23 +16,49 @@ interface Props {
   onCancel: (row: Row) => void | Promise<void>
   fisioOptions: { value: string; label: string }[]
   onEdit: (row: Row, field: EditField, value: string) => Promise<void>
+  /** Every loaded row (all pages) — the source of the column filter options */
+  allRows: Row[]
+  colFilters: Record<string, string[]>
+  onColFilter: (key: string, values: string[]) => void
+  colSort: SortState | null
+  onColSort: (s: SortState | null) => void
 }
 
-const HEADERS = [
-  'No', 'Tanggal', 'Jam', 'Pasien', 'Umur', 'Keluhan', 'Fisio',
-  'Layanan', 'Pertemuan Ke', 'Kurang Bayar', 'Kehadiran', 'Status', 'Catatan Admin', '',
+// key → JADWAL_LIST_COLUMNS (sort); filter → multi-select on that column
+const HEADERS: { label: string; key?: string; filter?: boolean }[] = [
+  { label: 'No' }, { label: 'Tanggal', key: 'tanggal' }, { label: 'Jam', key: 'jam', filter: true },
+  { label: 'Pasien', key: 'pasien', filter: true }, { label: 'Umur', key: 'umur' }, { label: 'Keluhan' },
+  { label: 'Fisio', key: 'fisio', filter: true }, { label: 'Layanan', key: 'layanan', filter: true },
+  { label: 'Kategori', key: 'kategori', filter: true }, { label: 'Pertemuan Ke', key: 'pertemuan', filter: true },
+  { label: 'Kurang Bayar', key: 'kurang_bayar' }, { label: 'Kehadiran', key: 'kehadiran', filter: true },
+  { label: 'Status', key: 'status', filter: true }, { label: 'Catatan Admin' }, { label: '' },
 ]
 
 const th = 'px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap'
 
-export function JadwalListTable({ rows, loading, page, pageSize, onRemind, onConfirm, onCancel, fisioOptions, onEdit }: Props) {
+export function JadwalListTable({
+  rows, loading, page, pageSize, onRemind, onConfirm, onCancel, fisioOptions, onEdit,
+  allRows, colFilters, onColFilter, colSort, onColSort,
+}: Props) {
   return (
     <div className="glass-card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              {HEADERS.map((h) => <th key={h} className={th}>{h}</th>)}
+              {HEADERS.map((h, i) => (
+                <th key={i} className={th}>
+                  <ColumnFilter
+                    label={h.label}
+                    sortKey={h.key}
+                    sort={colSort}
+                    onSort={onColSort}
+                    options={h.filter && h.key ? filterOptions(allRows, (r) => String(JADWAL_LIST_COLUMNS[h.key!](r) ?? '—')) : undefined}
+                    selected={h.key ? colFilters[h.key] : undefined}
+                    onFilter={h.key ? (v) => onColFilter(h.key!, v) : undefined}
+                  />
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>

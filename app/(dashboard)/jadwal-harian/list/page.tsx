@@ -10,6 +10,8 @@ import type { EditField } from '@/components/jadwalList/JadwalListRow'
 import { JadwalListTable } from '@/components/jadwalList/JadwalListTable'
 import { JadwalListExportButton } from '@/components/jadwalList/JadwalListExportButton'
 import { Pagination } from '@/components/leave/Pagination'
+import { applyColumnFilters, type SortState } from '@/components/ui/ColumnFilter'
+import { JADWAL_LIST_COLUMNS } from '@/components/jadwalList/columns'
 import {
   DEFAULT_PAGE_SIZE, MAX_RANGE_DAYS, NO_TARIF, PAGE_SIZE_OPTIONS, PAGE_SIZE_STORAGE_KEY,
   type JadwalListRow, type JadwalTarifOption,
@@ -49,6 +51,8 @@ export default function JadwalHarianListPage() {
   const [fisioFilter, setFisioFilter]     = useState('')
   const [tarifFilter, setTarifFilter]     = useState('')
   const [kehadiranFilter, setKehadiranFilter] = useState('')
+  const [colFilters, setColFilters] = useState<Record<string, string[]>>({})
+  const [colSort, setColSort] = useState<SortState | null>(null)
 
   const [staff, setStaff] = useState<BranchStaffMember[]>([])
   useEffect(() => {
@@ -93,7 +97,7 @@ export default function JadwalHarianListPage() {
     fetchWaConfigAll().then(setWaConfig)
   }, [])
 
-  useEffect(() => { setPage(1) }, [dateFrom, dateTo, selectedBranchId, pageSize, fisioFilter, tarifFilter, kehadiranFilter])
+  useEffect(() => { setPage(1) }, [dateFrom, dateTo, selectedBranchId, pageSize, fisioFilter, tarifFilter, kehadiranFilter, colFilters, colSort])
 
   const uniqueSorted = (vals: (string | null)[]) =>
     [...new Set(vals.filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b, 'id'))
@@ -102,10 +106,11 @@ export default function JadwalHarianListPage() {
   const usedTarif   = new Set(rows.map((r) => r.tarif_id))
   const tarifOptions = tarifList.filter((t) => t.is_active || usedTarif.has(t.id))
 
-  const filteredRows = rows.filter((r) =>
+  const filteredRows = applyColumnFilters(rows.filter((r) =>
     (!fisioFilter || r.attending_staff_name === fisioFilter) &&
     (!tarifFilter || (tarifFilter === NO_TARIF ? !r.tarif_id : r.tarif_id === tarifFilter)) &&
-    (!kehadiranFilter || (kehadiranFilter === 'BELUM' ? !r.kehadiran : r.kehadiran === kehadiranFilter)))
+    (!kehadiranFilter || (kehadiranFilter === 'BELUM' ? !r.kehadiran : r.kehadiran === kehadiranFilter))),
+  JADWAL_LIST_COLUMNS, colFilters, colSort)
   const total = filteredRows.length
   const from = (page - 1) * pageSize
   const pagedRows = filteredRows.slice(from, from + pageSize)
@@ -117,6 +122,7 @@ export default function JadwalHarianListPage() {
     fisioFilter && `Fisio: ${fisioFilter}`,
     tarifFilter && `Layanan: ${tarifFilter === NO_TARIF ? 'Tanpa tarif layanan' : tarifList.find((t) => t.id === tarifFilter)?.nama ?? '—'}`,
     kehadiranFilter && `Kehadiran: ${kehadiranFilter === 'BELUM' ? 'Belum Diisi' : kehadiranFilter}`,
+    ...Object.entries(colFilters).filter(([, v]) => v.length).map(([k, v]) => `${k}: ${v.join(', ')}`),
   ].filter((f): f is string => !!f)
 
   function handleRemind(row: JadwalListRow) {
@@ -225,6 +231,11 @@ export default function JadwalHarianListPage() {
         onCancel={handleCancelRow}
         fisioOptions={staffOptions}
         onEdit={handleEditRow}
+        allRows={rows}
+        colFilters={colFilters}
+        onColFilter={(key, values) => setColFilters((f) => ({ ...f, [key]: values }))}
+        colSort={colSort}
+        onColSort={setColSort}
       />
 
       <Pagination page={page} pageSize={pageSize} total={total} onPage={setPage} />

@@ -12,14 +12,17 @@ import { deriveAdminStatus, fetchPackagePositions } from '@/lib/internal/visitIn
 import { getVisitFormRoute } from '@/lib/visitRouting'
 import { resolveTherapistNames } from '@/lib/finance/therapists'
 import { fetchAllRows, fetchInChunks } from '@/lib/supabase/fetchAll'
-import { pickLayanan, type LayananForMatch } from '@/lib/finance/priceList'
+import { pickLayanan, resolveTransactionLayanan, type LayananForMatch } from '@/lib/finance/priceList'
 
 export interface TargetProgressDetailRow {
   id: string
   patientId: string | null
   patientName: string
   noRm: string | null
+  /** Tarif Layanan name; the kategori when the Layanan can't be resolved */
   serviceType: string | null
+  /** Income category / service type (Tarif Layanan kategori) */
+  kategori: string | null
   visitTime: string | null
   fisioName: string
   // Attending therapist (visit) / attributed therapist (transaction) — filter key.
@@ -150,11 +153,12 @@ export async function fetchTargetProgressDetail(
     })
 
     const patientIds = [...new Set(rows.map((row) => row.patient_id).filter((id): id is string => !!id))]
-    const [patients, therapists] = await Promise.all([
+    const [patients, therapists, layananByTx] = await Promise.all([
       fetchInChunks<{ id: string; encrypted_name: string | null; no_rm: string | null }>(
         patientIds, (ids) => db.from('patients').select('id, encrypted_name, no_rm').in('id', ids)),
       // fisio_id, else the linked visit's attending staff — same rule as the finance pages.
       resolveTherapistNames(supabase, rows),
+      resolveTransactionLayanan(db, branchId, rows.map((r) => ({ ...r, branch_id: branchId }))),
     ])
     const patientById = new Map(patients.map((p) => [p.id, p]))
 
@@ -169,7 +173,8 @@ export async function fetchTargetProgressDetail(
         patientId: row.patient_id,
         patientName: name || '—',
         noRm: (patient?.no_rm as string | null) ?? null,
-        serviceType: row.category,
+        serviceType: layananByTx.get(row.id)?.nama ?? row.category,
+        kategori: row.category,
         visitTime: null,
         fisioName: therapist?.name ?? '—',
         therapistId: therapist?.id ?? null,
@@ -234,7 +239,7 @@ export async function fetchTargetProgressDetail(
   const visitIds = rows.map((row) => row.id)
   const packageIds = [...new Set(rows.map((row) => row.package_id).filter((id): id is string => !!id))]
   type FormRow = { visit_id: string; status: string }
-  type PackageLayanan = { id: string; package_name: string; internal_layanan: { nama: string } | null }
+  type PackageLayanan = { id: string; package_name: string; category: string | null; internal_layanan: { nama: string } | null }
   const formStatus = (table: string) => fetchInChunks<FormRow>(
     visitIds, (ids) => supabase.from(table).select('visit_id, status').in('visit_id', ids))
   type VisitTx = { visit_id: string; branch_id: string; category: string; harga: number | null }
@@ -244,7 +249,7 @@ export async function fetchTargetProgressDetail(
     fetchPackagePositions(supabase, packageIds),
     fetchInChunks<PackageLayanan>(
       packageIds, (ids) => supabase.from('patient_packages')
-        .select('id, package_name, internal_layanan!layanan_id(nama)')
+        .select('id, package_name, category, internal_layanan!layanan_id(nama)')
         .in('id', ids) as unknown as PromiseLike<{ data: PackageLayanan[] | null; error: unknown }>),
     supabase.from('internal_layanan').select('id, branch_id, nama, kategori, harga').eq('branch_id', branchId)
       .then(({ data }) => (data ?? []) as LayananForMatch[]),
@@ -260,12 +265,13 @@ export async function fetchTargetProgressDetail(
 
   // Package visits show the Tarif Layanan product the package was sold as.
   const packageLayananById = new Map(packages.map((p) => [p.id, p.internal_layanan?.nama ?? p.package_name]))
+  const packageCategoryById = new Map(packages.map((p) => [p.id, p.category]))
 
   // Non-package visits: the Layanan they were booked / paid as (pickLayanan, the finance rule).
   const txByVisit = new Map(visitTxs.map((t) => [t.visit_id, t]))
-  const visitLayanan = (row: VisitRow): string | null => {
+  const visitLayanan = (row: VisitRow): LayananForMatch | null => {
     const tx = txByVisit.get(row.id) ?? { branch_id: branchId, category: row.service_type ?? '', harga: null }
-    return pickLayanan(tx, row.layanan_id, branchLayanan)?.nama ?? null
+    return pickLayanan(tx, row.layanan_id, branchLayanan)
   }
 
   // Record-form status per visit; 'completed' wins if a visit has more than one row.
@@ -276,7 +282,9 @@ export async function fetchTargetProgressDetail(
 
   return rows.map((row) => {
     // Tarif Layanan name (package → booked / paid Layanan); kategori only when ambiguous.
-    const layanan = (row.package_id ? packageLayananById.get(row.package_id) : visitLayanan(row)) ?? row.service_type
+    const picked = row.package_id ? null : visitLayanan(row)
+    const layanan = (row.package_id ? packageLayananById.get(row.package_id) : picked?.nama) ?? row.service_type
+    const kategori = (row.package_id ? packageCategoryById.get(row.package_id) : picked?.kategori) ?? row.service_type
     const patient = patientById.get(row.patient_id)
     const name = patient?.encrypted_name
       ? decryptPatientPII({ encrypted_name: patient.encrypted_name, encrypted_phone: '' }).name
@@ -287,6 +295,7 @@ export async function fetchTargetProgressDetail(
       patientName: name || '—',
       noRm: (patient?.no_rm as string | null) ?? null,
       serviceType: layanan,
+      kategori,
       visitTime: row.visit_time,
       fisioName: row.internal_profiles?.full_name ?? '—',
       therapistId: row.attending_staff_id,

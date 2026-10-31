@@ -8,7 +8,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activityLog'
-import { buildPeriodDays, countWorkdays, MONTH_NAMES } from '@/lib/payroll/period'
+import { addDays, buildDaysInRange, buildPeriodDays, countWorkdays, MONTH_NAMES } from '@/lib/payroll/period'
 import { codeFromRow, rowFromCode, type AttendanceDbRow } from '@/lib/payroll/attendance'
 import { pickCompensation } from '@/lib/payroll/engine'
 import { computeAutoActivity, payrollActivityHits, VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
@@ -19,7 +19,7 @@ import {
 import { resolveTransactionLayanan, type LayananForMatch } from '@/lib/finance/priceList'
 import { resolveTherapistIds } from '@/lib/finance/therapists'
 import { fetchCountedSales } from '@/lib/metrics/sales'
-import type { MetricDetail } from '@/lib/metrics/achievement'
+import { countsAsKunjungan, NON_KUNJUNGAN_SERVICE_TYPES, type MetricDetail, type VisitForAchievement } from '@/lib/metrics/achievement'
 import { resolvePatientNames } from '@/lib/metrics/patientNames'
 import {
   computeWorkspaceRows, type ActivityCell, type PayrollWorkspace, type SlipRecord, type WorkspaceAdjustment,
@@ -306,14 +306,13 @@ export async function openPayrollPeriod(branchId: string, year: number, month: n
   if (!PREP_ROLES.includes(actor.role)) return fail('Periode ini belum dibuat oleh HR.')
 
   const settings = await loadSettings(supabase, branchId)
-  // Range first (holidays are looked up inside it), then build the days.
+  // Range first (holidays are looked up inside it), then build the days. A period
+  // continues right after the previous month's stored end — HR may have moved it.
   const probe = buildPeriodDays(year, month, { startDay: settings.period_start_day, weeklyOffDays: [], holidays: [] })
-  const holidays = await loadHolidays(supabase, branchId, probe.start, probe.end)
-  const built = buildPeriodDays(year, month, {
-    startDay: settings.period_start_day,
-    weeklyOffDays: settings.weekly_off_days,
-    holidays,
-  })
+  const prevEnd = await previousPeriodEnd(supabase, branchId, year, month)
+  const start = prevEnd && prevEnd < probe.end ? addDays(prevEnd, 1) : probe.start
+  const holidays = await loadHolidays(supabase, branchId, start, probe.end)
+  const built = buildDaysInRange(start, probe.end, { weeklyOffDays: settings.weekly_off_days, holidays })
 
   const { data: period, error } = await supabase
     .from('payroll_periods')
@@ -343,6 +342,64 @@ export async function openPayrollPeriod(branchId: string, year: number, month: n
     newValues: { start_date: built.start, end_date: built.end, workdays: built.workdays, staff: staffIds.length },
   })
   return ok(period.id)
+}
+
+/** end_date of the branch's period for the month before (year, month), if one exists. */
+async function previousPeriodEnd(supabase: ServerClient, branchId: string, year: number, month: number): Promise<string | null> {
+  const py = month === 1 ? year - 1 : year
+  const pm = month === 1 ? 12 : month - 1
+  const { data } = await supabase
+    .from('payroll_periods')
+    .select('end_date')
+    .eq('branch_id', branchId).eq('period_year', py).eq('period_month', pm)
+    .maybeSingle()
+  return (data?.end_date as string | undefined) ?? null
+}
+
+/**
+ * Moves a draft period's start/end (e.g. payday shifted to the 26th because the
+ * 27th is a day off). Day flags already set are kept; counts are re-pulled.
+ * Returns a warning when the range leaves a gap or overlaps the neighbour months.
+ */
+export async function updatePeriodRange(periodId: string, start: string, end: string): Promise<Result<{ warning: string | null }>> {
+  const actor = await getActor(PREP_ROLES)
+  if (isErr(actor)) return actor
+  const { supabase } = actor
+  const period = await loadPeriod(supabase, periodId)
+  if (!period) return fail('Periode tidak ditemukan.')
+  if (period.status !== 'draft') return fail('Tanggal periode hanya bisa diubah saat draft.')
+  const ISO = /^\d{4}-\d{2}-\d{2}$/
+  if (!ISO.test(start) || !ISO.test(end) || start > end) return fail('Tanggal mulai harus sebelum tanggal selesai.')
+  const lengthDays = (Date.parse(end) - Date.parse(start)) / 86_400_000 + 1
+  if (lengthDays < 20 || lengthDays > 40) return fail('Panjang periode harus 20–40 hari.')
+
+  const settings = await loadSettings(supabase, period.branch_id)
+  const holidays = await loadHolidays(supabase, period.branch_id, start, end)
+  const built = buildDaysInRange(start, end, { weeklyOffDays: settings.weekly_off_days, holidays }, period.days)
+  const { error } = await supabase.from('payroll_periods')
+    .update({ start_date: start, end_date: end, days: built.days, workdays: built.workdays })
+    .eq('id', periodId)
+  if (error) return fail(friendly(error.message))
+  await refreshActivityFor(supabase, periodId, actor.userId)
+
+  logActivity({
+    supabase, userId: actor.userId, action: 'update', resourceType: 'payroll_period',
+    resourceId: periodId, resourceLabel: `Tanggal periode ${periodLabelOf(period)}`, branchId: period.branch_id,
+    oldValues: { start_date: period.start_date, end_date: period.end_date },
+    newValues: { start_date: start, end_date: end, workdays: built.workdays },
+  })
+
+  const ny = period.period_month === 12 ? period.period_year + 1 : period.period_year
+  const nm = period.period_month === 12 ? 1 : period.period_month + 1
+  const [prevEnd, { data: next }] = await Promise.all([
+    previousPeriodEnd(supabase, period.branch_id, period.period_year, period.period_month),
+    supabase.from('payroll_periods').select('start_date')
+      .eq('branch_id', period.branch_id).eq('period_year', ny).eq('period_month', nm).maybeSingle(),
+  ])
+  const warnings: string[] = []
+  if (prevEnd && addDays(prevEnd, 1) !== start) warnings.push(`periode sebelumnya berakhir ${prevEnd}`)
+  if (next?.start_date && addDays(end, 1) !== next.start_date) warnings.push(`periode berikutnya mulai ${next.start_date}`)
+  return ok({ warning: warnings.length ? `Tidak bersambung: ${warnings.join(', ')}.` : null })
 }
 
 // ── Workspace ───────────────────────────────────────────────────────────────
@@ -599,6 +656,20 @@ async function loadActivityInput(
     }
   }
 
+  // Package sessions don't store their Layanan — take the package's (migration 120),
+  // so Layanan-filtered types (e.g. Sport Massage Full Body) count them too.
+  const missing = packageIds.length && autoTypes.some((t) => t.source_layanan_ids.length > 0)
+    ? [...periodVisits, ...firstPackageVisit.values()].filter((v) => v.package_id && !v.layanan_id)
+    : []
+  if (missing.length) {
+    const layananByPackage = new Map<string, string>()
+    for (let i = 0; i < packageIds.length; i += 300) {
+      const { data: pk } = await admin.from('patient_packages').select('id, layanan_id').in('id', packageIds.slice(i, i + 300))
+      for (const p of pk ?? []) if (p.layanan_id) layananByPackage.set(p.id, p.layanan_id)
+    }
+    for (const v of missing) v.layanan_id = layananByPackage.get(v.package_id!) ?? null
+  }
+
   return {
     types: autoTypes, periodVisits, firstPackageVisit, staffIds,
     start: period.start_date, end: period.end_date, todayISO: today,
@@ -738,6 +809,44 @@ export async function refreshAutoActivity(periodId: string): Promise<Result<{ up
 }
 
 /** Patient + date list behind one auto activity cell; its length equals the auto value. */
+/**
+ * Slip quick stat "Jumlah Kunjungan": the staff member's clinic sessions in the
+ * period — counted ones (the Kunjungan rule) and the rest (not attended / cancelled).
+ * `auto` = counted sessions.
+ */
+export async function getPayrollKunjunganDetail(periodId: string, staffId: string): Promise<Result<MetricDetail>> {
+  const actor = await getActor(VIEW_ROLES)
+  if (isErr(actor)) return actor
+  const period = await loadPeriod(actor.supabase, periodId)
+  if (!period) return fail('Periode tidak ditemukan.')
+  // Service role for the same reason as loadActivityInput (HR has no patient_visits access).
+  const { data, error } = await createAdminClient()
+    .from('patient_visits')
+    .select('id, patient_id, service_type, status, kehadiran, visit_date')
+    .eq('attending_staff_id', staffId)
+    .gte('visit_date', period.start_date).lte('visit_date', period.end_date)
+    .not('service_type', 'in', `(${NON_KUNJUNGAN_SERVICE_TYPES.map((t) => `"${t}"`).join(',')})`)
+    .order('visit_date')
+    .limit(5000)
+  if (error) return fail(error.message)
+  const today = todayJakarta()
+  const visits = (data ?? []) as (VisitForAchievement & { id: string; patient_id: string })[]
+  const names = await resolvePatientNames(visits.map((v) => v.patient_id))
+  const state = (v: VisitForAchievement) =>
+    countsAsKunjungan(v, today) ? 'Selesai'
+      : v.status === 'cancelled' ? 'Batal'
+      : v.kehadiran === 'TIDAK HADIR' || v.status === 'no_show' ? 'Tidak hadir'
+      : 'Belum selesai'
+  const done = (v: VisitForAchievement) => state(v) === 'Selesai'
+  // Completed sessions first, then the rest — each by date.
+  const sorted = [...visits].sort((a, b) => Number(done(b)) - Number(done(a)) || a.visit_date.localeCompare(b.visit_date))
+  return ok({
+    rows: sorted.map((v) => ({ date: v.visit_date, patientName: names.get(v.patient_id) || '—', label: `${v.service_type ?? '—'} · ${state(v)}` })),
+    auto: visits.filter(done).length,
+    override: null,
+  })
+}
+
 export async function getPayrollActivityDetail(periodId: string, staffId: string, code: string): Promise<Result<MetricDetail>> {
   const actor = await getActor(VIEW_ROLES)
   if (isErr(actor)) return actor

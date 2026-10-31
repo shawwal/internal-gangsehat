@@ -21,6 +21,9 @@ export function ModernView({ summaries, days }: ModernViewProps) {
             target={s.target}
             color={s.color}
             delay={i * 80}
+            perDay={s.perDay}
+            current={s.current}
+            previous={s.previous}
           />
         ))}
       </div>

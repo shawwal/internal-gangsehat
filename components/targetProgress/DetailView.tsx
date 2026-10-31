@@ -12,6 +12,7 @@ import { SkeletonRegion, TableSkeleton } from '@/components/ui/Skeleton'
 import { Pagination } from '@/components/leave/Pagination'
 import { exportToExcel, type ExportColumn } from '@/lib/excel-export'
 import { DETAIL_SORT_OPTIONS, type CategoryKey, type DetailSort } from './types'
+import { ColumnFilter, applyColumnFilters, filterOptions, type SortState } from '@/components/ui/ColumnFilter'
 
 // Rows with no attributed therapist — selectable as their own filter value.
 const NO_THERAPIST = 'none'
@@ -35,6 +36,7 @@ const KUNJUNGAN_EXPORT_COLUMNS: ExportColumn<TargetProgressDetailRow>[] = [
   { header: 'Nama Pasien',      value: (r) => r.patientName },
   { header: 'Nama Terapis',     value: (r) => r.fisioNickname ?? r.fisioName },
   { header: 'Layanan',          value: (r) => r.serviceType },
+  { header: 'Kategori',         value: (r) => r.kategori ?? '' },
   { header: 'Pertemuan Ke',     value: (r) => r.pertemuanKe },
   // Rows with no recorded kehadiran are past visits the target counts as attended.
   { header: 'Kehadiran',        value: (r) => (r.kehadiran === 'HADIR' ? 'Hadir' : 'Belum Dicatat') },
@@ -47,6 +49,7 @@ const TRANSACTION_EXPORT_COLUMNS: ExportColumn<TargetProgressDetailRow>[] = [
   { header: 'Nama Pasien',  value: (r) => r.patientName },
   { header: 'Nama Terapis', value: (r) => r.fisioName },
   { header: 'Layanan',      value: (r) => r.serviceType },
+  { header: 'Kategori',     value: (r) => r.kategori ?? '' },
   { header: 'Harga',        value: (r) => r.tx?.harga ?? '' },
   { header: 'Diskon',       value: (r) => r.tx?.discount ?? '' },
   { header: 'Dibayar',      value: (r) => r.tx?.amount ?? '' },
@@ -69,6 +72,26 @@ const SORTERS: Record<DetailSort, (a: TargetProgressDetailRow, b: TargetProgress
   therapist_asc: (a, b) => Number(!a.therapistId) - Number(!b.therapistId) || byText(a.fisioName, b.fisioName) || byDate(a, b),
   service_asc:   (a, b) => byText(a.serviceType, b.serviceType) || byDate(a, b),
   amount_desc:   (a, b) => (b.tx?.harga ?? 0) - (a.tx?.harga ?? 0) || byDate(a, b),
+}
+
+const kehadiranLabel = (r: TargetProgressDetailRow) => (r.kehadiran === 'HADIR' ? 'Hadir' : 'Belum Dicatat')
+
+/** Cell value per header key — what the column filters match and sort on. */
+const COLUMN_VALUES: Record<string, (r: TargetProgressDetailRow) => string | number | null | undefined> = {
+  tanggal:    (r) => `${r.visitDate ?? ''} ${r.visitTime ?? ''}`,
+  jam:        (r) => r.visitTime?.slice(0, 5),
+  pasien:     (r) => r.patientName,
+  terapis:    (r) => (r.therapistId ? r.fisioName : null),
+  layanan:    (r) => r.serviceType,
+  kategori:   (r) => r.kategori,
+  pertemuan:  (r) => r.pertemuanKe,
+  kehadiran:  kehadiranLabel,
+  status:     (r) => r.statusKunjungan,
+  harga:      (r) => r.tx?.harga,
+  diskon:     (r) => r.tx?.discount,
+  dibayar:    (r) => r.tx?.amount,
+  metode:     (r) => r.tx?.payment_method,
+  pembayaran: (r) => r.tx?.payment_status,
 }
 
 export interface DetailFilters {
@@ -104,8 +127,12 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState<DetailFilters>(initial)
   const [editingRow, setEditingRow] = useState<TargetProgressDetailRow | null>(null)
-  const { q, therapist, service, payment, sort } = filters
+  const { q, therapist, payment, sort } = filters
   const set = (patch: Partial<DetailFilters>) => { setFilters((f) => ({ ...f, ...patch })); setPage(1) }
+  // Per-column multi-select filters + header sort (header sort overrides the Urutkan select).
+  const [colFilters, setColFilters] = useState<Record<string, string[]>>(initial.service ? { layanan: [initial.service] } : {})
+  const [colSort, setColSort] = useState<SortState | null>(null)
+  const setColFilter = (key: string, values: string[]) => { setColFilters((f) => ({ ...f, [key]: values })); setPage(1) }
 
   const isKunjungan = category === 'kunjungan'
   const hasTx = !!rows?.some((r) => r.tx)
@@ -121,12 +148,12 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
   // Mirror filters into the URL (no navigation) so reload / Back keep them.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    for (const [k, v] of Object.entries({ q: q.trim(), therapist, service, payment, sort: sort === 'date_asc' ? '' : sort })) {
+    for (const [k, v] of Object.entries({ q: q.trim(), therapist, service: '', payment, sort: sort === 'date_asc' ? '' : sort })) {
       if (v) params.set(k, v)
       else params.delete(k)
     }
     window.history.replaceState(null, '', `?${params}`)
-  }, [q, therapist, service, payment, sort])
+  }, [q, therapist, payment, sort])
 
   const therapistOptions = useMemo<TherapistOption[] | null>(() => {
     if (!rows) return null
@@ -138,11 +165,6 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
     return opts
   }, [rows])
 
-  const serviceOptions = useMemo(
-    () => [...new Set((rows ?? []).map((r) => r.serviceType).filter((s): s is string => !!s))].sort(byText),
-    [rows],
-  )
-
   const paymentOptions = useMemo(
     () => [...new Set((rows ?? []).map((r) => r.tx?.payment_status).filter((s): s is string => !!s))].sort(byText),
     [rows],
@@ -150,19 +172,20 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
 
   const visible = useMemo(() => {
     const term = q.trim().toLowerCase()
-    return (rows ?? [])
+    const base = (rows ?? [])
       .filter((r) => !therapist || (therapist === NO_THERAPIST ? !r.therapistId : r.therapistId === therapist))
-      .filter((r) => !service || r.serviceType === service)
       .filter((r) => !payment || r.tx?.payment_status === payment)
       .filter((r) => !term || [r.patientName, r.noRm, r.fisioName, r.fisioNickname, r.serviceType, r.tx?.penjamin]
         .some((v) => v?.toLowerCase().includes(term)))
       .sort(SORTERS[sort])
-  }, [rows, q, therapist, service, payment, sort])
+    return applyColumnFilters(base, COLUMN_VALUES, colFilters, colSort)
+  }, [rows, q, therapist, payment, sort, colFilters, colSort])
 
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
   const pageRows = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const filtered = !!(q.trim() || therapist || service || payment)
+  const colFiltered = Object.values(colFilters).some((v) => v.length > 0)
+  const filtered = !!(q.trim() || therapist || payment || colFiltered)
   const patientCount = new Set(visible.map((r) => r.patientId ?? r.id)).size
   const totalHarga = visible.reduce((s, r) => s + (r.tx?.harga ?? 0), 0)
   const sortOptions = DETAIL_SORT_OPTIONS.filter((o) => o.value !== 'amount_desc' || hasTx)
@@ -183,12 +206,23 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
     load()
   }
 
-  const headers = [
-    'No.', 'Tanggal',
-    ...(isKunjungan ? ['Jam'] : []),
-    'Pasien', 'Terapis', 'Layanan',
-    ...(isKunjungan ? ['Pert.', 'Kehadiran', 'Status'] : []),
-    ...(hasTx ? ['Harga', 'Diskon', 'Dibayar', 'Metode', 'Pembayaran'] : []),
+  const headers: { label: string; key?: string; filter?: boolean }[] = [
+    { label: 'No.' },
+    { label: 'Tanggal', key: 'tanggal' },
+    ...(isKunjungan ? [{ label: 'Jam', key: 'jam' }] : []),
+    { label: 'Pasien', key: 'pasien', filter: true },
+    { label: 'Terapis', key: 'terapis', filter: true },
+    { label: 'Layanan', key: 'layanan', filter: true },
+    { label: 'Kategori', key: 'kategori', filter: true },
+    ...(isKunjungan ? [
+      { label: 'Pert.', key: 'pertemuan', filter: true },
+      { label: 'Kehadiran', key: 'kehadiran', filter: true },
+      { label: 'Status', key: 'status', filter: true },
+    ] : []),
+    ...(hasTx ? [
+      { label: 'Harga', key: 'harga' }, { label: 'Diskon', key: 'diskon' }, { label: 'Dibayar', key: 'dibayar' },
+      { label: 'Metode', key: 'metode', filter: true }, { label: 'Pembayaran', key: 'pembayaran', filter: true },
+    ] : []),
   ]
 
   return (
@@ -237,17 +271,6 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <TherapistCombobox options={therapistOptions} value={therapist} onChange={(id) => set({ therapist: id })} />
-          <select
-            aria-label="Layanan"
-            value={service}
-            onChange={(e) => set({ service: e.target.value })}
-            className={`${CONTROL} cursor-pointer`}
-          >
-            <option value="">Semua Layanan</option>
-            {/* Keep a URL value selectable even if this period has no such rows. */}
-            {service && !serviceOptions.includes(service) && <option value={service}>{service}</option>}
-            {serviceOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
           {/* Payment detail only reaches roles that can read transactions. */}
           {hasTx && (
             <select
@@ -275,7 +298,7 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
           {filtered && (
             <button
               type="button"
-              onClick={() => set({ q: '', therapist: '', service: '', payment: '' })}
+              onClick={() => { set({ q: '', therapist: '', service: '', payment: '' }); setColFilters({}); setColSort(null) }}
               className="h-9 px-3 text-xs font-medium rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
             >
               Reset
@@ -321,7 +344,17 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
                 <thead>
                   <tr className="border-b border-border">
                     {headers.map((h) => (
-                      <th key={h} className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                      <th key={h.label} className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">
+                        <ColumnFilter
+                          label={h.label}
+                          sortKey={h.key}
+                          sort={colSort}
+                          onSort={(next) => { setColSort(next); setPage(1) }}
+                          options={h.filter && h.key ? filterOptions(rows, (r) => String(COLUMN_VALUES[h.key!](r) ?? '—')) : undefined}
+                          selected={h.key ? colFilters[h.key] : undefined}
+                          onFilter={h.key ? (v) => setColFilter(h.key!, v) : undefined}
+                        />
+                      </th>
                     ))}
                   </tr>
                 </thead>
@@ -359,7 +392,8 @@ export function DetailView({ branchId, branchName, category, label, start, end, 
                       <td className="px-3 py-2.5 text-xs text-foreground whitespace-nowrap">
                         {r.therapistId ? r.fisioName : <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{r.serviceType ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-xs text-foreground whitespace-nowrap">{r.serviceType ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-[11px] text-muted-foreground whitespace-nowrap">{r.kategori ?? '—'}</td>
                       {isKunjungan && (
                         <>
                           <td className="px-3 py-2.5 text-xs text-muted-foreground text-center">{r.pertemuanKe ?? '—'}</td>

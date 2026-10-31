@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, CheckCircle2 } from 'lucide-react'
 import { pctValue, formatPct, progressColor } from './utils'
 
 interface TargetKpiCardProps {
@@ -11,9 +11,15 @@ interface TargetKpiCardProps {
   color: string
   delay?: number
   onClick?: () => void
+  /** Average per elapsed day */
+  perDay?: number | null
+  /** `current` vs `previous` (same elapsed days of the previous period) → ▲ / ▼ % */
+  current?: number
+  previous?: number | null
 }
 
-export function TargetKpiCard({ label, actual, target, color, delay = 0, onClick }: TargetKpiCardProps) {
+export function TargetKpiCard({ label, actual, target, color, delay = 0, onClick, perDay, current, previous }: TargetKpiCardProps) {
+  const change = previous != null && current != null && previous > 0 ? ((current - previous) / previous) * 100 : null
   const pct = pctValue(actual, target)
   const clamped = pct !== null ? Math.min(pct, 100) : 0
   const barColor = progressColor(pct)
@@ -73,6 +79,24 @@ export function TargetKpiCard({ label, actual, target, color, delay = 0, onClick
           <CheckCircle2 size={12} style={{ color: 'var(--chart-4)' }} />
         )}
       </div>
+
+      {(perDay != null || previous != null) && (
+        <div className="flex items-center justify-between gap-2 mt-2 text-[11px]">
+          {perDay != null && (
+            <span className="text-muted-foreground">{perDay.toLocaleString('id-ID', { maximumFractionDigits: 1 })} / hari</span>
+          )}
+          {previous != null && (
+            <span
+              className={`inline-flex items-center gap-0.5 font-semibold ${change == null ? 'text-muted-foreground' : change >= 0 ? 'text-[#34C759]' : 'text-destructive'}`}
+              title={`Periode sebelumnya, hari yang sama: ${previous.toLocaleString('id-ID')}`}
+            >
+              {change == null
+                ? `vs ${previous.toLocaleString('id-ID')}`
+                : <>{change >= 0 ? <ArrowUp size={11} /> : <ArrowDown size={11} />}{Math.abs(change).toLocaleString('id-ID', { maximumFractionDigits: 1 })}%</>}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }

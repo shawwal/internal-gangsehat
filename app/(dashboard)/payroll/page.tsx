@@ -11,7 +11,7 @@ import { useToast } from '@/context/ToastContext'
 import {
   addPayrollAdjustment, deletePayrollAdjustment, getPayrollBootstrap, getPayrollWorkspace, listBindableStaff,
   listPayrollPeriods, lockPayrollPeriod, markPayrollPaid, openPayrollPeriod, refreshAutoActivity, saveAttendanceCells,
-  setActivityOverride, setPeriodStaff, submitPayrollPeriod, unlockPayrollPeriod, updatePeriodDay,
+  setActivityOverride, setPeriodStaff, submitPayrollPeriod, unlockPayrollPeriod, updatePeriodDay, updatePeriodRange,
   withdrawPayrollSubmission, type PayrollPeriodSummary,
 } from '@/app/actions/payroll'
 import { MONTH_NAMES } from '@/lib/payroll/period'
@@ -195,6 +195,15 @@ function PayrollWorkspacePage() {
     if (!ws) return
     const res = await updatePeriodDay(ws.period.id, date, workday, note)
     if (toastResult(res)) reload()
+  }
+
+  async function onChangeRange(start: string, end: string) {
+    if (!ws) return
+    const res = await updatePeriodRange(ws.period.id, start, end)
+    if (!toastResult(res)) return
+    if (res.ok && res.data.warning) showToast(res.data.warning, 'error')
+    else showToast('Tanggal periode diperbarui — aktivitas dihitung ulang', 'success')
+    reload()
   }
 
   async function onOverride(staffId: string, code: string, value: number | null) {
@@ -407,7 +416,7 @@ function PayrollWorkspacePage() {
             })}
           </div>
 
-          {step === 'calendar' && <CalendarStep ws={ws} onToggleDay={onToggleDay} />}
+          {step === 'calendar' && <CalendarStep key={`${ws.period.id}:${ws.period.start_date}:${ws.period.end_date}`} ws={ws} onToggleDay={onToggleDay} onChangeRange={onChangeRange} />}
           {step === 'attendance' && <AttendanceGrid ws={ws} rows={rows} onChange={onAttendanceChange} />}
           {step === 'activity' && (
             <ActivityStep ws={ws} rows={rows} refreshing={busy === 'refresh'} onRefresh={onRefreshActivity} onOverride={onOverride} />

@@ -57,6 +57,7 @@ export function JadwalListRow({ row, no, onRemind, onConfirm, onCancel, fisioOpt
           onSave={(v) => onEdit(row, 'attending_staff_id', v)} />
       </td>
       <td className={td}>{row.layanan_label ?? '—'}</td>
+      <td className={`${td} text-xs text-muted-foreground`}>{row.kategori ?? '—'}</td>
       <td className={td}>{row.pertemuan_ke}</td>
       <td className={`${td} whitespace-nowrap`}>{formatCurrency(row.kurang_bayar)}</td>
       <td className={td}>

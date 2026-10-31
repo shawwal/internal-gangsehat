@@ -70,12 +70,29 @@ export function buildPeriodDays(year: number, month: number, opts: BuildPeriodOp
   workdays: number
 } {
   const { start, end } = periodRange(year, month, opts.startDay)
+  return buildDaysInRange(start, end, opts)
+}
+
+/**
+ * Days for an explicit start..end (a period whose dates HR moved, e.g. payday
+ * shifted off a holiday). `keep` carries over workday/note already set on dates
+ * that stay inside the range.
+ */
+export function buildDaysInRange(
+  start: string,
+  end: string,
+  opts: Omit<BuildPeriodOptions, 'startDay'>,
+  keep: PeriodDay[] = [],
+): { start: string; end: string; days: PeriodDay[]; workdays: number } {
   const off = new Set(opts.weeklyOffDays)
   const holidayByDate = new Map(opts.holidays.map((h) => [h.date, h.name]))
+  const kept = new Map(keep.map((d) => [d.date, d]))
   const days: PeriodDay[] = []
   for (let d = start; d <= end; d = addDays(d, 1)) {
+    const prev = kept.get(d)
     const holiday = holidayByDate.get(d)
-    if (holiday) days.push({ date: d, workday: false, note: holiday })
+    if (prev) days.push(prev)
+    else if (holiday) days.push({ date: d, workday: false, note: holiday })
     else if (off.has(weekdayOf(d))) days.push({ date: d, workday: false, note: null })
     else days.push({ date: d, workday: true, note: null })
   }

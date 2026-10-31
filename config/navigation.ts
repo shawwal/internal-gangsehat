@@ -357,6 +357,16 @@ export const navigation: NavItem[] = [
     group: 'schedule',
   },
 
+  // Validation Center — read-only tracker of every fisio + Sport Massage session
+  {
+    key: 'validation-center',
+    label: 'Validation Center',
+    href: '/sessions',
+    icon: 'ClipboardCheck',
+    roles: ['director', 'manager', 'admin'],
+    group: 'schedule',
+  },
+
   // Sport Massage schedule — dedicated therapists + management roles
   {
     key: 'jadwal-sport-massage',
