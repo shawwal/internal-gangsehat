@@ -18,6 +18,11 @@ async function requireBranchAccess(): Promise<{ userId: string; role: string; br
   return { userId: user.id, role: profile.role, branchId: profile.branch_id }
 }
 
+/** Director picks any branch; everyone else is pinned to their own. */
+function targetBranch(access: { role: string; branchId: string | null }, requested?: string): string | null {
+  return access.role === 'director' ? (requested ?? null) : access.branchId
+}
+
 // ── Expense categories ───────────────────────────────────────────────────────
 
 export interface ExpenseCategoryRow {
@@ -40,13 +45,14 @@ export async function fetchExpenseCategories(branchId: string): Promise<ExpenseC
   return (data ?? []) as ExpenseCategoryRow[]
 }
 
-export async function addExpenseCategory(name: string): Promise<{ error: string | null }> {
+export async function addExpenseCategory(name: string, branchId?: string): Promise<{ error: string | null }> {
   const access = await requireBranchAccess()
   if ('error' in access) return { error: access.error }
-  if (!access.branchId) return { error: 'Akun Anda belum terhubung ke cabang.' }
+  const branch = targetBranch(access, branchId)
+  if (!branch) return { error: access.role === 'director' ? 'Pilih cabang terlebih dahulu.' : 'Akun Anda belum terhubung ke cabang.' }
   const supabase = await createClient()
   const { error } = await supabase.from('internal_expense_categories').insert({
-    branch_id: access.branchId,
+    branch_id: branch,
     name: name.trim().toUpperCase(),
   })
   return { error: error?.message ?? null }
@@ -95,13 +101,14 @@ export async function fetchOpeningBalance(branchId: string, year: number): Promi
   return data ? Number(data.amount) : 0
 }
 
-export async function setOpeningBalance(year: number, amount: number): Promise<{ error: string | null }> {
+export async function setOpeningBalance(year: number, amount: number, branchId?: string): Promise<{ error: string | null }> {
   const access = await requireBranchAccess()
   if ('error' in access) return { error: access.error }
-  if (!access.branchId) return { error: 'Akun Anda belum terhubung ke cabang.' }
+  const branch = targetBranch(access, branchId)
+  if (!branch) return { error: access.role === 'director' ? 'Pilih cabang terlebih dahulu.' : 'Akun Anda belum terhubung ke cabang.' }
   const supabase = await createClient()
   const { error } = await supabase.from('internal_cash_opening_balance').upsert({
-    branch_id: access.branchId,
+    branch_id: branch,
     year,
     amount,
     updated_by: access.userId,

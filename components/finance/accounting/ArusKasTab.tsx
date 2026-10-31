@@ -121,7 +121,7 @@ export function ArusKasTab({ branchId, branchName }: Props) {
 
   async function saveOpeningBalance() {
     setSavingBalance(true)
-    const { error } = await setOpeningBalance(year, Number(openingInput) || 0)
+    const { error } = await setOpeningBalance(year, Number(openingInput) || 0, branchId)
     setSavingBalance(false)
     if (error) { alert(error); return }
     setOpening(Number(openingInput) || 0)

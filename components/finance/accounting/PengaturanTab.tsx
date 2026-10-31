@@ -205,7 +205,7 @@ function ExpenseCategorySection({ branchId }: { branchId: string }) {
     e.preventDefault()
     if (!newName.trim()) return
     setAdding(true)
-    const { error } = await addExpenseCategory(newName)
+    const { error } = await addExpenseCategory(newName, branchId)
     setAdding(false)
     if (error) { alert(error); return }
     setNewName('')
