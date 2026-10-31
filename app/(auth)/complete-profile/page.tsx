@@ -105,8 +105,8 @@ export default function CompleteProfilePage() {
           <Image
             src={isDark ? '/white-logo.png' : '/black-logo.png'}
             alt="Gangsehat"
-            width={140}
-            height={40}
+            width={141}
+            height={47}
             className="h-8 w-auto"
             priority
           />

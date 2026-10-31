@@ -61,8 +61,8 @@ export default function PendingPage() {
       <div className="w-full max-w-sm">
         <div className="bg-card rounded-2xl shadow-sm border border-border p-8 text-center space-y-6">
           <div className="flex justify-center">
-            <Image src="/black-logo.png" alt="Gang Sehat" width={140} height={40} className="object-contain dark:hidden" priority />
-            <Image src="/white-logo.png" alt="Gang Sehat" width={140} height={40} className="object-contain hidden dark:block" priority />
+            <Image src="/black-logo.png" alt="Gang Sehat" width={141} height={47} className="object-contain dark:hidden" priority />
+            <Image src="/white-logo.png" alt="Gang Sehat" width={141} height={47} className="object-contain hidden dark:block" priority />
           </div>
 
           <div className="flex flex-col items-center gap-3">

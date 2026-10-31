@@ -75,13 +75,13 @@ export function Sidebar({ role, branchId, allowedNavKeys, collapsed }: Props) {
       >
         {collapsed ? (
           <>
-            <Image src="/black-logo.png" alt="GS" width={28} height={28} className="object-contain dark:hidden" priority />
-            <Image src="/white-logo.png" alt="GS" width={28} height={28} className="object-contain hidden dark:block" priority />
+            <Image src="/black-logo.png" alt="GS" width={28} height={28} className="h-7 w-7 object-contain dark:hidden" priority />
+            <Image src="/white-logo.png" alt="GS" width={28} height={28} className="h-7 w-7 object-contain hidden dark:block" priority />
           </>
         ) : (
           <>
-            <Image src="/black-logo.png" alt="Gang Sehat" width={140} height={40} className="object-contain dark:hidden" priority />
-            <Image src="/white-logo.png" alt="Gang Sehat" width={140} height={40} className="object-contain hidden dark:block" priority />
+            <Image src="/black-logo.png" alt="Gang Sehat" width={141} height={47} className="object-contain dark:hidden" priority />
+            <Image src="/white-logo.png" alt="Gang Sehat" width={141} height={47} className="object-contain hidden dark:block" priority />
           </>
         )}
       </div>

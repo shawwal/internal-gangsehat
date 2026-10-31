@@ -20,7 +20,7 @@ export function BrandPanel() {
             src="/white-logo.png"
             alt="Gang Sehat"
             width={200}
-            height={58}
+            height={67}
             style={{ height: 'auto' }}
             className="object-contain drop-shadow-lg"
             priority

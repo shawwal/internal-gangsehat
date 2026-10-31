@@ -96,8 +96,8 @@ export default function RegisterPage() {
         <div className="w-full max-w-sm">
           <div className="bg-card rounded-2xl shadow-sm border border-border p-8 text-center space-y-4">
             <div className="flex justify-center mb-2">
-              <Image src="/black-logo.png" alt="Gang Sehat" width={140} height={40} className="object-contain dark:hidden" priority />
-              <Image src="/white-logo.png" alt="Gang Sehat" width={140} height={40} className="object-contain hidden dark:block" priority />
+              <Image src="/black-logo.png" alt="Gang Sehat" width={141} height={47} className="object-contain dark:hidden" priority />
+              <Image src="/white-logo.png" alt="Gang Sehat" width={141} height={47} className="object-contain hidden dark:block" priority />
             </div>
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
               <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -126,8 +126,8 @@ export default function RegisterPage() {
         <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <Image src="/black-logo.png" alt="Gang Sehat" width={180} height={52} className="object-contain dark:hidden" priority />
-              <Image src="/white-logo.png" alt="Gang Sehat" width={180} height={52} className="object-contain hidden dark:block" priority />
+              <Image src="/black-logo.png" alt="Gang Sehat" width={180} height={60} className="object-contain dark:hidden" priority />
+              <Image src="/white-logo.png" alt="Gang Sehat" width={180} height={60} className="object-contain hidden dark:block" priority />
             </div>
             <p className="text-sm text-muted-foreground">Daftar sebagai tim internal</p>
           </div>

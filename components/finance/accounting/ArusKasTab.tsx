@@ -46,8 +46,6 @@ export function ArusKasTab({ branchId, branchName }: Props) {
   const [period, setPeriod] = useState<ArusKasPeriod>(readPeriod)
   const periodOption = PERIOD_OPTIONS.find((p) => p.key === period)!
   const shownMonths = periodOption.months
-  const lastShown = shownMonths[shownMonths.length - 1]
-  const firstHalfOnly = period === 's1'
 
   function changePeriod(next: ArusKasPeriod) {
     setPeriod(next)
@@ -55,18 +53,18 @@ export function ArusKasTab({ branchId, branchName }: Props) {
   }
   const [txns, setTxns] = useState<AccountingTxnRow[]>([])
   const [expenseCats, setExpenseCats] = useState<ExpenseCategoryRow[]>([])
-  const [opening, setOpening] = useState(0)
+  const [openings, setOpenings] = useState<{ s1: number; s2: number | null }>({ s1: 0, s2: null })
   const [openingInput, setOpeningInput] = useState('0')
+  // Semester 2 has its own Saldo Awal; until it's set, it falls back to Semester 1's.
+  const semester: 1 | 2 = period === 's2' ? 2 : 1
+  const opening = semester === 2 ? (openings.s2 ?? openings.s1) : openings.s1
   const [loading, setLoading] = useState(true)
   const [savingBalance, setSavingBalance] = useState(false)
 
   useEffect(() => {
     setLoading(true)
-    // Semester 1 only needs Jan–Jun. Semester 2 still loads from January: its
-    // Saldo Akhir carries the yearly opening balance through Jan–Jun.
-    const { from, toExclusive } = firstHalfOnly
-      ? { from: `${year}-01-01`, toExclusive: `${year}-07-01` }
-      : yearRange(year)
+    // Always the whole year: the "setahun" export needs it whatever is on screen.
+    const { from, toExclusive } = yearRange(year)
     Promise.all([
       fetchTransactionsForRange(branchId, from, toExclusive),
       fetchExpenseCategories(branchId),
@@ -74,11 +72,17 @@ export function ArusKasTab({ branchId, branchName }: Props) {
     ]).then(([t, e, ob]) => {
       setTxns(t)
       setExpenseCats(e.filter((r) => r.is_active))
-      setOpening(ob)
-      setOpeningInput(String(ob))
+      setOpenings(ob)
       setLoading(false)
     })
-  }, [branchId, year, firstHalfOnly])
+  }, [branchId, year])
+
+  // Reset the input when the period/year switches to another Saldo Awal.
+  const [inputFor, setInputFor] = useState(opening)
+  if (inputFor !== opening) {
+    setInputFor(opening)
+    setOpeningInput(String(opening))
+  }
 
   // Income rows key off the same coarse category bucket `transactions.category`
   // stores app-wide (TERAPI AWAL KLINIK, PAKET KLINIK, ...) — not the specific item name,
@@ -112,37 +116,42 @@ export function ArusKasTab({ branchId, branchName }: Props) {
   const incomeTotals = Array.from({ length: 12 }, (_, mi) => incomeRows.reduce((s, r) => s + r.monthly[mi], 0))
   const expenseTotals = Array.from({ length: 12 }, (_, mi) => expenseRows.reduce((s, r) => s + r.monthly[mi], 0))
   const netMonthly = Array.from({ length: 12 }, (_, mi) => incomeTotals[mi] - expenseTotals[mi])
-  const runningBalance: number[] = []
-  netMonthly.reduce((bal, net, mi) => {
-    const end = bal + net
-    runningBalance[mi] = end
-    return end
-  }, opening)
+  // Saldo Akhir runs within the chosen period only: Semester 2 starts again
+  // from its own Saldo Awal in July instead of carrying Jan–Jun over.
+  function balancesFor(months: number[], start: number): number[] {
+    const out: number[] = []
+    months.reduce((bal, mi) => (out[mi] = bal + netMonthly[mi]), start)
+    return out
+  }
+  const runningBalance = balancesFor(shownMonths, opening)
+  const allMonths = PERIOD_OPTIONS[0].months
 
   async function saveOpeningBalance() {
     setSavingBalance(true)
-    const { error } = await setOpeningBalance(year, Number(openingInput) || 0, branchId)
+    const amount = Number(openingInput) || 0
+    const { error } = await setOpeningBalance(year, amount, branchId, semester)
     setSavingBalance(false)
     if (error) { alert(error); return }
-    setOpening(Number(openingInput) || 0)
+    setOpenings((o) => (semester === 2 ? { ...o, s2: amount } : { ...o, s1: amount }))
   }
 
-  function handleExportExcel() {
+  function exportExcel(months: number[], suffix: string) {
     const cols: ExportColumn<MatrixRow>[] = [
       { header: 'Nama', value: (r) => r.label },
-      ...shownMonths.map((i): ExportColumn<MatrixRow> => ({ header: MONTH_NAMES[i], value: (r) => r.monthly[i] })),
+      ...months.map((i): ExportColumn<MatrixRow> => ({ header: MONTH_NAMES[i], value: (r) => r.monthly[i] })),
     ]
-    exportToExcel([...incomeRows, ...expenseRows], cols, period === 'year' ? `arus_kas_${year}` : `arus_kas_${year}_${period}`)
+    exportToExcel([...incomeRows, ...expenseRows], cols, `arus_kas_${year}${suffix}`)
   }
 
-  function handleExportPdf() {
+  function exportPdf(months: number[], start: number, subtitle: string) {
+    const balances = balancesFor(months, start)
     openPrintableReport({
       title: 'Arus Kas',
-      subtitle: period === 'year' ? `Tahun ${year}` : `${periodOption.label} ${year}`,
+      subtitle,
       meta: [
         { label: 'Cabang', value: branchName },
-        { label: 'Saldo Awal', value: formatRp(opening) },
-        { label: 'Saldo Akhir', value: formatRp(runningBalance[lastShown] ?? opening) },
+        { label: 'Saldo Awal', value: formatRp(start) },
+        { label: 'Saldo Akhir', value: formatRp(balances[months[months.length - 1]] ?? start) },
       ],
       columns: [
         { header: 'Bulan', value: (r: { label: string; income: number; expense: number; net: number; balance: number }) => r.label },
@@ -151,11 +160,18 @@ export function ArusKasTab({ branchId, branchName }: Props) {
         { header: 'Laba Bersih', align: 'right', value: (r) => formatRp(r.net) },
         { header: 'Saldo Akhir', align: 'right', value: (r) => formatRp(r.balance) },
       ],
-      rows: shownMonths.map((i) => ({
-        label: MONTH_NAMES[i], income: incomeTotals[i], expense: expenseTotals[i], net: netMonthly[i], balance: runningBalance[i],
+      rows: months.map((i) => ({
+        label: MONTH_NAMES[i], income: incomeTotals[i], expense: expenseTotals[i], net: netMonthly[i], balance: balances[i],
       })),
     })
   }
+
+  const handleExportExcel = () => exportExcel(shownMonths, period === 'year' ? '' : `_${period}`)
+  const handleExportPdf = () =>
+    exportPdf(shownMonths, opening, period === 'year' ? `Tahun ${year}` : `${periodOption.label} ${year}`)
+  // Whole year = one running total from Semester 1's Saldo Awal, same as "Tahun penuh".
+  const handleExportYearExcel = () => exportExcel(allMonths, '')
+  const handleExportYearPdf = () => exportPdf(allMonths, openings.s1, `Tahun ${year}`)
 
   return (
     <div className="space-y-4">
@@ -171,7 +187,7 @@ export function ArusKasTab({ branchId, branchName }: Props) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-foreground mb-1">Saldo Awal (Rp)</label>
+          <label className="block text-xs font-medium text-foreground mb-1">{semester === 2 ? 'Saldo Awal Juli (Rp)' : 'Saldo Awal (Rp)'}</label>
           <div className="flex gap-2">
             <input type="number" value={openingInput} onChange={(e) => setOpeningInput(e.target.value)} className={`${inputCls} w-40`} />
             <button onClick={saveOpeningBalance} disabled={savingBalance} className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors flex items-center gap-1.5">
@@ -180,7 +196,13 @@ export function ArusKasTab({ branchId, branchName }: Props) {
           </div>
         </div>
         <div className="ml-auto">
-          <ExportMenu onExportExcel={handleExportExcel} onExportPdf={handleExportPdf} disabled={loading} />
+          <ExportMenu
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+            onExportYearExcel={period === 'year' ? undefined : handleExportYearExcel}
+            onExportYearPdf={period === 'year' ? undefined : handleExportYearPdf}
+            disabled={loading}
+          />
         </div>
       </div>
 

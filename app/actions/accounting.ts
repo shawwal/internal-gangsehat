@@ -90,18 +90,21 @@ export async function deleteExpenseCategory(id: string): Promise<{ error: string
 
 // ── Cash opening balance ─────────────────────────────────────────────────────
 
-export async function fetchOpeningBalance(branchId: string, year: number): Promise<number> {
+/** Saldo Awal per semester. Semester 1 = the yearly opening (also "Tahun penuh");
+ * Semester 2 is null until set — the tab then falls back to Semester 1's figure. */
+export async function fetchOpeningBalance(branchId: string, year: number): Promise<{ s1: number; s2: number | null }> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('internal_cash_opening_balance')
-    .select('amount')
+    .select('semester, amount')
     .eq('branch_id', branchId)
     .eq('year', year)
-    .maybeSingle()
-  return data ? Number(data.amount) : 0
+  const s1 = data?.find((r) => r.semester === 1)
+  const s2 = data?.find((r) => r.semester === 2)
+  return { s1: s1 ? Number(s1.amount) : 0, s2: s2 ? Number(s2.amount) : null }
 }
 
-export async function setOpeningBalance(year: number, amount: number, branchId?: string): Promise<{ error: string | null }> {
+export async function setOpeningBalance(year: number, amount: number, branchId?: string, semester: 1 | 2 = 1): Promise<{ error: string | null }> {
   const access = await requireBranchAccess()
   if ('error' in access) return { error: access.error }
   const branch = targetBranch(access, branchId)
@@ -110,10 +113,11 @@ export async function setOpeningBalance(year: number, amount: number, branchId?:
   const { error } = await supabase.from('internal_cash_opening_balance').upsert({
     branch_id: branch,
     year,
+    semester,
     amount,
     updated_by: access.userId,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'branch_id,year' })
+  }, { onConflict: 'branch_id,year,semester' })
 
   return { error: error?.message ?? null }
 }

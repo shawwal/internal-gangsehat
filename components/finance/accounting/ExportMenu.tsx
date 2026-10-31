@@ -7,9 +7,12 @@ interface Props {
   onExportExcel: () => void
   onExportPdf: () => void
   disabled?: boolean
+  /** Optional whole-year exports, shown under the regular two. */
+  onExportYearExcel?: () => void
+  onExportYearPdf?: () => void
 }
 
-export function ExportMenu({ onExportExcel, onExportPdf, disabled = false }: Props) {
+export function ExportMenu({ onExportExcel, onExportPdf, disabled = false, onExportYearExcel, onExportYearPdf }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -33,7 +36,7 @@ export function ExportMenu({ onExportExcel, onExportPdf, disabled = false }: Pro
         <ChevronDown size={14} />
       </button>
       {open && (
-        <div className="absolute right-0 mt-1 w-44 rounded-xl border border-border bg-card shadow-lg z-20 overflow-hidden">
+        <div className="absolute right-0 mt-1 w-52 rounded-xl border border-border bg-card shadow-lg z-20 overflow-hidden">
           <button
             onClick={() => { setOpen(false); onExportPdf() }}
             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
@@ -46,6 +49,22 @@ export function ExportMenu({ onExportExcel, onExportPdf, disabled = false }: Pro
           >
             <Sheet size={14} /> Export Excel
           </button>
+          {onExportYearPdf && (
+            <button
+              onClick={() => { setOpen(false); onExportYearPdf() }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-muted transition-colors border-t border-border"
+            >
+              <FileText size={14} /> Export PDF (setahun)
+            </button>
+          )}
+          {onExportYearExcel && (
+            <button
+              onClick={() => { setOpen(false); onExportYearExcel() }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+            >
+              <Sheet size={14} /> Export Excel (setahun)
+            </button>
+          )}
         </div>
       )}
     </div>
