@@ -13,7 +13,9 @@ import { ExportButton }         from '@/components/ui/ExportButton'
 import { exportToExcel }        from '@/lib/excel-export'
 import { PackageSessionWizard } from '@/components/packages/PackageSessionWizard'
 import { PaketPaymentStep }     from '@/components/jadwal/assign/paket/PaketPaymentStep'
+import { PackageSection }       from '@/components/packages/PackageSection'
 import type { PatientPackage }  from '@/components/packages/types'
+import type { PatientPackageWithPayment } from '@/app/actions/packages'
 
 export default function PatientPackagesPage() {
   const { id } = useParams() as { id: string }
@@ -29,6 +31,7 @@ export default function PatientPackagesPage() {
   function handleExportPackages() {
     exportToExcel(packages, [
       { header: 'Nama Paket',       value: (p) => p.package_name },
+      { header: 'Kategori',         value: (p) => p.category ?? '' },
       { header: 'Jenis',            value: (p) => p.jenis_paket ?? '' },
       { header: 'Mulai',            value: (p) => p.mulai_paket ?? '' },
       { header: 'Total Sesi',       value: (p) => p.total_sessions },
@@ -51,6 +54,26 @@ export default function PatientPackagesPage() {
   function openEdit(pkg: PatientPackage) {
     setEditTarget(pkg)
     setShowModal(true)
+  }
+
+  const smPackages    = packages.filter((p) => p.category === 'PAKET SPORT MASSAGE')
+  const fisioPackages = packages.filter((p) => p.category !== 'PAKET SPORT MASSAGE')
+
+  function renderCard(pkg: PatientPackageWithPayment) {
+    return (
+      <PackageCard
+        key={pkg.id}
+        pkg={pkg}
+        userRole={userRole}
+        patientName={patientName}
+        onEdit={openEdit}
+        onDelete={(pkgId) => setDeleteTarget(pkgId)}
+        onStop={(pkgId) => setStopTarget(pkgId)}
+        onSchedule={(p) => setScheduleTarget(p)}
+        onSessionChange={load}
+        onRecordPayment={(p) => setPaymentTarget(p)}
+      />
+    )
   }
 
   return (
@@ -114,21 +137,9 @@ export default function PatientPackagesPage() {
           <p className="text-xs text-muted-foreground">Tekan "Tambah Paket" untuk menambahkan paket baru</p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-4">
-          {packages.map((pkg) => (
-            <PackageCard
-              key={pkg.id}
-              pkg={pkg}
-              userRole={userRole}
-              patientName={patientName}
-              onEdit={openEdit}
-              onDelete={(pkgId) => setDeleteTarget(pkgId)}
-              onStop={(pkgId) => setStopTarget(pkgId)}
-              onSchedule={(p) => setScheduleTarget(p)}
-              onSessionChange={load}
-              onRecordPayment={(p) => setPaymentTarget(p)}
-            />
-          ))}
+        <div className="space-y-6">
+          <PackageSection title="Paket Fisioterapi"   items={fisioPackages} renderItem={renderCard} />
+          <PackageSection title="Paket Sport Massage" items={smPackages}    renderItem={renderCard} />
         </div>
       )}
 
@@ -179,7 +190,7 @@ export default function PatientPackagesPage() {
           packageName={paymentTarget.package_name}
           jumlahSesi={paymentTarget.total_sessions}
           hargaDefault={0}
-          category={paymentTarget.category === 'PAKET VISIT' ? 'PAKET VISIT' : 'PAKET KLINIK'}
+          category={paymentTarget.category ?? 'PAKET KLINIK'}
           branchId={paymentTarget.branch_id}
           onDone={() => { setPaymentTarget(null); load() }}
         />
