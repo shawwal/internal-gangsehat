@@ -15,11 +15,13 @@ import { CompensationEditor, EMPTY_COMPENSATION } from './CompensationEditor'
 interface Props {
   data: PayrollSettingsData
   onChanged: () => Promise<void>
+  /** Opened from Penggajian Griya Anak — offers the Griya presets and rules. */
+  griya?: boolean
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-export function EmployeesTab({ data, onChanged }: Props) {
+export function EmployeesTab({ data, onChanged, griya = false }: Props) {
   const { showToast } = useToast()
   const [open, setOpen] = useState<EmployeeRow | null>(null)
   const [tab, setTab] = useState<'profile' | 'comp' | 'history'>('comp')
@@ -43,7 +45,8 @@ export function EmployeesTab({ data, onChanged }: Props) {
         gaji_pokok: current.gaji_pokok, tj_jabatan: current.tj_jabatan, operasional: current.operasional,
         operasional_mode: current.operasional_mode, operasional_threshold: current.operasional_threshold,
         operasional_daily_rate: current.operasional_daily_rate, insentif_base: current.insentif_base,
-        incentive_target: current.incentive_target, incentive_activity_codes: current.incentive_activity_codes,
+        incentive_target: current.incentive_target, incentive_full_threshold: current.incentive_full_threshold,
+        incentive_activity_codes: current.incentive_activity_codes,
         bonus_tiers: current.bonus_tiers, activity_rates: current.activity_rates,
       })
     } else {
@@ -219,7 +222,7 @@ export function EmployeesTab({ data, onChanged }: Props) {
                 </div>
               </div>
               <CompensationEditor value={comp} onChange={setComp} activityTypes={data.activityTypes.filter((t) => t.is_active)}
-                visitBonus={VISIT_BONUS_ROLES.includes(open.role)} />
+                visitBonus={VISIT_BONUS_ROLES.includes(open.role)} griya={griya} />
             </div>
           )}
 

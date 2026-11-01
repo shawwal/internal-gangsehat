@@ -8,6 +8,7 @@ import { logActivity } from '@/lib/activityLog'
 import type { ActivityType, BonusTier, Compensation, DeductionRule, Weekday } from '@/lib/payroll/types'
 import { BRANCH_TOTAL_SALE_CATEGORIES } from '@/lib/payroll/paymentActivity'
 import { incentiveConfigIssue } from '@/lib/payroll/engine'
+import { payrollBranchesFor, type PayrollScope } from '@/lib/payroll/branchScope'
 
 type Ok<T> = { ok: true; data: T }
 type Err = { ok: false; error: string }
@@ -87,17 +88,14 @@ export interface PayrollSettingsData {
   layanan: { id: string; nama: string; kategori: string }[]
 }
 
-export async function getPayrollSettingsData(branchIdParam?: string | null): Promise<Result<PayrollSettingsData>> {
+export async function getPayrollSettingsData(branchIdParam?: string | null, scope: PayrollScope = 'clinic'): Promise<Result<PayrollSettingsData>> {
   const actor = await getActor()
   if (isErr(actor)) return actor
   const { supabase } = actor
 
-  let bq = supabase.from('branches').select('id, name').eq('is_active', true).order('name')
-  if (!crossBranch(actor)) bq = bq.eq('id', actor.branchId ?? '')
-  const { data: branches } = await bq
-  const branchId = branchIdParam && (crossBranch(actor) || branchIdParam === actor.branchId)
-    ? branchIdParam
-    : (actor.branchId ?? branches?.[0]?.id ?? '')
+  const branches = await payrollBranchesFor(supabase, actor.role, actor.branchId, scope)
+  const inScope = (id: string | null | undefined) => !!id && branches.some((b) => b.id === id)
+  const branchId = inScope(branchIdParam) ? branchIdParam! : inScope(actor.branchId) ? actor.branchId! : (branches[0]?.id ?? '')
   if (!branchId) return fail('Belum ada cabang.')
 
   const [settingsRes, rulesRes, holidaysRes, typesRes, staffRes, layananRes] = await Promise.all([
@@ -132,6 +130,7 @@ export async function getPayrollSettingsData(branchIdParam?: string | null): Pro
       operasional_mode: c.operasional_mode as Compensation['operasional_mode'],
       operasional_threshold: Number(c.operasional_threshold), operasional_daily_rate: Number(c.operasional_daily_rate),
       insentif_base: Number(c.insentif_base), incentive_target: Number(c.incentive_target),
+      incentive_full_threshold: Number(c.incentive_full_threshold ?? 1),
       incentive_activity_codes: (c.incentive_activity_codes as string[]) ?? [],
       bonus_tiers: (c.bonus_tiers as BonusTier[]) ?? [],
       activity_rates: (c.activity_rates as Record<string, number>) ?? {},
@@ -390,6 +389,7 @@ function validateCompensation(c: Compensation): string | null {
   if (money.some((n) => !Number.isFinite(n) || n < 0 || n > 1_000_000_000)) return 'Nominal kompensasi tidak valid.'
   if (c.operasional_threshold < 0 || c.operasional_threshold > 1) return 'Batas kehadiran operasional harus 0–100%.'
   if (!Number.isInteger(c.incentive_target) || c.incentive_target < 0) return 'Target insentif harus bilangan bulat ≥ 0.'
+  if (!(c.incentive_full_threshold > 0) || c.incentive_full_threshold > 1) return 'Batas insentif penuh harus 1–100%.'
   for (const t of c.bonus_tiers) {
     if (!(t.min_qty > 0) || !(t.amount >= 0)) return 'Tingkat bonus tidak valid.'
   }
@@ -421,6 +421,7 @@ export async function addCompensationVersion(staffId: string, effectiveFrom: str
     operasional_daily_rate: comp.operasional_daily_rate,
     insentif_base: comp.insentif_base,
     incentive_target: comp.incentive_target,
+    incentive_full_threshold: comp.incentive_full_threshold,
     incentive_activity_codes: comp.incentive_activity_codes,
     bonus_tiers: comp.bonus_tiers.filter((t) => t.amount > 0),
     activity_rates: activityRates,

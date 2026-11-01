@@ -183,7 +183,9 @@ export function rowsFromSlips(ws: PayrollWorkspace): WorkspaceRow[] {
         incentiveQty,
         notes: slip.notes ?? '',
       }
-      return { staff, attendance: slip.attendance_summary, activityQty: slip.activity, result, warnings: [] }
+      // Slips locked before migration 126 have no Tugas count.
+      const attendance = { ...slip.attendance_summary, tugas: slip.attendance_summary.tugas ?? 0 }
+      return { staff, attendance, activityQty: slip.activity, result, warnings: [] }
     })
     .sort((a, b) => (a.staff.employee_no ?? '~').localeCompare(b.staff.employee_no ?? '~') || a.staff.full_name.localeCompare(b.staff.full_name))
 }

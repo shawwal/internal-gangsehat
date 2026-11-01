@@ -1,13 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { ArrowLeft, Settings2 } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import { getPayrollSettingsData, type PayrollSettingsData } from '@/app/actions/payrollSettings'
 import { EmployeesTab } from '@/components/payroll/settings/EmployeesTab'
 import { ActivityTypesTab, HolidaysTab, PeriodSettingsTab, RulesTab } from '@/components/payroll/settings/ConfigTabs'
 import { TableSkeleton } from '@/components/ui/Skeleton'
+import { PAYROLL_HOME, type PayrollScope } from '@/lib/payroll/branchScope'
 
 type Tab = 'employees' | 'rules' | 'holidays' | 'activities' | 'period'
 
@@ -19,37 +21,38 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'period', label: 'Periode & Slip' },
 ]
 
-export default function PayrollSettingsPage() {
+function PayrollSettings() {
+  const scope: PayrollScope = useSearchParams().get('scope') === 'griya' ? 'griya' : 'clinic'
   const { showToast } = useToast()
   const [data, setData] = useState<PayrollSettingsData | null>(null)
   const [branchId, setBranchId] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('employees')
 
   const load = useCallback(async () => {
-    const res = await getPayrollSettingsData(branchId)
+    const res = await getPayrollSettingsData(branchId, scope)
     if (!res.ok) { showToast(res.error, 'error'); return }
     setData(res.data)
-  }, [branchId, showToast])
+  }, [branchId, scope, showToast])
 
   useEffect(() => {
     let cancelled = false
-    getPayrollSettingsData(branchId).then((res) => {
+    getPayrollSettingsData(branchId, scope).then((res) => {
       if (cancelled) return
       if (!res.ok) showToast(res.error, 'error')
       else setData(res.data)
     })
     return () => { cancelled = true }
-  }, [branchId, showToast])
+  }, [branchId, scope, showToast])
 
   return (
     <div className="space-y-5 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <Link href="/payroll" className="w-10 h-10 rounded-2xl bg-muted flex items-center justify-center shrink-0 hover:bg-muted/70" aria-label="Kembali">
+          <Link href={PAYROLL_HOME[scope]} className="w-10 h-10 rounded-2xl bg-muted flex items-center justify-center shrink-0 hover:bg-muted/70" aria-label="Kembali">
             <ArrowLeft size={18} />
           </Link>
           <div>
-            <h1 className="text-lg font-bold text-foreground flex items-center gap-2"><Settings2 size={17} className="text-primary" /> Pengaturan Penggajian</h1>
+            <h1 className="text-lg font-bold text-foreground flex items-center gap-2"><Settings2 size={17} className="text-primary" /> Pengaturan Penggajian{scope === 'griya' ? ' Griya Anak' : ''}</h1>
             <p className="text-xs text-muted-foreground mt-0.5">Data karyawan, kompensasi, tarif dan aturan — semua angka gaji diatur di sini, bukan di kode.</p>
           </div>
         </div>
@@ -72,7 +75,7 @@ export default function PayrollSettingsPage() {
 
       {!data ? <TableSkeleton rows={8} cols={6} /> : (
         <>
-          {tab === 'employees' && <EmployeesTab data={data} onChanged={load} />}
+          {tab === 'employees' && <EmployeesTab data={data} onChanged={load} griya={scope === 'griya'} />}
           {tab === 'rules' && <RulesTab data={data} onChanged={load} />}
           {tab === 'holidays' && <HolidaysTab data={data} onChanged={load} />}
           {tab === 'activities' && <ActivityTypesTab data={data} onChanged={load} />}
@@ -80,5 +83,13 @@ export default function PayrollSettingsPage() {
         </>
       )}
     </div>
+  )
+}
+
+export default function PayrollSettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-6"><TableSkeleton rows={8} cols={6} /></div>}>
+      <PayrollSettings />
+    </Suspense>
   )
 }

@@ -11,12 +11,13 @@ export interface PeriodDay {
   note: string | null    // holiday name / manual reason
 }
 
-/** One cell of the ABS grid: H / I / S / C / A, a number = minutes late, null = empty. */
-export type AttendanceCode = 'H' | 'I' | 'S' | 'C' | 'A' | number
+/** One cell of the ABS grid: H / T / I / S / C / A, a number = minutes late, null = empty. */
+export type AttendanceCode = 'H' | 'T' | 'I' | 'S' | 'C' | 'A' | number
 
 export interface AttendanceSummary {
   workdays: number
   hadir: number        // H + late days (late still counts as present)
+  tugas: number        // T — on duty outside the clinic; counts as present
   lateDays: number
   lateMinutes: number  // TLBT
   izin: number
@@ -25,7 +26,7 @@ export interface AttendanceSummary {
   alfa: number
 }
 
-export type OperasionalMode = 'prorata' | 'daily_deduction' | 'none'
+export type OperasionalMode = 'prorata' | 'daily_deduction' | 'threshold_full' | 'none'
 
 export interface BonusTier {
   min_qty: number
@@ -42,6 +43,8 @@ export interface Compensation {
   operasional_daily_rate: number
   insentif_base: number
   incentive_target: number
+  /** Capaian ≥ this share of the target pays the full insentif (1 = only at 100%). */
+  incentive_full_threshold: number
   incentive_activity_codes: string[]
   bonus_tiers: BonusTier[]
   activity_rates: Record<string, number>

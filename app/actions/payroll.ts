@@ -11,6 +11,7 @@ import { logActivity } from '@/lib/activityLog'
 import { addDays, buildDaysInRange, buildPeriodDays, countWorkdays, MONTH_NAMES } from '@/lib/payroll/period'
 import { codeFromRow, rowFromCode, type AttendanceDbRow } from '@/lib/payroll/attendance'
 import { pickCompensation } from '@/lib/payroll/engine'
+import { payrollBranchesFor, payrollPeriodLink, type PayrollScope } from '@/lib/payroll/branchScope'
 import { computeAutoActivity, payrollActivityHits, payrollAttended, VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
 import {
   BRANCH_TOTAL_SALE_CATEGORIES, PAYROLL_PAYMENT_STATUSES, paymentActivityHits, paymentModeCodes, sumPaymentHits,
@@ -162,6 +163,7 @@ function normalizeCompensation(row: Record<string, unknown>): Compensation {
     operasional_daily_rate: Number(row.operasional_daily_rate ?? 0),
     insentif_base: Number(row.insentif_base ?? 0),
     incentive_target: Number(row.incentive_target ?? 0),
+    incentive_full_threshold: Number(row.incentive_full_threshold ?? 1),
     incentive_activity_codes: (row.incentive_activity_codes as string[]) ?? [],
     bonus_tiers: ((row.bonus_tiers as Compensation['bonus_tiers']) ?? []).map((t) => ({ ...t, min_qty: Number(t.min_qty), amount: Number(t.amount) })),
     activity_rates: Object.fromEntries(
@@ -217,21 +219,22 @@ export interface PayrollPeriodSummary {
   net_total: number | null
 }
 
-export async function getPayrollBootstrap(): Promise<Result<{
+export async function getPayrollBootstrap(scope: PayrollScope = 'clinic'): Promise<Result<{
   role: string
   branchId: string | null
   branches: { id: string; name: string }[]
+  /** Branches served by the other payroll page — for the cross-link. */
+  otherScopeCount: number
 }>> {
   const actor = await getActor(VIEW_ROLES)
   if (isErr(actor)) return actor
-  let q = actor.supabase.from('branches').select('id, name').eq('is_active', true).order('name')
-  // Director and HR (migration 107) work on every branch; others stay on their own.
-  if (actor.role !== 'director' && actor.role !== 'hr') {
-    if (!actor.branchId) return fail('Akun Anda belum terhubung ke cabang.')
-    q = q.eq('id', actor.branchId)
-  }
-  const { data } = await q
-  return ok({ role: actor.role, branchId: actor.branchId, branches: data ?? [] })
+  if (actor.role !== 'director' && actor.role !== 'hr' && !actor.branchId) return fail('Akun Anda belum terhubung ke cabang.')
+  const other: PayrollScope = scope === 'griya' ? 'clinic' : 'griya'
+  const [branches, otherBranches] = await Promise.all([
+    payrollBranchesFor(actor.supabase, actor.role, actor.branchId, scope),
+    payrollBranchesFor(actor.supabase, actor.role, actor.branchId, other),
+  ])
+  return ok({ role: actor.role, branchId: actor.branchId, branches, otherScopeCount: otherBranches.length })
 }
 
 export async function listPayrollPeriods(branchId: string): Promise<Result<PayrollPeriodSummary[]>> {
@@ -1057,7 +1060,7 @@ export async function submitPayrollPeriod(periodId: string): Promise<Result> {
     target_role: 'director',
     title: 'Penggajian Menunggu Persetujuan',
     message: `${period.branches?.name ?? ''} · ${periodLabelOf(period)}`,
-    link: `/payroll?period=${periodId}`,
+    link: await payrollPeriodLink(actor.supabase, period.branch_id, periodId),
   }])
   logActivity({
     supabase: actor.supabase, userId: actor.userId, action: 'update', resourceType: 'payroll_period',
@@ -1156,7 +1159,7 @@ export async function lockPayrollPeriod(periodId: string): Promise<Result<{ slip
       message: `Slip gaji ${label} sudah dapat dilihat.`,
       link: '/my-payslips',
     })),
-    { target_role: 'finance', title: 'Penggajian Disetujui', message: `${ws.period.branch_name} · ${label}`, link: `/payroll?period=${periodId}` },
+    { target_role: 'finance', title: 'Penggajian Disetujui', message: `${ws.period.branch_name} · ${label}`, link: await payrollPeriodLink(supabase, ws.period.branch_id, periodId) },
   ])
   logActivity({
     supabase, userId: actor.userId, action: 'update', resourceType: 'payroll_period',

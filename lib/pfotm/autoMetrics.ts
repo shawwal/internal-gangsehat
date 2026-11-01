@@ -20,7 +20,7 @@ export const DRILLDOWN_METRICS = ['kunjungan', 'paket_1', 'paket_2', 'paket_3', 
 export interface AttendanceForPfotm {
   staff_id: string
   date: string
-  status: 'present' | 'absent' | 'late' | 'leave' | 'sick' | 'izin'
+  status: 'present' | 'absent' | 'late' | 'leave' | 'sick' | 'izin' | 'duty'
 }
 
 export interface PackageInfo {
@@ -120,7 +120,7 @@ export function pfotmHitsWithGap(params: PfotmAutoInput): { hits: PfotmHit[]; ga
   }
 
   for (const a of params.attendance) {
-    if (a.status === 'present') hit(a.staff_id, 'hadir', a.date)
+    if (a.status === 'present' || a.status === 'duty') hit(a.staff_id, 'hadir', a.date)
     else if (a.status === 'late') { hit(a.staff_id, 'hadir', a.date); hit(a.staff_id, 'terlambat', a.date) }
     else if (a.status === 'absent') hit(a.staff_id, 'alfa', a.date)
   }

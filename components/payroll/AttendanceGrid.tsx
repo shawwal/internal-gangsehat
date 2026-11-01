@@ -20,7 +20,11 @@ interface Props {
   ws: PayrollWorkspace
   rows: WorkspaceRow[]
   onChange: (changes: CellChange[]) => void
+  /** Griya Anak sheet: T (Tugas) code + TUGAS column. Off on /payroll. */
+  tugas?: boolean
 }
+
+const SUMMARY_KEYS = ['hadir', 'tugas', 'lateMinutes', 'izin', 'sakit', 'cuti', 'alfa'] as const
 
 function cellStyle(code: AttendanceCode | null): string {
   if (code === null) return 'bg-transparent text-muted-foreground'
@@ -28,14 +32,15 @@ function cellStyle(code: AttendanceCode | null): string {
   return CODE_STYLE[code]
 }
 
-export function AttendanceGrid({ ws, rows, onChange }: Props) {
+export function AttendanceGrid({ ws, rows, onChange, tugas = false }: Props) {
   const { period, permissions } = ws
+  const summaryKeys = tugas ? SUMMARY_KEYS : SUMMARY_KEYS.filter((k) => k !== 'tugas')
   const editable = permissions.canEdit
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [invalid, setInvalid] = useState<string | null>(null)
   // Red cell = worse than the Rata-rata row: HADIR below it, TLBT/IZIN/SAKIT/CUTI/ALFA above it.
-  const summaryBelowAvg = (['hadir', 'lateMinutes', 'izin', 'sakit', 'cuti', 'alfa'] as const).map((k) =>
-    belowAvgTest(rows.map((r) => r.attendance[k]), k === 'hadir' ? 'higher' : 'lower'))
+  const summaryBelowAvg = summaryKeys.map((k) =>
+    belowAvgTest(rows.map((r) => r.attendance[k]), k === 'hadir' || k === 'tugas' ? 'higher' : 'lower'))
   const gridRef = useRef<HTMLTableElement>(null)
 
   const key = (staffId: string, date: string) => `${staffId}|${date}`
@@ -43,7 +48,7 @@ export function AttendanceGrid({ ws, rows, onChange }: Props) {
   function commit(staffId: string, date: string, raw: string) {
     const k = key(staffId, date)
     const parsed = parseCodeInput(raw)
-    if (parsed === undefined) {
+    if (parsed === undefined || (parsed === 'T' && !tugas)) {
       setInvalid(k)
       return
     }
@@ -90,9 +95,10 @@ export function AttendanceGrid({ ws, rows, onChange }: Props) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1.5 text-[11px]">
-          {[
-            ['H', 'Hadir'], ['5', 'Angka = menit terlambat'], ['I', 'Izin'], ['S', 'Sakit'], ['C', 'Cuti'], ['A', 'Alfa'],
-          ].map(([c, label]) => (
+          {(tugas
+            ? [['H', 'Hadir (M juga bisa)'], ['5', 'Angka = menit terlambat'], ['T', 'Tugas'], ['I', 'Izin'], ['S', 'Sakit'], ['C', 'Cuti'], ['A', 'Alfa']]
+            : [['H', 'Hadir'], ['5', 'Angka = menit terlambat'], ['I', 'Izin'], ['S', 'Sakit'], ['C', 'Cuti'], ['A', 'Alfa']]
+          ).map(([c, label]) => (
             <span key={c} className={`px-2 py-0.5 rounded-full font-medium ${/\d/.test(c) ? CODE_STYLE.LATE : CODE_STYLE[c]}`}>
               <b>{c}</b> {label}
             </span>
@@ -116,7 +122,7 @@ export function AttendanceGrid({ ws, rows, onChange }: Props) {
                   <div>{Number(d.date.slice(8))}</div>
                 </th>
               ))}
-              {['HADIR', 'TLBT', 'IZIN', 'SAKIT', 'CUTI', 'ALFA'].map((h) => (
+              {(tugas ? ['HADIR', 'TUGAS', 'TLBT', 'IZIN', 'SAKIT', 'CUTI', 'ALFA'] : ['HADIR', 'TLBT', 'IZIN', 'SAKIT', 'CUTI', 'ALFA']).map((h) => (
                 <th key={h} className="px-2 py-2 text-center font-semibold text-muted-foreground border-l border-border">{h}</th>
               ))}
             </tr>
@@ -165,11 +171,14 @@ export function AttendanceGrid({ ws, rows, onChange }: Props) {
                       </td>
                     )
                   })}
-                  {[a.hadir, a.lateMinutes, a.izin, a.sakit, a.cuti, a.alfa].map((v, i) => (
-                    <td key={i} className={`px-2 text-center font-semibold border-l border-border ${
-                      i === 5 && v > 0 ? 'text-destructive' : i === 1 && v > 0 ? 'text-secondary-foreground' : 'text-foreground'
-                    } ${summaryBelowAvg[i](v) ? BELOW_AVG_CLS : ''}`}>{v}</td>
-                  ))}
+                  {summaryKeys.map((k, i) => {
+                    const v = a[k]
+                    return (
+                      <td key={k} className={`px-2 text-center font-semibold border-l border-border ${
+                        k === 'alfa' && v > 0 ? 'text-destructive' : k === 'lateMinutes' && v > 0 ? 'text-secondary-foreground' : 'text-foreground'
+                      } ${summaryBelowAvg[i](v) ? BELOW_AVG_CLS : ''}`}>{v}</td>
+                    )
+                  })}
                 </tr>
               )
             })}
@@ -182,7 +191,7 @@ export function AttendanceGrid({ ws, rows, onChange }: Props) {
                   <tr key={label} className="border-b border-border last:border-0">
                     <td className="sticky left-0 z-10 bg-card px-3 py-1.5 border-r border-border">{label}</td>
                     <td colSpan={period.days.length} />
-                    {(['hadir', 'lateMinutes', 'izin', 'sakit', 'cuti', 'alfa'] as const).map((k) => (
+                    {summaryKeys.map((k) => (
                       <td key={k} className="px-2 py-1.5 text-center border-l border-border">
                         {formatStat(stat(rows.map((r) => r.attendance[k])))}
                       </td>
@@ -195,7 +204,9 @@ export function AttendanceGrid({ ws, rows, onChange }: Props) {
         </table>
       </div>
       {invalid && (
-        <p className="text-xs text-destructive">Isi dengan H, I, S, C, A, atau angka menit terlambat (0–600).</p>
+        <p className="text-xs text-destructive">
+          {tugas ? 'Isi dengan H (atau M), T, I, S, C, A' : 'Isi dengan H, I, S, C, A'}, atau angka menit terlambat (0–600).
+        </p>
       )}
       <p className="text-xs text-muted-foreground">
         Tips: ketik kode lalu tekan Enter/panah untuk pindah sel. Perubahan tersimpan otomatis.

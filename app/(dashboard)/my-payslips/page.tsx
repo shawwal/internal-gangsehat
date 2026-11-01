@@ -69,9 +69,10 @@ export default function MyPayslipsPage() {
                   <div className="px-4 pb-4 space-y-3">
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
                       {([
-                        ['Hadir', s.attendance_summary.hadir], ['Telat (mnt)', s.attendance_summary.lateMinutes], ['Izin', s.attendance_summary.izin],
-                        ['Sakit', s.attendance_summary.sakit], ['Cuti', s.attendance_summary.cuti], ['Alfa', s.attendance_summary.alfa],
-                      ] as const).map(([l, v]) => (
+                        ['Hadir', s.attendance_summary.hadir], ['Tugas', s.attendance_summary.tugas ?? 0], ['Telat (mnt)', s.attendance_summary.lateMinutes],
+                        ['Izin', s.attendance_summary.izin], ['Sakit', s.attendance_summary.sakit], ['Cuti', s.attendance_summary.cuti],
+                        ['Alfa', s.attendance_summary.alfa],
+                      ] as const).filter(([l, v]) => l !== 'Tugas' || v > 0).map(([l, v]) => (
                         <div key={l} className="rounded-xl bg-muted/50 p-2">
                           <p className="text-sm font-bold text-foreground">{v}</p>
                           <p className="text-[10px] text-muted-foreground">{l}</p>

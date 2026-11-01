@@ -488,7 +488,7 @@ export interface PackageSession {
   therapist_name: string | null
 }
 
-export type AttendanceStatus = 'present' | 'absent' | 'late' | 'leave' | 'sick' | 'izin'
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'leave' | 'sick' | 'izin' | 'duty'
 
 export interface Attendance {
   id: string

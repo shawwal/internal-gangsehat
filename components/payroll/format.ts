@@ -34,6 +34,7 @@ export const STATUS_STYLE: Record<PayrollPeriodStatus, string> = {
 
 export const CODE_STYLE: Record<string, string> = {
   H: 'bg-chart-4/15 text-chart-4',
+  T: 'bg-chart-3/15 text-chart-3',
   I: 'bg-primary/10 text-primary',
   S: 'bg-muted text-foreground/70',
   C: 'bg-chart-5/15 text-chart-5',

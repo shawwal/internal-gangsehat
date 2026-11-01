@@ -28,22 +28,34 @@ export interface OperasionalResult {
 
 /**
  * ABS!AR.
- * prorata: r = (hadir + sakit + cuti + alfa) / workdays; r ≤ threshold → 0, else floor(r × OPS).
+ * prorata: r = (hadir + tugas + sakit + cuti + alfa) / workdays; r ≤ threshold → 0, else floor(r × OPS).
  *   (r is capped at 1 so working on an off day can't exceed the full allowance.)
- * daily_deduction (masseur row): (hadir + cuti) × rate − workdays × rate.
+ * daily_deduction (masseur row): (hadir + tugas + cuti) × rate − workdays × rate.
+ * threshold_full (Griya Anak sheet, Absensi!AS): r = (hadir + tugas) / workdays;
+ *   r ≥ threshold → full OPS, else floor(r × OPS).
  */
 export function computeOperasional(c: Compensation, a: AttendanceSummary, unit: number): OperasionalResult {
   if (c.operasional_mode === 'none') return { amount: 0, ratio: null, detail: 'Tidak ada tunjangan operasional' }
   if (c.operasional_mode === 'daily_deduction') {
-    const amount = (a.hadir + a.cuti) * c.operasional_daily_rate - a.workdays * c.operasional_daily_rate
+    const present = a.hadir + a.tugas
+    const amount = (present + a.cuti) * c.operasional_daily_rate - a.workdays * c.operasional_daily_rate
     return {
       amount,
       ratio: null,
-      detail: `(${a.hadir} hadir + ${a.cuti} cuti − ${a.workdays} hari kerja) × ${fmt(c.operasional_daily_rate)}`,
+      detail: `(${present} hadir + ${a.cuti} cuti − ${a.workdays} hari kerja) × ${fmt(c.operasional_daily_rate)}`,
     }
   }
   if (a.workdays <= 0 || c.operasional <= 0) return { amount: 0, ratio: null, detail: 'Tidak ada tunjangan operasional' }
-  const counted = a.hadir + a.sakit + a.cuti + a.alfa
+  if (c.operasional_mode === 'threshold_full') {
+    const present = a.hadir + a.tugas
+    const ratio = Math.min(1, present / a.workdays)
+    const pct = `${present}/${a.workdays} hari = ${(ratio * 100).toFixed(1)}%`
+    if (ratio >= c.operasional_threshold) {
+      return { amount: c.operasional, ratio, detail: `${pct} ≥ ${(c.operasional_threshold * 100).toFixed(0)}% → penuh` }
+    }
+    return { amount: floorTo(ratio * c.operasional, unit), ratio, detail: `${pct} × ${fmt(c.operasional)}` }
+  }
+  const counted = a.hadir + a.tugas + a.sakit + a.cuti + a.alfa
   const ratio = Math.min(1, counted / a.workdays)
   if (ratio <= c.operasional_threshold) {
     return {
@@ -79,16 +91,23 @@ export function incentiveConfigIssue(c: Pick<Compensation, 'incentive_target' | 
   return null
 }
 
-/** INS!P — floor(min(1, qty/target) × INSENTIF) + bonus tiers (qty ≥ min). */
+/**
+ * INS!P — floor(r × INSENTIF) + bonus tiers (qty ≥ min), r = min(1, qty/target);
+ * r ≥ incentive_full_threshold pays in full (Griya admin: ≥ 75% → 100%).
+ */
 export function computeIncentive(c: Compensation, qtyByCode: Record<string, number>, unit: number): IncentiveResult {
   const qty = c.incentive_activity_codes.reduce((sum, code) => sum + (qtyByCode[code] ?? 0), 0)
   let base = 0
   let detail = ''
   if (c.insentif_base > 0) {
     if (c.incentive_target > 0) {
-      const ratio = Math.min(1, qty / c.incentive_target)
+      const raw = Math.min(1, qty / c.incentive_target)
+      const full = c.incentive_full_threshold ?? 1
+      const ratio = raw >= full ? 1 : raw
       base = floorTo(ratio * c.insentif_base, unit)
-      detail = `${qty}/${c.incentive_target} target × ${fmt(c.insentif_base)}`
+      detail = ratio === 1 && raw < 1
+        ? `${qty}/${c.incentive_target} target ≥ ${(full * 100).toFixed(0)}% → penuh ${fmt(c.insentif_base)}`
+        : `${qty}/${c.incentive_target} target × ${fmt(c.insentif_base)}`
     } else {
       base = c.insentif_base
       detail = 'Insentif tetap (tanpa target)'
@@ -262,9 +281,9 @@ export function validateEmployeeInputs(params: {
   const incentiveIssue = params.compensation ? incentiveConfigIssue(params.compensation) : null
   if (incentiveIssue) w.push({ field: 'compensation', message: `${incentiveIssue} Atur di Pengaturan & Karyawan.` })
   if (a.lateDays > params.maxLateDays) w.push({ field: 'late', message: `Terlambat ${a.lateDays} kali (batas ${params.maxLateDays})` })
-  const recorded = a.hadir + a.izin + a.sakit + a.cuti + a.alfa
+  const recorded = a.hadir + a.tugas + a.izin + a.sakit + a.cuti + a.alfa
   if (recorded < a.workdays) w.push({ field: 'attendance', message: `Absensi belum lengkap: ${recorded}/${a.workdays} hari terisi` })
-  if (a.hadir > a.workdays) w.push({ field: 'attendance', message: `Hadir ${a.hadir} hari melebihi ${a.workdays} hari kerja` })
+  if (a.hadir + a.tugas > a.workdays) w.push({ field: 'attendance', message: `Hadir ${a.hadir + a.tugas} hari melebihi ${a.workdays} hari kerja` })
   for (const [code, qty] of Object.entries(params.activity)) {
     const lim = params.activityLimits[code]
     if (lim && qty > lim.max) w.push({ field: code, message: `${lim.label}: ${qty} melebihi batas wajar ${lim.max}` })

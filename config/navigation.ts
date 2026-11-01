@@ -678,6 +678,16 @@ export const navigation: NavItem[] = [
     group: 'finance',
   },
   {
+    // Same payroll engine/tables as /payroll, limited to Griya Anak branches
+    // (lib/payroll/branchScope.ts); /payroll lists the other branches.
+    key: 'griya-penggajian',
+    label: 'Penggajian Griya Anak',
+    href: '/griya-anak/penggajian',
+    icon: 'Wallet',
+    roles: ['director', 'manager', 'hr', 'finance'],
+    group: 'griya',
+  },
+  {
     key: 'griya-performa',
     label: 'Performa Terapis Griya Anak',
     href: '/griya-anak/performa',
