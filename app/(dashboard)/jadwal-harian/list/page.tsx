@@ -14,7 +14,7 @@ import { applyColumnFilters, type SortState } from '@/components/ui/ColumnFilter
 import { JADWAL_LIST_COLUMNS } from '@/components/jadwalList/columns'
 import {
   DEFAULT_PAGE_SIZE, MAX_RANGE_DAYS, NO_TARIF, PAGE_SIZE_OPTIONS, PAGE_SIZE_STORAGE_KEY,
-  type JadwalListRow, type JadwalTarifOption,
+  unitOfRow, type JadwalListRow, type JadwalTarifOption, type ListUnit,
 } from '@/components/jadwalList/types'
 import { fetchBranchStaff, type BranchStaffMember } from '@/app/actions/jadwal'
 import { fetchJadwalTarifOptions } from '@/app/actions/jadwalList'
@@ -48,6 +48,7 @@ export default function JadwalHarianListPage() {
     try { window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(size)) } catch {}
   }
   const [waConfig, setWaConfig] = useState<WaConfigAll | null>(null)
+  const [unitFilter, setUnitFilter]       = useState<ListUnit>('')
   const [fisioFilter, setFisioFilter]     = useState('')
   const [tarifFilter, setTarifFilter]     = useState('')
   const [kehadiranFilter, setKehadiranFilter] = useState('')
@@ -57,7 +58,7 @@ export default function JadwalHarianListPage() {
   const [staff, setStaff] = useState<BranchStaffMember[]>([])
   useEffect(() => {
     if (!selectedBranchId) { setStaff([]); return }
-    fetchBranchStaff(selectedBranchId).then(setStaff).catch(() => setStaff([]))
+    fetchBranchStaff(selectedBranchId, { includeSportMassage: true }).then(setStaff).catch(() => setStaff([]))
   }, [selectedBranchId])
   const staffOptions = staff.map((s) => ({ value: s.id, label: s.nickname || s.full_name }))
 
@@ -97,7 +98,7 @@ export default function JadwalHarianListPage() {
     fetchWaConfigAll().then(setWaConfig)
   }, [])
 
-  useEffect(() => { setPage(1) }, [dateFrom, dateTo, selectedBranchId, pageSize, fisioFilter, tarifFilter, kehadiranFilter, colFilters, colSort])
+  useEffect(() => { setPage(1) }, [dateFrom, dateTo, selectedBranchId, pageSize, unitFilter, fisioFilter, tarifFilter, kehadiranFilter, colFilters, colSort])
 
   const uniqueSorted = (vals: (string | null)[]) =>
     [...new Set(vals.filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b, 'id'))
@@ -107,6 +108,7 @@ export default function JadwalHarianListPage() {
   const tarifOptions = tarifList.filter((t) => t.is_active || usedTarif.has(t.id))
 
   const filteredRows = applyColumnFilters(rows.filter((r) =>
+    (!unitFilter || unitOfRow(r) === unitFilter) &&
     (!fisioFilter || r.attending_staff_name === fisioFilter) &&
     (!tarifFilter || (tarifFilter === NO_TARIF ? !r.tarif_id : r.tarif_id === tarifFilter)) &&
     (!kehadiranFilter || (kehadiranFilter === 'BELUM' ? !r.kehadiran : r.kehadiran === kehadiranFilter))),
@@ -119,7 +121,8 @@ export default function JadwalHarianListPage() {
   const rangeLabel = isRange ? `${fmtHeaderDate(dateFrom)} – ${fmtHeaderDate(dateTo)}` : fmtHeaderDate(dateFrom)
   const branchName = branches.find((b) => b.id === selectedBranchId)?.name ?? ''
   const activeFilters = [
-    fisioFilter && `Fisio: ${fisioFilter}`,
+    unitFilter && `Unit: ${unitFilter === 'sport_massage' ? 'Sport Massage' : 'Fisioterapi'}`,
+    fisioFilter && `Terapis: ${fisioFilter}`,
     tarifFilter && `Layanan: ${tarifFilter === NO_TARIF ? 'Tanpa tarif layanan' : tarifList.find((t) => t.id === tarifFilter)?.nama ?? '—'}`,
     kehadiranFilter && `Kehadiran: ${kehadiranFilter === 'BELUM' ? 'Belum Diisi' : kehadiranFilter}`,
     ...Object.entries(colFilters).filter(([, v]) => v.length).map(([k, v]) => `${k}: ${v.join(', ')}`),
@@ -172,7 +175,7 @@ export default function JadwalHarianListPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <PageHeader date={dateFrom} loading={loading} onRefresh={reload} subtitle={rangeLabel} />
+        <PageHeader title="Data Kunjungan Klinik" date={dateFrom} loading={loading} onRefresh={reload} subtitle={rangeLabel} />
         <div className="flex items-center gap-2 flex-wrap">
           <JadwalListExportButton
             rows={filteredRows}
@@ -198,6 +201,8 @@ export default function JadwalHarianListPage() {
       <DateNav selectedDate={dateFrom} today={today} onSelect={setSelectedDate} />
 
       <JadwalListToolbar
+        unit={unitFilter}
+        onUnitChange={setUnitFilter}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
         dateFrom={toIso(dateFrom)}

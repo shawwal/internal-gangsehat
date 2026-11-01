@@ -49,6 +49,12 @@ export const DEFAULT_REMINDER_TEMPLATE =
 export const DEFAULT_ORDER_CONFIRMATION_TEMPLATE =
   'KONFIRMASI PENDAFTARAN JADWAL FISIOTERAPI\n\n* Nama: {{nama}}\n* Hari : {{hari}}\n* Tanggal: {{tanggal}}\n* Jam: {{jam}}\n* Order ID: {{order_id}}\nCatatan: admin akan mengingatkan kembali H-1 sebelum jadwal kunjungan anda'
 
+export const DEFAULT_SM_REMINDER_TEMPLATE =
+  'PENGINGAT JADWAL SPORT MASSAGE\n\nNama: {{nama}}\nTanggal: {{tanggal}}\nJam: {{jam}}\nLayanan: {{layanan}}\nTerapis: {{terapis}}\nOrder ID: {{order_id}}\n\nKami dari Gang Sehat ingin mengingatkan jadwal sport massage Anda pada {{tanggal}} pukul {{jam}} di {{cabang}}. Sampai jumpa!'
+
+export const DEFAULT_SM_CONFIRMATION_TEMPLATE =
+  'KONFIRMASI PENDAFTARAN JADWAL SPORT MASSAGE\n\n* Nama: {{nama}}\n* Hari : {{hari}}\n* Tanggal: {{tanggal}}\n* Jam: {{jam}}\n* Layanan: {{layanan}}\n* Order ID: {{order_id}}\nCatatan: admin akan mengingatkan kembali H-1 sebelum jadwal anda'
+
 export const DEFAULT_RESUME_SHARE_MESSAGE =
   'Halo, ini hasil pemeriksaan atas nama pasien tersebut yang terdaftar ya. Terimakasih😊🙏🏻'
 

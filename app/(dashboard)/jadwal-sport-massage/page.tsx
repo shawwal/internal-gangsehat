@@ -46,8 +46,8 @@ export default function JadwalSportMassagePage() {
     loadAll, handleStatusChange, handleDelete, handleMoveVisit, handleLeaveAction,
   } = useJadwalSportMassage()
   const { showToast } = useToast()
-  // Same WhatsApp reminder / confirmation (template + order ID) as fisioterapi
-  const { handleWhatsAppReminder, handleWhatsAppConfirmation } = useVisitWhatsApp(visits, staff, branches)
+  // WhatsApp reminder / confirmation — Sport Massage templates (Template Pesan WA)
+  const { handleWhatsAppReminder, handleWhatsAppConfirmation } = useVisitWhatsApp(visits, staff, branches, 'sportMassage')
 
   // Branch-flag gate: does the selected branch have sport massage enabled?
   const [branchEnabled, setBranchEnabled] = useState<boolean | null>(null)

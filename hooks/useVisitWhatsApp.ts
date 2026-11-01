@@ -9,12 +9,13 @@ import type { DailyVisit } from '@/app/actions/jadwal'
 interface StaffLite { staff_id: string; full_name: string; nickname?: string | null }
 
 /** WhatsApp reminder / confirmation for a jadwal grid visit — shared by the
- *  fisio (jadwal-harian) and Sport Massage schedules so both send the same
- *  branch template with the same order ID. */
+ *  fisio (jadwal-harian) and Sport Massage schedules. Same placeholders and
+ *  order ID; `variant` picks the fisio or the Sport Massage templates. */
 export function useVisitWhatsApp(
   visits: DailyVisit[],
   staff: StaffLite[],
   branches: { id: string; name: string }[],
+  variant: 'fisio' | 'sportMassage' = 'fisio',
 ) {
   const [waConfig, setWaConfig] = useState<WaConfigAll | null>(null)
   useEffect(() => {
@@ -27,7 +28,10 @@ export function useVisitWhatsApp(
 
     const cfg = resolveWaConfig(waConfig, visit.branch_id)
     const attending = staff.find((s) => s.staff_id === visit.attending_staff_id)
-    const msg = fillTemplate(kind === 'reminder' ? cfg.reminder : cfg.confirmation, {
+    const template = variant === 'sportMassage'
+      ? (kind === 'reminder' ? cfg.smReminder : cfg.smConfirmation)
+      : (kind === 'reminder' ? cfg.reminder : cfg.confirmation)
+    const msg = fillTemplate(template, {
       nama:        visit.patient_name,
       hari:        formatHari(visit.visit_date),
       tanggal:     formatDate(visit.visit_date),

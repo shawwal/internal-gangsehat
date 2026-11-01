@@ -7,7 +7,7 @@ import { Table2, TrendingUp, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { datesBetween, KUNJUNGAN_SERVICE_FILTER, KUNJUNGAN_VISIT_STATUSES } from '@/lib/metrics/achievement'
 import { todayJakartaISO } from '@/lib/utils'
-import { fetchTargetProgressTransactions } from '@/app/actions/targetProgress'
+import { fetchApprovedBranchTarget, fetchTargetProgressTransactions } from '@/app/actions/targetProgress'
 import { getPayrollWindow } from '@/app/actions/pfotm'
 import { MonthPicker } from '@/components/targetProgress/MonthPicker'
 import { BranchPicker } from '@/components/targetProgress/BranchPicker'
@@ -164,15 +164,8 @@ export default function TargetProgressPage() {
     const prevDates = datesBetween(prevRange.start, prevRange.end)
     const prevEnd = elapsed > 0 ? prevDates[Math.min(elapsed, prevDates.length) - 1] : null
 
-    const [{ data: targetRow }, current, previous, { data: categorySettings }] = await Promise.all([
-      supabase
-        .from('branch_targets')
-        .select('target_terapi_awal, target_paket_klinik, target_kunjungan, target_visit, target_sesi')
-        .eq('branch_id', selectedBranchId)
-        .eq('bulan', month)
-        .eq('tahun', year)
-        .eq('status', 'approved')
-        .maybeSingle(),
+    const [targetRow, current, previous, { data: categorySettings }] = await Promise.all([
+      fetchApprovedBranchTarget(selectedBranchId, month, year),
       countWindow(range.start, range.end),
       prevEnd ? countWindow(prevRange.start, prevEnd) : Promise.resolve(null),
       supabase

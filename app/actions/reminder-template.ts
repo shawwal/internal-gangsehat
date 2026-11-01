@@ -2,20 +2,27 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { DEFAULT_REMINDER_TEMPLATE, DEFAULT_ORDER_CONFIRMATION_TEMPLATE, DEFAULT_RESUME_SHARE_MESSAGE } from '@/lib/utils'
+import {
+  DEFAULT_REMINDER_TEMPLATE, DEFAULT_ORDER_CONFIRMATION_TEMPLATE, DEFAULT_RESUME_SHARE_MESSAGE,
+  DEFAULT_SM_REMINDER_TEMPLATE, DEFAULT_SM_CONFIRMATION_TEMPLATE,
+} from '@/lib/utils'
 
 const KEY_REMINDER      = 'patient_reminder_template'
 const KEY_CONFIRMATION  = 'order_confirmation_template'
 const KEY_ADMIN_PHONE   = 'admin_primary_phone'
 const KEY_RESUME        = 'resume_share_template'
+const KEY_SM_REMINDER   = 'sport_massage_reminder_template'
+const KEY_SM_CONFIRM    = 'sport_massage_confirmation_template'
 
-export type WaConfigKind = 'reminder' | 'confirmation' | 'phone' | 'resume'
+export type WaConfigKind = 'reminder' | 'confirmation' | 'phone' | 'resume' | 'smReminder' | 'smConfirmation'
 
 const KEYS: Record<WaConfigKind, string> = {
   reminder: KEY_REMINDER,
   confirmation: KEY_CONFIRMATION,
   phone: KEY_ADMIN_PHONE,
   resume: KEY_RESUME,
+  smReminder: KEY_SM_REMINDER,
+  smConfirmation: KEY_SM_CONFIRM,
 }
 
 const DEFAULTS: Record<WaConfigKind, string> = {
@@ -23,6 +30,8 @@ const DEFAULTS: Record<WaConfigKind, string> = {
   confirmation: DEFAULT_ORDER_CONFIRMATION_TEMPLATE,
   phone: '',
   resume: DEFAULT_RESUME_SHARE_MESSAGE,
+  smReminder: DEFAULT_SM_REMINDER_TEMPLATE,
+  smConfirmation: DEFAULT_SM_CONFIRMATION_TEMPLATE,
 }
 
 // Per-branch overrides live in the same internal_konfigurasi table under
@@ -30,7 +39,11 @@ const DEFAULTS: Record<WaConfigKind, string> = {
 // key, then to the built-in default.
 const branchKey = (kunci: string, branchId: string) => `${kunci}:${branchId}`
 
-export interface WaConfigSet { reminder: string; confirmation: string; phone: string; resume: string }
+export interface WaConfigSet {
+  reminder: string; confirmation: string; phone: string; resume: string
+  /** Sport Massage schedule (jadwal-sport-massage) — separate from the fisio templates */
+  smReminder: string; smConfirmation: string
+}
 
 export interface WaConfigAll {
   global: WaConfigSet

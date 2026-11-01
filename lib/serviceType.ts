@@ -77,3 +77,11 @@ export function packageCategoryForKategori(kategori: string | null | undefined):
   if (k.includes('VISIT')) return 'PAKET VISIT'
   return 'PAKET KLINIK'
 }
+
+/** Visit service type for a Tarif Layanan kategori — Sport Massage packages are
+ *  booked as SPORT MASSAGE visits; null for a kategori with no visit type. */
+export function serviceTypeForKategori(kategori: string | null | undefined): ServiceType | null {
+  const k = kategori ?? ''
+  if (CATEGORY_TO_SERVICE_TYPE[k]) return CATEGORY_TO_SERVICE_TYPE[k]
+  return packageCategoryForKategori(k) === 'PAKET SPORT MASSAGE' ? 'SPORT MASSAGE' : null
+}

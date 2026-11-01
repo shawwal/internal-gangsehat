@@ -11,7 +11,7 @@ import { logActivity } from '@/lib/activityLog'
 import { addDays, buildDaysInRange, buildPeriodDays, countWorkdays, MONTH_NAMES } from '@/lib/payroll/period'
 import { codeFromRow, rowFromCode, type AttendanceDbRow } from '@/lib/payroll/attendance'
 import { pickCompensation } from '@/lib/payroll/engine'
-import { computeAutoActivity, payrollActivityHits, VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
+import { computeAutoActivity, payrollActivityHits, payrollAttended, VISIT_FOR_PAYROLL_COLUMNS, type VisitForPayroll } from '@/lib/payroll/autoActivity'
 import {
   BRANCH_TOTAL_SALE_CATEGORIES, PAYROLL_PAYMENT_STATUSES, paymentActivityHits, paymentModeCodes, sumPaymentHits,
   type PaymentForPayroll, type PayrollUnits,
@@ -652,7 +652,7 @@ async function loadActivityInput(
       .order('visit_date', { ascending: true })
     for (const v of (pv ?? []) as VisitForPayroll[]) {
       if (!v.package_id || firstPackageVisit.has(v.package_id)) continue
-      if (v.kehadiran === 'HADIR' || (v.kehadiran == null && v.visit_date < today)) firstPackageVisit.set(v.package_id, v)
+      if (payrollAttended(v, today)) firstPackageVisit.set(v.package_id, v)
     }
   }
 

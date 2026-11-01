@@ -36,6 +36,7 @@ export const ACTIVITY_RESOURCE_TYPES = {
   pfotm_period: 'Periode PFOTM',
   pfotm_entry: 'Data Performa PFOTM',
   pfotm_rule: 'Aturan Poin PFOTM',
+  closing_submission: 'Closing Admin',
 } as const
 
 export type ActivityResourceType = keyof typeof ACTIVITY_RESOURCE_TYPES

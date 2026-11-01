@@ -2,7 +2,6 @@ import { useRef } from 'react'
 import { CalendarRange, FileText, Upload, X } from 'lucide-react'
 import { dayCount, LEAVE_TYPES, LEAVE_TYPE_LABEL, type LeaveType } from './types'
 
-const today = new Date().toISOString().split('T')[0]
 const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 interface FormState {
@@ -85,7 +84,6 @@ export function MyLeaveForm({
             <input
               required type="date"
               value={form.start_date}
-              min={today}
               onChange={e => onChange({ ...form, start_date: e.target.value })}
               className="w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -126,8 +124,15 @@ export function MyLeaveForm({
         <div>
           <label className="block text-xs font-medium text-foreground mb-1.5">
             Surat Sakit / Bukti
-            <span className="ml-1 text-muted-foreground font-normal">(opsional)</span>
+            <span className="ml-1 text-muted-foreground font-normal">
+              {form.leave_type === 'SAKIT' ? '(wajib)' : '(opsional)'}
+            </span>
           </label>
+          {form.leave_type === 'SAKIT' && (
+            <p className="text-[11px] text-muted-foreground mb-1.5">
+              Unggah surat sakit dari dokter yang sudah ditandatangani manager.
+            </p>
+          )}
           <input
             ref={fileInputRef}
             type="file"

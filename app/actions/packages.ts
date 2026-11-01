@@ -539,6 +539,7 @@ export async function updatePatientPackage(
     jenis_paket?: 'P1' | 'P2'
     mulai_paket?: 'NEW' | 'EXT.'
     category?: PackageCategory
+    layanan_id?: string | null
     operational_status?: 'ON' | 'OFF' | 'PENDING'
     completion_status?: 'LANJUT' | 'SEMBUH' | 'TIDAK LANJUT' | 'STOP' | null
     status?: 'active' | 'completed' | 'cancelled' | 'stopped'

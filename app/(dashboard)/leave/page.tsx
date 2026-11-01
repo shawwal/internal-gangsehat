@@ -82,6 +82,10 @@ export default function MyLeavePage() {
       showToast('Tanggal akhir tidak boleh sebelum tanggal mulai.', 'error')
       return
     }
+    if (form.leave_type === 'SAKIT' && !proofFile) {
+      showToast('Izin sakit wajib melampirkan surat dokter yang sudah ditandatangani manager.', 'error')
+      return
+    }
     setSaving(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()

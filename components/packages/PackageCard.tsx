@@ -6,6 +6,8 @@ import { fetchPackageSessions, ensurePackagePaymentOrder } from '@/app/actions/p
 import { fetchOrderPaymentHistory } from '@/app/actions/transactions'
 import { fetchBranchStaff, fetchVisitWithPatient, updateVisit, deleteVisit, createVisit, type BranchStaffMember, type VisitWithPatient } from '@/app/actions/jadwal'
 import { fetchBookingIdByKode } from '@/app/actions/orders'
+import { fetchLayananByBranch } from '@/app/actions/layanan'
+import { serviceTypeForKategori } from '@/lib/serviceType'
 import type { PatientPackageWithPayment } from '@/app/actions/packages'
 import type { OrderPaymentHistoryEntry } from '@/lib/internal/orderPayments'
 import { SessionList } from './SessionList'
@@ -21,15 +23,14 @@ import type { PatientPackage, PackageSession } from './types'
 import type { ServiceType, UserRole } from '@/types'
 import type { Shift } from '@/lib/shifts'
 
-const SESSION_SERVICE_TYPES: ServiceType[] = [
-  'TERAPI AWAL KLINIK', 'PAKET KLINIK', 'SESI KLINIK',
-  'TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT', 'SPORT MASSAGE', 'LAINNYA',
-]
+type SessionLayanan = { id: string; nama: string; kategori: string; is_active: boolean }
 
 type EditSessionForm = {
   visit_date:          string
   attending_staff_id:  string
   service_type:        ServiceType | ''
+  /** Tarif Layanan entry — picking one also sets service_type from its kategori */
+  layanan_id:          string
   shift:                Shift | ''
   kehadiran:            'HADIR' | 'TIDAK HADIR' | ''
   sumber_pasien:        string
@@ -40,6 +41,7 @@ function toEditSessionForm(v: VisitWithPatient): EditSessionForm {
     visit_date:         v.visit_date,
     attending_staff_id: v.attending_staff_id ?? '',
     service_type:       (v.service_type as ServiceType) ?? '',
+    layanan_id:         v.layanan_id ?? '',
     shift:              (v.shift as EditSessionForm['shift']) ?? '',
     kehadiran:          (v.kehadiran as EditSessionForm['kehadiran']) ?? '',
     sumber_pasien:       v.sumber_pasien ?? '',
@@ -50,6 +52,7 @@ const DEFAULT_ADD_SESSION_FORM: EditSessionForm = {
   visit_date:         '',
   attending_staff_id: '',
   service_type:       'PAKET KLINIK',
+  layanan_id:         '',
   shift:              '',
   kehadiran:          'HADIR',
   sumber_pasien:       '',
@@ -82,6 +85,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
   const [loadingPayments, setLoadingPayments] = useState(false)
 
   const [branchStaff, setBranchStaff]           = useState<BranchStaffMember[]>([])
+  const [sessionLayanan, setSessionLayanan]     = useState<SessionLayanan[] | null>(null)
   const [editSessionTarget, setEditSessionTarget] = useState<VisitWithPatient | null>(null)
   const [editSessionForm, setEditSessionForm]     = useState<EditSessionForm | null>(null)
   const [editSessionSaving, setEditSessionSaving] = useState(false)
@@ -98,6 +102,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
   const [resolvingOrder, setResolvingOrder] = useState(false)
   const [editPaymentTarget, setEditPaymentTarget] = useState<EditableTransaction | null>(null)
 
+  const isSportMassagePkg = pkg.category === 'PAKET SPORT MASSAGE'
   const canDeleteSession = !!userRole && !['therapist', 'staff', 'sport_massage_therapist'].includes(userRole)
   const canEditPayment   = !!userRole && ['finance', 'manager', 'director', 'admin'].includes(userRole)
 
@@ -171,14 +176,25 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
     setPaymentExpanded((v) => !v)
   }
 
+  // Session forms: therapists of this branch (Sport Massage therapists for a
+  // Sport Massage package) and the branch's Tarif Layanan names.
+  function loadSessionOptions() {
+    if (!pkg.branch_id) return
+    if (branchStaff.length === 0) {
+      fetchBranchStaff(pkg.branch_id, { includeSportMassage: isSportMassagePkg }).then(setBranchStaff)
+    }
+    if (sessionLayanan === null) {
+      fetchLayananByBranch(pkg.branch_id).then((rows) =>
+        setSessionLayanan(rows.filter((l) => serviceTypeForKategori(l.kategori))))
+    }
+  }
+
   async function openEditSession(s: PackageSession) {
     const v = await fetchVisitWithPatient(s.id)
     if (!v) return
     setEditSessionTarget(v)
     setEditSessionForm(toEditSessionForm(v))
-    if (branchStaff.length === 0 && pkg.branch_id) {
-      fetchBranchStaff(pkg.branch_id).then(setBranchStaff)
-    }
+    loadSessionOptions()
   }
 
   async function handleEditSessionSave(e: React.FormEvent) {
@@ -189,6 +205,8 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
       visit_date:          editSessionForm.visit_date,
       attending_staff_id:  editSessionForm.attending_staff_id || null,
       service_type:        editSessionForm.service_type || null,
+      ...(editSessionForm.layanan_id !== (editSessionTarget.layanan_id ?? '')
+        ? { layanan_id: editSessionForm.layanan_id || null } : {}),
       shift:                editSessionForm.shift || null,
       kehadiran:            editSessionForm.kehadiran || null,
       sumber_pasien:        editSessionForm.sumber_pasien || null,
@@ -203,13 +221,12 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
   function openAddSession() {
     setAddSessionForm({
       ...DEFAULT_ADD_SESSION_FORM,
-      service_type: pkg.category === 'PAKET VISIT' ? 'PAKET VISIT' : 'PAKET KLINIK',
+      service_type: pkg.category === 'PAKET VISIT' ? 'PAKET VISIT' : isSportMassagePkg ? 'SPORT MASSAGE' : 'PAKET KLINIK',
+      layanan_id:   pkg.layanan_id ?? '',
     })
     setAddSessionError(null)
     setAddSessionOpen(true)
-    if (branchStaff.length === 0 && pkg.branch_id) {
-      fetchBranchStaff(pkg.branch_id).then(setBranchStaff)
-    }
+    loadSessionOptions()
   }
 
   async function handleAddSessionSave(e: React.FormEvent) {
@@ -224,6 +241,7 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
       visit_date:          addSessionForm.visit_date,
       visit_time:          null,
       service_type:        addSessionForm.service_type || null,
+      layanan_id:          addSessionForm.layanan_id || null,
       shift:               addSessionForm.shift || null,
       chief_complaint:     null,
       status:              'completed',
@@ -533,10 +551,11 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={LABEL_CLS}>Layanan</label>
-                  <select value={editSessionForm.service_type} onChange={(e) => setEditSessionForm((f) => f && { ...f, service_type: e.target.value as ServiceType | '' })} className={INPUT_CLS}>
-                    <option value="">— Pilih —</option>
-                    {SESSION_SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <LayananSelect
+                    layanan={sessionLayanan}
+                    form={editSessionForm}
+                    onChange={(patch) => setEditSessionForm((f) => f && { ...f, ...patch })}
+                  />
                 </div>
                 <div>
                   <label className={LABEL_CLS}>Kehadiran</label>
@@ -626,10 +645,11 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={LABEL_CLS}>Layanan</label>
-                  <select value={addSessionForm.service_type} onChange={(e) => setAddSessionForm((f) => ({ ...f, service_type: e.target.value as ServiceType | '' }))} className={INPUT_CLS}>
-                    <option value="">— Pilih —</option>
-                    {SESSION_SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <LayananSelect
+                    layanan={sessionLayanan}
+                    form={addSessionForm}
+                    onChange={(patch) => setAddSessionForm((f) => ({ ...f, ...patch }))}
+                  />
                 </div>
                 <div>
                   <label className={LABEL_CLS}>Kehadiran</label>
@@ -716,5 +736,35 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
         />
       )}
     </div>
+  )
+}
+
+/** Layanan picker of the session forms: Tarif Layanan names grouped by kategori.
+ *  A visit saved before it had a Layanan shows its service type until one is picked. */
+function LayananSelect({ layanan, form, onChange }: {
+  layanan: SessionLayanan[] | null
+  form: EditSessionForm
+  onChange: (patch: Pick<EditSessionForm, 'layanan_id' | 'service_type'>) => void
+}) {
+  const visible = (layanan ?? []).filter((l) => l.is_active || l.id === form.layanan_id)
+  const groups = new Map<string, SessionLayanan[]>()
+  for (const l of visible) groups.set(l.kategori, [...(groups.get(l.kategori) ?? []), l])
+  return (
+    <select
+      value={form.layanan_id}
+      disabled={layanan === null}
+      onChange={(e) => {
+        const l = visible.find((x) => x.id === e.target.value)
+        onChange({ layanan_id: e.target.value, service_type: (l && serviceTypeForKategori(l.kategori)) || form.service_type })
+      }}
+      className={INPUT_CLS}
+    >
+      <option value="">{layanan === null ? 'Memuat…' : form.service_type ? `${form.service_type} (belum pilih layanan)` : '— Pilih —'}</option>
+      {[...groups].map(([kategori, items]) => (
+        <optgroup key={kategori} label={kategori}>
+          {items.map((l) => <option key={l.id} value={l.id}>{l.nama}{l.is_active ? '' : ' (nonaktif)'}</option>)}
+        </optgroup>
+      ))}
+    </select>
   )
 }

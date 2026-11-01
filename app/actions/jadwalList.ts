@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import { fetchAllRows, fetchInChunks } from '@/lib/supabase/fetchAll'
 import { calcAge } from '@/components/patients/detail/constants'
@@ -58,6 +57,8 @@ export interface JadwalTarifOption {
 interface TarifRow extends JadwalTarifOption { branch_id: string; harga: number; jumlah_sesi: number | null }
 
 const CLINIC_SERVICE_TYPES = ['TERAPI AWAL KLINIK', 'PAKET KLINIK', 'SESI KLINIK', 'LAINNYA']
+/** Data Kunjungan Klinik: clinic physiotherapy + Sport Massage (the page filters by unit). */
+const LIST_SERVICE_TYPES = [...CLINIC_SERVICE_TYPES, 'SPORT MASSAGE']
 
 function isoOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -102,11 +103,11 @@ export async function fetchJadwalListRows(
 ): Promise<JadwalListRow[]> {
   if (dateTo < dateFrom) [dateFrom, dateTo] = [dateTo, dateFrom]
   if (datesBetween(dateFrom, dateTo).length > MAX_RANGE_DAYS) throw new Error(`Rentang tanggal maksimal ${MAX_RANGE_DAYS} hari`)
-  return loadJadwalRows(dateFrom, dateTo, branchId, { serviceTypes: CLINIC_SERVICE_TYPES, griya: true })
+  return loadJadwalRows(dateFrom, dateTo, branchId, { serviceTypes: LIST_SERVICE_TYPES, griya: true })
 }
 
 /**
- * Rows for List Jadwal and the session tracker. `serviceTypes` limits the visits
+ * Rows for Data Kunjungan Klinik. `serviceTypes` limits the visits
  * (Griya branches use their grid's own rule when `griya` is set).
  */
 async function loadJadwalRows(
@@ -137,8 +138,8 @@ async function loadJadwalRows(
       `)
       .gte('visit_date', dateFrom)
       .lte('visit_date', dateTo)
-    // Same service types as the jadwal-harian grid — Sport Massage and Home Visit
-    // (TA/SESI/PAKET VISIT) have their own pages. Griya uses the same rule as its grid.
+    // Clinic (jadwal-harian grid) + Sport Massage; Home Visit (TA/SESI/PAKET VISIT)
+    // has its own page. Griya uses the same rule as its grid.
     if (!isGriya) query = query.in('service_type', opts.serviceTypes)
     if (branchId) query = query.eq('branch_id', branchId)
     return query.order('visit_date').order('visit_time').order('id').range(f, t)
@@ -342,47 +343,4 @@ async function griyaVirtualRows(dates: string[], branchId: string): Promise<Jadw
     }
   }
   return out
-}
-
-// ── Validation Center (session tracker) ─────────────────────────────────────
-
-const SESSION_TRACKER_ROLES = ['director', 'manager', 'admin']
-/** Clinic physiotherapy + Sport Massage — the services tracked session by session. */
-const SESSION_SERVICE_TYPES = [...CLINIC_SERVICE_TYPES, 'SPORT MASSAGE']
-const RESCHEDULE_FIELDS = ['visit_date', 'visit_time', 'attending_staff_id']
-
-export interface SessionTrackerRow extends JadwalListRow {
-  /** Moved to another date / hour / therapist at least once (activity log) */
-  rescheduled: boolean
-}
-
-/** Every fisio + Sport Massage session of the branch in [dateFrom, dateTo], read-only. */
-export async function fetchSessionTrackerRows(
-  dateFrom: string,
-  dateTo: string,
-  branchId: string | null,
-): Promise<SessionTrackerRow[]> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-  const { data: me } = await supabase.from('internal_profiles').select('role, branch_id').eq('id', user.id).single()
-  if (!me || !SESSION_TRACKER_ROLES.includes(me.role)) return []
-  if (dateTo < dateFrom) [dateFrom, dateTo] = [dateTo, dateFrom]
-  const scope = me.role === 'director' ? branchId : me.branch_id
-
-  const rows = await loadJadwalRows(dateFrom, dateTo, scope, { serviceTypes: SESSION_SERVICE_TYPES, griya: false })
-
-  // Reschedules: drag & drop / edit of date, hour or therapist, logged by updateVisit.
-  // activity_logs is director-only under RLS — read with the service role after the role check.
-  const admin = createAdminClient()
-  const moved = new Set<string>()
-  const logs = await fetchInChunks<{ resource_id: string; changed_fields: string[] | null }>(
-    rows.map((r) => r.id),
-    (c) => admin.from('activity_logs').select('resource_id, changed_fields')
-      .eq('resource_type', 'patient_visit').eq('action', 'update')
-      .overlaps('changed_fields', RESCHEDULE_FIELDS)
-      .in('resource_id', c),
-  )
-  for (const l of logs) moved.add(l.resource_id)
-  return rows.map((r) => ({ ...r, rescheduled: moved.has(r.id) || r.visit_status === 'rescheduled' }))
 }

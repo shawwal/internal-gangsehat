@@ -10,6 +10,13 @@ export const PAGE_SIZE_STORAGE_KEY = 'jadwal_list_page_size'
 /** Longest date range the list loads at once — every day pulls its own visits, payments and records. */
 export const MAX_RANGE_DAYS = 31
 
+/** Unit filter: clinic physiotherapy vs Sport Massage ('' = both). */
+export type ListUnit = '' | 'fisioterapi' | 'sport_massage'
+
+export function unitOfRow(r: { service_type: string | null }): Exclude<ListUnit, ''> {
+  return r.service_type === 'SPORT MASSAGE' ? 'sport_massage' : 'fisioterapi'
+}
+
 /** Layanan filter value for visits that don't resolve to a Tarif Layanan entry. */
 export const NO_TARIF = '__none__'
 

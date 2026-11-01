@@ -60,6 +60,9 @@ All tables: `id uuid PK DEFAULT gen_random_uuid()`, `created_at timestamptz DEFA
 
 `status` = approval workflow; `payment_status` = payment detail — independent fields.
 
+### Closing Admin — migration 125
+`/closing` (`app/actions/closing.ts`): Rekap Kunjungan Fisioterapi Klinik + Sport Massage Klinik (Hadir / Paket / Sesi / Terapi Awal / Booking / Tidak Hadir incl. visits deleted per `activity_logs` / Rekam Medis Belum Lengkap per therapist), then Rekap Keuangan. GAJI expenses are filtered server-side for every role except director/finance. `closing_submissions` (branch_id, closing_date UNIQUE pair, status submitted/approved/rejected, snapshot, review_note): admin/manager/director submit a single day, finance (own branch) / director approve or reject; trigger `closing_submissions_guard` stops anyone else from setting approved/rejected or touching an approved day. Approved = final: admin's closing page turns read-only (UI only — no DB lock on transactions).
+
 ### Online payments — DOKU (migration 101)
 | Table | Key columns |
 |-------|-------------|

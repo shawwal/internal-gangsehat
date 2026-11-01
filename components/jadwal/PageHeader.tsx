@@ -8,9 +8,10 @@ interface PageHeaderProps {
   onRefresh: () => void
   /** Replaces the formatted date line (e.g. a date range) */
   subtitle?: string
+  title?: string
 }
 
-export function PageHeader({ date, loading, onRefresh, subtitle }: PageHeaderProps) {
+export function PageHeader({ date, loading, onRefresh, subtitle, title = 'Jadwal Harian' }: PageHeaderProps) {
   const weekGroup = getWeekGroupForDate(date)
   return (
     <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -20,7 +21,7 @@ export function PageHeader({ date, loading, onRefresh, subtitle }: PageHeaderPro
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-foreground">Jadwal Harian</h1>
+            <h1 className="text-xl font-semibold text-foreground">{title}</h1>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary">
               {weekGroup === 'MINGGU_1' ? 'Minggu 1' : 'Minggu 2'}
             </span>

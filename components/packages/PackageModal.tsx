@@ -7,7 +7,9 @@ import { createTransactionManual, fetchLayananHarga } from '@/app/actions/transa
 import type { CreateTransactionManualInput } from '@/app/actions/transactions'
 import { DEFAULT_FORM, INPUT_CLS, LABEL_CLS } from './types'
 import { FisioSelect } from '@/components/finance/FisioSelect'
-import { PACKAGE_CATEGORIES } from '@/lib/serviceType'
+import { PACKAGE_CATEGORIES, packageCategoryForKategori } from '@/lib/serviceType'
+import { fetchLayananByBranch } from '@/app/actions/layanan'
+import { SearchSelect, type SearchSelectOption } from '@/components/ui/SearchSelect'
 import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
 import type { PatientPackage, JenisPaket, PackageOperationalStatus, PackageCompletionStatus, PackageStatus, FormState } from './types'
@@ -44,6 +46,35 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
   const [proofPath, setProofPath] = useState<string | null>(null)
   const [proofUploading, setProofUploading] = useState(false)
   const [fisioId, setFisioId] = useState('')
+  // Nama Paket = a package product from the branch's Tarif Layanan
+  const [paketLayanan, setPaketLayanan] = useState<{ id: string; nama: string; kategori: string; jumlah_sesi: number | null; harga: number; is_active: boolean }[] | null>(null)
+  const [layananId, setLayananId] = useState<string>(editTarget?.layanan_id ?? '')
+
+  useEffect(() => {
+    if (!branchId) return
+    let cancelled = false
+    fetchLayananByBranch(branchId).then((rows) => {
+      if (!cancelled) setPaketLayanan(rows.filter((l) => packageCategoryForKategori(l.kategori)))
+    })
+    return () => { cancelled = true }
+  }, [branchId])
+
+  const paketOptions: SearchSelectOption[] | null = (paketLayanan ?? (branchId ? null : []))
+    ?.filter((l) => l.is_active || l.id === layananId)
+    .map((l) => ({ value: l.id, label: l.nama, hint: l.is_active ? l.kategori : 'nonaktif' })) ?? null
+
+  function pickPaket(id: string) {
+    const l = paketLayanan?.find((x) => x.id === id)
+    if (!l) return
+    setLayananId(id)
+    setForm((f) => ({
+      ...f,
+      package_name: l.nama,
+      category:     packageCategoryForKategori(l.kategori) ?? f.category,
+      jenis_paket:  l.jumlah_sesi === 10 ? 'P2' : l.jumlah_sesi === 5 ? 'P1' : f.jenis_paket,
+      ...(isEdit ? {} : { harga: String(l.harga ?? '') }),
+    }))
+  }
 
   const sessionCount = form.jenis_paket === 'P1' ? 5 : 10
 
@@ -51,17 +82,17 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
     setForm((f) => ({ ...f, [key]: val }))
   }
 
-  // Auto-fill harga from the branch's price list (internal_layanan) — create-only
+  // Auto-fill harga from the branch's price list (internal_layanan) — create-only,
+  // until a Tarif Layanan package is picked (its own harga wins)
   useEffect(() => {
-    if (isEdit) return
+    if (isEdit || layananId) return
     let cancelled = false
     const virtualServiceType = form.category === 'PAKET VISIT' ? 'PAKET VISIT' : 'PAKET KLINIK'
     fetchLayananHarga(virtualServiceType, branchId, sessionCount).then((price) => {
       if (!cancelled) set('harga', price != null ? String(price) : '')
     })
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEdit, form.category, branchId, sessionCount])
+  }, [isEdit, layananId, form.category, branchId, sessionCount])
 
   const hargaNum  = parseFloat(form.harga.replace(/\D/g, '')) || 0
   const amountNum = parseFloat(form.amount.replace(/\D/g, '')) || 0
@@ -85,6 +116,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
         jenis_paket:        form.jenis_paket,
         mulai_paket:        form.mulai_paket,
         category:           form.category,
+        ...(layananId && layananId !== editTarget.layanan_id ? { layanan_id: layananId } : {}),
         operational_status: form.operational_status,
         completion_status:  form.completion_status || null,
         status:             form.status,
@@ -149,13 +181,13 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
         <form id="pkg-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
           <div>
             <label className={LABEL_CLS}>Nama Paket</label>
-            <input
-              required
-              type="text"
-              placeholder="mis. Paket Fisio Lutut"
-              value={form.package_name}
-              onChange={(e) => set('package_name', e.target.value)}
-              className={INPUT_CLS}
+            <SearchSelect
+              options={paketOptions}
+              value={layananId}
+              onChange={pickPaket}
+              placeholder={form.package_name || 'Pilih paket dari Tarif Layanan'}
+              searchPlaceholder="Cari nama paket…"
+              ariaLabel="Nama Paket"
             />
           </div>
 
@@ -204,7 +236,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
 
           <div>
             <label className={LABEL_CLS}>Kategori Paket</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {PACKAGE_CATEGORIES.map((c) => (
                 <button
                   key={c}
@@ -216,7 +248,7 @@ export function PackageModal({ editTarget, branchId, patientId, onClose, onSaved
                       : 'border-border text-muted-foreground hover:bg-muted'
                   }`}
                 >
-                  {c === 'PAKET KLINIK' ? 'Klinik' : 'Visit'}
+                  {c === 'PAKET KLINIK' ? 'Klinik' : c === 'PAKET VISIT' ? 'Visit' : 'Sport Massage'}
                 </button>
               ))}
             </div>

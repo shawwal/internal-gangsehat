@@ -31,6 +31,16 @@ function matchesType(t: ActivityType, v: VisitForPayroll): boolean {
   return true
 }
 
+/**
+ * Sport Massage incentive counts only sessions explicitly marked HADIR (not
+ * cancelled) — the Payroll Sport Massage page's rule; an unmarked or TIDAK HADIR
+ * session earns nothing. Other visits follow the shared Kunjungan rule.
+ */
+export function payrollAttended(v: VisitForPayroll, todayISO: string): boolean {
+  if (v.service_type === 'SPORT MASSAGE') return v.kehadiran === 'HADIR' && v.status !== 'cancelled'
+  return visitAttended(v, todayISO)
+}
+
 /** One counted unit: +1 on `code` for `staff_id`, from `visit`. */
 export interface PayrollActivityHit {
   staff_id: string
@@ -61,7 +71,7 @@ export function payrollActivityHits(params: {
   const hits: PayrollActivityHit[] = []
   const bump = (staffId: string, code: string, visit: VisitForPayroll) => { hits.push({ staff_id: staffId, code, visit }) }
 
-  const attended = periodVisits.filter((v) => v.attending_staff_id && staff.has(v.attending_staff_id) && visitAttended(v, todayISO))
+  const attended = periodVisits.filter((v) => v.attending_staff_id && staff.has(v.attending_staff_id) && payrollAttended(v, todayISO))
 
   for (const t of types) {
     if (!t.is_active || t.count_mode === 'manual' || t.source_service_types.length === 0) continue

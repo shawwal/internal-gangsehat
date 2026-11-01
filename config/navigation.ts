@@ -347,23 +347,13 @@ export const navigation: NavItem[] = [
     group: 'schedule',
   },
 
-  // Daily schedule — flat table view (list) of the same day's visits
+  // Data Kunjungan Klinik — flat table of clinic physiotherapy + Sport Massage visits
   {
     key: 'jadwal-harian-list',
-    label: 'List Jadwal',
+    label: 'Data Kunjungan Klinik',
     href: '/jadwal-harian/list',
     icon: 'Table',
     roles: ['director', 'hr', 'manager', 'therapist', 'staff', 'admin'],
-    group: 'schedule',
-  },
-
-  // Validation Center — read-only tracker of every fisio + Sport Massage session
-  {
-    key: 'validation-center',
-    label: 'Validation Center',
-    href: '/sessions',
-    icon: 'ClipboardCheck',
-    roles: ['director', 'manager', 'admin'],
     group: 'schedule',
   },
 

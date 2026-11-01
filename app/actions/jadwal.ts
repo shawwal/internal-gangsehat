@@ -521,13 +521,14 @@ export interface VisitWithPatient {
   status: VisitStatus
   notes: string | null
   package_id: string | null
+  layanan_id: string | null
 }
 
 export async function fetchVisitWithPatient(visitId: string): Promise<VisitWithPatient | null> {
   const supabase = await createClient()
   const { data: v, error } = await supabase
     .from('patient_visits')
-    .select('id, patient_id, branch_id, visit_date, visit_time, service_type, shift, kehadiran, regio, sumber_pasien, chief_complaint, diagnosis, treatment, attending_staff_id, status, notes, package_id')
+    .select('id, patient_id, branch_id, visit_date, visit_time, service_type, shift, kehadiran, regio, sumber_pasien, chief_complaint, diagnosis, treatment, attending_staff_id, status, notes, package_id, layanan_id')
     .eq('id', visitId)
     .single()
 
@@ -566,6 +567,7 @@ export async function fetchVisitWithPatient(visitId: string): Promise<VisitWithP
     status:             v.status as VisitStatus,
     notes:              v.notes,
     package_id:         v.package_id ?? null,
+    layanan_id:         v.layanan_id ?? null,
   }
 }
 
@@ -764,13 +766,17 @@ export interface BranchStaffMember {
   nickname: string | null
 }
 
-export async function fetchBranchStaff(branchId: string): Promise<BranchStaffMember[]> {
+export async function fetchBranchStaff(
+  branchId: string,
+  opts?: { includeSportMassage?: boolean },
+): Promise<BranchStaffMember[]> {
   const supabase = await createClient()
+  const roles = ['therapist', 'staff', 'manager', ...(opts?.includeSportMassage ? ['sport_massage_therapist'] : [])]
   const { data } = await supabase
     .from('internal_profiles')
     .select('id, full_name, nickname')
     .eq('branch_id', branchId)
-    .in('role', ['therapist', 'staff', 'manager'])
+    .in('role', roles)
     .eq('is_active', true)
     .order('full_name')
   return (data ?? []) as BranchStaffMember[]

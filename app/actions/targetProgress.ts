@@ -307,3 +307,54 @@ export async function fetchTargetProgressDetail(
     }
   })
 }
+
+export interface ApprovedBranchTarget {
+  target_terapi_awal: number
+  target_paket_klinik: number
+  target_kunjungan: number
+  target_visit: number
+  target_sesi: number
+}
+
+const TARGET_COLUMNS = 'target_terapi_awal, target_paket_klinik, target_kunjungan, target_visit, target_sesi'
+
+/**
+ * The branch's approved target for a month. An approved branch target wins;
+ * otherwise the latest approved "Target Saya" (staff_targets) of the branch —
+ * HR / manager submit the branch's monthly numbers there and the director
+ * approves them. staff_targets is own-rows-only under RLS, so that fallback is
+ * read with the service role after the branch check.
+ */
+export async function fetchApprovedBranchTarget(
+  branchId: string,
+  month: number,
+  year: number,
+): Promise<ApprovedBranchTarget | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data: me } = await supabase.from('internal_profiles').select('role, branch_id').eq('id', user.id).single()
+  if (!me || (me.role !== 'director' && me.branch_id !== branchId)) return null
+
+  const { data: branchTarget } = await supabase
+    .from('branch_targets')
+    .select(TARGET_COLUMNS)
+    .eq('branch_id', branchId)
+    .eq('bulan', month)
+    .eq('tahun', year)
+    .eq('status', 'approved')
+    .maybeSingle()
+  if (branchTarget) return branchTarget as ApprovedBranchTarget
+
+  const { data: staffTarget } = await createAdminClient()
+    .from('staff_targets')
+    .select(TARGET_COLUMNS)
+    .eq('branch_id', branchId)
+    .eq('bulan', month)
+    .eq('tahun', year)
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return (staffTarget as ApprovedBranchTarget | null) ?? null
+}

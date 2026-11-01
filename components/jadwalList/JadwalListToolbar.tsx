@@ -1,8 +1,10 @@
 'use client'
 
-import { NO_TARIF, PAGE_SIZE_OPTIONS, type JadwalTarifOption } from './types'
+import { NO_TARIF, PAGE_SIZE_OPTIONS, type JadwalTarifOption, type ListUnit } from './types'
 
 interface Props {
+  unit: ListUnit
+  onUnitChange: (u: ListUnit) => void
   pageSize: number
   onPageSizeChange: (n: number) => void
   dateFrom: string
@@ -22,6 +24,7 @@ interface Props {
 const selectCls = 'px-2.5 py-1.5 border border-border rounded-xl bg-input text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer'
 
 export function JadwalListToolbar({
+  unit, onUnitChange,
   pageSize, onPageSizeChange,
   dateFrom, dateTo, onDateFromChange, onDateToChange,
   fisioOptions, fisio, onFisioChange,
@@ -63,8 +66,14 @@ export function JadwalListToolbar({
         />
       </div>
 
+      <select value={unit} onChange={(e) => onUnitChange(e.target.value as ListUnit)} className={selectCls} aria-label="Unit">
+        <option value="">Semua Unit</option>
+        <option value="fisioterapi">Fisioterapi</option>
+        <option value="sport_massage">Sport Massage</option>
+      </select>
+
       <select value={fisio} onChange={(e) => onFisioChange(e.target.value)} className={selectCls}>
-        <option value="">Semua Fisio</option>
+        <option value="">Semua Terapis</option>
         {fisioOptions.map((f) => <option key={f} value={f}>{f}</option>)}
       </select>
 

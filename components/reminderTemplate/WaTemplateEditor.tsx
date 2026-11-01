@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Check, Loader2, CalendarDays, Building2, RotateCcw } from 'lucide-react'
+import { Check, Loader2, CalendarDays, Building2, RotateCcw, Dumbbell } from 'lucide-react'
 import {
   fetchWaConfigAll, saveWaConfig, clearWaConfigOverride,
   type WaConfigAll, type WaConfigKind, type WaConfigSet,
@@ -10,7 +10,10 @@ import {
 import { resolveWaConfig } from '@/lib/waConfig'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/context/ToastContext'
-import { DEFAULT_REMINDER_TEMPLATE, DEFAULT_ORDER_CONFIRMATION_TEMPLATE, DEFAULT_RESUME_SHARE_MESSAGE } from '@/lib/utils'
+import {
+  DEFAULT_REMINDER_TEMPLATE, DEFAULT_ORDER_CONFIRMATION_TEMPLATE, DEFAULT_RESUME_SHARE_MESSAGE,
+  DEFAULT_SM_REMINDER_TEMPLATE, DEFAULT_SM_CONFIRMATION_TEMPLATE,
+} from '@/lib/utils'
 import { TemplateEditorCard } from './TemplateEditorCard'
 import { FormSkeleton } from '@/components/ui/Skeleton'
 
@@ -66,8 +69,12 @@ const CONFIRMATION_SAMPLE = {
   nomor_admin: '081234567890',
 }
 
+const SM_SAMPLE = { layanan: 'SPORT MASSAGE', cabang: 'Gang Sehat Pontianak' }
+
 type Status = { saving: boolean; saved: boolean; error: string | null }
 const IDLE: Status = { saving: false, saved: false, error: null }
+const EMPTY_SET: WaConfigSet = { reminder: '', confirmation: '', phone: '', resume: '', smReminder: '', smConfirmation: '' }
+const IDLE_ALL: Record<WaConfigKind, Status> = { reminder: IDLE, confirmation: IDLE, phone: IDLE, resume: IDLE, smReminder: IDLE, smConfirmation: IDLE }
 
 // Shown above each editor when a branch is selected: whether the branch uses
 // its own value or follows the global default, plus a way back to the default.
@@ -95,8 +102,8 @@ export function WaTemplateEditor({ lockedBranchId }: { lockedBranchId?: string }
   const [all, setAll] = useState<WaConfigAll | null>(null)
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
   const [branchId, setBranchId] = useState<string | null>(lockedBranchId ?? null)   // null = default for every branch
-  const [draft, setDraft] = useState<WaConfigSet>({ reminder: '', confirmation: '', phone: '', resume: '' })
-  const [status, setStatus] = useState<Record<WaConfigKind, Status>>({ reminder: IDLE, confirmation: IDLE, phone: IDLE, resume: IDLE })
+  const [draft, setDraft] = useState<WaConfigSet>(EMPTY_SET)
+  const [status, setStatus] = useState<Record<WaConfigKind, Status>>(IDLE_ALL)
   const [clearing, setClearing] = useState<WaConfigKind | null>(null)
 
   const load = useCallback(async () => {
@@ -121,7 +128,7 @@ export function WaTemplateEditor({ lockedBranchId }: { lockedBranchId?: string }
   function selectBranch(id: string | null) {
     setBranchId(id)
     setDraft(id ? resolveWaConfig(all, id) : all!.global)
-    setStatus({ reminder: IDLE, confirmation: IDLE, phone: IDLE, resume: IDLE })
+    setStatus(IDLE_ALL)
   }
 
   const overrides = branchId ? all?.byBranch[branchId] ?? {} : {}
@@ -273,6 +280,58 @@ export function WaTemplateEditor({ lockedBranchId }: { lockedBranchId?: string }
               placeholders={CONFIRMATION_PLACEHOLDERS}
               sampleVars={{ ...CONFIRMATION_SAMPLE, ...(branchName ? { cabang: branchName } : {}), ...(draft.phone ? { nomor_admin: draft.phone } : {}) }}
             />
+          </div>
+
+          {/* Sport Massage templates — used by Jadwal Sport Massage instead of the fisio ones */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pt-2">
+              <Dumbbell size={15} className="text-primary" />
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Sport Massage</h2>
+                <p className="text-xs text-muted-foreground">Dipakai tombol WhatsApp di Jadwal Sport Massage</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {branchId && <OverrideBar overridden={overrides.smReminder !== undefined} onClear={() => handleClear('smReminder')} clearing={clearing === 'smReminder'} />}
+              <TemplateEditorCard
+                title="Pesan Pengingat Sport Massage"
+                description="Dikirim ke pasien sebagai pengingat jadwal sport massage"
+                template={draft.smReminder}
+                onChange={(v) => setDraft((d) => ({ ...d, smReminder: v }))}
+                onSave={() => handleSave('smReminder')}
+                onReset={() => setDraft((d) => ({ ...d, smReminder: DEFAULT_SM_REMINDER_TEMPLATE }))}
+                saving={status.smReminder.saving}
+                saved={status.smReminder.saved}
+                error={status.smReminder.error}
+                placeholders={REMINDER_PLACEHOLDERS}
+                sampleVars={{ ...REMINDER_SAMPLE, ...SM_SAMPLE, ...(branchName ? { cabang: branchName } : {}), ...(draft.phone ? { nomor_admin: draft.phone } : {}) }}
+              />
+            </div>
+
+            <div className="space-y-2">
+              {branchId && <OverrideBar overridden={overrides.smConfirmation !== undefined} onClear={() => handleClear('smConfirmation')} clearing={clearing === 'smConfirmation'} />}
+              <TemplateEditorCard
+                title="Konfirmasi Pendaftaran Sport Massage"
+                description="Dikirim ke pasien saat jadwal sport massage berhasil didaftarkan"
+                template={draft.smConfirmation}
+                onChange={(v) => setDraft((d) => ({ ...d, smConfirmation: v }))}
+                onSave={() => handleSave('smConfirmation')}
+                onReset={() => setDraft((d) => ({ ...d, smConfirmation: DEFAULT_SM_CONFIRMATION_TEMPLATE }))}
+                saving={status.smConfirmation.saving}
+                saved={status.smConfirmation.saved}
+                error={status.smConfirmation.error}
+                placeholders={CONFIRMATION_PLACEHOLDERS}
+                sampleVars={{ ...CONFIRMATION_SAMPLE, ...SM_SAMPLE, ...(branchName ? { cabang: branchName } : {}), ...(draft.phone ? { nomor_admin: draft.phone } : {}) }}
+              />
+            </div>
+
+            <Link
+              href="/jadwal-sport-massage"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-input hover:bg-muted text-sm font-medium text-foreground transition-colors cursor-pointer"
+            >
+              <CalendarDays size={15} /> Buka Jadwal Sport Massage
+            </Link>
           </div>
 
           {/* Resume share message */}

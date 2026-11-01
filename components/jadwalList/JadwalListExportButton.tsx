@@ -62,7 +62,7 @@ export function JadwalListExportButton({ rows, branchName, dateFrom, dateTo, fil
       const XLSX = await import('xlsx')
       const period = dateFrom === dateTo ? dateFrom : `${dateFrom} s/d ${dateTo}`
       const head: Cell[][] = [
-        ['Jadwal Harian'],
+        ['Data Kunjungan Klinik'],
         ['Cabang', branchName],
         ['Periode', period],
         ['Filter', filters.length ? filters.join(' · ') : 'Tidak ada'],
