@@ -89,16 +89,17 @@ export function NewSessionDialog({ branchId: ownBranchId, onClose, onSuccess }: 
 
   useEffect(() => {
     if (!canPickBranch) return
-    createClient()
-      .from('branches')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('name')
-      .then(({ data }) => {
-        const list = data ?? []
-        setBranches(list)
-        setBranchId((cur) => cur ?? list[0]?.id ?? null)
-      })
+    const supabase = createClient()
+    Promise.all([
+      supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
+      supabase.from('branch_griya_settings').select('branch_id').eq('enabled', true),
+    ]).then(([{ data }, { data: griya }]) => {
+      // Griya Anak branches book home visits on /griya-anak/home-visit.
+      const griyaIds = new Set((griya ?? []).map((g) => g.branch_id as string))
+      const list = (data ?? []).filter((b) => !griyaIds.has(b.id))
+      setBranches(list)
+      setBranchId((cur) => cur ?? list[0]?.id ?? null)
+    })
   }, [canPickBranch])
 
   useEffect(() => {

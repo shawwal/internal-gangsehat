@@ -5,8 +5,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
-import { SERVICE_TYPES } from '@/lib/serviceType'
+import { HOME_VISIT_SERVICE_TYPES, SERVICE_TYPES } from '@/lib/serviceType'
 import { resolveTherapistForSlot } from '@/lib/griyaRotation'
+import type { ServiceType } from '@/types'
 import { resolveDay, isBusyCell } from '@/components/griya/resolve'
 
 // ── Shared types ──────────────────────────────────────────────────────────────
@@ -983,14 +984,20 @@ export interface AddSubstituteInput {
   /** 'once' = a standalone single session booked from "Sekali saja (1 sesi)" —
    *  same storage as a substitute (a patient_visits row with no griya_slot_id, so
    *  nothing recurs next week and deleting it removes it for good), just not
-   *  labelled "Pengganti". */
-  kind?: 'substitute' | 'once'
+   *  labelled "Pengganti". 'home_visit' = the same single session booked from
+   *  Home Visit Griya Anak (/griya-anak/home-visit) — a visit service type, the
+   *  therapist's hour blocked on the jadwal while they are out. */
+  kind?: 'substitute' | 'once' | 'home_visit'
 }
 
-export async function addSubstitute(input: AddSubstituteInput): Promise<{ error: string | null }> {
+export async function addSubstitute(input: AddSubstituteInput): Promise<{ error: string | null; id?: string }> {
   const a = await requireWrite()
   if ('error' in a) return { error: a.error }
   const { supabase, userId } = a
+
+  if (input.kind === 'home_visit' && !HOME_VISIT_SERVICE_TYPES.includes(input.service_type as ServiceType)) {
+    return { error: 'Layanan home visit harus Terapi Awal Visit, Sesi Visit, atau Paket Visit.' }
+  }
 
   if (await isCellOccupied(supabase, input.branch_id, input.therapist_id, input.date, input.slot_time)) {
     return { error: 'Jam ini untuk terapis tersebut sudah terisi anak lain hari ini — pilih jam atau terapis lain.' }
@@ -999,7 +1006,7 @@ export async function addSubstitute(input: AddSubstituteInput): Promise<{ error:
   await ensureEnrolled(a, input.patient_id, input.branch_id, 'jadwal')
 
   const orderId = await generateOrderId(supabase)
-  const { error } = await supabase.from('patient_visits').insert({
+  const { data, error } = await supabase.from('patient_visits').insert({
     patient_id: input.patient_id,
     branch_id: input.branch_id,
     attending_staff_id: input.therapist_id,
@@ -1010,20 +1017,21 @@ export async function addSubstitute(input: AddSubstituteInput): Promise<{ error:
     package_id: input.package_id ?? null,
     status: 'scheduled',
     griya_slot_id: null,
-    notes: input.kind === 'once'
+    notes: input.kind === 'once' || input.kind === 'home_visit'
       ? null
       : input.coveringName ? `Pengganti untuk ${input.coveringName}` : 'Pengganti',
     order_id: orderId,
     updated_at: new Date().toISOString(),
-  })
+  }).select('id').single()
   if (error) return { error: error.message }
 
+  const kindKey = input.kind === 'once' ? 'one_off' : input.kind === 'home_visit' ? 'home_visit' : 'substitute'
   await logActivity({
     supabase, userId, action: 'create', resourceType: 'griya_slot', resourceId: null,
     branchId: input.branch_id, patientId: input.patient_id,
-    newValues: { [input.kind === 'once' ? 'one_off' : 'substitute']: true, date: input.date, therapist_id: input.therapist_id, slot_time: input.slot_time },
+    newValues: { [kindKey]: true, date: input.date, therapist_id: input.therapist_id, slot_time: input.slot_time },
   })
-  return { error: null }
+  return { error: null, id: data?.id as string }
 }
 
 // ── End an enrolment ────────────────────────────────────────────────────────

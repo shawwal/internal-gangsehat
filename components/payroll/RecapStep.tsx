@@ -253,7 +253,7 @@ const fmtDay = (d: string) =>
 
 // Slip pills: attendance (from the ABS grid) + activity counts; every pill opens its list.
 const ATTENDANCE_PILLS: { label: string; match: (c: AttendanceCode) => boolean; note?: (c: AttendanceCode) => string }[] = [
-  { label: 'Hadir', match: (c) => c === 'H' || typeof c === 'number', note: (c) => (typeof c === 'number' ? `terlambat ${c} mnt` : '') },
+  { label: 'Hadir', match: (c) => c === 'H' || typeof c === 'number', note: (c) => (typeof c === 'number' ? `terlambat ${c} menit` : '') },
   { label: 'Terlambat', match: (c) => typeof c === 'number', note: (c) => `${c} menit` },
   { label: 'Izin', match: (c) => c === 'I' },
   { label: 'Sakit', match: (c) => c === 'S' },
@@ -279,7 +279,7 @@ function SlipQuickStats({ ws, row, onOpen }: { ws: PayrollWorkspace; row: Worksp
   const attendancePill = (p: typeof ATTENDANCE_PILLS[number]) => {
     const rows = Object.entries(codes).filter(([, c]) => p.match(c)).sort(([a], [b]) => a.localeCompare(b))
       .map(([date, c]) => ({ date, note: p.note?.(c) ?? '' }))
-    const value = p.label === 'Terlambat' ? `${row.attendance.lateMinutes} mnt` : String(rows.length)
+    const value = p.label === 'Terlambat' ? `${row.attendance.lateMinutes} menit` : String(rows.length)
     return { key: p.label, label: p.label, value, open: () => onOpen({ kind: 'dates', title: `${p.label} — ${name}`, rows }) }
   }
   const pills = [

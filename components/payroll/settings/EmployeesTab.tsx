@@ -237,7 +237,7 @@ export function EmployeesTab({ data, onChanged, griya = false }: Props) {
                       Berlaku {v.effective_from === '2000-01-01' ? 'sejak awal' : v.effective_from} {i === 0 && <span className="text-primary">(terbaru)</span>}
                     </p>
                     <p className="text-muted-foreground">
-                      Pokok {formatRupiah(v.gaji_pokok)} · Tj. jabatan {formatRupiah(v.tj_jabatan)} · Operasional {
+                      Pokok {formatRupiah(v.gaji_pokok)} · Tunjangan jabatan {formatRupiah(v.tj_jabatan)} · Operasional {
                         v.operasional_mode === 'daily_deduction' ? `${formatRupiah(v.operasional_daily_rate)}/hari` : formatRupiah(v.operasional)
                       } · Insentif {formatRupiah(v.insentif_base)}{v.incentive_target ? ` (target ${v.incentive_target})` : ''}
                     </p>

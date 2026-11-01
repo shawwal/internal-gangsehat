@@ -8,6 +8,9 @@ export const SERVICE_TYPES: ServiceType[] = [
 // A visit's service type and the income category it is paid under are the same
 // word (migration 119 — the Tarif Layanan kategori names). Kept as a map so call
 // sites read as "category for this visit".
+/** Home-visit service types (/home-visit, /griya-anak/home-visit). */
+export const HOME_VISIT_SERVICE_TYPES: ServiceType[] = ['TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT']
+
 export const SERVICE_TO_CATEGORY = Object.fromEntries(
   SERVICE_TYPES.map((s) => [s, s]),
 ) as Record<ServiceType, string>

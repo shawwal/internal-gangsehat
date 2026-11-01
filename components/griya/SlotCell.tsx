@@ -6,6 +6,8 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { Plus, Check, UserX, Move, GraduationCap, CreditCard, ExternalLink, UserPlus2, Pencil, RotateCcw, Stethoscope, Ban, Trash2 } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { ResolvedCell } from './resolve'
+import { HOME_VISIT_SERVICE_TYPES } from '@/lib/serviceType'
+import type { ServiceType } from '@/types'
 
 export type CellAction =
   | 'assign' | 'substitute' | 'attendance' | 'markPresent' | 'unmarkAttendance' | 'move' | 'end' | 'pay' | 'open' | 'editVisit' | 'examine' | 'coverUnassigned'
@@ -102,7 +104,11 @@ export function SlotCell({ cellKey, stackIndex, cell, therapistOn, canEdit, move
         <span className="block truncate">{cell.studentName}</span>
         {cell.state === 'izin' && cell.reason && <span className="block truncate text-[9px] opacity-80">{cell.reason}</span>}
         {cell.state === 'adhoc' && (
-          <span className="block truncate text-[9px] opacity-80">{cell.reason?.startsWith('Pengganti') ? 'pengganti' : '1x sesi'}</span>
+          <span className="block truncate text-[9px] opacity-80">
+            {cell.visit && HOME_VISIT_SERVICE_TYPES.includes(cell.visit.service_type as ServiceType)
+              ? 'home visit'
+              : cell.reason?.startsWith('Pengganti') ? 'pengganti' : '1x sesi'}
+          </span>
         )}
       </div>
 

@@ -13,6 +13,7 @@ const GRIYA_THERAPIST_NAV_KEYS = new Set([
   'griya-jadwal-mingguan',
   'griya-siswa',
   'griya-siswa-saya',
+  'griya-home-visit',
   'my-leave',
   'target-progress',
   'notifications',

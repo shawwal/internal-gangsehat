@@ -7,6 +7,7 @@ import { logActivity } from '@/lib/activityLog'
 import type { BodyRegion, ServiceType, UserRole, VisitStatus } from '@/types'
 import type { HomeVisitSessionRow, HomeVisitStatsData } from '@/components/homeVisit/types'
 import type { Shift } from '@/lib/shifts'
+import { fetchGriyaBranchIds } from '@/lib/griyaRecordCompletion'
 
 const HOME_VISIT_TYPES: ServiceType[] = ['TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT']
 
@@ -40,6 +41,17 @@ async function resolveViewer(supabase: SupabaseServerClient): Promise<ViewerCont
 // director sees every branch; everyone else is scoped to their own branch (via RLS + explicit filter)
 function isCrossBranch(role: UserRole) {
   return role === 'director'
+}
+
+/**
+ * Griya Anak branches keep their home visits on /griya-anak/home-visit
+ * (app/actions/griyaHomeVisit.ts) — this page lists every other branch.
+ * Returns the branch ids to exclude, or null when the viewer's own branch is Griya.
+ */
+async function griyaExclusion(supabase: SupabaseServerClient, viewer: ViewerContext): Promise<string[] | null> {
+  const griya = await fetchGriyaBranchIds(supabase)
+  if (!isCrossBranch(viewer.role) && viewer.branchId && griya.includes(viewer.branchId)) return null
+  return griya
 }
 
 async function searchPatientIds(supabase: SupabaseServerClient, term: string): Promise<string[]> {
@@ -76,8 +88,11 @@ export async function fetchHomeVisitSessions(params: {
     .neq('status', 'cancelled')
     .order('visit_date', { ascending: false })
 
+  const griya = await griyaExclusion(supabase, viewer)
+  if (!griya) return { rows: [], total: 0 }
   if (isCrossBranch(viewer.role)) {
     if (params.branchId && params.branchId !== 'all') visitQuery = visitQuery.eq('branch_id', params.branchId)
+    if (griya.length) visitQuery = visitQuery.not('branch_id', 'in', `(${griya.join(',')})`)
   } else if (viewer.branchId) {
     visitQuery = visitQuery.eq('branch_id', viewer.branchId)
   } else {
@@ -182,8 +197,11 @@ export async function fetchHomeVisitStats(branchId?: string): Promise<HomeVisitS
     .select('patient_id, visit_date')
     .in('service_type', HOME_VISIT_TYPES)
 
+  const griya = await griyaExclusion(supabase, viewer)
+  if (!griya) return { totalPatients: 0, activePackages: 0, visitsThisMonth: 0, noPackageYet: 0 }
   if (isCrossBranch(viewer.role)) {
     if (branchId && branchId !== 'all') visitQuery = visitQuery.eq('branch_id', branchId)
+    if (griya.length) visitQuery = visitQuery.not('branch_id', 'in', `(${griya.join(',')})`)
   } else if (viewer.branchId) {
     visitQuery = visitQuery.eq('branch_id', viewer.branchId)
   } else {

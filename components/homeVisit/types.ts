@@ -1,7 +1,7 @@
 import type { ServiceType, VisitStatus } from '@/types'
 import { STATUS_LABEL, STATUS_BADGE } from '@/components/jadwal/types'
 
-export const HOME_VISIT_SERVICE_TYPES: ServiceType[] = ['TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT']
+export { HOME_VISIT_SERVICE_TYPES } from '@/lib/serviceType'
 
 export { STATUS_LABEL, STATUS_BADGE }
 

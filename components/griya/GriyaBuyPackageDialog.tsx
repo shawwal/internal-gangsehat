@@ -11,7 +11,7 @@ import type { PatientPackage } from '@/types'
 import { LayananPicker } from '@/components/jadwal/assign/paket/LayananPicker'
 import { PaketPaymentStep } from '@/components/jadwal/assign/paket/PaketPaymentStep'
 import { ModalPortal } from '@/components/payment-links/ModalPortal'
-import { packageCategoryForKategori } from '@/lib/serviceType'
+import { packageCategoryForKategori, type PackageCategory } from '@/lib/serviceType'
 import { DISCIPLINE_LABEL, HARI_LABEL } from './constants'
 import { inputCls, labelCls } from './StudentFormFields'
 
@@ -27,11 +27,13 @@ interface Props {
   onClose: () => void
   /** Fired once the package row exists (payment may still be pending). */
   onDone: (packageId: string) => void
+  /** Package kinds offered — e.g. only PAKET VISIT from Home Visit Griya Anak. */
+  categories?: PackageCategory[]
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
-export function GriyaBuyPackageDialog({ patientId, patientName, branchId, slots, packages, onClose, onDone }: Props) {
+export function GriyaBuyPackageDialog({ patientId, patientName, branchId, slots, packages, onClose, onDone, categories }: Props) {
   const [layanan, setLayanan] = useState<LayananRow | null>(null)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -136,7 +138,7 @@ export function GriyaBuyPackageDialog({ patientId, patientName, branchId, slots,
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"><X size={16} /></button>
           </div>
 
-          <LayananPicker branchId={branchId} selected={layanan} onSelect={selectLayanan} />
+          <LayananPicker branchId={branchId} selected={layanan} onSelect={selectLayanan} categories={categories} />
 
           {layanan && (
             <div className="mt-4 space-y-3 rounded-2xl border border-border p-3">

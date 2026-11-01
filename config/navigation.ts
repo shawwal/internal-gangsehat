@@ -678,6 +678,17 @@ export const navigation: NavItem[] = [
     group: 'finance',
   },
   {
+    // Griya's own Home Visit — standalone visits with a visit service type,
+    // booked through the Griya jadwal (app/actions/griyaHomeVisit.ts). /home-visit
+    // lists the other branches.
+    key: 'griya-home-visit',
+    label: 'Home Visit Griya Anak',
+    href: '/griya-anak/home-visit',
+    icon: 'Home',
+    roles: ['director', 'manager', 'admin', 'therapist'],
+    group: 'griya',
+  },
+  {
     // Same payroll engine/tables as /payroll, limited to Griya Anak branches
     // (lib/payroll/branchScope.ts); /payroll lists the other branches.
     key: 'griya-penggajian',

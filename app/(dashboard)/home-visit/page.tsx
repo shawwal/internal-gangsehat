@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Search, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchHomeVisitSessions, fetchHomeVisitStats } from '@/app/actions/homeVisit'
@@ -20,6 +21,7 @@ const PAYMENT_ROLES: UserRole[] = ['finance', 'manager', 'director', 'admin']
 export default function HomeVisitPage() {
   const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [branchId, setBranchId] = useState<string | null>(null)
+  const [griyaBranch, setGriyaBranch] = useState(false)
 
   const [search, setSearch]   = useState('')
   const [page, setPage]       = useState(1)
@@ -63,6 +65,11 @@ export default function HomeVisitPage() {
         .single()
       setBranchId(profile?.branch_id ?? null)
       setUserRole((profile?.role as UserRole) ?? null)
+      if (profile?.branch_id) {
+        const { data: griya } = await supabase
+          .from('branch_griya_settings').select('enabled').eq('branch_id', profile.branch_id).maybeSingle()
+        setGriyaBranch(!!griya?.enabled)
+      }
     }
     loadProfile()
   }, [])
@@ -108,6 +115,15 @@ export default function HomeVisitPage() {
         attending_staff_name: result.attending_staff_name ?? undefined,
       })
     }
+  }
+
+  if (griyaBranch) {
+    return (
+      <div className="glass-card p-8 text-sm text-muted-foreground space-y-2">
+        <p>Home visit cabang Griya Anak dikelola di halaman tersendiri.</p>
+        <Link href="/griya-anak/home-visit" className="text-primary font-medium hover:underline">Buka Home Visit Griya Anak →</Link>
+      </div>
+    )
   }
 
   return (

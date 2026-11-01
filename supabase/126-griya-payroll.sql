@@ -9,7 +9,7 @@
 --      (The Pontianak 'prorata' rule pays 0 below the threshold instead.)
 --   3. incentive_full_threshold: capaian ≥ this share of the target pays the
 --      full insentif (Griya admin: 75%). 1 = the old min(1, qty / target).
---   4. Manual activity KPI_ADMIN — admin KPI score (%), target 100.
+--   4. Manual activity KPI_ADMIN — "Capaian Kinerja Admin (%)", target 100.
 --   5. Griya Anak branches: Alfa = Rp50.000 / day (global rule is Rp100.000).
 
 -- 1. Tugas
@@ -32,9 +32,9 @@ ALTER TABLE public.employee_compensation
   ADD CONSTRAINT employee_compensation_incentive_full_threshold_check
   CHECK (incentive_full_threshold > 0 AND incentive_full_threshold <= 1);
 
--- 4. Admin KPI
+-- 4. Capaian kinerja admin
 INSERT INTO public.payroll_activity_types (code, label, group_label, count_mode, max_per_period, sort_order)
-VALUES ('KPI_ADMIN', 'Capaian KPI Admin (%)', 'Lainnya', 'manual', 100, 52)
+VALUES ('KPI_ADMIN', 'Capaian Kinerja Admin (%)', 'Lainnya', 'manual', 100, 52)
 ON CONFLICT (code) DO NOTHING;
 
 -- 5. Alfa rate for Griya Anak branches

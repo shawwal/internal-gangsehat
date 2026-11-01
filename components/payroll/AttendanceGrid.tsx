@@ -122,7 +122,7 @@ export function AttendanceGrid({ ws, rows, onChange, tugas = false }: Props) {
                   <div>{Number(d.date.slice(8))}</div>
                 </th>
               ))}
-              {(tugas ? ['HADIR', 'TUGAS', 'TLBT', 'IZIN', 'SAKIT', 'CUTI', 'ALFA'] : ['HADIR', 'TLBT', 'IZIN', 'SAKIT', 'CUTI', 'ALFA']).map((h) => (
+              {(tugas ? ['HADIR', 'TUGAS', 'TERLAMBAT (MENIT)', 'IZIN', 'SAKIT', 'CUTI', 'ALFA'] : ['HADIR', 'TLBT', 'IZIN', 'SAKIT', 'CUTI', 'ALFA']).map((h) => (
                 <th key={h} className="px-2 py-2 text-center font-semibold text-muted-foreground border-l border-border">{h}</th>
               ))}
             </tr>

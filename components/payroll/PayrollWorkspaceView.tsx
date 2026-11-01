@@ -59,7 +59,7 @@ const SCOPE_TEXT: Record<PayrollScope, { title: string; subtitle: string; other:
   },
   griya: {
     title: 'Penggajian Griya Anak',
-    subtitle: 'Komponen gaji, absensi (M/T/menit/C/S/I/A), insentif klinik & visit, potongan dan slip gaji karyawan Griya Anak.',
+    subtitle: 'Komponen gaji, absensi (masuk, tugas, menit terlambat, cuti, sakit, izin, alfa), insentif klinik & visit, potongan dan slip gaji karyawan Griya Anak.',
     other: 'Penggajian Klinik',
     empty: 'Belum ada cabang Griya Anak yang aktif.',
   },
