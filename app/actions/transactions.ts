@@ -371,6 +371,7 @@ export interface UpdateTransactionInput {
   description?: string | null
   transaction_date?: string
   patient_id?: string | null
+  fisio_id?: string | null
   receipt_url?: string | null
 }
 

@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { Plus, CheckCircle, XCircle, Search } from 'lucide-react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import { Plus, CheckCircle, XCircle, Search, Pencil, ArrowDownWideNarrow, ArrowUpNarrowWide } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Transaction, TransactionType, PaymentMethod, PaymentDetailStatus } from '@/types'
-import { createTransactionManual } from '@/app/actions/transactions'
+import { createTransactionManual, updateTransaction } from '@/app/actions/transactions'
 import { searchPatients, fetchPatientNames, type PatientPlain } from '@/app/actions/patients'
 import { fetchExpenseCategories, fetchBranchAdmins, type ExpenseCategoryRow, type AdminOption } from '@/app/actions/accounting'
 import { todayJakartaISO } from '@/lib/utils'
@@ -15,7 +15,9 @@ import { ExportMenu } from './ExportMenu'
 import { formatRp, PAYMENT_METHODS, PAYMENT_STATUSES, inputCls } from './shared'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 import { PaymentProofField, PaymentProofLink } from '@/components/payments/PaymentProofField'
-import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof } from '@/lib/paymentProof'
+import { PAYMENT_PROOF_REQUIRED_MSG, requiresPaymentProof, isGatewayPayment } from '@/lib/paymentProof'
+import { fetchAllRows } from '@/lib/supabase/fetchAll'
+import { Pagination } from '@/components/leave/Pagination'
 import { FisioSelect, isTherapistCategory } from '@/components/finance/FisioSelect'
 import { LayananIncomePicker, needsLayananPick, type LayananPick } from '@/components/finance/LayananIncomePicker'
 import { isPackageCategory } from '@/lib/serviceType'
@@ -34,6 +36,31 @@ interface Props {
   dateToExclusive: string
   periodLabel: string
 }
+
+// Per-browser list preferences, shared by Pemasukan and Pengeluaran.
+const SORT_KEY = 'akuntansi.ledgerSort'
+const PAGE_SIZE_KEY = 'akuntansi.ledgerPageSize'
+const PAGE_SIZES = [10, 25, 50, 100]
+type SortDir = 'desc' | 'asc'
+
+function readSort(): SortDir {
+  try {
+    return typeof window !== 'undefined' && localStorage.getItem(SORT_KEY) === 'asc' ? 'asc' : 'desc'
+  } catch {
+    return 'desc'
+  }
+}
+
+function readPageSize(): number {
+  try {
+    const n = typeof window !== 'undefined' ? Number(localStorage.getItem(PAGE_SIZE_KEY)) : 0
+    return PAGE_SIZES.includes(n) ? n : 25
+  } catch {
+    return 25
+  }
+}
+
+const STATUS_LABEL: Record<string, string> = { confirmed: 'Dikonfirmasi', pending: 'Menunggu', rejected: 'Ditolak' }
 
 function getDefaultForm(dateFrom: string, isIncome: boolean) {
   return {
@@ -61,6 +88,8 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
   const [rows, setRows] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  // Row being edited in the form; null = adding a new one
+  const [editing, setEditing] = useState<Transaction | null>(null)
   const [form, setForm] = useState(() => getDefaultForm(todayJakartaISO(), isIncome))
   const [saving, setSaving] = useState(false)
   const [rejectId, setRejectId] = useState<string | null>(null)
@@ -74,16 +103,24 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
   const fisioRequired = isIncome && isTherapistCategory(form.category || 'LAINNYA')
   const hargaNum = Number(form.harga) || 0
   const discountNum = Number(form.discount) || 0
+  // DOKU payments: amount, method and receipt are gateway-verified (server ignores edits)
+  const editingGateway = !!editing && isGatewayPayment(editing.payment_method)
   const amountDigits = form.amountManual ? form.amount : (hargaNum > 0 ? String(Math.max(hargaNum - discountNum, 0)) : '')
 
   const [patientQuery, setPatientQuery] = useState('')
   const [patientResults, setPatientResults] = useState<PatientPlain[]>([])
   const [patientNames, setPatientNames] = useState<Record<string, string>>({})
 
+  const [search, setSearch] = useState('')
+  const [sortDir, setSortDir] = useState<SortDir>(readSort)
+  const [pageSize, setPageSize] = useState(readPageSize)
+  const [page, setPage] = useState(1)
+
   const load = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    const { data } = await supabase
+    // Whole period (no 1000-row cap) — search, sort and paging run on the client
+    const list = await fetchAllRows<Transaction>((from, to) => supabase
       .from('transactions')
       .select('*')
       .eq('branch_id', branchId)
@@ -92,8 +129,8 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
       .lt('transaction_date', dateToExclusive)
       .order('transaction_date', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(500)
-    const list = (data ?? []) as Transaction[]
+      .order('id')
+      .range(from, to)).catch(() => [] as Transaction[])
     setRows(list)
     setLoading(false)
     const ids = list.map((t) => t.patient_id).filter((id): id is string => !!id)
@@ -101,6 +138,47 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
   }, [branchId, type, dateFrom, dateToExclusive])
 
   useEffect(() => { load() }, [load])
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const digits = q.replace(/\D/g, '')
+    const list = q
+      ? rows.filter((r) =>
+          [
+            r.patient_id ? patientNames[r.patient_id] : '',
+            r.description, r.category, r.payment_method, r.payment_status,
+            STATUS_LABEL[r.status], r.transaction_date,
+          ].some((v) => v?.toLowerCase().includes(q))
+          // "150000" / "150.000" matches the amount or price
+          || (digits.length >= 3 && /^[\d.,\s]+$/.test(q) && [r.amount, r.harga].some((n) => n != null && String(Math.round(Number(n))).includes(digits))))
+      : rows
+    const sign = sortDir === 'asc' ? 1 : -1
+    return [...list].sort((a, b) =>
+      sign * (a.transaction_date.localeCompare(b.transaction_date) || (a.created_at ?? '').localeCompare(b.created_at ?? '')))
+  }, [rows, search, sortDir, patientNames])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const pageRows = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const filteredTotal = filtered.reduce((s, r) => s + Number(r.amount), 0)
+
+  function toggleSort() {
+    const next: SortDir = sortDir === 'desc' ? 'asc' : 'desc'
+    setSortDir(next)
+    setPage(1)
+    try { localStorage.setItem(SORT_KEY, next) } catch { /* just not remembered */ }
+  }
+
+  function changePageSize(n: number) {
+    setPageSize(n)
+    setPage(1)
+    try { localStorage.setItem(PAGE_SIZE_KEY, String(n)) } catch { /* just not remembered */ }
+  }
+
+  // A new period / branch starts on the first page
+  const periodKey = `${dateFrom}|${dateToExclusive}`
+  const [pagedPeriod, setPagedPeriod] = useState(periodKey)
+  if (pagedPeriod !== periodKey) { setPagedPeriod(periodKey); setPage(1) }
 
   useEffect(() => {
     if (!branchId) return
@@ -117,7 +195,33 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
   }, [patientQuery])
 
   function openForm() {
+    setEditing(null)
     setForm(getDefaultForm(todayJakartaISO(), isIncome))
+    setPatientQuery('')
+    setPatientResults([])
+    setShowForm(true)
+  }
+
+  function openEdit(r: Transaction) {
+    setEditing(r)
+    setForm({
+      itemId: '',
+      itemNama: '',
+      category: r.category ?? '',
+      harga: r.harga ? String(Math.round(Number(r.harga))) : '',
+      amount: String(Math.round(Number(r.amount) || 0)),
+      // Keep the stored amount (may be a DP) unless staff change it
+      amountManual: true,
+      discount: r.discount ? String(Math.round(Number(r.discount))) : '',
+      payment_method: (r.payment_method ?? 'TUNAI') as PaymentMethod,
+      payment_status: (r.payment_status ?? 'LUNAS') as PaymentDetailStatus,
+      fisio_id: r.fisio_id ?? '',
+      patient_id: r.patient_id ?? '',
+      patient_label: r.patient_id ? (patientNames[r.patient_id] ?? '') : '',
+      description: r.description ?? '',
+      transaction_date: r.transaction_date,
+      receipt_url: r.receipt_url ?? null,
+    })
     setPatientQuery('')
     setPatientResults([])
     setShowForm(true)
@@ -143,17 +247,32 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
     }))
   }
 
-  async function handleAdd(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (proofUploading) return
-    if (isIncome && (!form.category || needsLayananPick(form.category, form.itemId || null))) {
+    // Editing keeps the stored category as-is; a new / changed one must come from Tarif Layanan
+    const categoryChanged = !editing || form.category !== editing.category
+    if (isIncome && (!form.category || (categoryChanged && needsLayananPick(form.category, form.itemId || null)))) {
       alert('Pilih kategori dan layanan dari Tarif Layanan cabang.'); return
     }
     const needsProof = requiresPaymentProof(form.payment_method)
-    if (needsProof && !form.receipt_url) { alert(PAYMENT_PROOF_REQUIRED_MSG); return }
+    if (needsProof && !form.receipt_url && !editingGateway) { alert(PAYMENT_PROOF_REQUIRED_MSG); return }
     if (fisioRequired && !form.fisio_id) { alert('Pilih Fisio untuk transaksi layanan ini — tanpa Fisio, penjualan tidak terhitung ke terapis mana pun.'); return }
     setSaving(true)
-    const { error } = await createTransactionManual({
+    const { error } = editing
+      ? await updateTransaction(editing.id, {
+          category: form.category || (isIncome ? 'LAINNYA' : form.category),
+          ...(isIncome ? { harga: Number(form.harga) || 0, discount: Number(form.discount) || 0 } : {}),
+          amount: Number(amountDigits) || 0,
+          payment_method: form.payment_method || null,
+          payment_status: isIncome ? form.payment_status : null,
+          description: form.description || null,
+          transaction_date: form.transaction_date,
+          patient_id: isIncome ? (form.patient_id || null) : null,
+          fisio_id: form.fisio_id || null,
+          receipt_url: needsProof ? form.receipt_url : null,
+        })
+      : await createTransactionManual({
       type,
       category: form.category || (isIncome ? 'LAINNYA' : form.category),
       harga: Number(form.harga) || 0,
@@ -174,6 +293,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
     if (error) { alert(error); return }
 
     setShowForm(false)
+    setEditing(null)
     load()
   }
 
@@ -222,7 +342,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
 
   function handleExportExcel() {
     const today = new Date().toISOString().slice(0, 10)
-    exportToExcel(rows, COLS, `${isIncome ? 'pemasukan' : 'pengeluaran'}_${today}`)
+    exportToExcel(filtered, COLS, `${isIncome ? 'pemasukan' : 'pengeluaran'}_${today}`)
   }
 
   function handleExportPdf() {
@@ -232,7 +352,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
       meta: [
         { label: 'Cabang', value: branchName },
         { label: 'Periode', value: periodLabel },
-        { label: 'Total Transaksi', value: String(rows.length) },
+        { label: 'Total Transaksi', value: String(filtered.length) },
       ],
       columns: [
         { header: 'Tanggal', value: (r: Transaction) => r.transaction_date },
@@ -241,21 +361,45 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
         { header: 'Total', align: 'right', value: (r: Transaction) => formatRp(r.amount) },
         { header: 'Status', align: 'center', value: (r: Transaction) => r.status },
       ],
-      rows,
-      totalsRow: [...(isIncome ? ['', ''] : ['']), 'Total', formatRp(rows.reduce((s, r) => s + Number(r.amount), 0)), ''],
+      rows: filtered,
+      totalsRow: [...(isIncome ? ['', ''] : ['']), 'Total', formatRp(filteredTotal), ''],
     })
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-sm text-muted-foreground">{periodLabel} · {rows.length} transaksi</p>
+        <p className="text-sm text-muted-foreground">
+          {periodLabel} · {search.trim() ? `${filtered.length} dari ${rows.length}` : rows.length} transaksi
+          {filtered.length > 0 && <> · <span className="font-medium text-foreground">{formatRp(filteredTotal)}</span></>}
+        </p>
         <div className="flex items-center gap-2">
-          <ExportMenu onExportExcel={handleExportExcel} onExportPdf={handleExportPdf} disabled={rows.length === 0} />
+          <ExportMenu onExportExcel={handleExportExcel} onExportPdf={handleExportPdf} disabled={filtered.length === 0} />
           <button onClick={openForm} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
             <Plus size={16} /> Tambah
           </button>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+            placeholder={isIncome ? 'Cari pasien, layanan, kategori, metode, nominal…' : 'Cari kategori, keterangan, metode, nominal…'}
+            className={`${inputCls} pl-8`}
+          />
+        </div>
+        <button onClick={toggleSort} title="Urutkan tanggal"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-sm hover:bg-muted transition-colors cursor-pointer">
+          {sortDir === 'desc' ? <ArrowDownWideNarrow size={15} /> : <ArrowUpNarrowWide size={15} />}
+          {sortDir === 'desc' ? 'Terbaru' : 'Terlama'}
+        </button>
+        <select value={pageSize} onChange={(e) => changePageSize(Number(e.target.value))}
+          className="px-3 py-2 rounded-xl border border-border text-sm bg-input cursor-pointer" title="Baris per halaman">
+          {PAGE_SIZES.map((n) => <option key={n} value={n}>{n} / hal</option>)}
+        </select>
       </div>
 
       {loading ? (
@@ -265,7 +409,11 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tanggal</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                  <button onClick={toggleSort} className="inline-flex items-center gap-1 hover:text-foreground cursor-pointer">
+                    Tanggal {sortDir === 'desc' ? <ArrowDownWideNarrow size={13} /> : <ArrowUpNarrowWide size={13} />}
+                  </button>
+                </th>
                 {isIncome && <th className="text-left px-4 py-3 font-medium text-muted-foreground">Pasien</th>}
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">{isIncome ? 'Layanan' : 'Kategori'}</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total</th>
@@ -275,7 +423,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {pageRows.map((r) => (
                 <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
                   <td className="px-4 py-3 text-muted-foreground">{r.transaction_date}</td>
                   {isIncome && (
@@ -303,30 +451,41 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                       r.status === 'confirmed' ? 'bg-chart-4/15 text-chart-4' : r.status === 'pending' ? 'bg-secondary/20 text-secondary-foreground' : 'bg-destructive/10 text-destructive'
                     }`}>
-                      {r.status === 'confirmed' ? 'Dikonfirmasi' : r.status === 'pending' ? 'Menunggu' : 'Ditolak'}
+                      {STATUS_LABEL[r.status] ?? r.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {r.status === 'pending' && (
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => confirm(r.id)} className="p-1.5 rounded-lg hover:bg-chart-4/10 text-chart-4 transition-colors" title="Konfirmasi"><CheckCircle size={14} /></button>
-                        <button onClick={() => { setRejectId(r.id); setRejectReason('') }} className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors" title="Tolak"><XCircle size={14} /></button>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => openEdit(r)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Ubah"><Pencil size={14} /></button>
+                      {r.status === 'pending' && (
+                        <>
+                          <button onClick={() => confirm(r.id)} className="p-1.5 rounded-lg hover:bg-chart-4/10 text-chart-4 transition-colors" title="Konfirmasi"><CheckCircle size={14} /></button>
+                          <button onClick={() => { setRejectId(r.id); setRejectReason('') }} className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors" title="Tolak"><XCircle size={14} /></button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
           {!rows.length && <p className="text-sm text-muted-foreground text-center py-8">Belum ada transaksi pada periode ini.</p>}
+          {rows.length > 0 && !filtered.length && <p className="text-sm text-muted-foreground text-center py-8">Tidak ada transaksi yang cocok dengan pencarian.</p>}
         </div>
       )}
+
+      {!loading && <Pagination page={currentPage} pageSize={pageSize} total={filtered.length} onPage={setPage} />}
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="glass-card p-6 w-full max-w-md overflow-y-auto max-h-[90vh]">
-            <h2 className="text-base font-semibold text-foreground mb-4">Tambah {isIncome ? 'Pemasukan' : 'Pengeluaran'}</h2>
-            <form onSubmit={handleAdd} className="space-y-3">
+            <h2 className="text-base font-semibold text-foreground mb-4">{editing ? 'Ubah' : 'Tambah'} {isIncome ? 'Pemasukan' : 'Pengeluaran'}</h2>
+            {editingGateway && (
+              <p className="text-xs text-muted-foreground mb-3 rounded-xl bg-muted px-3 py-2">
+                Pembayaran DOKU — nominal, metode dan bukti tercatat otomatis dan tidak dapat diubah.
+              </p>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Tanggal</label>
                 <input type="date" value={form.transaction_date} onChange={(e) => setForm((f) => ({ ...f, transaction_date: e.target.value }))} className={inputCls} />
@@ -338,6 +497,8 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
                   kategori={form.category}
                   layananId={form.itemId || null}
                   onChange={handleLayananPick}
+                  keepCategory={editing?.category ?? null}
+                  autoPick={!editing}
                   selectClassName={inputCls}
                   labelClassName="block text-xs font-medium text-foreground mb-1"
                 />
@@ -346,6 +507,9 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
                   <label className="block text-xs font-medium text-foreground mb-1">Kategori</label>
                   <select required value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className={inputCls}>
                     <option value="">Pilih kategori...</option>
+                    {editing?.category && !expenseCats.some((c) => c.name === editing.category) && (
+                      <option value={editing.category}>{editing.category}</option>
+                    )}
                     {expenseCats.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
@@ -395,7 +559,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">Jumlah Bayar (Rp)</label>
                   <input
-                    required inputMode="numeric" placeholder="0"
+                    required inputMode="numeric" placeholder="0" disabled={editingGateway}
                     value={showRp(amountDigits)}
                     onChange={(e) => setForm((f) => ({ ...f, amount: toDigits(e.target.value), amountManual: true }))}
                     className={inputCls}
@@ -403,18 +567,21 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">Metode Bayar</label>
-                  <select value={form.payment_method} onChange={(e) => setForm((f) => ({ ...f, payment_method: e.target.value as PaymentMethod }))} className={inputCls}>
+                  <select value={form.payment_method} disabled={editingGateway} onChange={(e) => setForm((f) => ({ ...f, payment_method: e.target.value as PaymentMethod }))} className={`${inputCls} disabled:opacity-60`}>
+                    {!PAYMENT_METHODS.includes(form.payment_method) && <option value={form.payment_method}>{form.payment_method}</option>}
                     {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
               </div>
 
-              <PaymentProofField
-                method={form.payment_method}
-                value={form.receipt_url}
-                onChange={(path) => setForm((f) => ({ ...f, receipt_url: path }))}
-                onUploadingChange={setProofUploading}
-              />
+              {!editingGateway && (
+                <PaymentProofField
+                  method={form.payment_method}
+                  value={form.receipt_url}
+                  onChange={(path) => setForm((f) => ({ ...f, receipt_url: path }))}
+                  onUploadingChange={setProofUploading}
+                />
+              )}
 
               {isIncome && (
                 <div>
@@ -451,7 +618,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
               </div>
 
               <div className="flex gap-2 pt-1">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Batal</button>
+                <button type="button" onClick={() => { setShowForm(false); setEditing(null) }} className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Batal</button>
                 <button type="submit" disabled={saving || proofUploading} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
                   {saving ? 'Menyimpan...' : 'Simpan'}
                 </button>

@@ -45,7 +45,10 @@ export default function AkuntansiPage() {
 
   function changePeriodMode(mode: PeriodMode) {
     setPeriodMode(mode)
-    setRange(periodContaining(mode, new Date(`${range.from}T00:00:00`)))
+    // Rentang starts from the period currently shown, then is edited freely
+    setRange(mode === 'range'
+      ? customRange(range.from, addDays(range.toExclusive, -1))
+      : periodContaining(mode, new Date(`${range.from}T00:00:00`)))
     try { localStorage.setItem(PERIOD_MODE_KEY, mode) } catch { /* storage unavailable — just not remembered */ }
   }
 
@@ -140,12 +143,13 @@ function readSavedBranch(): string | null {
   }
 }
 
-type PeriodMode = 'month' | 'semester' | 'year'
+type PeriodMode = 'month' | 'semester' | 'year' | 'range'
 type Range = { from: string; toExclusive: string; label: string }
 const PERIOD_MODES: { key: PeriodMode; label: string }[] = [
   { key: 'month', label: 'Bulan' },
   { key: 'semester', label: 'Semester' },
   { key: 'year', label: 'Tahun' },
+  { key: 'range', label: 'Rentang' },
 ]
 // Per-browser preference: which period granularity the page opens on.
 const PERIOD_MODE_KEY = 'akuntansi.periodMode'
@@ -153,13 +157,29 @@ const PERIOD_MODE_KEY = 'akuntansi.periodMode'
 function readPeriodMode(): PeriodMode {
   try {
     const v = typeof window !== 'undefined' ? localStorage.getItem(PERIOD_MODE_KEY) : null
-    return v === 'semester' || v === 'year' ? v : 'month'
+    return v === 'semester' || v === 'year' || v === 'range' ? v : 'month'
   } catch {
     return 'month'
   }
 }
 
-/** The month / semester / year that contains `d`. */
+/** `YYYY-MM-DD` shifted by `n` days (calendar math, no timezone drift). */
+function addDays(iso: string, n: number): string {
+  const d = new Date(`${iso}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+function shortDate(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+/** Custom range, both ends inclusive. */
+function customRange(from: string, to: string): Range {
+  return { from, toExclusive: addDays(to, 1), label: from === to ? shortDate(from) : `${shortDate(from)} – ${shortDate(to)}` }
+}
+
+/** The month / semester / year that contains `d` (Rentang opens on the month). */
 function periodContaining(mode: PeriodMode, d: Date): Range {
   const y = d.getFullYear()
   const m = d.getMonth() + 1
@@ -189,6 +209,16 @@ function PeriodPicker({
     onChange(periodContaining(mode, new Date(d.getFullYear(), d.getMonth() + delta * step, 1)))
   }
 
+  const to = addDays(range.toExclusive, -1)
+  function setFrom(v: string) {
+    if (!v) return
+    onChange(customRange(v, v > to ? v : to))
+  }
+  function setTo(v: string) {
+    if (!v) return
+    onChange(customRange(v < range.from ? v : range.from, v))
+  }
+
   return (
     <div className="glass-card p-2 inline-flex flex-wrap items-center gap-2">
       <div className="inline-flex gap-1">
@@ -201,9 +231,21 @@ function PeriodPicker({
           </button>
         ))}
       </div>
-      <button onClick={() => go(-1)} className="p-1.5 rounded-lg hover:bg-muted cursor-pointer"><ChevronLeft size={15} /></button>
-      <span className="text-sm font-medium px-2 min-w-[120px] text-center">{range.label}</span>
-      <button onClick={() => go(1)} className="p-1.5 rounded-lg hover:bg-muted cursor-pointer"><ChevronRight size={15} /></button>
+      {mode === 'range' ? (
+        <div className="inline-flex flex-wrap items-center gap-1.5 text-sm">
+          <input type="date" value={range.from} onChange={(e) => setFrom(e.target.value)}
+            className="px-2 py-1 rounded-lg border border-border bg-input text-sm" aria-label="Dari tanggal" />
+          <span className="text-muted-foreground">s/d</span>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
+            className="px-2 py-1 rounded-lg border border-border bg-input text-sm" aria-label="Sampai tanggal" />
+        </div>
+      ) : (
+        <>
+          <button onClick={() => go(-1)} className="p-1.5 rounded-lg hover:bg-muted cursor-pointer"><ChevronLeft size={15} /></button>
+          <span className="text-sm font-medium px-2 min-w-[120px] text-center">{range.label}</span>
+          <button onClick={() => go(1)} className="p-1.5 rounded-lg hover:bg-muted cursor-pointer"><ChevronRight size={15} /></button>
+        </>
+      )}
     </div>
   )
 }
