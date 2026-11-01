@@ -4,14 +4,15 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Search, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { fetchHomeVisitSessions, fetchHomeVisitStats } from '@/app/actions/homeVisit'
+import { fetchHomeVisitPackagesWithoutSessions, fetchHomeVisitSessions, fetchHomeVisitStats } from '@/app/actions/homeVisit'
 import { updateVisitStatus } from '@/app/actions/jadwal'
 import { NewSessionDialog, type NewSessionResult } from '@/components/homeVisit/NewSessionDialog'
 import { PaymentDialog, type PaymentVisitInfo } from '@/components/visits/PaymentDialog'
 import { HomeVisitStats } from '@/components/homeVisit/HomeVisitStats'
 import { HomeVisitSessionLog } from '@/components/homeVisit/HomeVisitSessionLog'
+import { HomeVisitPendingPackages } from '@/components/homeVisit/HomeVisitPendingPackages'
 import { Pagination } from '@/components/leave/Pagination'
-import type { HomeVisitSessionRow, HomeVisitStatsData } from '@/components/homeVisit/types'
+import type { HomeVisitPendingPackageRow, HomeVisitSessionRow, HomeVisitStatsData } from '@/components/homeVisit/types'
 import type { UserRole, VisitStatus } from '@/types'
 
 const PAGE_SIZE = 10
@@ -28,6 +29,7 @@ export default function HomeVisitPage() {
   const [rows, setRows]       = useState<HomeVisitSessionRow[]>([])
   const [total, setTotal]     = useState(0)
   const [loading, setLoading] = useState(true)
+  const [pendingPackages, setPendingPackages] = useState<HomeVisitPendingPackageRow[]>([])
 
   const [stats, setStats] = useState<HomeVisitStatsData>({ totalPatients: 0, activePackages: 0, visitsThisMonth: 0, noPackageYet: 0 })
   const [statsLoading, setStatsLoading] = useState(true)
@@ -44,6 +46,10 @@ export default function HomeVisitPage() {
     setRows(result.rows)
     setTotal(result.total)
     setLoading(false)
+  }, [])
+
+  const loadPendingPackages = useCallback(async (currentSearch: string) => {
+    setPendingPackages(await fetchHomeVisitPackagesWithoutSessions({ search: currentSearch }))
   }, [])
 
   const loadStats = useCallback(async () => {
@@ -75,7 +81,7 @@ export default function HomeVisitPage() {
   }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => { setPage(1); loadRows(1, search); loadStats() }, search ? 300 : 0)
+    const t = setTimeout(() => { setPage(1); loadRows(1, search); loadPendingPackages(search); loadStats() }, search ? 300 : 0)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
@@ -87,6 +93,7 @@ export default function HomeVisitPage() {
 
   function refresh() {
     loadRows(page, search)
+    loadPendingPackages(search)
     loadStats()
   }
 
@@ -152,6 +159,8 @@ export default function HomeVisitPage() {
           className="w-full pl-9 pr-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
+
+      <HomeVisitPendingPackages rows={pendingPackages} showBranch={showBranch} />
 
       <HomeVisitSessionLog rows={rows} loading={loading} showBranch={showBranch} onStatusChange={handleStatusChange} />
 

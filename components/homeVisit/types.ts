@@ -30,6 +30,18 @@ export interface HomeVisitSessionRow {
   has_payment: boolean
 }
 
+/** An active PAKET VISIT package with no session logged yet. */
+export interface HomeVisitPendingPackageRow {
+  package_id: string
+  patient_id: string
+  patient_name: string
+  no_rm: string | null
+  branch_name: string
+  package_name: string
+  total_sessions: number
+  purchased_at: string
+}
+
 export interface HomeVisitStatsData {
   totalPatients: number
   activePackages: number

@@ -5,7 +5,7 @@ import { decryptPatientPII } from '@/lib/encryption'
 import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
 import type { BodyRegion, ServiceType, UserRole, VisitStatus } from '@/types'
-import type { HomeVisitSessionRow, HomeVisitStatsData } from '@/components/homeVisit/types'
+import type { HomeVisitPendingPackageRow, HomeVisitSessionRow, HomeVisitStatsData } from '@/components/homeVisit/types'
 import type { Shift } from '@/lib/shifts'
 import { fetchGriyaBranchIds } from '@/lib/griyaRecordCompletion'
 
@@ -184,6 +184,82 @@ export async function fetchHomeVisitSessions(params: {
   })
 
   return { rows, total }
+}
+
+// ── Home-visit packages with no session yet ─────────────────────────────────────
+// The session log is built from patient_visits, so a patient who bought a
+// PAKET VISIT but hasn't had a session logged never appears there (nor in its
+// search). This lists those packages so they stay findable.
+export async function fetchHomeVisitPackagesWithoutSessions(params: {
+  search: string
+  branchId?: string // 'all' or uuid — only honored for director
+}): Promise<HomeVisitPendingPackageRow[]> {
+  const supabase = await createClient()
+  const viewer = await resolveViewer(supabase)
+  if (!viewer) return []
+
+  const search = params.search.trim().toLowerCase()
+  let patientIds: string[] | null = null
+  if (search) {
+    patientIds = await searchPatientIds(supabase, search)
+    if (patientIds.length === 0) return []
+  }
+
+  let pkgQuery = supabase
+    .from('patient_packages')
+    .select('id, patient_id, branch_id, package_name, total_sessions, purchased_at, created_at, branches!branch_id(name)')
+    .eq('category', 'PAKET VISIT')
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+
+  const griya = await griyaExclusion(supabase, viewer)
+  if (!griya) return []
+  if (isCrossBranch(viewer.role)) {
+    if (params.branchId && params.branchId !== 'all') pkgQuery = pkgQuery.eq('branch_id', params.branchId)
+    if (griya.length) pkgQuery = pkgQuery.not('branch_id', 'in', `(${griya.join(',')})`)
+  } else if (viewer.branchId) {
+    pkgQuery = pkgQuery.eq('branch_id', viewer.branchId)
+  } else {
+    return []
+  }
+  if (patientIds) pkgQuery = pkgQuery.in('patient_id', patientIds)
+
+  const { data: packages } = await pkgQuery.limit(500)
+  if (!packages?.length) return []
+
+  const { data: used } = await supabase
+    .from('patient_visits')
+    .select('package_id')
+    .in('package_id', packages.map((p) => p.id as string))
+    .neq('status', 'cancelled')
+  const withSessions = new Set((used ?? []).map((v) => v.package_id as string))
+  const pending = packages.filter((p) => !withSessions.has(p.id as string))
+  if (!pending.length) return []
+
+  const { data: patients } = await supabase
+    .from('patients')
+    .select('id, encrypted_name, encrypted_phone, no_rm')
+    .in('id', [...new Set(pending.map((p) => p.patient_id as string))])
+  const patientMap = new Map<string, { name: string; no_rm: string | null }>()
+  for (const p of patients ?? []) {
+    let name = 'Pasien'
+    try {
+      name = decryptPatientPII({ encrypted_name: p.encrypted_name ?? '', encrypted_phone: p.encrypted_phone ?? '' }).name || 'Pasien'
+    } catch { /* keep fallback */ }
+    patientMap.set(p.id, { name, no_rm: p.no_rm ?? null })
+  }
+
+  return pending.map((p) => ({
+    package_id:     p.id as string,
+    patient_id:     p.patient_id as string,
+    patient_name:   patientMap.get(p.patient_id as string)?.name ?? 'Pasien',
+    no_rm:          patientMap.get(p.patient_id as string)?.no_rm ?? null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    branch_name:    (p as any).branches?.name ?? '',
+    package_name:   p.package_name as string,
+    total_sessions: Number(p.total_sessions ?? 0),
+    purchased_at:   (p.purchased_at as string | null) ?? (p.created_at as string).slice(0, 10),
+  }))
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────

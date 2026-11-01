@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { listTherapistOptions, resolveTherapistNames, type TherapistOption, type TherapistRef } from '@/lib/finance/therapists'
 import { computeOrderPaymentSummary, type OrderPaymentSummary, type OrderPaymentRow } from '@/lib/internal/orderPayments'
 import { logActivity } from '@/lib/activityLog'
-import { PACKAGE_CATEGORIES as PACKAGE_CATEGORY_LIST, SERVICE_TO_CATEGORY } from '@/lib/serviceType'
+import { PACKAGE_CATEGORIES as PACKAGE_CATEGORY_LIST, SERVICE_TO_CATEGORY, type PackageCategory } from '@/lib/serviceType'
 import type { ServiceType } from '@/types'
 import { priceListCategoryError } from '@/lib/finance/priceList'
 import { PAYMENT_PROOF_BUCKET, PAYMENT_PROOF_REQUIRED_MSG, isGatewayPayment, isPaymentProofRequiredOnEdit, isValidPaymentProofPath, paymentProofError, requiresPaymentProof } from '@/lib/paymentProof'
@@ -508,6 +508,75 @@ export async function reclassifyAsExpense(
   return { error: error?.message ?? null }
 }
 
+// ── Package for a PAKET payment entered without one ───────────────────────────
+// The generic entry forms (finance, akuntansi, closing) record a PAKET payment
+// without a package, which left the patient with no patient_packages row — the
+// package never showed in the patient's Paket tab, /home-visit or Jadwal.
+// Link the payment to the package it pays for instead:
+//  1. the visit's package, when a visit is given;
+//  2. an installment (not a fresh full-price LUNAS) → the patient's latest
+//     active package of that category whose order still has a balance;
+//  3. a first payment (LUNAS / DP) → a new package from the branch's Tarif
+//     Layanan entry with that kategori and harga.
+// Returns null when nothing fits — the payment is still saved, unlinked.
+async function resolvePackageForManualPayment(
+  supabase: ServerClient,
+  input: CreateTransactionManualInput,
+  branchId: string,
+): Promise<string | null> {
+  if (input.visit_id) {
+    const { data: visit } = await supabase
+      .from('patient_visits').select('package_id').eq('id', input.visit_id).maybeSingle()
+    if (visit?.package_id) return visit.package_id as string
+  }
+  if (!input.patient_id) return null
+
+  if (input.payment_status !== 'LUNAS') {
+    const { data: pkgs } = await supabase
+      .from('patient_packages')
+      .select('id, order_id')
+      .eq('patient_id', input.patient_id)
+      .eq('branch_id', branchId)
+      .eq('category', input.category)
+      .eq('status', 'active')
+      .not('order_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const latest = pkgs?.[0]
+    if (latest) {
+      const { data: last } = await supabase
+        .from('transactions')
+        .select('outstanding')
+        .eq('order_id', latest.order_id)
+        .neq('status', 'rejected')
+        .order('created_at', { ascending: false })
+        .limit(1)
+      if (Number(last?.[0]?.outstanding ?? 0) > 0) return latest.id as string
+    }
+  }
+  if (input.payment_status !== 'LUNAS' && input.payment_status !== 'DP') return null
+
+  const { data: layanan } = await supabase
+    .from('internal_layanan')
+    .select('id, harga')
+    .eq('branch_id', branchId)
+    .eq('kategori', input.category)
+    .eq('is_active', true)
+  const match = (layanan ?? []).find((l) => Number(l.harga) === Number(input.harga))
+    ?? (layanan?.length === 1 ? layanan[0] : null)
+  if (!match) return null
+
+  const { createPackageFromLayanan } = await import('@/app/actions/packages')
+  const pkg = await createPackageFromLayanan({
+    patient_id:   input.patient_id,
+    branch_id:    branchId,
+    layanan_id:   match.id as string,
+    category:     input.category as PackageCategory,
+    purchased_at: input.transaction_date,
+  })
+  return pkg.id
+}
+
 // ── Create transaction manually (from finance/transactions page) ──────────────
 
 export interface CreateTransactionManualInput {
@@ -563,14 +632,19 @@ export async function createTransactionManual(
     if (priceErr) return { error: priceErr }
   }
 
+  const packageId = input.package_id
+    ?? (input.type === 'income' && PACKAGE_CATEGORIES.has(input.category)
+      ? await resolvePackageForManualPayment(supabase, input, branchId)
+      : null)
+
   // The order_id for a package purchase belongs to the package (so DP/Pelunasan
   // installments share one order), not the visit that may have prompted the sale.
   let orderId: string | null = null
-  if (input.package_id) {
+  if (packageId) {
     const { data: pkg } = await supabase
       .from('patient_packages')
       .select('order_id')
-      .eq('id', input.package_id)
+      .eq('id', packageId)
       .single()
     orderId = pkg?.order_id ?? null
   } else if (input.visit_id) {
