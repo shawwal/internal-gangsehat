@@ -117,6 +117,7 @@ interface Props {
   onStaffClick: (staffId: string) => void
   onPayment?: (visitId: string) => void
   onPayOnline?: (visitId: string) => void
+  onShowPendingPayment?: (visitId: string) => void
   onRemind?: (visitId: string) => void
   onWhatsApp?: (visitId: string) => void
   onWhatsAppConfirmation?: (visitId: string) => void
@@ -134,7 +135,7 @@ interface Props {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onPayOnline, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit, showDurations = false }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onPayOnline, onShowPendingPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit, showDurations = false }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const canDrop = !!onMoveVisit
   // Narrower columns on phones so ~2 therapists fit on screen instead of ~1.7.
@@ -382,6 +383,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
                       onOpenRecord={(id) => onOpenRecord(id, s.shift || undefined)}
                       onPayment={onPayment}
                       onPayOnline={onPayOnline}
+                      onShowPendingPayment={onShowPendingPayment}
                       onRemind={onRemind}
                       onWhatsApp={onWhatsApp}
                       onWhatsAppConfirmation={onWhatsAppConfirmation}
@@ -604,6 +606,7 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
                           onOpenRecord={(id) => onOpenRecord(id, s.shift || undefined)}
                           onPayment={onPayment}
                           onPayOnline={onPayOnline}
+                          onShowPendingPayment={onShowPendingPayment}
                           onRemind={onRemind}
                           onWhatsApp={onWhatsApp}
                           onWhatsAppConfirmation={onWhatsAppConfirmation}

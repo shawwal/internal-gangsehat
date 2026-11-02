@@ -13,6 +13,7 @@ import { decryptPatientPII } from '@/lib/encryption'
 import { fetchVisitDisciplines } from '@/lib/griyaDiscipline'
 import { GRIYA_RECORD_EMBED, resolveGriyaRecordStates } from '@/lib/griyaRecordCompletion'
 import { HOME_VISIT_SERVICE_TYPES, isPackageCategory } from '@/lib/serviceType'
+import { fetchPackagePayments, isPackagePaidOff } from '@/lib/internal/packagePayments'
 import type { GriyaVisitFormRoute } from '@/lib/griyaVisitRouting'
 import type { Discipline } from './griyaJadwal'
 
@@ -49,7 +50,8 @@ export interface GriyaHomeVisitRow {
   layanan_id: string | null
   layanan_name: string | null
   package_id: string | null
-  package: { name: string; used: number; total: number; paid: boolean } | null
+  /** paid = nothing outstanding; deposit = some payment made (DP) but not paid off */
+  package: { name: string; used: number; total: number; paid: boolean; deposit: boolean } | null
   /** Per-session payment (non-package visits); null = none recorded. */
   payment: { status: string | null; outstanding: number } | null
   record: { route: GriyaVisitFormRoute | null; status: 'completed' | 'draft' | null }
@@ -114,7 +116,7 @@ export async function fetchGriyaHomeVisits(params: {
       ? createAdminClient().from('internal_profiles').select('id, full_name, nickname').in('id', staffIds)
       : Promise.resolve({ data: [] as { id: string; full_name: string; nickname: string | null }[] }),
     packageIds.length
-      ? supabase.from('patient_packages_with_stats').select('id, package_name, used_sessions, total_sessions, payment_ok').in('id', packageIds)
+      ? supabase.from('patient_packages_with_stats').select('id, order_id, package_name, used_sessions, total_sessions, payment_ok').in('id', packageIds)
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
     layananIds.length
       ? supabase.from('internal_layanan').select('id, nama').in('id', layananIds)
@@ -138,10 +140,15 @@ export async function fetchGriyaHomeVisits(params: {
     }
   }
   const staff = new Map((staffRes.data ?? []).map((s) => [s.id, s.nickname?.trim() || s.full_name]))
-  const packages = new Map((packagesRes.data ?? []).map((p) => [p.id as string, {
-    name: (p.package_name as string) ?? 'Paket', used: Number(p.used_sessions ?? 0),
-    total: Number(p.total_sessions ?? 0), paid: !!p.payment_ok,
-  }]))
+  const pkgRows = (packagesRes.data ?? []) as { id: string; order_id: string | null; package_name: string | null; used_sessions: number | null; total_sessions: number | null; payment_ok: boolean | null }[]
+  const pkgPayments = await fetchPackagePayments(supabase, pkgRows)
+  const packages = new Map(pkgRows.map((p) => {
+    const paid = isPackagePaidOff(pkgPayments.get(p.id), p.payment_ok)
+    return [p.id, {
+      name: p.package_name ?? 'Paket', used: Number(p.used_sessions ?? 0),
+      total: Number(p.total_sessions ?? 0), paid, deposit: !paid && !!p.payment_ok,
+    }]
+  }))
   const layanan = new Map((layananRes.data ?? []).map((l) => [l.id, l.nama as string]))
   // Package purchases are paid on the package, not the session.
   const payments = new Map<string, { status: string | null; outstanding: number }>()

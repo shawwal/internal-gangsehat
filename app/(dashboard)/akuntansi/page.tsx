@@ -113,11 +113,11 @@ export default function AkuntansiPage() {
 
       <div key={branchId} className="space-y-5">
       {tab === 'pemasukan' && (
-        <LedgerTab type="income" branchId={branchId} branchName={branchName} userId={userId}
+        <LedgerTab type="income" branchId={branchId} branchName={branchName} userId={userId} userRole={role}
           dateFrom={range.from} dateToExclusive={range.toExclusive} periodLabel={range.label} />
       )}
       {tab === 'pengeluaran' && (
-        <LedgerTab type="expense" branchId={branchId} branchName={branchName} userId={userId}
+        <LedgerTab type="expense" branchId={branchId} branchName={branchName} userId={userId} userRole={role}
           dateFrom={range.from} dateToExclusive={range.toExclusive} periodLabel={range.label} />
       )}
       {tab === 'laporan' && (

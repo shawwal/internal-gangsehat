@@ -40,6 +40,8 @@ interface Props {
   onPayment?: (id: string) => void
   /** Send a DOKU payment link (QRIS / VA) for this visit */
   onPayOnline?: (id: string) => void
+  /** "Menunggu Konfirmasi" badge clicked — show the pending payments */
+  onShowPendingPayment?: (id: string) => void
   onRemind?: (id: string) => void
   onWhatsApp?: (id: string) => void
   onWhatsAppConfirmation?: (id: string) => void
@@ -52,7 +54,7 @@ interface Props {
   onChangeTherapist?: (id: string) => void
 }
 
-export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onPayOnline, onRemind, onWhatsApp, onWhatsAppConfirmation, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist }: Props) {
+export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, onOpenRecord, onPayment, onPayOnline, onShowPendingPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, isRefreshing, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist }: Props) {
   const [menuOpen, setMenuOpen]   = useState(false)
   const [menuPos, setMenuPos]     = useState<{ top: number; left: number } | null>(null)
   const [menuReady, setMenuReady] = useState(false)
@@ -69,10 +71,13 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
   const showPayOnlineItem = !!onPayOnline && canRecordPayment
     && (visit.status === 'scheduled' || visit.status === 'completed')
     && (!visit.has_payment || visit.visit_payment_status === 'DP' || visit.package_payment_ok === false)
-  // Fully paid: own payment settled, or a package session whose package passes its payment gate.
-  const isPaid           = visit.package_id
-    ? visit.package_payment_ok === true
-    : visit.has_payment && (visit.visit_payment_status === 'LUNAS' || visit.visit_payment_status === 'PELUNASAN')
+  // Fully paid by confirmed money: own payment settled, or a package session whose
+  // package has nothing outstanding (a DP only passes the booking gate,
+  // package_payment_ok — not lunas). A settling payment still pending finance
+  // confirmation is "Menunggu Konfirmasi", never "Lunas".
+  const isPaid           = !visit.payment_awaiting_confirmation && (visit.package_id
+    ? visit.package_paid_off === true
+    : visit.has_payment && (visit.visit_payment_status === 'LUNAS' || visit.visit_payment_status === 'PELUNASAN'))
   const isIncomplete     = visit.status === 'completed' && (!visit.diagnosis || !visit.treatment || (isRegioRequired(visit.service_type) && !visit.regio))
   const canRemind        = !!userRole && REMIND_ROLES.includes(userRole) && isIncomplete && !!onRemind
   const canSendWhatsApp             = !!visit.patient_phone && !!onWhatsApp
@@ -253,17 +258,29 @@ export function VisitCard({ visit, userRole, onStatusChange, onDelete, onOpen, o
             {serviceTypeLabel}
           </span>
         )}
-        {visit.status !== 'cancelled' && (
+        {visit.status !== 'cancelled' && (visit.payment_awaiting_confirmation && onShowPendingPayment ? (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onShowPendingPayment(visit.id) }}
+            className="shrink-0 text-[8px] px-1.5 py-0.5 rounded-full font-bold border bg-muted text-muted-foreground border-border hover:bg-muted/70 hover:text-foreground cursor-pointer transition-colors"
+            title="Pembayaran tercatat, menunggu konfirmasi — klik untuk detail"
+          >
+            Menunggu Konfirmasi
+          </button>
+        ) : (
           <span
             className={`shrink-0 text-[8px] px-1.5 py-0.5 rounded-full font-bold border ${
               isPaid
                 ? 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/30'
-                : 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/30'
+                : visit.payment_awaiting_confirmation
+                  ? 'bg-muted text-muted-foreground border-border'
+                  : 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/30'
             }`}
+            title={visit.payment_awaiting_confirmation ? 'Pembayaran tercatat, menunggu konfirmasi finance' : undefined}
           >
-            {isPaid ? 'Lunas' : 'Belum Lunas'}
+            {isPaid ? 'Lunas' : visit.payment_awaiting_confirmation ? 'Menunggu Konfirmasi' : 'Belum Lunas'}
           </span>
-        )}
+        ))}
       </div>
 
       {/* Context menu */}

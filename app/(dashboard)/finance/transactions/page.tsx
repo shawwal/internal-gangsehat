@@ -23,6 +23,7 @@ import { PayOnlineFlow } from '@/components/payment-links/PayOnlineFlow'
 import { OnlineMethodPicker } from '@/components/payment-links/OnlineMethodPicker'
 import type { PaymentLinkTarget } from '@/components/payment-links/types'
 import { ONLINE_PAYMENT, type PaymentLinkMethod } from '@/lib/doku/channels'
+import { canConfirmPayment } from '@/lib/finance/paymentConfirm'
 
 const TYPE_LABELS: Record<TransactionType, string>    = { income: 'Pemasukan', expense: 'Pengeluaran' }
 const STATUS_BADGE: Record<TransactionStatus, string> = {
@@ -322,7 +323,8 @@ export default function TransactionsPage() {
     load()
   }
 
-  const canConfirm = userRole === 'finance' || userRole === 'director' || userRole === 'admin' || userRole === 'manager'
+  // Admins record payments; checking the money arrived is finance / manager / director.
+  const canConfirm = canConfirmPayment(userRole)
 
   const TRANSACTION_COLS: ExportColumn<Transaction>[] = [
     { header: 'Tanggal',      value: (r) => r.transaction_date },

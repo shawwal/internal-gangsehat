@@ -21,6 +21,7 @@ import { Pagination } from '@/components/leave/Pagination'
 import { FisioSelect, isTherapistCategory } from '@/components/finance/FisioSelect'
 import { LayananIncomePicker, needsLayananPick, type LayananPick } from '@/components/finance/LayananIncomePicker'
 import { isPackageCategory } from '@/lib/serviceType'
+import { canConfirmPayment } from '@/lib/finance/paymentConfirm'
 
 // Rupiah fields are text inputs holding digits only, shown with id-ID thousand
 // dots — a type="number" input reads "2.400.000" as 2.4 and drops the rest.
@@ -32,6 +33,8 @@ interface Props {
   branchId: string
   branchName: string
   userId: string
+  /** viewer's role — confirm / reject is finance, manager, director only */
+  userRole: string | null
   dateFrom: string
   dateToExclusive: string
   periodLabel: string
@@ -83,7 +86,7 @@ function getDefaultForm(dateFrom: string, isIncome: boolean) {
   }
 }
 
-export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateToExclusive, periodLabel }: Props) {
+export function LedgerTab({ type, branchId, branchName, userId, userRole, dateFrom, dateToExclusive, periodLabel }: Props) {
   const isIncome = type === 'income'
   const [rows, setRows] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
@@ -457,7 +460,7 @@ export function LedgerTab({ type, branchId, branchName, userId, dateFrom, dateTo
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => openEdit(r)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Ubah"><Pencil size={14} /></button>
-                      {r.status === 'pending' && (
+                      {r.status === 'pending' && canConfirmPayment(userRole) && (
                         <>
                           <button onClick={() => confirm(r.id)} className="p-1.5 rounded-lg hover:bg-chart-4/10 text-chart-4 transition-colors" title="Konfirmasi"><CheckCircle size={14} /></button>
                           <button onClick={() => { setRejectId(r.id); setRejectReason('') }} className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors" title="Tolak"><XCircle size={14} /></button>

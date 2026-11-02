@@ -359,11 +359,16 @@ export function PackageCard({ pkg, userRole, onEdit, onDelete, onStop, onSchedul
           </span>
           <span className="flex items-center gap-1.5">
             <span className={`font-semibold px-2 py-0.5 rounded-full border ${
-              pkg.payment.paymentStatus === 'LUNAS'
+              pkg.payment.confirmedOutstanding === 0
                 ? 'bg-[#34C759]/15 text-[#34C759] border-[#34C759]/20'
                 : 'bg-[#FFB35C]/15 text-[#FFB35C] border-[#FFB35C]/25'
             }`}>
-              {pkg.payment.paymentStatus === 'LUNAS' ? 'Lunas' : `Sisa ${formatCurrency(pkg.payment.outstanding)}`}
+              {/* Lunas = confirmed money only; a pending Pelunasan may still be rejected. */}
+              {pkg.payment.confirmedOutstanding === 0
+                ? 'Lunas'
+                : pkg.payment.outstanding === 0
+                  ? `Sisa ${formatCurrency(pkg.payment.confirmedOutstanding)} belum dikonfirmasi`
+                  : `Sisa ${formatCurrency(pkg.payment.outstanding)}`}
             </span>
             {pkg.payment.outstanding > 0 && canEditPayment && (
               <button

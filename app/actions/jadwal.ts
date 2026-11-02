@@ -10,6 +10,7 @@ import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
 import { SERVICE_TO_CATEGORY, isPackageCategory } from '@/lib/serviceType'
 import { countBookedSessions } from '@/app/actions/packages'
+import { fetchPackagePayments, isPackageAwaitingConfirmation, isPackagePaidOff } from '@/lib/internal/packagePayments'
 import { DEFAULT_VISIT_MINUTES, minutesToTime, timeToMinutes, visitMinutes } from '@/lib/jadwal/duration'
 import { fetchFirstSesiAfterTa, fetchPackagePositions, isTaServiceType } from '@/lib/internal/visitInsights'
 
@@ -69,9 +70,15 @@ export interface DailyVisit {
   visit_package_outstanding: number | null
   visit_transaction: VisitTransaction | null
   // Whether the linked package's payment gate is satisfied (legacy-exempt or has
-  // a confirmed transaction) — null when package_id is null. See
-  // patient_packages_with_stats.payment_ok.
+  // any payment, a DP included) — null when package_id is null. See
+  // patient_packages_with_stats.payment_ok. NOT "lunas" — use package_paid_off.
   package_payment_ok: boolean | null
+  // Linked package fully paid by confirmed payments — null when package_id is null.
+  // Same rule as the Paket page (lib/internal/packagePayments.ts).
+  package_paid_off: boolean | null
+  // Recorded payments settle the bill (the package's, or the visit's own) but
+  // part is still pending finance confirmation — badge "Menunggu Konfirmasi".
+  payment_awaiting_confirmation: boolean
   // Linked package's Layanan name (patient_packages.package_name) — null when package_id is null
   package_name: string | null
   // "Pasien yang perlu diperhatikan hari ini": TA, first SESI after a TA, or the
@@ -193,7 +200,7 @@ export async function fetchDailyVisits(
   // via visit_id for traceability, but they must NOT feed into the visit's
   // own payment badge — a package's DP/outstanding balance is unrelated to
   // whether the source visit itself (e.g. the TA assessment) was paid.
-  const payMap = new Map<string, { payment_status: string | null; all_paid: boolean }>()
+  const payMap = new Map<string, { payment_status: string | null; all_paid: boolean; has_pending: boolean }>()
   const packageMap = new Map<string, { harga: number; outstanding: number }>()
   // Most recent non-package transaction per visit — offered up for editing
   // rather than always stacking another payment row.
@@ -206,11 +213,12 @@ export async function fetchDailyVisits(
     }
     const existing = payMap.get(vid)
     if (!existing) {
-      payMap.set(vid, { payment_status: t.payment_status, all_paid: t.outstanding === 0 })
+      payMap.set(vid, { payment_status: t.payment_status, all_paid: t.outstanding === 0, has_pending: t.status === 'pending' })
     } else {
       payMap.set(vid, {
         payment_status: t.payment_status ?? existing.payment_status,
         all_paid: existing.all_paid && t.outstanding === 0,
+        has_pending: existing.has_pending || t.status === 'pending',
       })
     }
     latestTxnMap.set(vid, {
@@ -232,14 +240,19 @@ export async function fetchDailyVisits(
   // See patient_packages_with_stats.payment_ok (supabase/079-...).
   const packageIds = [...new Set(visits.map((v) => v.package_id).filter((id): id is string => !!id))]
   const packagePaymentOkMap = new Map<string, boolean>()
+  const packagePaidOffMap = new Map<string, boolean>()
+  const packageAwaitingMap = new Map<string, boolean>()
   const packageNameMap = new Map<string, string>()
   if (packageIds.length > 0) {
     const { data: pkgs } = await supabase
       .from('patient_packages_with_stats')
-      .select('id, payment_ok, package_name')
+      .select('id, order_id, payment_ok, package_name')
       .in('id', packageIds)
+    const payments = await fetchPackagePayments(supabase, pkgs ?? [])
     for (const p of pkgs ?? []) {
       packagePaymentOkMap.set(p.id, !!p.payment_ok)
+      packagePaidOffMap.set(p.id, isPackagePaidOff(payments.get(p.id), p.payment_ok))
+      packageAwaitingMap.set(p.id, isPackageAwaitingConfirmation(payments.get(p.id)))
       if (p.package_name) packageNameMap.set(p.id, p.package_name)
     }
   }
@@ -300,6 +313,10 @@ export async function fetchDailyVisits(
       visit_package_outstanding: pkg?.outstanding ?? null,
       visit_transaction:    latestTxnMap.get(v.id) ?? null,
       package_payment_ok:  v.package_id ? (packagePaymentOkMap.get(v.package_id) ?? false) : null,
+      package_paid_off:    v.package_id ? (packagePaidOffMap.get(v.package_id) ?? false) : null,
+      payment_awaiting_confirmation: v.package_id
+        ? (packageAwaitingMap.get(v.package_id) ?? false)
+        : !!pay && pay.has_pending && (pay.all_paid || pay.payment_status === 'LUNAS' || pay.payment_status === 'PELUNASAN'),
       package_name:        v.package_id ? (packageNameMap.get(v.package_id) ?? null) : null,
       is_priority:          isTaServiceType(v.service_type) || firstSesiAfterTa.has(v.id)
         || (!!v.package_id && isLastPackageSession(v.id)),

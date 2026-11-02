@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { PatientPackage, PackageSession } from '@/types'
 import { generateOrderId } from '@/lib/internal/orderId'
+import { fetchPackagePayments, type PackagePayment } from '@/lib/internal/packagePayments'
 import { getEffectivePackageServiceType, PACKAGE_CATEGORIES, packageCategoryForKategori, type PackageCategory } from '@/lib/serviceType'
 
 // ── Fetch all packages for a patient with computed session counts ───────────────
@@ -100,30 +101,10 @@ async function countAttendedSessions(
 }
 
 // ── Fetch packages with their payment info ──────────────────────────────────────
-// Packages have no FK to transactions. Payment can be linked two ways:
-//  1. order_id — the newer path (createTransactionManual with package_id), where
-//     the transaction shares the package's own order_id.
-//  2. visit_id → patient_visits.package_id — how the vast majority of existing
-//     packages are actually linked: the transaction is tied to the visit that
-//     prompted the sale, and that visit's package_id points back at the package.
-// Both paths are checked and merged — relying on order_id alone misses nearly
-// every historical package sale and would wrongly show them as unpaid.
-export interface PackagePayment {
-  harga: number | null
-  amountPaid: number
-  discount: number
-  outstanding: number
-  /** order the installments are added to (addPaymentToOrder) — null on legacy rows */
-  orderId: string | null
-  category: string
-  paymentMethod: string | null
-  paymentStatus: 'LUNAS' | 'DP'
-  transactionStatus: 'pending' | 'confirmed'
-}
+// Payment math lives in lib/internal/packagePayments.ts — shared with Jadwal
+// Harian so the "Lunas" badge and this page never disagree.
 
 export type PatientPackageWithPayment = PatientPackage & { payment: PackagePayment | null }
-
-interface PkgTxRow { id: string; order_id: string | null; category: string; payment_method: string | null; transaction_date: string; harga: number; amount: number; discount: number; status: string }
 
 export async function fetchPatientPackagesWithPayment(
   patientId: string,
@@ -132,82 +113,8 @@ export async function fetchPatientPackagesWithPayment(
   if (packages.length === 0) return []
 
   const supabase = await createClient()
-  const packageIds = packages.map((p) => p.id)
-  const orderIds   = packages.map((p) => p.order_id).filter((v): v is string => !!v)
-
-  const [orderTxRes, linkedVisitsRes] = await Promise.all([
-    orderIds.length > 0
-      ? supabase.from('transactions')
-          .select('id, order_id, category, payment_method, transaction_date, harga, amount, discount, status')
-          .in('order_id', orderIds)
-          .in('category', [...PACKAGE_CATEGORIES])
-          .neq('status', 'rejected')
-      : Promise.resolve({ data: [] }),
-    supabase.from('patient_visits').select('id, package_id').in('package_id', packageIds),
-  ])
-
-  const orderToPackage = new Map(packages.filter((p) => p.order_id).map((p) => [p.order_id as string, p.id]))
-  const visitToPackage = new Map(
-    (linkedVisitsRes.data ?? []).filter((v) => v.package_id).map((v) => [v.id, v.package_id as string]),
-  )
-  const visitIds = [...visitToPackage.keys()]
-
-  const visitTxRes = visitIds.length > 0
-    ? await supabase.from('transactions')
-        .select('id, visit_id, order_id, category, payment_method, transaction_date, harga, amount, discount, status')
-        .in('visit_id', visitIds)
-        .in('category', [...PACKAGE_CATEGORIES])
-        .neq('status', 'rejected')
-    : { data: [] }
-
-  const byPackage = new Map<string, PkgTxRow[]>()
-  function addRow(pkgId: string | undefined, row: PkgTxRow) {
-    if (!pkgId) return
-    const list = byPackage.get(pkgId) ?? []
-    // A payment linked by both its order and its visit counts once.
-    if (list.some((r) => r.id === row.id)) return
-    list.push(row)
-    byPackage.set(pkgId, list)
-  }
-  for (const t of (orderTxRes.data ?? []) as (PkgTxRow & { order_id: string })[]) {
-    addRow(orderToPackage.get(t.order_id), t)
-  }
-  for (const t of (visitTxRes.data ?? []) as (PkgTxRow & { visit_id: string })[]) {
-    addRow(visitToPackage.get(t.visit_id), t)
-  }
-
-  return packages.map((p) => {
-    const rows = byPackage.get(p.id)
-    if (!rows || rows.length === 0) return { ...p, payment: null }
-
-    rows.sort((a, b) => a.transaction_date.localeCompare(b.transaction_date))
-    // The package's own order first; else the order of its first payment.
-    const orderId = rows.find((r) => p.order_id && r.order_id === p.order_id)?.order_id
-      ?? rows.find((r) => r.order_id)?.order_id
-      ?? null
-    const latest  = rows[rows.length - 1]
-
-    const harga         = rows[0].harga
-    const amountPaid     = rows.reduce((s, r) => s + (r.amount ?? 0), 0)
-    // Installments copy the first payment's discount — count it once (SALDO model).
-    const discountTotal  = rows[0].discount ?? 0
-    const outstanding    = Math.max(harga - amountPaid - discountTotal, 0)
-
-    return {
-      ...p,
-      payment: {
-        harga,
-        amountPaid,
-        discount:          discountTotal,
-        outstanding,
-        orderId,
-        category:          rows[0].category,
-        paymentMethod:     latest.payment_method,
-        paymentStatus:     outstanding === 0 ? 'LUNAS' : 'DP',
-        transactionStatus: rows.some((r) => r.status === 'pending') ? 'pending' : 'confirmed',
-      },
-    }
-  })
+  const payments = await fetchPackagePayments(supabase, packages)
+  return packages.map((p) => ({ ...p, payment: payments.get(p.id) ?? null }))
 }
 
 // ── Give a legacy package payment an order, so installments can be added ──────

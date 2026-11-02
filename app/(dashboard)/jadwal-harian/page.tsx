@@ -15,6 +15,7 @@ import { PendingLeaveModal } from '@/components/jadwal/PendingLeaveModal'
 import { DailyGrid } from '@/components/jadwal/DailyGrid'
 import { AssignDialog } from '@/components/jadwal/AssignDialog'
 import { MedicalRecordModal } from '@/components/jadwal/MedicalRecordModal'
+import { PendingPaymentDialog } from '@/components/jadwal/PendingPaymentDialog'
 import { StaffDetailModal } from '@/components/jadwal/StaffDetailModal'
 import { ControlsBar } from '@/components/jadwal/ControlsBar'
 import { FocusModeBar } from '@/components/jadwal/FocusModeBar'
@@ -60,6 +61,7 @@ export default function JadwalHarianPage() {
   const [selectedStaffId, setSelectedStaffId]       = useState<string | null>(null)
   const [paymentVisit, setPaymentVisit]             = useState<DailyVisit | null>(null)
   const [payOnlineVisit, setPayOnlineVisit]         = useState<DailyVisit | null>(null)
+  const [pendingPayVisit, setPendingPayVisit]       = useState<DailyVisit | null>(null)
   const [detachVisit, setDetachVisit]               = useState<DailyVisit | null>(null)
   const [attachVisit, setAttachVisit]               = useState<DailyVisit | null>(null)
   const [changeTherapistVisit, setChangeTherapistVisit] = useState<DailyVisit | null>(null)
@@ -429,6 +431,7 @@ export default function JadwalHarianPage() {
                 onStaffClick={setSelectedStaffId}
                 onPayment={handleOpenPayment}
                 onPayOnline={handleOpenPayOnline}
+                onShowPendingPayment={(id) => setPendingPayVisit(visits.find((v) => v.id === id) ?? null)}
                 onRemind={canSendReminders ? handleRemind : undefined}
                 onWhatsApp={handleWhatsAppReminder}
                 onWhatsAppConfirmation={handleWhatsAppConfirmation}
@@ -504,6 +507,15 @@ export default function JadwalHarianPage() {
           entry={staff.find((s) => s.staff_id === selectedStaffId)!}
           onClose={() => setSelectedStaffId(null)}
           onSaved={() => silentReload({ type: 'staff', staffId: selectedStaffId })}
+        />
+      )}
+
+      {pendingPayVisit && (
+        <PendingPaymentDialog
+          visit={pendingPayVisit}
+          userRole={userRole}
+          onClose={() => setPendingPayVisit(null)}
+          onReviewed={() => silentReload({ type: 'visit', visitId: pendingPayVisit.id })}
         />
       )}
 

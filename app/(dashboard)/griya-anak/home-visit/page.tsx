@@ -237,7 +237,7 @@ export default function GriyaHomeVisitPage() {
                     </td>
                     <td className="px-4 py-3">
                       {r.package ? (
-                        <span className={`text-xs ${r.package.paid ? 'text-chart-4' : 'text-destructive'}`}>{r.package.paid ? 'Paket lunas' : 'Paket belum dibayar'}</span>
+                        <span className={`text-xs ${r.package.paid ? 'text-chart-4' : r.package.deposit ? 'text-secondary' : 'text-destructive'}`}>{r.package.paid ? 'Paket lunas' : r.package.deposit ? 'Paket belum lunas (DP)' : 'Paket belum dibayar'}</span>
                       ) : r.payment ? (
                         r.payment.outstanding > 0
                           ? <span className="text-xs text-secondary-foreground">{r.payment.status ?? 'DP'} · sisa {rp(r.payment.outstanding)}</span>
