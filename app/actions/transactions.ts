@@ -260,71 +260,7 @@ export async function createTransactionForVisit(
 }
 
 // ── Pending payments behind a Jadwal Harian card ("Menunggu Konfirmasi") ─────
-// A package session shows its package's pending installments (by the package's
-// order, or a payment tied to one of its visits); any other visit shows its own.
-
-export interface PendingPaymentRow {
-  id: string
-  transaction_date: string
-  category: string
-  harga: number | null
-  amount: number
-  payment_status: string | null
-  payment_method: string | null
-  receipt_url: string | null
-  recorded_by_name: string | null
-}
-
-const PENDING_COLS = 'id, transaction_date, category, harga, amount, payment_status, payment_method, receipt_url, recorded_by'
-type PendingTxRow = Omit<PendingPaymentRow, 'recorded_by_name'> & { recorded_by: string | null }
-
-export async function fetchVisitPendingPayments(visitId: string): Promise<{ rows: PendingPaymentRow[]; error: string | null }> {
-  const supabase = await createClient()
-
-  const { data: visit } = await supabase.from('patient_visits').select('package_id').eq('id', visitId).single()
-  if (!visit) return { rows: [], error: 'Kunjungan tidak ditemukan' }
-
-  let txRows: PendingTxRow[] = []
-  if (visit.package_id) {
-    const [{ data: pkg }, { data: pkgVisits }] = await Promise.all([
-      supabase.from('patient_packages').select('order_id').eq('id', visit.package_id).single(),
-      supabase.from('patient_visits').select('id').eq('package_id', visit.package_id),
-    ])
-    const visitIds = (pkgVisits ?? []).map((v) => v.id)
-    const [byOrder, byVisit] = await Promise.all([
-      pkg?.order_id
-        ? supabase.from('transactions').select(PENDING_COLS).eq('order_id', pkg.order_id)
-            .eq('status', 'pending').in('category', PACKAGE_CATEGORY_LIST)
-        : Promise.resolve({ data: [] }),
-      visitIds.length
-        ? supabase.from('transactions').select(PENDING_COLS).in('visit_id', visitIds)
-            .eq('status', 'pending').in('category', PACKAGE_CATEGORY_LIST)
-        : Promise.resolve({ data: [] }),
-    ])
-    const seen = new Set<string>()
-    for (const r of [...(byOrder.data ?? []), ...(byVisit.data ?? [])] as PendingTxRow[]) {
-      if (!seen.has(r.id)) { seen.add(r.id); txRows.push(r) }
-    }
-  } else {
-    const { data } = await supabase.from('transactions').select(PENDING_COLS)
-      .eq('visit_id', visitId).eq('status', 'pending')
-      .not('category', 'in', `(${PACKAGE_CATEGORY_LIST.map((c) => `"${c}"`).join(',')})`)
-    txRows = (data ?? []) as PendingTxRow[]
-  }
-
-  // Recorder names via the admin client — RLS hides other staff rows from some roles.
-  const recorderIds = [...new Set(txRows.map((r) => r.recorded_by).filter((x): x is string => !!x))]
-  const { data: people } = recorderIds.length
-    ? await createAdminClient().from('internal_profiles').select('id, full_name').in('id', recorderIds)
-    : { data: [] as { id: string; full_name: string }[] }
-  const names = new Map((people ?? []).map((p) => [p.id, p.full_name]))
-
-  const rows = txRows
-    .sort((a, b) => a.transaction_date.localeCompare(b.transaction_date))
-    .map(({ recorded_by, ...r }) => ({ ...r, recorded_by_name: recorded_by ? (names.get(recorded_by) ?? null) : null }))
-  return { rows, error: null }
-}
-
+// The rows come with the visit (fetchDailyVisits → pending_payments).
 // Confirm / reject a pending payment — finance, manager or director only
 // (PAYMENT_CONFIRM_ROLES; the DB trigger transactions_confirm_guard enforces it too).
 export async function reviewPendingPayment(

@@ -10,7 +10,7 @@ import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
 import { SERVICE_TO_CATEGORY, isPackageCategory } from '@/lib/serviceType'
 import { countBookedSessions } from '@/app/actions/packages'
-import { fetchPackagePayments, isPackageAwaitingConfirmation, isPackagePaidOff } from '@/lib/internal/packagePayments'
+import { fetchPackagePayments, isPackageAwaitingConfirmation, isPackagePaidOff, toPendingTx, type PendingPaymentRow, type PendingPaymentTx } from '@/lib/internal/packagePayments'
 import { DEFAULT_VISIT_MINUTES, minutesToTime, timeToMinutes, visitMinutes } from '@/lib/jadwal/duration'
 import { fetchFirstSesiAfterTa, fetchPackagePositions, isTaServiceType } from '@/lib/internal/visitInsights'
 
@@ -79,6 +79,9 @@ export interface DailyVisit {
   // Recorded payments settle the bill (the package's, or the visit's own) but
   // part is still pending finance confirmation — badge "Menunggu Konfirmasi".
   payment_awaiting_confirmation: boolean
+  // The pending payments behind that badge (empty otherwise) — shown in
+  // PendingPaymentDialog without another round-trip.
+  pending_payments: PendingPaymentRow[]
   // Linked package's Layanan name (patient_packages.package_name) — null when package_id is null
   package_name: string | null
   // "Pasien yang perlu diperhatikan hari ini": TA, first SESI after a TA, or the
@@ -190,7 +193,7 @@ export async function fetchDailyVisits(
   const visitIds = visits.map((v) => v.id)
   const { data: txns } = await supabase
     .from('transactions')
-    .select('id, visit_id, category, harga, discount, amount, payment_method, payment_status, penjamin, description, transaction_date, receipt_url, outstanding, status, created_at')
+    .select('id, visit_id, category, harga, discount, amount, payment_method, payment_status, penjamin, description, transaction_date, receipt_url, outstanding, status, created_at, recorded_by')
     .in('visit_id', visitIds)
     .neq('status', 'rejected')
     .order('created_at', { ascending: true })
@@ -242,6 +245,7 @@ export async function fetchDailyVisits(
   const packagePaymentOkMap = new Map<string, boolean>()
   const packagePaidOffMap = new Map<string, boolean>()
   const packageAwaitingMap = new Map<string, boolean>()
+  const packagePendingMap = new Map<string, PendingPaymentTx[]>()
   const packageNameMap = new Map<string, string>()
   if (packageIds.length > 0) {
     const { data: pkgs } = await supabase
@@ -253,6 +257,7 @@ export async function fetchDailyVisits(
       packagePaymentOkMap.set(p.id, !!p.payment_ok)
       packagePaidOffMap.set(p.id, isPackagePaidOff(payments.get(p.id), p.payment_ok))
       packageAwaitingMap.set(p.id, isPackageAwaitingConfirmation(payments.get(p.id)))
+      packagePendingMap.set(p.id, payments.get(p.id)?.pending ?? [])
       if (p.package_name) packageNameMap.set(p.id, p.package_name)
     }
   }
@@ -280,6 +285,32 @@ export async function fetchDailyVisits(
       .select('id, nama')
       .in('id', layananIds)
     for (const l of layanan ?? []) layananNameMap.set(l.id, l.nama)
+  }
+
+  // "Menunggu Konfirmasi": recorded payments settle the bill (the package's, or
+  // the visit's own) but part is still pending. Its rows ride along with the
+  // visit so the badge's dialog needs no extra request.
+  const ownPendingMap = new Map<string, PendingPaymentTx[]>()
+  for (const t of txns ?? []) {
+    if (t.status !== 'pending' || PACKAGE_CATEGORIES.has(t.category ?? '')) continue
+    const vid = t.visit_id as string
+    ownPendingMap.set(vid, [...(ownPendingMap.get(vid) ?? []), toPendingTx(t as PendingPaymentTx)])
+  }
+  const isAwaiting = (v: { id: string; package_id?: string | null }) => {
+    if (v.package_id) return packageAwaitingMap.get(v.package_id) ?? false
+    const pay = payMap.get(v.id)
+    return !!pay && pay.has_pending && (pay.all_paid || pay.payment_status === 'LUNAS' || pay.payment_status === 'PELUNASAN')
+  }
+  const pendingOf = (v: { id: string; package_id?: string | null }): PendingPaymentTx[] => {
+    if (!isAwaiting(v)) return []
+    return v.package_id ? (packagePendingMap.get(v.package_id) ?? []) : (ownPendingMap.get(v.id) ?? [])
+  }
+  const recorderIds = [...new Set(visits.flatMap(pendingOf).map((r) => r.recorded_by).filter((id): id is string => !!id))]
+  const recorderNames = new Map<string, string>()
+  if (recorderIds.length > 0) {
+    // Admin client — RLS hides other staff rows from some roles.
+    const { data: people } = await createAdminClient().from('internal_profiles').select('id, full_name').in('id', recorderIds)
+    for (const p of people ?? []) recorderNames.set(p.id, p.full_name)
   }
 
   return visits.map((v) => {
@@ -314,9 +345,10 @@ export async function fetchDailyVisits(
       visit_transaction:    latestTxnMap.get(v.id) ?? null,
       package_payment_ok:  v.package_id ? (packagePaymentOkMap.get(v.package_id) ?? false) : null,
       package_paid_off:    v.package_id ? (packagePaidOffMap.get(v.package_id) ?? false) : null,
-      payment_awaiting_confirmation: v.package_id
-        ? (packageAwaitingMap.get(v.package_id) ?? false)
-        : !!pay && pay.has_pending && (pay.all_paid || pay.payment_status === 'LUNAS' || pay.payment_status === 'PELUNASAN'),
+      payment_awaiting_confirmation: isAwaiting(v),
+      pending_payments: pendingOf(v).map(({ recorded_by, ...r }) => ({
+        ...r, recorded_by_name: recorded_by ? (recorderNames.get(recorded_by) ?? null) : null,
+      })),
       package_name:        v.package_id ? (packageNameMap.get(v.package_id) ?? null) : null,
       is_priority:          isTaServiceType(v.service_type) || firstSesiAfterTa.has(v.id)
         || (!!v.package_id && isLastPackageSession(v.id)),

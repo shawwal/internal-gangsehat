@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Hourglass, AlertTriangle, Loader2, CheckCircle, XCircle } from 'lucide-react'
-import { fetchVisitPendingPayments, reviewPendingPayment, type PendingPaymentRow } from '@/app/actions/transactions'
+import { reviewPendingPayment } from '@/app/actions/transactions'
 import { PaymentProofLink } from '@/components/payments/PaymentProofField'
 import { canConfirmPayment } from '@/lib/finance/paymentConfirm'
 import type { DailyVisit } from './types'
@@ -22,33 +22,30 @@ const formatDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('
 // the bill but haven't been checked yet. Everyone sees them (read-only); only
 // finance / manager / director confirm or reject — admins record, not approve.
 export function PendingPaymentDialog({ visit, userRole, onClose, onReviewed }: Props) {
-  const [rows, setRows]         = useState<PendingPaymentRow[] | null>(null)
+  // Loaded with the visit (fetchDailyVisits) — no request when the dialog opens.
+  const [rows, setRows]         = useState(visit.pending_payments)
   const [error, setError]       = useState<string | null>(null)
   const [busyId, setBusyId]     = useState<string | null>(null)
   const [rejectId, setRejectId] = useState<string | null>(null)
   const [reason, setReason]     = useState('')
   const canReview = canConfirmPayment(userRole)
 
-  useEffect(() => {
-    let cancelled = false
-    fetchVisitPendingPayments(visit.id).then((res) => {
-      if (cancelled) return
-      setRows(res.rows)
-      setError(res.error)
-    })
-    return () => { cancelled = true }
-  }, [visit.id])
-
   async function review(id: string, decision: 'confirm' | 'reject') {
     if (busyId) return
     setBusyId(id)
     setError(null)
-    const res = await reviewPendingPayment(id, decision, decision === 'reject' ? reason : undefined)
-    setBusyId(null)
+    let res: { error: string | null }
+    try {
+      res = await reviewPendingPayment(id, decision, decision === 'reject' ? reason : undefined)
+    } catch {
+      res = { error: 'Gagal menyimpan. Periksa koneksi lalu coba lagi.' }
+    } finally {
+      setBusyId(null)
+    }
     if (res.error) { setError(res.error); return }
     setRejectId(null)
     setReason('')
-    const next = (rows ?? []).filter((r) => r.id !== id)
+    const next = rows.filter((r) => r.id !== id)
     setRows(next)
     onReviewed()
     if (next.length === 0) onClose()
@@ -78,9 +75,7 @@ export function PendingPaymentDialog({ visit, userRole, onClose, onReviewed }: P
             Finance, Manager atau Director memastikan dananya masuk.
           </p>
 
-          {rows === null ? (
-            <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-muted-foreground" /></div>
-          ) : rows.length === 0 ? (
+          {rows.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4">Tidak ada pembayaran yang menunggu konfirmasi.</p>
           ) : rows.map((r) => (
             <div key={r.id} className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
@@ -153,7 +148,7 @@ export function PendingPaymentDialog({ visit, userRole, onClose, onReviewed }: P
             </div>
           ))}
 
-          {!canReview && rows && rows.length > 0 && (
+          {!canReview && rows.length > 0 && (
             <p className="text-[11px] text-muted-foreground">
               Konfirmasi dilakukan oleh Finance, Manager atau Director — hubungi mereka bila pasien menanyakan status pembayaran.
             </p>

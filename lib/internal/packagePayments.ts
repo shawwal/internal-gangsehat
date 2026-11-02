@@ -34,11 +34,35 @@ export interface PackagePayment {
   paymentMethod: string | null
   paymentStatus: 'LUNAS' | 'DP'
   transactionStatus: 'pending' | 'confirmed'
+  /** payments still awaiting finance confirmation, oldest first */
+  pending: PendingPaymentTx[]
 }
 
-interface PkgTxRow { id: string; order_id: string | null; category: string; payment_method: string | null; transaction_date: string; harga: number; amount: number; discount: number; status: string }
+// A recorded payment not yet confirmed — listed behind "Menunggu Konfirmasi".
+export interface PendingPaymentRow {
+  id: string
+  transaction_date: string
+  category: string
+  harga: number | null
+  amount: number
+  payment_status: string | null
+  payment_method: string | null
+  receipt_url: string | null
+  recorded_by_name: string | null
+}
+export type PendingPaymentTx = Omit<PendingPaymentRow, 'recorded_by_name'> & { recorded_by: string | null }
 
-const TX_COLUMNS = 'id, order_id, category, payment_method, transaction_date, harga, amount, discount, status'
+export function toPendingTx(r: PendingPaymentTx): PendingPaymentTx {
+  return {
+    id: r.id, transaction_date: r.transaction_date, category: r.category, harga: r.harga,
+    amount: r.amount, payment_status: r.payment_status, payment_method: r.payment_method,
+    receipt_url: r.receipt_url, recorded_by: r.recorded_by,
+  }
+}
+
+interface PkgTxRow { id: string; order_id: string | null; category: string; payment_method: string | null; payment_status: string | null; transaction_date: string; harga: number; amount: number; discount: number; status: string; receipt_url: string | null; recorded_by: string | null }
+
+const TX_COLUMNS = 'id, order_id, category, payment_method, payment_status, transaction_date, harga, amount, discount, status, receipt_url, recorded_by'
 
 export async function fetchPackagePayments(
   supabase: Supabase,
@@ -115,6 +139,7 @@ export async function fetchPackagePayments(
       paymentMethod:     latest.payment_method,
       paymentStatus:     outstanding === 0 ? 'LUNAS' : 'DP',
       transactionStatus: rows.some((r) => r.status === 'pending') ? 'pending' : 'confirmed',
+      pending:           rows.filter((r) => r.status === 'pending').map(toPendingTx),
     })
   }
   return result
