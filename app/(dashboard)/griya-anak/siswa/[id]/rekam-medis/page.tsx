@@ -28,6 +28,16 @@ function StatusChip({ status }: { status: 'completed' | 'draft' | null }) {
   return <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${cls}`}>{status === 'completed' ? 'Lengkap' : status === 'draft' ? 'Draf' : 'Belum diisi'}</span>
 }
 
+/** PDF header of the child's branch when it isn't Griya Anak (the PDF's default). */
+async function clinicHeader(patientId: string): Promise<{ name: string; address: string } | undefined> {
+  const sb = createClient()
+  const { data: member } = await sb.from('griya_students').select('branch_id').eq('patient_id', patientId).maybeSingle()
+  if (!member?.branch_id) return undefined
+  const { data: b } = await sb.from('branches').select('name, address, phone').eq('id', member.branch_id).maybeSingle()
+  if (!b?.name || /griya anak/i.test(b.name)) return undefined
+  return { name: b.name.toUpperCase(), address: [b.address, b.phone].filter(Boolean).join(' · ') }
+}
+
 export default function GriyaRekamMedisPage() {
   const { id } = useParams<{ id: string }>()
   const { showToast } = useToast()
@@ -80,6 +90,7 @@ export default function GriyaRekamMedisPage() {
         title: latestTa ? RM_TYPES[latestTa.rmType].pdfTitle : 'REKAM MEDIS',
         patient,
         blocks, filename: `Rekam_Medis_${safe}.pdf`,
+        clinic: await clinicHeader(id),
       })
     } catch {
       showToast('Gagal membuat PDF', 'error')

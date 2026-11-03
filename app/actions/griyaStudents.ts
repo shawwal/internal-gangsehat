@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { loadGriyaBranchContext } from '@/lib/griyaBranchServer'
 import { decryptPatientPII } from '@/lib/encryption'
 import { normalizeBirthDate } from '@/lib/dates'
 import { logActivity } from '@/lib/activityLog'
@@ -44,11 +45,9 @@ async function requireWrite(): Promise<AuthResult> {
   return a
 }
 
-async function resolveBranch(a: AuthOk): Promise<string | null> {
-  if (a.branchId) return a.branchId
-  const { data } = await a.supabase
-    .from('branches').select('id').ilike('name', '%Griya Anak%').eq('is_active', true).limit(1).maybeSingle()
-  return data?.id ?? null
+// The Griya branch the caller is working on (picked in the Griya layout).
+async function resolveBranch(): Promise<string | null> {
+  return (await loadGriyaBranchContext()).branchId
 }
 
 function decName(row: { encrypted_name?: string | null; encrypted_phone?: string | null; encrypted_birth_date?: string | null }) {
@@ -75,8 +74,7 @@ export async function searchGriyaStudents(term: string, branchId?: string | null
 
   let bid = branchId ?? null
   if (!bid) {
-    const a = await auth()
-    if (!('error' in a)) bid = await resolveBranch(a)
+    bid = await resolveBranch()
   }
   if (!bid) return []
 
@@ -128,8 +126,7 @@ export async function fetchGriyaStudentsPage(params: {
 
   let bid = params.branchId ?? null
   if (!bid) {
-    const a = await auth()
-    if (!('error' in a)) bid = await resolveBranch(a)
+    bid = await resolveBranch()
   }
   if (!bid) return { students: [], total: 0 }
 
@@ -253,10 +250,7 @@ export async function fetchGriyaStudentDetail(patientId: string): Promise<GriyaS
     .eq('patient_id', patientId)
     .maybeSingle()
 
-  const branchId = member?.branch_id ?? (await (async () => {
-    const a = await auth()
-    return 'error' in a ? null : resolveBranch(a)
-  })())
+  const branchId = member?.branch_id ?? (await resolveBranch())
 
   const [slotsRes, visitsRes] = await Promise.all([
     supabase

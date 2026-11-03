@@ -6,8 +6,7 @@ import {
   fetchLayananByBranch, toggleLayananActive, upsertLayanan, updateLayanan, deleteLayanan,
   type LayananRow,
 } from '@/app/actions/layanan'
-import { resolveGriyaBranchId } from '@/app/actions/griyaJadwal'
-import { createClient } from '@/lib/supabase/client'
+import { useGriyaBranch } from '@/hooks/useGriyaBranch'
 import { RowsSkeleton } from '@/components/ui/Skeleton'
 
 const KATEGORI_OPTIONS = ['TERAPI AWAL KLINIK', 'SESI KLINIK', 'PAKET KLINIK', 'TERAPI AWAL VISIT', 'SESI VISIT', 'PAKET VISIT', 'LAINNYA']
@@ -21,24 +20,13 @@ type FormState = { nama: string; kategori: string; jumlah_sesi: string; harga: s
 const BLANK: FormState = { nama: '', kategori: KATEGORI_OPTIONS[0], jumlah_sesi: '', harga: '' }
 
 export default function GriyaPengaturanPage() {
-  const [branchId, setBranchId] = useState<string | null | undefined>(undefined)
-  const [enabled, setEnabled] = useState<boolean | null>(null)
+  const gate = useGriyaBranch()
+  const branchId = gate.loading ? undefined : gate.branchId
+  const enabled = gate.loading ? null : gate.enabled
   const [rows, setRows] = useState<LayananRow[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<{ mode: 'add' } | { mode: 'edit'; row: LayananRow } | null>(null)
 
-  useEffect(() => {
-    (async () => {
-      const bid = await resolveGriyaBranchId()
-      setBranchId(bid)
-      if (!bid) { setEnabled(false); setLoading(false); return }
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data: profile } = await supabase.from('internal_profiles').select('role').eq('id', user!.id).single()
-      const { data: s } = await supabase.from('branch_griya_settings').select('enabled').eq('branch_id', bid).maybeSingle()
-      setEnabled(profile?.role === 'director' ? true : (s?.enabled ?? false))
-    })()
-  }, [])
 
   function reload() {
     if (!branchId) return

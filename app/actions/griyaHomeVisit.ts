@@ -9,6 +9,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { actingBranchId } from '@/lib/griyaBranchServer'
 import { decryptPatientPII } from '@/lib/encryption'
 import { fetchVisitDisciplines } from '@/lib/griyaDiscipline'
 import { GRIYA_RECORD_EMBED, resolveGriyaRecordStates } from '@/lib/griyaRecordCompletion'
@@ -27,7 +28,7 @@ async function viewer(branchId: string): Promise<{ supabase: SupaClient; userId:
   if (!user) return null
   const { data: profile } = await supabase.from('internal_profiles').select('role, branch_id').eq('id', user.id).single()
   if (!profile || !VIEW_ROLES.includes(profile.role)) return null
-  if (profile.role !== 'director' && profile.branch_id !== branchId) return null
+  if (profile.role !== 'director' && (await actingBranchId(supabase, profile.branch_id)) !== branchId) return null
   const { data: griya } = await supabase.from('branch_griya_settings').select('enabled').eq('branch_id', branchId).maybeSingle()
   if (!griya?.enabled) return null
   return { supabase, userId: user.id, role: profile.role }

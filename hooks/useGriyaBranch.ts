@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useGriyaBranchContext } from '@/components/griya/GriyaBranchProvider'
 
 interface GriyaBranchState {
   loading: boolean
@@ -11,14 +12,17 @@ interface GriyaBranchState {
   canEdit: boolean
 }
 
-/** Shared resolver for the Griya Anak pages — role, branch, and feature gate
- *  in the fewest round trips. */
+/** Shared resolver for the Griya Anak pages — role, branch, and feature gate.
+ *  Under /griya-anak it reads the branch picked in the Griya layout
+ *  (GriyaBranchProvider); elsewhere it resolves the caller's own branch. */
 export function useGriyaBranch(): GriyaBranchState {
+  const ctx = useGriyaBranchContext()
   const [state, setState] = useState<GriyaBranchState>({
     loading: true, branchId: null, role: null, enabled: false, canEdit: false,
   })
 
   useEffect(() => {
+    if (ctx) return
     let cancelled = false
     ;(async () => {
       const supabase = createClient()
@@ -54,7 +58,10 @@ export function useGriyaBranch(): GriyaBranchState {
       }
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [ctx])
 
+  if (ctx) {
+    return { loading: false, branchId: ctx.branchId, role: ctx.role, enabled: ctx.enabled, canEdit: ctx.canEdit }
+  }
   return state
 }

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { actingBranchId, loadGriyaBranchContext } from '@/lib/griyaBranchServer'
 import { decryptPatientPII } from '@/lib/encryption'
 import { generateOrderId } from '@/lib/internal/orderId'
 import { logActivity } from '@/lib/activityLog'
@@ -143,20 +144,10 @@ async function ensureEnrolled(a: AuthOk, patientId: string, branchId: string, so
     .upsert({ patient_id: patientId, branch_id: branchId, source, created_by: a.userId }, { onConflict: 'patient_id', ignoreDuplicates: true })
 }
 
-/** Resolves the Griya Anak branch id — the caller's own branch, or (for a
- *  director) the branch named "Griya Anak". */
+/** Resolves the Griya branch the caller is working on — their own branch, or
+ *  the one a director / Griya admin picked in the Griya layout. */
 export async function resolveGriyaBranchId(): Promise<string | null> {
-  const a = await auth()
-  if ('error' in a) return null
-  if (a.branchId) return a.branchId
-  const { data } = await a.supabase
-    .from('branches')
-    .select('id')
-    .ilike('name', '%Griya Anak%')
-    .eq('is_active', true)
-    .limit(1)
-    .maybeSingle()
-  return data?.id ?? null
+  return (await loadGriyaBranchContext()).branchId
 }
 
 // ── Fetch a week ──────────────────────────────────────────────────────────────
@@ -166,7 +157,8 @@ async function readBranchSchedules(supabase: SupaClient, branchId: string) {
   if (!user) return { data: [] }
   const { data: profile } = await supabase
     .from('internal_profiles').select('role, branch_id').eq('id', user.id).single()
-  if (!profile || (profile.role !== 'director' && profile.branch_id !== branchId)) return { data: [] }
+  if (!profile) return { data: [] }
+  if (profile.role !== 'director' && (await actingBranchId(supabase, profile.branch_id)) !== branchId) return { data: [] }
   return createAdminClient()
     .from('schedules')
     .select('staff_id, hari, jam_mulai, jam_selesai, status')

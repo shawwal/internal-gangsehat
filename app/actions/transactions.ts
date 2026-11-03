@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { actingBranchId } from '@/lib/griyaBranchServer'
 import { listTherapistOptions, resolveTherapistNames, type TherapistOption, type TherapistRef } from '@/lib/finance/therapists'
 import { computeOrderPaymentSummary, type OrderPaymentSummary, type OrderPaymentRow } from '@/lib/internal/orderPayments'
 import { logActivity } from '@/lib/activityLog'
@@ -661,7 +662,7 @@ export async function createTransactionManual(
   const proofErr = paymentProofError(input.payment_method, input.receipt_url)
   if (proofErr) return { error: proofErr }
 
-  const branchId = input.branch_id ?? profile.branch_id
+  const branchId = input.branch_id ?? (await actingBranchId(supabase, profile.branch_id))
   if (!branchId) {
     return { error: 'Akun Anda belum terhubung ke cabang. Hubungi direktur.' }
   }
@@ -810,6 +811,6 @@ export async function getTherapistOptions(branchId?: string): Promise<TherapistO
   if (!user) return []
   const { data: prof } = await supabase.from('internal_profiles').select('role, branch_id').eq('id', user.id).single()
   if (!prof || !PAYMENT_ROLES.includes(prof.role)) return []
-  const scope = prof.role === 'director' ? (branchId ?? '') : (prof.branch_id ?? '')
+  const scope = prof.role === 'director' ? (branchId ?? '') : ((await actingBranchId(supabase, prof.branch_id)) ?? '')
   return listTherapistOptions(supabase, scope)
 }

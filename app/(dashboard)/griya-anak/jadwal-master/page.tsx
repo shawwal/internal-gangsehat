@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Plus, Pencil, GraduationCap, Trash2, Search, X } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { resolveGriyaBranchId, fetchGriyaMasterSchedule, removeSlot, type GriyaSlot } from '@/app/actions/griyaJadwal'
+import { useGriyaBranch } from '@/hooks/useGriyaBranch'
+import { fetchGriyaMasterSchedule, removeSlot, type GriyaSlot } from '@/app/actions/griyaJadwal'
 import { HARI_ORDER, HARI_LABEL, DISCIPLINE_LABEL, toIso } from '@/components/griya/constants'
 import { AddMasterScheduleDialog } from '@/components/griya/master/AddMasterScheduleDialog'
 import { EditMasterScheduleDialog } from '@/components/griya/master/EditMasterScheduleDialog'
@@ -15,9 +15,10 @@ import { TableSkeleton } from '@/components/ui/Skeleton'
 
 export default function GriyaJadwalMasterPage() {
   const { showToast } = useToast()
-  const [branchId, setBranchId] = useState<string | null | undefined>(undefined)
-  const [enabled, setEnabled] = useState<boolean | null>(null)
-  const [canEdit, setCanEdit] = useState(false)
+  const gate = useGriyaBranch()
+  const branchId = gate.loading ? undefined : gate.branchId
+  const enabled = gate.loading ? null : gate.enabled
+  const canEdit = gate.canEdit
 
   const [rows, setRows] = useState<GriyaSlot[]>([])
   const [loading, setLoading] = useState(true)
@@ -30,19 +31,6 @@ export default function GriyaJadwalMasterPage() {
   const [layananFilter, setLayananFilter] = useState('')
   const [kategoriFilter, setKategoriFilter] = useState('')
 
-  useEffect(() => {
-    (async () => {
-      const bid = await resolveGriyaBranchId()
-      setBranchId(bid)
-      if (!bid) { setEnabled(false); return }
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data: profile } = await supabase.from('internal_profiles').select('role').eq('id', user!.id).single()
-      setCanEdit(['director', 'manager', 'admin'].includes(profile?.role ?? ''))
-      const { data: s } = await supabase.from('branch_griya_settings').select('enabled').eq('branch_id', bid).maybeSingle()
-      setEnabled(profile?.role === 'director' ? true : (s?.enabled ?? false))
-    })()
-  }, [])
 
   const load = useCallback(() => {
     if (!branchId) return

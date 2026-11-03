@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Search, ChevronRight, GraduationCap, RotateCcw, Trash2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { resolveGriyaBranchId } from '@/app/actions/griyaJadwal'
+import { useGriyaBranch } from '@/hooks/useGriyaBranch'
 import {
   fetchGriyaStudentsPage, setGriyaStudentStatus, removeGriyaStudent,
   type GriyaStudentRow,
@@ -32,9 +31,10 @@ const TA_CLS: Record<'draft' | 'completed', string> = {
 
 export default function GriyaSiswaPage() {
   const { showToast } = useToast()
-  const [branchId, setBranchId] = useState<string | null | undefined>(undefined)
-  const [enabled, setEnabled] = useState<boolean | null>(null)
-  const [canEdit, setCanEdit] = useState(false)
+  const gate = useGriyaBranch()
+  const branchId = gate.loading ? undefined : gate.branchId
+  const enabled = gate.loading ? null : gate.enabled
+  const canEdit = gate.canEdit
 
   const [rows, setRows] = useState<GriyaStudentRow[]>([])
   const [total, setTotal] = useState(0)
@@ -43,19 +43,6 @@ export default function GriyaSiswaPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<StatusFilter>('all')
 
-  useEffect(() => {
-    (async () => {
-      const bid = await resolveGriyaBranchId()
-      setBranchId(bid)
-      if (!bid) { setEnabled(false); return }
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data: profile } = await supabase.from('internal_profiles').select('role').eq('id', user!.id).single()
-      setCanEdit(['director', 'manager', 'admin'].includes(profile?.role ?? ''))
-      const { data: s } = await supabase.from('branch_griya_settings').select('enabled').eq('branch_id', bid).maybeSingle()
-      setEnabled(profile?.role === 'director' ? true : (s?.enabled ?? false))
-    })()
-  }, [])
 
   const load = useCallback(() => {
     if (!branchId) return

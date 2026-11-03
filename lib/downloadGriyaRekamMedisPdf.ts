@@ -48,7 +48,11 @@ export async function downloadGriyaRekamMedisPdf(opts: {
   patient: PatientPlain
   blocks: Block[]
   filename: string
+  /** Header for a Griya branch other than Griya Anak (e.g. Nafaya Centre). */
+  clinic?: { name: string; address: string }
 }) {
+  const clinic = opts.clinic?.name ?? CLINIC
+  const address = opts.clinic ? opts.clinic.address : ADDRESS
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true })
   const p = opts.patient
@@ -66,9 +70,9 @@ export async function downloadGriyaRekamMedisPdf(opts: {
   doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...TEXT)
   doc.text(opts.title, PAGE_W / 2, y + 4, { align: 'center' })
   doc.setFontSize(10.5); doc.setTextColor(...PRIMARY)
-  doc.text(CLINIC, PAGE_W / 2, y + 9.5, { align: 'center' })
+  doc.text(clinic, PAGE_W / 2, y + 9.5, { align: 'center' })
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED)
-  doc.text(ADDRESS, PAGE_W / 2, y + 14, { align: 'center' })
+  doc.text(address, PAGE_W / 2, y + 14, { align: 'center' })
   y += 17
   doc.setDrawColor(...PRIMARY); doc.setLineWidth(0.6); doc.line(M, y, PAGE_W - M, y)
   y += 5
@@ -155,7 +159,7 @@ export async function downloadGriyaRekamMedisPdf(opts: {
   for (let i = 1; i <= total; i++) {
     doc.setPage(i)
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED)
-    doc.text(`${p.name}${p.no_rm ? ` · ${p.no_rm}` : ''} · ${CLINIC}`, M, PAGE_H - 8)
+    doc.text(`${p.name}${p.no_rm ? ` · ${p.no_rm}` : ''} · ${clinic}`, M, PAGE_H - 8)
     doc.text(`Halaman ${i} / ${total}`, PAGE_W - M, PAGE_H - 8, { align: 'right' })
   }
 

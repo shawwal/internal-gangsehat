@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { actingBranchId } from '@/lib/griyaBranchServer'
 import { decryptPatientPII } from '@/lib/encryption'
 import { logActivity } from '@/lib/activityLog'
 import { dokuEnabled, gatewayMode } from '@/lib/doku/client'
@@ -135,7 +136,7 @@ export async function createPaymentLink(
       .eq('order_id', input.orderId).neq('status', 'rejected').limit(1).maybeSingle()
     if (t) { branchId = t.branch_id; patientId = patientId ?? t.patient_id }
   }
-  branchId = branchId ?? profile.branch_id ?? (profile.role === 'director' ? input.branchId ?? null : null)
+  branchId = branchId ?? (await actingBranchId(supabase, profile.branch_id)) ?? (profile.role === 'director' ? input.branchId ?? null : null)
   if (!branchId) return { data: null, error: 'Pilih cabang untuk link pembayaran ini' }
   // New sales only — toko sales and installments on an existing order keep their category
   if (!input.tokoSaleId && !input.orderId) {
