@@ -34,6 +34,8 @@ export function normalizeSumber(raw: string | null | undefined): string | null {
   if (has('FACEBOOK', ' FB')) return 'FACEBOOK'
   if (has('TIKTOK', 'THREADS')) return 'TIKTOK'
   if (has('GOOGLE', 'MAPS', 'BROWSING', 'SEARCH', 'SEACRCH', 'INTERNET', ' AI')) return 'GOOGLE'
+  // Before the doctor check — "SPANDUK" contains its "SPA" needle.
+  if (has('SPANDUK', 'BROSUR', 'BALIHO', 'BANNER')) return 'LAINNYA'
   if (has('DOKTER', 'DSA', 'RUJUKAN', 'SP.A', 'SP. A', 'SPA', ' RS', 'RSUD', 'PSIKOLOG', 'PISIKOLOG', 'DR.', 'DR ', 'NEVITA', 'ROSYADI', 'LEA')) return 'REKOMENDASI DOKTER'
   if (has('SEMINAR', 'EVENT', 'OUTDOOR', 'GOES TO', 'MENGISI DI')) return 'EVENT'
   if (has('SEKOLAH', 'SCHOOL', 'SCHOLL', ' TK', 'TK ', 'LES', 'DAYCARE', 'DAY CARE', 'AHE', 'PAUD', 'GURU', 'MISS ', 'SUNSHINE', 'TUNAS BANGSA')) return 'REKOMENDASI SEKOLAH'
