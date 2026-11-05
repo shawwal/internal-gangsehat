@@ -113,6 +113,7 @@ export function Sidebar({ role, branchId, allowedNavKeys, collapsed }: Props) {
                   <Link
                     key={item.key}
                     href={item.href!}
+                    prefetch={false}
                     className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                       active
                         ? 'bg-primary text-primary-foreground shadow-sm'
@@ -160,6 +161,7 @@ export function Sidebar({ role, branchId, allowedNavKeys, collapsed }: Props) {
                         <Link
                           key={item.key}
                           href={item.href!}
+                          prefetch={false}
                           title={collapsed ? item.label : undefined}
                           className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                             collapsed ? 'justify-center' : ''

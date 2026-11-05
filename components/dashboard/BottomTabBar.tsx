@@ -67,6 +67,7 @@ export function BottomTabBar({ branchId, allowedNavKeys, onMorePress }: Props) {
               <Link
                 key={tab.key}
                 href={tab.href!}
+                prefetch={false}
                 className="relative flex flex-col items-center gap-1 px-3 py-2 rounded-[1.5rem] min-w-[60px] transition-all duration-150 active:scale-90"
               >
                 {/* Active pill bubble */}

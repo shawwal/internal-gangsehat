@@ -48,6 +48,7 @@ function NavGridItem({ item, isActive, isDark }: { item: NavItem; isActive: bool
   return (
     <Link
       href={item.href!}
+      prefetch={false}
       className="flex flex-col items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-2xl transition-all active:scale-95"
       title={item.label}
       style={{
