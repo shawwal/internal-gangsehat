@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { withLocalAuth } from './localAuth'
 import { GRIYA_BRANCH_COOKIE, GRIYA_BRANCH_HEADER, parseGriyaBranch } from '@/lib/griyaBranch'
 
 export async function createClient() {
@@ -7,7 +8,7 @@ export async function createClient() {
   // Only sent on /griya-anak requests (cookie path) — see lib/griyaBranch.ts.
   const griyaBranch = parseGriyaBranch(cookieStore.get(GRIYA_BRANCH_COOKIE)?.value)
 
-  return createServerClient(
+  return withLocalAuth(createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
@@ -27,5 +28,5 @@ export async function createClient() {
         },
       },
     }
-  )
+  ))
 }

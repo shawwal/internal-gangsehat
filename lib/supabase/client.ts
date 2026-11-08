@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { withLocalAuth } from './localAuth'
 import { GRIYA_BRANCH_HEADER, readGriyaBranchCookie } from '@/lib/griyaBranch'
 
 // On /griya-anak, database requests carry the picked Griya branch (lib/griyaBranch.ts).
@@ -12,9 +13,9 @@ function griyaFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Respo
 }
 
 export function createClient() {
-  return createBrowserClient(
+  return withLocalAuth(createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     { global: { fetch: griyaFetch } }
-  )
+  ))
 }

@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { decryptPatientPII, encryptPatientPII, hashPhone } from '@/lib/encryption'
+import { decrypt, decryptPatientPII, encryptPatientPII, hashPhone } from '@/lib/encryption'
 import { normalizeBirthDate } from '@/lib/dates'
 import { logActivity } from '@/lib/activityLog'
 import { phoneHashIfFree } from '@/lib/patientPhoneHash'
@@ -115,6 +115,48 @@ export async function fetchPatients(): Promise<PatientPlain[]> {
     from += BATCH
   }
   return rows.map(toPlain)
+}
+
+/**
+ * Slim rows for the director's Analitik Pasien page — only the 7 fields the
+ * charts use (≈1/10 of the full row), and only birth date is decrypted.
+ */
+export async function fetchPatientAnalyticsRows(): Promise<{
+  id: string; gender: 'male' | 'female' | 'other' | null; birthYear: number | null
+  createdAt: string; isActive: boolean; agama: string | null; provinsi: string | null
+}[]> {
+  const supabase = await createClient()
+  const BATCH = 1000
+  const out: Awaited<ReturnType<typeof fetchPatientAnalyticsRows>> = []
+  for (let from = 0; ; from += BATCH) {
+    const { data, error } = await supabase
+      .from('patients')
+      .select('id, gender, encrypted_birth_date, created_at, is_active, agama, provinsi')
+      .eq('is_active', true)
+      .order('id')
+      .range(from, from + BATCH - 1)
+    if (error || !data || data.length === 0) break
+    for (const r of data) {
+      let birthYear: number | null = null
+      if (r.encrypted_birth_date) {
+        try {
+          const d = normalizeBirthDate(decrypt(r.encrypted_birth_date as string))
+          birthYear = d ? new Date(d).getFullYear() : null
+        } catch { /* undecryptable legacy value */ }
+      }
+      out.push({
+        id: r.id as string,
+        gender: (r.gender as 'male' | 'female' | 'other' | null) ?? null,
+        birthYear,
+        createdAt: r.created_at as string,
+        isActive: r.is_active as boolean,
+        agama: (r.agama as string | null) ?? null,
+        provinsi: (r.provinsi as string | null) ?? null,
+      })
+    }
+    if (data.length < BATCH) break
+  }
+  return out
 }
 
 export async function searchPatients(term: string): Promise<PatientPlain[]> {
