@@ -177,7 +177,7 @@ export async function getAvailability(branchId: string, date: string): Promise<A
   const day = dateAtNoon(date)
   const hari = toHariIndonesia(day)
   const weekGroup = getWeekGroupForDate(day)
-  const PROFILE_COLS = 'full_name, avatar_url, nickname, gender, role, additional_roles, branch_id'
+  const PROFILE_COLS = 'full_name, avatar_url, nickname, gender, role, additional_roles, is_active, branch_id'
 
   const [schedules, overrides, leaves, slots, visits, holds] = await Promise.all([
     admin.from('schedules')

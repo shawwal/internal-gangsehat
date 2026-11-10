@@ -10,6 +10,8 @@ export const HIDDEN_ROLES = ['director', 'sport_massage_therapist']
 
 /** Hidden only when every role the person holds (primary + additional, migration 132) is hidden. */
 export function isHiddenFromClinicGrid(p: StaffProfileJoin | null | undefined): boolean {
+  // Deactivated accounts keep their schedule rows — never give them a column.
+  if (p?.is_active === false) return true
   const roles = [p?.role ?? '', ...(p?.additional_roles ?? [])].filter(Boolean)
   return roles.length > 0 && roles.every((r) => HIDDEN_ROLES.includes(r))
 }
@@ -21,6 +23,7 @@ export interface StaffProfileJoin {
   gender?: string | null
   role?: string | null
   additional_roles?: string[] | null
+  is_active?: boolean | null
   branch_id?: string | null
 }
 

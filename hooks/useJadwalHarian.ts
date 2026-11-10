@@ -116,7 +116,7 @@ export function useJadwalHarian() {
       return selectedBranchId ? q.eq('branch_id', selectedBranchId) : q
     }
 
-    const PROFILE_COLS = 'full_name, avatar_url, nickname, gender, role, additional_roles, branch_id'
+    const PROFILE_COLS = 'full_name, avatar_url, nickname, gender, role, additional_roles, is_active, branch_id'
 
     // Schedules and overrides are fetched across all branches and mapped to a
     // branch below rather than by the row's own branch_id: a regular schedule
@@ -224,7 +224,7 @@ export function useJadwalHarian() {
     if (unknownIds.length > 0) {
       const { data: profiles } = await supabase
         .from('internal_profiles')
-        .select('id, full_name, avatar_url, nickname, gender, role, additional_roles')
+        .select('id, full_name, avatar_url, nickname, gender, role, additional_roles, is_active')
         .in('id', unknownIds)
       if (requestId !== loadSeq.current) return
       for (const p of profiles ?? []) {

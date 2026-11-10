@@ -121,6 +121,7 @@ export function useJadwalSportMassage() {
           .eq('hari', hari)
           .eq('status', 'AKTIF')
           .or(roleOrFilter(['sport_massage_therapist']), { referencedTable: 'internal_profiles' })
+          .eq('internal_profiles.is_active', true)
           .in('week_group', [weekGroup, 'SEMUA']),
       ),
       supabase
@@ -136,6 +137,7 @@ export function useJadwalSportMassage() {
           .select('id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!inner!staff_id(full_name, avatar_url, nickname, gender, role, additional_roles)')
           .eq('status', 'active')
           .or(roleOrFilter(['sport_massage_therapist']), { referencedTable: 'internal_profiles' })
+          .eq('internal_profiles.is_active', true)
           .lte('start_date', isoDate)
           .gte('end_date', isoDate),
       ),
