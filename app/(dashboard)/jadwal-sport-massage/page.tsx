@@ -37,7 +37,7 @@ export default function JadwalSportMassagePage() {
   const searchParams = useSearchParams()
   const {
     today, selectedDate, setSelectedDate,
-    staff, visits, loading,
+    staff, visits, loading, busyElsewhere,
     leavePopover, setLeavePopover,
     leaveSaving, canApproveLeave,
     userRole,
@@ -257,6 +257,7 @@ export default function JadwalSportMassagePage() {
                   <DailyGrid
                     showDurations
                     staff={visibleStaff}
+                    busyElsewhere={busyElsewhere}
                     visits={visits}
                     date={toIso(selectedDate)}
                     userRole={userRole}

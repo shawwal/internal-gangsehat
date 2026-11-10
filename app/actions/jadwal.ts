@@ -961,3 +961,39 @@ export async function sendBulkMedicalRecordReminders(
   }
   return { sent, skipped, error: null }
 }
+
+// ── Busy elsewhere (dual-role staff, migration 132) ───────────────────────────
+// A person who is both Terapis and Terapis Sport Massage shows on both grids;
+// each grid marks the hours already taken on the other one. Only time + service
+// are returned — no patient data.
+export interface BusyBlock {
+  staff_id: string
+  visit_time: string
+  duration_minutes: number | null
+  service_type: string
+}
+
+export async function fetchStaffBusyElsewhere(
+  date: string,
+  staffIds: string[],
+  serviceTypes: string[],
+): Promise<BusyBlock[]> {
+  if (staffIds.length === 0 || serviceTypes.length === 0) return []
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('patient_visits')
+    .select('attending_staff_id, visit_time, duration_minutes, service_type, kehadiran')
+    .eq('visit_date', date)
+    .in('attending_staff_id', staffIds)
+    .in('service_type', serviceTypes)
+    .not('visit_time', 'is', null)
+    .not('status', 'in', '(cancelled,no_show)')
+  return (data ?? [])
+    .filter((v) => v.kehadiran !== 'TIDAK HADIR')
+    .map((v) => ({
+      staff_id: v.attending_staff_id as string,
+      visit_time: v.visit_time as string,
+      duration_minutes: v.duration_minutes,
+      service_type: v.service_type,
+    }))
+}

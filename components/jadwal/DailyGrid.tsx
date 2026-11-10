@@ -8,6 +8,7 @@ import {
   SLOT_H, TIME_COL_W, STAFF_COL_W,
 } from './types'
 import type { VisitStatus } from '@/types'
+import type { BusyBlock } from '@/app/actions/jadwal'
 import { hourInFilter, VIEW_SORE_START, type ShiftFilter } from '@/lib/shifts'
 import { VisitCard } from './VisitCard'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -132,10 +133,12 @@ interface Props {
   /** Visits occupy their duration (Sport Massage): a 13:00 Full Body (90′) shows
    *  as running into the 14:00 cell, whose add button then starts at 14:30. */
   showDurations?: boolean
+  /** Hours this person already works on the other grid (dual-role staff, migration 132). */
+  busyElsewhere?: BusyBlock[]
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onPayOnline, onShowPendingPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit, showDurations = false }: Props) {
+export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEnd = 21, slotHours, shiftFilter = 'all', onAssign, onStatusChange, onDelete, onOpen, onOpenRecord, onPendingLeaveClick, onStaffClick, onPayment, onPayOnline, onShowPendingPayment, onRemind, onWhatsApp, onWhatsAppConfirmation, refreshingCell, onSellPackage, onDetachPackage, onAttachPackage, onMarkPresent, onChangeTherapist, onMoveVisit, showDurations = false, busyElsewhere = [] }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const canDrop = !!onMoveVisit
   // Narrower columns on phones so ~2 therapists fit on screen instead of ~1.7.
@@ -197,6 +200,25 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
         const until  = Math.min(end, (h + 1) * 60)
         if ((byHour.get(h)?.until ?? 0) < until) byHour.set(h, { visit: v, until })
       }
+    }
+  }
+
+  // Hours taken on the other grid (Jadwal Harian ↔ Jadwal Sport Massage):
+  // staffId → hour → covered span + label. Whole hour covered → no add button.
+  const busyMap = new Map<string, Map<number, { from: number; until: number; label: string }>>()
+  for (const b of busyElsewhere) {
+    const start = timeToMinutes(b.visit_time)
+    const end   = start + visitMinutes(b)
+    const label = b.service_type === 'SPORT MASSAGE' ? 'Sport Massage' : 'Jadwal Klinik'
+    for (let h = Math.floor(start / 60); h * 60 < end; h++) {
+      if (!busyMap.has(b.staff_id)) busyMap.set(b.staff_id, new Map())
+      const byHour = busyMap.get(b.staff_id)!
+      const from   = Math.max(start, h * 60)
+      const until  = Math.min(end, (h + 1) * 60)
+      const prev   = byHour.get(h)
+      byHour.set(h, prev
+        ? { from: Math.min(prev.from, from), until: Math.max(prev.until, until), label: prev.label }
+        : { from, until, label })
     }
   }
 
@@ -535,7 +557,9 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
                   const cellVisits = hourMap?.get(h) ?? []
                   const overhang   = overhangMap.get(s.staff_id)?.get(h)
                   // Cell fully taken by an earlier visit → nothing can start here
-                  const fullyBusy  = !!overhang && overhang.until >= (h + 1) * 60
+                  const busy       = busyMap.get(s.staff_id)?.get(h)
+                  const fullyBusy  = (!!overhang && overhang.until >= (h + 1) * 60)
+                    || (!!busy && busy.from <= h * 60 && busy.until >= (h + 1) * 60)
                   const isInShift  = s.hasSchedule && !s.isOnLeave
                     && parseHour(s.jam_mulai) <= h && h < parseHour(s.jam_selesai)
 
@@ -592,6 +616,18 @@ export function DailyGrid({ staff, visits, date, userRole, gridStart = 8, gridEn
                           <span className="truncate">↳ {overhang.visit.patient_name}</span>
                           <span className="ml-auto shrink-0 font-mono text-primary">s/d {minutesToTime(overhang.until)}</span>
                         </button>
+                      )}
+
+                      {/* Already booked on the other grid (dual-role staff) */}
+                      {busy && (
+                        <div
+                          className="w-full shrink-0 flex items-center gap-1 px-2 rounded-lg border border-dashed border-amber-500/50 bg-amber-500/10 text-[10px] text-amber-700 dark:text-amber-400 overflow-hidden"
+                          style={{ minHeight: 22, flexGrow: fullyBusy && cellVisits.length === 0 ? 1 : 0 }}
+                          title={`Sudah terjadwal ${busy.label} ${minutesToTime(busy.from)}–${minutesToTime(busy.until)}`}
+                        >
+                          <span className="truncate">Terjadwal {busy.label}</span>
+                          <span className="ml-auto shrink-0 font-mono">{minutesToTime(busy.from)}–{minutesToTime(busy.until)}</span>
+                        </div>
                       )}
 
                       {/* Visit cards */}

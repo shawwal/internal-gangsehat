@@ -45,7 +45,7 @@ export default function JadwalHarianPage() {
   const searchParams = useSearchParams()
   const {
     today, selectedDate, setSelectedDate,
-    staff, visits, loading,
+    staff, visits, loading, busyElsewhere,
     leavePopover, setLeavePopover,
     leaveSaving, canApproveLeave,
     userRole,
@@ -404,6 +404,7 @@ export default function JadwalHarianPage() {
             ) : (
               <DailyGrid
                 staff={visibleStaff}
+                busyElsewhere={busyElsewhere}
                 visits={visits}
                 date={toIso(selectedDate)}
                 userRole={userRole}

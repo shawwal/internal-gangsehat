@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { fetchDailyVisits, updateVisitStatus, deleteVisit, updateVisit } from '@/app/actions/jadwal'
+import { fetchDailyVisits, fetchStaffBusyElsewhere, type BusyBlock, updateVisitStatus, deleteVisit, updateVisit } from '@/app/actions/jadwal'
 import { toIso, toHariIndonesia, getMondayOf } from '@/components/jadwal/utils'
 import { getWeekGroupForDate } from '@/lib/schedule/weekGroup'
 import type { DayStaffEntry, PendingLeaveInfo } from '@/components/jadwal/types'
@@ -21,6 +21,7 @@ export function useJadwalHarian() {
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [staff, setStaff]               = useState<DayStaffEntry[]>([])
   const [visits, setVisits]             = useState<DailyVisit[]>([])
+  const [busyElsewhere, setBusyElsewhere] = useState<BusyBlock[]>([])
   const [loading, setLoading]           = useState(true)
   const [leavePopover, setLeavePopover] = useState<LeavePopoverState | null>(null)
   const [leaveSaving, setLeaveSaving]   = useState(false)
@@ -245,8 +246,13 @@ export function useJadwalHarian() {
       return r !== 0 ? r : a.full_name.localeCompare(b.full_name)
     })
 
+    // Dual-role staff: hours already booked on the other grid (migration 132).
+    const busy = await fetchStaffBusyElsewhere(isoDate, sorted.map((x) => x.staff_id), ['SPORT MASSAGE'])
+    if (requestId !== loadSeq.current) return
+
     setStaff(sorted)
     setVisits(visitsData)
+    setBusyElsewhere(busy)
     setLoading(false)
   }, [selectedBranchId, fetchSlots])
 
@@ -311,6 +317,7 @@ export function useJadwalHarian() {
     setSelectedDate,
     staff,
     visits,
+    busyElsewhere,
     loading,
     leavePopover,
     setLeavePopover,
