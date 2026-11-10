@@ -413,6 +413,8 @@ export interface UpdateTransactionInput {
   patient_id?: string | null
   fisio_id?: string | null
   receipt_url?: string | null
+  /** Not a column: a package payment joins the package's order (order_id), like createTransactionForVisit. */
+  package_id?: string | null
 }
 
 export async function updateTransaction(
@@ -465,7 +467,13 @@ export async function updateTransaction(
   if (proofRequired && !nextProof) return { error: PAYMENT_PROOF_REQUIRED_MSG }
 
   // A payment switched to cash/EDC (e.g. the closing page's inline select) drops its proof
-  const patch = { ...input }
+  const { package_id: packageId, ...rest } = input
+  const patch: Omit<UpdateTransactionInput, 'package_id'> & { order_id?: string | null } = { ...rest }
+  if (packageId) {
+    const { data: pkg } = await supabase
+      .from('patient_packages').select('order_id').eq('id', packageId).maybeSingle()
+    if (pkg?.order_id) patch.order_id = pkg.order_id
+  }
   if (input.payment_method !== undefined && !requiresPaymentProof(input.payment_method)) patch.receipt_url = null
 
   const { error } = await supabase
