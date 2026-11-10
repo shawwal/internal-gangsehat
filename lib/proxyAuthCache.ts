@@ -11,6 +11,8 @@ export const TTL_SECONDS = 300
 export type ProxyAuthCtx = {
   uid: string
   role: string | null
+  /** additional work roles (migration 132) */
+  extra?: string[]
   branch_id: string | null
   griya: boolean
   ov: [string, boolean][]   // override map entries, filtered to this role

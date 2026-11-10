@@ -59,7 +59,7 @@ export async function proxy(request: NextRequest) {
     const cached = await readCtx(request.cookies.get(PROXY_AUTH_COOKIE)?.value, uid)
     if (cached) return cached
     const { data: profile } = await supabase
-      .from('internal_profiles').select('role, branch_id').eq('id', uid).maybeSingle()
+      .from('internal_profiles').select('role, additional_roles, branch_id').eq('id', uid).maybeSingle()
     let griya = false
     if (profile?.role === 'therapist' && profile.branch_id) {
       const { data } = await supabase
@@ -69,10 +69,10 @@ export async function proxy(request: NextRequest) {
     let ov: [string, boolean][] = []
     if (profile && profile.role !== 'non-staff') {
       const { data: rows } = await supabase
-        .from('role_page_permissions').select('page_key, role, allowed').eq('role', profile.role)
+        .from('role_page_permissions').select('page_key, role, allowed').in('role', [profile.role, ...(profile.additional_roles ?? [])])
       ov = [...buildOverrideMap(rows ?? []).entries()]
     }
-    const ctx = { uid, role: profile?.role ?? null, branch_id: profile?.branch_id ?? null, griya, ov }
+    const ctx = { uid, role: profile?.role ?? null, extra: (profile?.additional_roles ?? []) as string[], branch_id: profile?.branch_id ?? null, griya, ov }
     // Don't cache a missing profile (first login before the trigger fires).
     if (profile) {
       const signed = await signCtx(ctx)
@@ -151,7 +151,7 @@ export async function proxy(request: NextRequest) {
 
     if (profile && profile.role !== 'non-staff') {
       const overrides = new Map(ctx.ov)
-      if (!isPathAllowed(pathname, profile.role as UserRole, navigation, overrides)) {
+      if (!isPathAllowed(pathname, profile.role as UserRole, navigation, overrides, (ctx.extra ?? []) as UserRole[])) {
         return finish(NextResponse.redirect(new URL('/unauthorized', request.url)))
       }
     }

@@ -18,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from('internal_profiles')
-    .select('id, full_name, email, role, branch_id, avatar_url')
+    .select('id, full_name, email, role, additional_roles, branch_id, avatar_url')
     .eq('id', user.id)
     .single()
 
@@ -30,6 +30,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     full_name:  user.email?.split('@')[0] ?? 'User',
     email:      user.email ?? '',
     role:       'director' as UserRole,
+    additional_roles: [] as string[],
     branch_id:  null,
     avatar_url: null,
   }
@@ -38,7 +39,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .from('role_page_permissions')
     .select('page_key, role, allowed')
   const overrides = buildOverrideMap(overrideRows ?? [])
-  let allowedNavKeys = allowedNavKeysForRole(resolved.role as UserRole, navigation, overrides)
+  let allowedNavKeys = allowedNavKeysForRole(resolved.role as UserRole, navigation, overrides, (resolved.additional_roles ?? []) as UserRole[])
 
   if (resolved.role === 'therapist' && resolved.branch_id) {
     const { data: griya } = await supabase

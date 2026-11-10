@@ -8,12 +8,19 @@ import type { DayStaffEntry } from '@/components/jadwal/types'
 /** Directors and sport massage therapists (own jadwal) never get a column. */
 export const HIDDEN_ROLES = ['director', 'sport_massage_therapist']
 
+/** Hidden only when every role the person holds (primary + additional, migration 132) is hidden. */
+export function isHiddenFromClinicGrid(p: StaffProfileJoin | null | undefined): boolean {
+  const roles = [p?.role ?? '', ...(p?.additional_roles ?? [])].filter(Boolean)
+  return roles.length > 0 && roles.every((r) => HIDDEN_ROLES.includes(r))
+}
+
 export interface StaffProfileJoin {
   full_name?: string | null
   nickname?: string | null
   avatar_url?: string | null
   gender?: string | null
   role?: string | null
+  additional_roles?: string[] | null
   branch_id?: string | null
 }
 
@@ -56,7 +63,7 @@ export interface BuildDayStaffInput {
 /** Scheduled staff for the day (regular schedules + overrides), keyed by staff id. */
 export function buildScheduledStaff({ hari, branchId, schedules, overrides, leaves }: BuildDayStaffInput) {
   const isHidden = (row: { internal_profiles?: StaffProfileJoin | null }) =>
-    HIDDEN_ROLES.includes(row.internal_profiles?.role ?? '')
+    isHiddenFromClinicGrid(row.internal_profiles)
   const inSelectedBranch = (id: string | null) => !branchId || id === branchId
 
   const approvedLeave = new Map<string, string>()

@@ -1,3 +1,4 @@
+import { profileRoles } from '@/lib/roles'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
 import { dokuEnabled, gatewayMode } from '@/lib/doku/client'
@@ -176,7 +177,7 @@ export async function getAvailability(branchId: string, date: string): Promise<A
   const day = dateAtNoon(date)
   const hari = toHariIndonesia(day)
   const weekGroup = getWeekGroupForDate(day)
-  const PROFILE_COLS = 'full_name, avatar_url, nickname, gender, role, branch_id'
+  const PROFILE_COLS = 'full_name, avatar_url, nickname, gender, role, additional_roles, branch_id'
 
   const [schedules, overrides, leaves, slots, visits, holds] = await Promise.all([
     admin.from('schedules')
@@ -205,11 +206,11 @@ export async function getAvailability(branchId: string, date: string): Promise<A
     leaves: leaves.data ?? [],
   })
   // Only therapists take online bookings (admins/managers may have shifts too).
-  const roleOf = new Map<string, string | null>()
-  for (const r of [...(schedules.data ?? []), ...(overrides.data ?? [])] as { staff_id: string; internal_profiles?: { role?: string | null } | null }[]) {
-    roleOf.set(r.staff_id, r.internal_profiles?.role ?? null)
+  const roleOf = new Map<string, string[]>()
+  for (const r of [...(schedules.data ?? []), ...(overrides.data ?? [])] as { staff_id: string; internal_profiles?: { role?: string | null; additional_roles?: string[] | null } | null }[]) {
+    roleOf.set(r.staff_id, profileRoles(r.internal_profiles))
   }
-  const staff = [...entries.values()].filter((s) => roleOf.get(s.staff_id) === 'therapist')
+  const staff = [...entries.values()].filter((s) => roleOf.get(s.staff_id)?.includes('therapist'))
 
   const now = Date.now()
   const busy: BusyRow[] = [

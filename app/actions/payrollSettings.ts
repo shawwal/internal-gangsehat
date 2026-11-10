@@ -55,6 +55,7 @@ export interface EmployeeRow {
   full_name: string
   nickname: string | null
   role: string
+  additional_roles: string[]
   is_active: boolean
   employee_no: string | null
   jabatan: string | null
@@ -104,7 +105,7 @@ export async function getPayrollSettingsData(branchIdParam?: string | null, scop
     supabase.from('payroll_holidays').select('id, date, name, branch_id').or(`branch_id.eq.${branchId},branch_id.is.null`)
       .order('date', { ascending: false }).limit(200),
     supabase.from('payroll_activity_types').select('*').order('sort_order'),
-    supabase.from('internal_profiles').select('id, full_name, nickname, role, is_active').eq('branch_id', branchId)
+    supabase.from('internal_profiles').select('id, full_name, nickname, role, additional_roles, is_active').eq('branch_id', branchId)
       .neq('role', 'non-staff').order('full_name'),
     supabase.from('internal_layanan').select('id, nama, kategori').eq('is_active', true).order('kategori').order('nama'),
   ])
@@ -168,6 +169,7 @@ export async function getPayrollSettingsData(branchIdParam?: string | null, scop
         full_name: st.full_name,
         nickname: st.nickname,
         role: st.role,
+        additional_roles: st.additional_roles ?? [],
         is_active: st.is_active,
         employee_no: (pp?.employee_no as string) ?? null,
         jabatan: (pp?.jabatan as string) ?? null,

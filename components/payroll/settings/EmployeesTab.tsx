@@ -6,7 +6,7 @@ import { useToast } from '@/context/ToastContext'
 import {
   addCompensationVersion, deleteCompensationVersion, saveEmployeePayrollProfile, type EmployeeRow, type PayrollSettingsData,
 } from '@/app/actions/payrollSettings'
-import { VISIT_BONUS_ROLES, type Compensation } from '@/lib/payroll/types'
+import { earnsVisitBonus, type Compensation } from '@/lib/payroll/types'
 import { BRANCH_TOTAL_SALE_CATEGORIES } from '@/lib/payroll/paymentActivity'
 import { formatIDR, formatRupiah } from '../format'
 import { Modal, btn, inputCls, labelCls } from '../Modal'
@@ -75,7 +75,7 @@ export function EmployeesTab({ data, onChanged, griya = false }: Props) {
     if (!open) return
     setSaving(true)
     // Non-therapists earn no Bonus Visit — don't carry hidden rates into the new version.
-    const payload = VISIT_BONUS_ROLES.includes(open.role) ? comp : { ...comp, activity_rates: {} }
+    const payload = earnsVisitBonus(open) ? comp : { ...comp, activity_rates: {} }
     const res = await addCompensationVersion(open.id, effectiveFrom, payload, notes)
     setSaving(false)
     if (!res.ok) return showToast(res.error, 'error')
@@ -222,7 +222,7 @@ export function EmployeesTab({ data, onChanged, griya = false }: Props) {
                 </div>
               </div>
               <CompensationEditor value={comp} onChange={setComp} activityTypes={data.activityTypes.filter((t) => t.is_active)}
-                visitBonus={VISIT_BONUS_ROLES.includes(open.role)} griya={griya} />
+                visitBonus={earnsVisitBonus(open)} griya={griya} />
             </div>
           )}
 

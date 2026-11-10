@@ -1,5 +1,6 @@
 'use client'
 
+import { roleOrFilter } from '@/lib/roles'
 import './performa-styles.css'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Trophy, Users, Activity } from 'lucide-react'
@@ -94,7 +95,7 @@ export default function SportMassagePerformaPage() {
           .from('internal_profiles')
           .select('id, full_name, nickname, avatar_url')
           .eq('branch_id', selectedBranchId)
-          .eq('role', 'sport_massage_therapist')
+          .or(roleOrFilter(['sport_massage_therapist']))
           .eq('is_active', true),
         supabase
           .from('patient_visits')

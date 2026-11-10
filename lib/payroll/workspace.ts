@@ -5,7 +5,7 @@
 import { computePayroll, validateEmployeeInputs, type ValidationWarning } from './engine'
 import { summarizeAttendance } from './attendance'
 import {
-  VISIT_BONUS_ROLES,
+  earnsVisitBonus,
   type ActivityType, type Adjustment, type AttendanceCode, type AttendanceSummary, type Compensation, type DeductionRule,
   type PayrollPeriodStatus, type PayrollResult, type PeriodDay, type Weekday,
 } from './types'
@@ -42,6 +42,7 @@ export interface WorkspaceStaff {
   full_name: string
   nickname: string | null
   role: string
+  additional_roles?: string[]
   employee_no: string | null
   jabatan: string | null
   compensation: Compensation | null
@@ -134,7 +135,7 @@ export function computeWorkspaceRows(ws: PayrollWorkspace): WorkspaceRow[] {
           deductionRules: ws.deductionRules,
           adjustments,
           roundingUnit: ws.settings.rounding_unit,
-          visitBonus: VISIT_BONUS_ROLES.includes(staff.role),
+          visitBonus: earnsVisitBonus(staff),
         })
       : null
     const warnings = validateEmployeeInputs({
@@ -165,6 +166,7 @@ export function rowsFromSlips(ws: PayrollWorkspace): WorkspaceRow[] {
         full_name: slip.full_name,
         nickname: live?.nickname ?? null,
         role: live?.role ?? '',
+        additional_roles: live?.additional_roles ?? [],
         employee_no: slip.employee_no,
         jabatan: slip.jabatan,
         compensation: live?.compensation ?? null,

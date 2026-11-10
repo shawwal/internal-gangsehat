@@ -49,15 +49,19 @@ export function isPathAllowed(
   pathname: string,
   role: UserRole,
   nav: NavItem[],
-  overrides: PermissionOverrides
+  overrides: PermissionOverrides,
+  /** Additional work roles (migration 132) — their pages are allowed too. */
+  extraRoles: UserRole[] = [],
 ): boolean {
   if (role === 'director') return true
   const matched = matchNavItems(pathname, nav)
   if (matched.length === 0) return true // not a registered page — unchanged legacy behavior
-  return matched.some((item) => isAllowed(role, item, overrides))
+  const roles = [role, ...extraRoles]
+  return matched.some((item) => roles.some((r) => isAllowed(r, item, overrides)))
 }
 
 /** Every nav key `role` can currently reach, given the current overrides. Used to filter the sidebar/tab bar/drawer. */
-export function allowedNavKeysForRole(role: UserRole, nav: NavItem[], overrides: PermissionOverrides): string[] {
-  return nav.filter((item) => isAllowed(role, item, overrides)).map((item) => item.key)
+export function allowedNavKeysForRole(role: UserRole, nav: NavItem[], overrides: PermissionOverrides, extraRoles: UserRole[] = []): string[] {
+  const roles = role === 'director' ? [role] : [role, ...extraRoles]
+  return nav.filter((item) => roles.some((r) => isAllowed(r, item, overrides))).map((item) => item.key)
 }

@@ -1,5 +1,6 @@
 'use server'
 
+import { roleOrFilter } from '@/lib/roles'
 import { createClient } from '@/lib/supabase/server'
 import { getPayrollWindow } from '@/app/actions/pfotm'
 import { fetchSportMassageExportRows, type SportMassageExportRow } from '@/app/actions/sportMassageExport'
@@ -73,7 +74,7 @@ export async function fetchSportMassagePayroll(branchId: string, year: number, m
       supabase.from('internal_profiles')
         .select('id, full_name, nickname, is_active')
         .eq('branch_id', branchId)
-        .eq('role', 'sport_massage_therapist'),
+        .or(roleOrFilter(['sport_massage_therapist'])),
       supabase.from('sport_massage_fee_rates')
         .select('staff_id, layanan_id, fee')
         .eq('branch_id', branchId),

@@ -1,5 +1,6 @@
 'use server'
 
+import { roleOrFilter } from '@/lib/roles'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptPatientPII } from '@/lib/encryption'
@@ -825,7 +826,7 @@ export async function fetchBranchStaff(
     .from('internal_profiles')
     .select('id, full_name, nickname')
     .eq('branch_id', branchId)
-    .in('role', roles)
+    .or(roleOrFilter(roles))
     .eq('is_active', true)
     .order('full_name')
   return (data ?? []) as BranchStaffMember[]

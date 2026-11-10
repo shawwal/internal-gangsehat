@@ -89,6 +89,15 @@ export function StaffTable({ users, branches, currentUserId, savingId, search, o
                         ))}
                       </select>
                     )}
+                    {(u.additional_roles ?? []).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(u.additional_roles ?? []).map((r) => (
+                          <span key={r} title="Peran tambahan" className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLOR[r]}`}>
+                            + {ROLE_LABELS[r]}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
 
                   {/* Branch */}

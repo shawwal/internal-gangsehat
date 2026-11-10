@@ -30,6 +30,7 @@ Enum: `director | finance | hr | marketing | staff | therapist | manager | admin
 
 - **admin**: branch-scoped operational role — schedule (`patient_visits`), payments (`transactions`, same rights as `finance`), add/view patients, and view `leave_requests` for their branch. Cannot approve/reject leave — that stays `director`-only (RLS grants admin `SELECT` only on `leave_requests`).
 
+- **Additional roles** (migration 132): `internal_profiles.additional_roles` (only `therapist` / `sport_massage_therapist` / `staff`; changed by director/hr/manager only) lets one account do two jobs (e.g. Terapis + Sport Massage). `role` stays primary and alone drives RLS, home redirect and access level; extras only widen jadwal columns, therapist pickers/rosters, Bonus Visit and nav/page access (union). Query "who does X work" with `roleOrFilter()` / `hasRole()` from `lib/roles.ts`, never `.eq('role', …)`.
 - **director**: `branch_id = NULL` — cross-branch signal in RLS
 - **manager**: branch-scoped director equivalent
 - **therapist**: branch-scoped; own attendance, leave, targets, visits

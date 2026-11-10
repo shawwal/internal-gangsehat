@@ -440,8 +440,8 @@ export async function getPayrollWorkspace(periodId: string): Promise<Result<Payr
       loadActivityTypes(supabase),
       loadBranchLayananUnits(period.branch_id),
       staffIds.length
-        ? supabase.from('internal_profiles').select('id, full_name, nickname, role').in('id', staffIds)
-        : Promise.resolve({ data: [] as { id: string; full_name: string; nickname: string | null; role: string }[] }),
+        ? supabase.from('internal_profiles').select('id, full_name, nickname, role, additional_roles').in('id', staffIds)
+        : Promise.resolve({ data: [] as { id: string; full_name: string; nickname: string | null; role: string; additional_roles: string[] | null }[] }),
       staffIds.length
         ? supabase.from('employee_payroll_profiles').select('staff_id, employee_no, jabatan, branch_total_codes').in('staff_id', staffIds)
         : Promise.resolve({ data: [] as { staff_id: string; employee_no: string | null; jabatan: string | null; branch_total_codes: string[] | null }[] }),
@@ -475,6 +475,7 @@ export async function getPayrollWorkspace(periodId: string): Promise<Result<Payr
       full_name: p.full_name,
       nickname: p.nickname,
       role: p.role,
+      additional_roles: p.additional_roles ?? [],
       employee_no: pp?.employee_no ?? null,
       jabatan: pp?.jabatan ?? null,
       compensation: current ? normalizeCompensation(current) : null,

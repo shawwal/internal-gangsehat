@@ -1,3 +1,4 @@
+import { roleOrFilter } from '@/lib/roles'
 import type { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { byDateDesc, selectAttributedTransactions } from './attribution'
@@ -138,7 +139,7 @@ const THERAPIST_ROLES = ['therapist', 'sport_massage_therapist']
  */
 export async function listTherapistOptions(supabase: ServerClient, branchId: string): Promise<TherapistOption[]> {
   const admin = createAdminClient()
-  let rolesQ = admin.from('internal_profiles').select('id').in('role', THERAPIST_ROLES)
+  let rolesQ = admin.from('internal_profiles').select('id').or(roleOrFilter(THERAPIST_ROLES))
   if (branchId) rolesQ = rolesQ.eq('branch_id', branchId)
   let recentQ = supabase
     .from('transactions')

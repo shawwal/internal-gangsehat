@@ -110,6 +110,11 @@ export interface ActivityType {
 /** Roles that earn Bonus Visit (activity_rates); everyone else is paid on Insentif only. */
 export const VISIT_BONUS_ROLES = ['therapist', 'sport_massage_therapist']
 
+/** Bonus Visit applies if the primary or an additional role (migration 132) is a therapist role. */
+export function earnsVisitBonus(p: { role: string; additional_roles?: string[] | null }): boolean {
+  return [p.role, ...(p.additional_roles ?? [])].some((r) => VISIT_BONUS_ROLES.includes(r))
+}
+
 export const ADJUSTMENT_CATEGORY_LABEL: Record<Adjustment['category'], string> = {
   DENDA: 'Denda',
   BONUS: 'Bonus',

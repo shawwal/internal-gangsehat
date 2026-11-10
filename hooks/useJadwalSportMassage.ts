@@ -1,5 +1,6 @@
 'use client'
 
+import { roleOrFilter } from '@/lib/roles'
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchDailyVisits, updateVisitStatus, updateVisit, deleteVisit } from '@/app/actions/jadwal'
@@ -115,10 +116,10 @@ export function useJadwalSportMassage() {
       applyBranch(
         supabase
           .from('schedules')
-          .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!inner!staff_id(full_name, avatar_url, nickname, gender, role)')
+          .select('staff_id, branch_id, shift, jam_mulai, jam_selesai, status, internal_profiles!inner!staff_id(full_name, avatar_url, nickname, gender, role, additional_roles)')
           .eq('hari', hari)
           .eq('status', 'AKTIF')
-          .eq('internal_profiles.role', 'sport_massage_therapist')
+          .or(roleOrFilter(['sport_massage_therapist']), { referencedTable: 'internal_profiles' })
           .in('week_group', [weekGroup, 'SEMUA']),
       ),
       supabase
@@ -131,9 +132,9 @@ export function useJadwalSportMassage() {
       applyBranch(
         supabase
           .from('schedule_overrides')
-          .select('id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!inner!staff_id(full_name, avatar_url, nickname, gender, role)')
+          .select('id, staff_id, branch_id, hari, shift, jam_mulai, jam_selesai, reason, internal_profiles!inner!staff_id(full_name, avatar_url, nickname, gender, role, additional_roles)')
           .eq('status', 'active')
-          .eq('internal_profiles.role', 'sport_massage_therapist')
+          .or(roleOrFilter(['sport_massage_therapist']), { referencedTable: 'internal_profiles' })
           .lte('start_date', isoDate)
           .gte('end_date', isoDate),
       ),
@@ -141,7 +142,7 @@ export function useJadwalSportMassage() {
         supabase
           .from('internal_profiles')
           .select('id, full_name, nickname, avatar_url, branch_id, gender')
-          .eq('role', 'sport_massage_therapist')
+          .or(roleOrFilter(['sport_massage_therapist']))
           .eq('is_active', true)
           .order('full_name'),
       ),

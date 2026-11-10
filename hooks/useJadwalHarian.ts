@@ -9,7 +9,7 @@ import type { DayStaffEntry, PendingLeaveInfo } from '@/components/jadwal/types'
 import type { DailyVisit } from '@/app/actions/jadwal'
 import type { VisitStatus } from '@/types'
 import { dividersFromSlots } from '@/lib/shifts'
-import { buildScheduledStaff, HIDDEN_ROLES } from '@/lib/jadwal/dayStaff'
+import { buildScheduledStaff, isHiddenFromClinicGrid } from '@/lib/jadwal/dayStaff'
 
 
 export interface LeavePopoverState {
@@ -115,7 +115,7 @@ export function useJadwalHarian() {
       return selectedBranchId ? q.eq('branch_id', selectedBranchId) : q
     }
 
-    const PROFILE_COLS = 'full_name, avatar_url, nickname, gender, role, branch_id'
+    const PROFILE_COLS = 'full_name, avatar_url, nickname, gender, role, additional_roles, branch_id'
 
     // Schedules and overrides are fetched across all branches and mapped to a
     // branch below rather than by the row's own branch_id: a regular schedule
@@ -223,11 +223,11 @@ export function useJadwalHarian() {
     if (unknownIds.length > 0) {
       const { data: profiles } = await supabase
         .from('internal_profiles')
-        .select('id, full_name, avatar_url, nickname, gender, role')
+        .select('id, full_name, avatar_url, nickname, gender, role, additional_roles')
         .in('id', unknownIds)
       if (requestId !== loadSeq.current) return
       for (const p of profiles ?? []) {
-        if (HIDDEN_ROLES.includes(p.role)) { entries.delete(p.id); continue }
+        if (isHiddenFromClinicGrid(p)) { entries.delete(p.id); continue }
         const entry = entries.get(p.id)
         if (entry) {
           entry.full_name  = p.full_name

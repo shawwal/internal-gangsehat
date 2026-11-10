@@ -8,6 +8,8 @@ export interface UserRow {
   email: string
   phone: string | null
   role: UserRole
+  /** Extra work roles on top of `role` (migration 132) */
+  additional_roles?: UserRole[]
   branch_id: string | null
   is_active: boolean
   created_at: string

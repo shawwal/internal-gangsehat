@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { X, Loader2 } from 'lucide-react'
-import type { UserRow } from './types'
+import { ROLE_LABELS, type UserRow, type UserRole } from './types'
+import { ADDITIONAL_ROLE_OPTIONS } from '@/lib/roles'
 
 interface Props {
   user: UserRow
   onClose: () => void
-  onSave: (id: string, patch: Partial<Pick<UserRow, 'full_name' | 'phone' | 'nickname' | 'gender'>>) => Promise<void>
+  onSave: (id: string, patch: Partial<Pick<UserRow, 'full_name' | 'phone' | 'nickname' | 'gender' | 'additional_roles'>>) => Promise<void>
 }
 
 export function EditUserModal({ user, onClose, onSave }: Props) {
@@ -14,6 +15,10 @@ export function EditUserModal({ user, onClose, onSave }: Props) {
   const [phone, setPhone]       = useState(user.phone ?? '')
   const [gender, setGender]     = useState<'male' | 'female' | null>(user.gender ?? null)
   const [loading, setLoading]   = useState(false)
+  const [extraRoles, setExtraRoles] = useState<UserRole[]>(user.additional_roles ?? [])
+  // Only work roles can be added, and never the person's own primary role.
+  const extraOptions = ADDITIONAL_ROLE_OPTIONS.filter((r) => r !== user.role)
+  const canHaveExtra = !['director', 'non-staff'].includes(user.role)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -23,6 +28,7 @@ export function EditUserModal({ user, onClose, onSave }: Props) {
       nickname:  nickname.trim() || null,
       phone:     phone.trim() || null,
       gender,
+      ...(canHaveExtra ? { additional_roles: extraRoles } : {}),
     })
     setLoading(false)
     onClose()
@@ -99,6 +105,35 @@ export function EditUserModal({ user, onClose, onSave }: Props) {
               className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-input focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
+          {canHaveExtra && (
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">
+                Peran Tambahan <span className="text-muted-foreground font-normal">(opsional)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {extraOptions.map((r) => {
+                  const on = extraRoles.includes(r)
+                  return (
+                    <button
+                      key={r}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => setExtraRoles(on ? extraRoles.filter((x) => x !== r) : [...extraRoles, r])}
+                      className={[
+                        'px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer',
+                        on ? 'bg-primary text-primary-foreground border-transparent' : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted',
+                      ].join(' ')}
+                    >
+                      {ROLE_LABELS[r]}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Untuk satu orang yang bekerja di dua peran (mis. Terapis + Sport Massage). Akses utama tetap mengikuti peran utama.
+              </p>
+            </div>
+          )}
           <div className="flex gap-2 pt-1">
             <button
               type="button"
