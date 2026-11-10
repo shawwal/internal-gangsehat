@@ -323,6 +323,7 @@ export default async function OutstandingPaymentsPage({
                       patient_id:       tx.patient_id as string | null,
                       patient_name:     tx.patient_name,
                       receipt_url:      tx.receipt_url as string | null,
+                      fisio_id:         tx.fisio_id,
                     }
                     return (
                       <OutstandingRow

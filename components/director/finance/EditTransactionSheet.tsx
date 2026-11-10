@@ -11,6 +11,7 @@ import { PaymentProofField } from '@/components/payments/PaymentProofField'
 import { PAYMENT_PROOF_REQUIRED_MSG, isGatewayPayment, isPaymentProofRequiredOnEdit, requiresPaymentProof } from '@/lib/paymentProof'
 import { PaymentProofLink } from '@/components/payments/PaymentProofField'
 import { LayananIncomePicker, type LayananPick } from '@/components/finance/LayananIncomePicker'
+import { FisioSelect } from '@/components/finance/FisioSelect'
 
 // Income categories come from the branch's Tarif Layanan (LayananIncomePicker)
 const EXPENSE_CATEGORIES = ['BEBAN PELAYANAN', 'GAJI', 'SEWA', 'LISTRIK', 'MARKETING', 'TUKAR TUNAI', 'LAINNYA']
@@ -43,6 +44,8 @@ export interface TransactionForEdit {
   patient_id: string | null
   patient_name: string | null
   receipt_url: string | null
+  /** Current therapist (Fisio). Omit (undefined) to hide the Fisio field. */
+  fisio_id?: string | null
 }
 
 type Status = 'idle' | 'saving' | 'success' | 'error'
@@ -87,6 +90,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
   const [patientName, setPatientName]       = useState<string | null>(transaction.patient_name)
   const [proofPath, setProofPath]           = useState<string | null>(transaction.receipt_url)
   const [proofUploading, setProofUploading] = useState(false)
+  const [fisioId, setFisioId]               = useState(transaction.fisio_id ?? '')
 
   // Patient search
   const [patientQuery, setPatientQuery]     = useState('')
@@ -114,6 +118,7 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
     setPatientId(transaction.patient_id)
     setPatientName(transaction.patient_name)
     setProofPath(transaction.receipt_url)
+    setFisioId(transaction.fisio_id ?? '')
     setPatientQuery('')
     setPatientResults([])
     setStatus('idle')
@@ -185,6 +190,8 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
   const discountNum = parseRp(discount)
   const sisa = isIncome ? Math.max(hargaNum - amountNum - discountNum, 0) : 0
 
+  const showFisio = isIncome && transaction.fisio_id !== undefined
+
   const proofRequired = isPaymentProofRequiredOnEdit(
     { method: transaction.payment_method, proofPath: transaction.receipt_url }, payMethod,
   )
@@ -212,6 +219,8 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
       transaction_date: txDate,
       patient_id:       patientId ?? null,
       receipt_url:      requiresPaymentProof(payMethod) ? proofPath : null,
+      // Only when the Fisio was actually changed — never clears an attribution by accident.
+      ...(showFisio && fisioId !== (transaction.fisio_id ?? '') ? { fisio_id: fisioId || null } : {}),
     })
 
     if (error) {
@@ -333,6 +342,17 @@ export function EditTransactionSheet({ transaction, open: openProp, onOpenChange
                 {EXPENSE_CATEGORIES.map(c => <option key={c} value={c} className="bg-gray-900 text-white">{c}</option>)}
               </select>
             </div>
+          )}
+
+          {/* Therapist (Fisio) — fixes a sale recorded under the wrong therapist */}
+          {showFisio && (
+            <FisioSelect
+              patientId={patientId}
+              branchId={transaction.branch_id}
+              value={fisioId}
+              onChange={setFisioId}
+              labelClassName="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5"
+            />
           )}
 
           {/* Patient assignment */}

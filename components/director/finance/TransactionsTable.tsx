@@ -95,6 +95,7 @@ export function TransactionsTable({ txns, showBranchColumn, q, sort, baseParams,
               patient_id:       tx.patient_id,
               patient_name:     tx.patient_name,
               receipt_url:      tx.receipt_url,
+              fisio_id:         tx.therapist?.id ?? null,
             }
 
             return (
